@@ -1,5 +1,5 @@
 // ================= INITIALISATION =================
-const APP_VERSION = "2.0";
+const APP_VERSION = "2.1";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 function applyTheme(){
@@ -42,6 +42,7 @@ function showSplash(){
   const leave = ()=>{
     if(gone) return; gone = true;
     sp.classList.add("out");
+    if(typeof needsOnboarding==="function" && needsOnboarding()) openOnboarding();
     setTimeout(()=>sp.remove(), 450);
   };
   sp.addEventListener("click", leave);
@@ -55,6 +56,12 @@ function init(){
   applyPlannedSession(); // la séance prévue aujourd'hui s'affiche directement
   switchTab("today");
   showSplash();
+  // manifeste d'installation : seulement servi par un vrai serveur (en fichier local, WebKit refuse de le lire)
+  if(/^https?:$/.test(location.protocol) && !document.querySelector('link[rel="manifest"]')){ const l = document.createElement("link"); l.rel = "manifest"; l.href = "manifest.webmanifest"; document.head.appendChild(l); }
+  // hors ligne : service worker (uniquement servi en https, pas en fichier local ni en aperçu)
+  try{ if("serviceWorker" in navigator && (location.protocol==="https:" || location.hostname==="localhost") && !/claude\.ai|claudeusercontent/.test(location.hostname)) navigator.serviceWorker.register("sw.js").catch(()=>{}); }catch(e){}
+  // demander un stockage persistant (le navigateur ne l'effacera pas pour libérer de la place)
+  try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(p=>{ if(!p) navigator.storage.persist(); }).catch(()=>{}); }catch(e){}
 
   const fi = qs("#fileImport");
   if(fi){

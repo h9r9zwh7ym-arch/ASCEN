@@ -59,49 +59,118 @@ function nextWeight(exo, current){
   return round1(current+inc);
 }
 
-function suggestForExo(exo){
+// ---------- progression : « double progression » guidée par le ressenti ----------
+// Repères (ACSM 2009, confirmés par la mise à jour 2026) : on progresse d'abord en
+// répétitions dans la fourchette, puis on augmente la charge (2 à 10 %) quand on dépasse
+// le haut de la fourchette ; les répétitions en réserve (RIR, Helms/Zourdos 2016)
+// servent à moduler : « 0 en réserve » = on consolide, « 3+ en réserve » = on accélère.
+// Variante plus difficile pour les exercices au poids du corps (pas de charge à ajouter).
+const HARDER = {
+  pompes_genoux:["pompes"], pompes_surelevees:["pompes"], pompes:["pompes_declinees","pompes_archer"],
+  pompes_larges:["pompes_declinees","pompes_archer"], pompes_declinees:["pompes_archer"], pompes_diamant:["pompes_archer"],
+  squat_pdc:["squat_bulgare_pdc","squat_saute"], fentes_avant:["fentes_sautees"], fentes_arriere:["squat_bulgare_pdc","fentes_sautees"],
+  pont_fessier:["pont_fessier_uni"], tractions_negatives:["tractions"], releve_genoux_suspendu:["releve_jambes_suspendu"],
+  mollets_pdc:["mollets_uni_pdc"], crunch:["releve_jambes"], planche:["planche_commando"],
+};
+function harderVariant(exo){
+  const list = HARDER[exo.id]; if(!list) return null;
+  const id = list.find(x=>EXO_MAP[x] && hasEquip(S.equipment, EXO_MAP[x].equip) && !S.prefs.excluded.includes(x));
+  return id ? EXO_MAP[id] : null;
+}
+// ressenti d'une performance : 1 = facile (3+ en réserve), 2 = correct, 3 = à fond ; 0 = non renseigné
+function perfEffort(ex){ const d = ex.sets.filter(s=>s.done); for(let i=d.length-1;i>=0;i--) if(d[i].effort) return d[i].effort; return 0; }
+function recentPerformances(exoId, n){
+  return memo("rp:"+exoId+":"+n, ()=>{
+    const out = [];
+    for(let i=S.sessions.length-1;i>=0 && out.length<n;i--){
+      const ex = S.sessions[i].exos.find(x=>x.exoId===exoId);
+      if(ex && ex.sets.some(st=>st.done)) out.push({ session:S.sessions[i], exo:ex });
+    }
+    return out;
+  });
+}
+function lowerWeight(exo, current){
+  const type = loadableTypeOf(exo); if(!type) return current;
+  const owned = (S.equipment.weights[type]||[]).slice().sort((a,b)=>a-b);
+  if(owned.length){ const lower = owned.slice().reverse().find(w=>w<current-0.001); return lower!==undefined ? lower : current; }
+  return Math.max(0, round1(current-(DEFAULT_INCREMENT[type]||2.5)));
+}
+function suggestForExo(exo, setsN){
   const [rMin,rMax] = repRangeForGoal(exo);
-  const last = lastPerformance(exo.id);
+  const n = setsN || exo.sets, timed = isTimed(exo);
   const type = loadableTypeOf(exo);
   let weight = null;
   if(type){
     const owned = (S.equipment.weights[type]||[]).slice().sort((a,b)=>a-b);
     weight = owned.length ? owned[0] : (DEFAULT_INCREMENT[type]||2.5);
   }
-  let targetReps=[rMin,rMax], note=null;
+  const mid = Math.round((rMin+rMax)/2);
+  let reps = new Array(n).fill(timed ? rMin : mid), note = null, harder = null;
+  const [last, prev] = recentPerformances(exo.id, 2);
+  if(!last) return { targetReps:[rMin,rMax], weight, reps, note: type ? "Première fois : choisis une charge qui te laisse 2 à 3 répétitions en réserve." : null };
 
-  if(last){
-    const doneSets = last.exo.sets.filter(st=>st.done);
-    if(doneSets.length){
-      const avgRpe = doneSets.reduce((t,s)=>t+(s.rpe||7),0)/doneSets.length;
-      const hitTop = doneSets.every(s=>(s.reps||0) >= (last.exo.targetReps? last.exo.targetReps[1] : rMax));
-      const missed = doneSets.some(s=>(s.reps||0) < Math.max(1,(last.exo.targetReps? last.exo.targetReps[0]:rMin)-1));
-      const lastWeight = doneSets[0].weight||0;
-      if(type){
-        if(hitTop && avgRpe<=7.5 && !missed){
-          weight = nextWeight(exo, lastWeight);
-          note = "Charge augmentée : tu as atteint le haut de la fourchette la dernière fois.";
-        } else if(missed || avgRpe>=9){
-          weight = lastWeight;
-          targetReps = [rMin, Math.max(rMin, rMax-2)];
-          note = "On garde la même charge pour consolider la forme.";
-        } else {
-          weight = lastWeight;
-        }
+  const done = last.exo.sets.filter(st=>st.done);
+  const lastReps = i => (done[Math.min(i, done.length-1)]||{}).reps || mid;
+  const top = last.exo.targetReps ? last.exo.targetReps[1] : rMax, bottom = last.exo.targetReps ? last.exo.targetReps[0] : rMin;
+  const effort = perfEffort(last.exo);
+  const hitTop = done.every(st=>(st.reps||0)>=top);
+  const missed = done.some(st=>(st.reps||0) < bottom);
+  const prevMissed = prev && prev.exo.sets.filter(st=>st.done).some(st=>(st.reps||0) < (prev.exo.targetReps ? prev.exo.targetReps[0] : rMin));
+
+  const gap = daysBetween(last.session.date, todayISO());
+  if(type){
+    const lastW = Math.max(0, ...done.map(st=>st.weight||0)) || weight;
+    weight = lastW;
+    if(gap>=21){
+      // après 3 semaines sans cet exercice : on repart un cran plus léger, sans pression
+      weight = lowerWeight(exo, lastW); reps = new Array(n).fill(mid);
+      note = `Reprise après ${gap} jours : charge un peu allégée pour retrouver tes sensations.`;
+    } else if((hitTop && effort!==3) || (effort===1 && done.every(st=>(st.reps||0)>=top-1))){
+      const nw = nextWeight(exo, lastW);
+      if(nw>lastW+0.001){
+        weight = nw; reps = new Array(n).fill(rMin);
+        note = `Charge augmentée à ${fmtDec(nw)} kg : tu as dépassé la fourchette. Reprends en bas (${rMin} reps) et remonte.`;
       } else {
-        // poids du corps : progression par les répétitions
-        if(hitTop && avgRpe<=7.5) note = "Essaie d'ajouter des répétitions par rapport à la dernière fois.";
+        reps = reps.map((_,i)=>Math.min(rMax+4, lastReps(i)+1));
+        note = "Tu es à ta charge maximale : ajoute une répétition ou ralentis la descente (3 s).";
       }
+    } else if(missed && (effort===3 || prevMissed)){
+      const lw = lowerWeight(exo, lastW);
+      weight = lw; reps = new Array(n).fill(rMin);
+      note = lw<lastW ? `Charge allégée à ${fmtDec(lw)} kg pour retrouver une exécution propre, puis on remonte.` : "On garde la charge : vise une exécution propre avant tout.";
+    } else if(missed){
+      reps = new Array(n).fill(rMin);
+      note = "Même charge : consolide les répétitions avant d'aller plus loin.";
+    } else {
+      const add = effort===3 ? 0 : 1;
+      reps = reps.map((_,i)=>Math.max(rMin, Math.min(rMax, lastReps(i)+add)));
+      if(add && reps.some((r,i)=>r>lastReps(i))) note = "Objectif du jour : une répétition de plus par série que la dernière fois.";
+      else if(effort===3) note = "Dernière fois à fond : on refait pareil, en soignant l'exécution.";
+    }
+  } else {
+    // poids du corps et exercices chronométrés : progression par les répétitions / les secondes
+    const step = timed ? 5 : 1, cap = timed ? rMax+30 : rMax+6;
+    const add = gap>=21 ? -step : effort===3 ? 0 : effort===1 ? step*2 : step;
+    reps = reps.map((_,i)=>Math.max(rMin, Math.min(cap, lastReps(i)+add)));
+    if(gap>=21){
+      note = `Reprise après ${gap} jours : un peu moins que la dernière fois, on remonte vite.`;
+    } else if(hitTop && effort!==3){
+      const h = harderVariant(exo);
+      if(h){ harder = h.id; note = `Tu maîtrises cet exercice : passe à « ${h.n} » pour continuer à progresser.`; }
+      else if(add) note = timed ? `Objectif : ${step} secondes de plus par série.` : "Objectif : une répétition de plus par série.";
+    } else if(add){
+      note = timed ? `Objectif : +${add} s par rapport à la dernière fois.` : `Objectif : +${add} répétition${add>1?"s":""} par série par rapport à la dernière fois.`;
     }
   }
-  return { targetReps, weight, note };
+  return { targetReps:[rMin,rMax], weight, reps, note, harder };
 }
 
 function buildSetsFor(exo, suggestion){
   const midReps = Math.round((suggestion.targetReps[0]+suggestion.targetReps[1])/2);
   const sets = [];
   for(let i=0;i<exo.sets;i++){
-    sets.push({ reps:midReps, weight:suggestion.weight, done:false, rpe:null });
+    const r = suggestion.reps ? suggestion.reps[Math.min(i, suggestion.reps.length-1)] : midReps;
+    sets.push({ reps:r, weight:suggestion.weight, done:false });
   }
   return sets;
 }
@@ -179,9 +248,11 @@ function pickExosForSession(n, pool, avoid){
 }
 
 function sessionEntryFor(exo, setsN){
-  const sug = suggestForExo(exo);
   const n = setsN || exo.sets;
-  return { exoId:exo.id, targetSets:n, targetReps:sug.targetReps, note:sug.note, sets:buildSetsFor(Object.assign({},exo,{sets:n}),sug) };
+  const sug = suggestForExo(exo, n);
+  const e = { exoId:exo.id, targetSets:n, targetReps:sug.targetReps, note:sug.note, sets:buildSetsFor(Object.assign({},exo,{sets:n}),sug) };
+  if(sug.harder) e.harder = sug.harder;
+  return e;
 }
 
 function generateEngineSession(typeId, avoid){

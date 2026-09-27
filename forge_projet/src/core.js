@@ -21,10 +21,20 @@ function defaultState(){
 let S = load();
 
 function load(){
+  let raw = null;
   try{
-    const raw = localStorage.getItem(STORAGE_KEY);
+    raw = localStorage.getItem(STORAGE_KEY);
     if(!raw) return defaultState();
-    const parsed = JSON.parse(raw);
+    return normalizeState(JSON.parse(raw));
+  }catch(e){
+    // données illisibles : on les met de côté au lieu de les écraser à la prochaine sauvegarde
+    try{ if(raw) localStorage.setItem(STORAGE_KEY+".illisible."+Date.now(), raw); }catch(err){}
+    return defaultState();
+  }
+}
+// fusion avec l'état par défaut (nouveaux champs entre versions, restauration d'une sauvegarde)
+function normalizeState(parsed){
+  {
     const d = defaultState();
     // fusion superficielle pour tolérer l'ajout de nouveaux champs entre versions
     const merged = Object.assign({}, d, parsed);
@@ -43,7 +53,7 @@ function load(){
     delete merged.settings.todayMode; // v1.2 : remplacé par todayTab (« Ma séance » en premier)
     delete merged.trophies; // ancien système de trophées (v1.0-1.1), remplacé par les médailles à paliers
     return merged;
-  }catch(e){ return defaultState(); }
+  }
 }
 
 // ---------- sauvegarde différée + cache des statistiques ----------
@@ -60,7 +70,7 @@ function memo(key, fn){
   MEMO.set(key, { v:DATA_VER, r });
   return r;
 }
-let persistTimer = null, persistBlocked = false;
+let persistTimer = null, persistBlocked = false, persistFailed = false;
 // Une séance terminée n'a plus besoin des champs de travail (notes, cibles de séries,
 // ressenti vide, séries non faites) : on les retire pour garder le stockage léger.
 function compactSession(s){
@@ -73,6 +83,7 @@ function compactSession(s){
       const o = { reps: st.reps, done: true };
       if(st.weight!=null) o.weight = st.weight;
       if(st.pr) o.pr = true;
+      if(st.effort) o.effort = st.effort; // ressenti (répétitions en réserve) pour la progression
       return o;
     })
   })).filter(ex=>ex.sets.length);
@@ -87,7 +98,12 @@ function save(){
 function persistNow(){
   clearTimeout(persistTimer); persistTimer = null;
   if(persistBlocked) return;
-  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(S)); }catch(e){}
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(S)); persistFailed = false; }
+  catch(e){
+    // stockage plein ou refusé : on prévient une fois, sans bloquer l'utilisation
+    if(!persistFailed && typeof toast==="function") toast("⚠︎ Enregistrement impossible sur cet appareil : fais une sauvegarde dans Profil");
+    persistFailed = true;
+  }
 }
 window.addEventListener("pagehide", ()=>{ if(persistTimer) persistNow(); });
 document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="hidden" && persistTimer) persistNow(); });

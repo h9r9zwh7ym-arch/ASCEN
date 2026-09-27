@@ -124,3 +124,21 @@ function showLaunch(session){
   timers.push(setTimeout(()=>{ haptic([20,40,30]); sfx("go"); }, 1650));
   timers.push(setTimeout(leave, 3000));
 }
+
+// ---------- écran allumé pendant la séance (Screen Wake Lock, Safari iOS 16.4+) ----------
+// Sans cela, le téléphone se verrouille pendant le repos et on perd le décompte de vue.
+// Le verrou est rendu par le système quand l'app passe en arrière-plan : on le redemande
+// au retour tant qu'une séance est en cours.
+let wakeLock = null;
+async function keepAwake(on){
+  try{
+    if(on){
+      if(!("wakeLock" in navigator) || (wakeLock && !wakeLock.released) || document.hidden) return;
+      wakeLock = await navigator.wakeLock.request("screen");
+    } else if(wakeLock){ const w = wakeLock; wakeLock = null; await w.release(); }
+  }catch(e){ wakeLock = null; }
+}
+function syncWakeLock(){ keepAwake(!!(typeof S!=="undefined" && S.draft && S.draft.startedAt)); }
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) syncWakeLock(); });
+// la demande exige souvent un geste : on la retente au toucher pendant une séance
+document.addEventListener("pointerup", ()=>{ if(typeof S!=="undefined" && S.draft && S.draft.startedAt && (!wakeLock || wakeLock.released)) keepAwake(true); }, { passive:true });

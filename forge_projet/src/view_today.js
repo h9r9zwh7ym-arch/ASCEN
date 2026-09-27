@@ -97,7 +97,8 @@ function heroHTML(draft){
     if(!draft.exos.length) return "";
     kind = "proposal";
     const t = SESSION_TYPE_MAP[draft.type]||SESSION_TYPES[0], rt = SESSION_TYPE_MAP[draft.resolvedType];
-    eyebrow = draft.source==="imported" ? "Programme importé" : draft.type==="auto" ? "Choisie pour toi" : "Séance proposée";
+    const lastS = S.sessions[S.sessions.length-1], away = lastS ? daysBetween(lastS.date, todayISO()) : 0;
+    eyebrow = draft.source==="imported" ? "Programme importé" : away>=10 ? "Bon retour !" : draft.type==="auto" ? "Choisie pour toi" : "Séance proposée";
     title = draft.source==="imported" ? esc(draft.name||"Séance importée") : draft.type==="auto" && rt ? rt.n : t.n;
     ids = draft.exos.map(e=>e.exoId);
     meta = [`${ids.length} exercices`, `${draft.exos.reduce((t,e)=>t+e.sets.length,0)} séries`, `≈ ${estimateMinutes(draft)} min`];
@@ -124,6 +125,7 @@ function renderTodayPreview(draft){
     </div>
     ${statPillsHTML()}
     ${heroHTML(draft)}
+    ${backupDue() ? `<div class="backup-nudge stagger" style="--i:3">${sfIcon("download","green")}<div class="grow"><div class="t">Sauvegarde conseillée</div><div class="s">${S.sessions.length} séances sont stockées uniquement sur ce téléphone.</div></div><div class="bn-act"><button data-a="backupData">Sauvegarder</button><button class="later" data-a="backupLater">Plus tard</button></div></div>` : ""}
     <div class="home-sep stagger" style="--i:3"><span>Préparer une séance</span></div>
     ${segHTML("today", [["custom","Ma séance"],["proposal","Proposée par l'app"]], mode, "todayMode")}
     <div class="seg-pane ${mode} ${paneDir?"from-"+paneDir:""}">${mode==="custom" ? customPaneHTML() : proposalPaneHTML(draft)}</div>
@@ -227,7 +229,8 @@ function weekPlanBodyHTML(){
         ${done?`<span class="wp-check">${icon("check")}</span>`:missed?`<span class="wp-miss" title="Séance prévue non faite"></span>`:""}
       </button>`;
     }).join("")}</div>
-    <div class="wp-foot">${S.templates.length ? "Touche un jour pour y placer une séance enregistrée." : "Enregistre une séance, puis place-la sur un ou plusieurs jours."}</div>`;
+    <div class="wp-foot">${S.templates.length ? "Touche un jour pour y placer une séance enregistrée." : "Enregistre une séance, puis place-la sur un ou plusieurs jours."}</div>
+    ${S.templates.some(t=>(t.days||[]).length) ? `<button class="wp-cal" data-a="openCalendarExport">${icon("clock")} Ajouter mon planning au Calendrier</button>` : ""}`;
 }
 function weekPlanHTML(){
   const nxt = nextPlanned();
@@ -599,6 +602,18 @@ function holdFinish(secs){
   ACT.validateSet({ exi:String(h.exi) });
 }
 
+// ---------- ressenti de la série (répétitions en réserve), facultatif, pendant le repos ----------
+function effortHTML(){
+  const src = restState && restState.src; if(!src || !S.draft || !S.draft.exos[src.exi]) return "";
+  const st = S.draft.exos[src.exi].sets[src.si]; if(!st) return "";
+  const timed = isTimed(EXO_MAP[S.draft.exos[src.exi].exoId]);
+  const opts = timed ? [[3,"À fond"],[2,"Encore un peu"],[1,"Large marge"]] : [[3,"0"],[2,"1–2"],[1,"3 ou +"]];
+  return `<div class="effort" role="group" aria-label="Ressenti de la série">
+    <div class="ef-q">${timed?"Comment c'était ?":"Répétitions que tu aurais pu faire en plus ?"} <span>facultatif</span></div>
+    <div class="ef-opts">${opts.map(([v,l])=>`<button class="${st.effort===v?"on":""}" data-a="setEffort" data-v="${v}" aria-pressed="${st.effort===v}">${l}</button>`).join("")}</div>
+  </div>`;
+}
+
 function lastTimeHTML(exoId){
   const last = lastPerformance(exoId);
   if(!last) return `<div class="fc-last">Première fois : prends tes repères</div>`;
@@ -633,6 +648,7 @@ function renderFocusCard(idx, ex, def){
       ${ringSVG(remain, restState.totalSec)}
       ${nextTxt?`<div class="fc-next">${nextTxt}</div>`:""}
       <div class="ring-adjust"><button data-a="restAdjust" data-d="-15">−15 s</button><button data-a="restAdjust" data-d="15">+15 s</button><button class="skip" data-a="restSkip">Passer</button></div>
+      ${effortHTML()}
     </div>`;
   }
 
@@ -671,7 +687,8 @@ function renderFocusCard(idx, ex, def){
       </div></div>`:""}
     </div>
     ${lastTimeHTML(ex.exoId)}
-    ${ex.note?`<div class="exo-note" style="margin:0 0 14px">${esc(ex.note)}</div>`:""}
+    ${hasWeight && (st.weight||0)>=8 && !S.draft.exos.some(e=>e.sets.some(x=>x.done)) ? `<div class="warmup">🔥 Échauffement : 1 série légère (≈ ${fmtDec(Math.max(1, Math.round((st.weight||0)*0.5)))} kg) de 8 à 10 répétitions avant de commencer.</div>` : ""}
+    ${ex.note?`<div class="exo-note" style="margin:0 0 14px">${esc(ex.note)}${ex.harder&&EXO_MAP[ex.harder]&&!ex.sets.some(s=>s.done)?`<button class="note-act" data-a="swapHarder" data-idx="${idx}">Essayer maintenant ${icon("chev")}</button>`:""}</div>`:""}
     ${isTimed(def)
       ? `<button class="btn big validate hold-go ${rr?"ready":""}" data-a="holdStart" data-exi="${idx}" data-si="${si}">${icon("timer")} Lancer le chrono · ${st.reps||30} s</button>
          <button class="btn ghost sm hold-skip" data-a="validateSet" data-exi="${idx}">Valider sans chrono</button>`
@@ -1070,6 +1087,24 @@ Object.assign(ACT, {
     if(hold.phase==="prep"){ clearInterval(holdTimer); hold = null; refreshFocusRegion(); return; }
     holdFinish((performance.now()-hold.t0)/1000);
   },
+  setEffort(d, el){
+    const src = restState && restState.src; if(!src) return;
+    const st = S.draft.exos[src.exi] && S.draft.exos[src.exi].sets[src.si]; if(!st) return;
+    const v = +d.v; st.effort = st.effort===v ? 0 : v;
+    const box = el && el.closest(".ef-opts");
+    if(box) qsa("button", box).forEach(b=>{ const on = +b.dataset.v===st.effort; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
+    sfx("seg"); haptic(6); save();
+  },
+  swapHarder(d){
+    const i = +d.idx, ex = S.draft.exos[i]; if(!ex || !ex.harder || !EXO_MAP[ex.harder]) return;
+    const h = EXO_MAP[ex.harder];
+    const entry = sessionEntryFor(h, ex.sets.length);
+    // les séries déjà faites restent acquises sur l'exercice d'origine
+    if(ex.sets.some(s=>s.done)){ ex.sets = ex.sets.filter(s=>s.done); delete ex.harder; S.draft.exos.splice(i+1, 0, entry); liveFocusIdx = i+1; }
+    else S.draft.exos[i] = entry;
+    focusAnimDir = "r"; save(); refreshFocusRegion(); sfx("open");
+    toast(`Place à « ${h.n} »`);
+  },
   toggleFlow(){
     S.settings.flow = circuitMode() ? "classic" : "circuit"; save(); closeSheet();
     toast(circuitMode() ? "Après chaque repos : exercice suivant" : "Toutes les séries d'un exercice, puis le suivant");
@@ -1163,7 +1198,7 @@ Object.assign(ACT, {
     if(!st.pr && !exoFinished0(ex)) floatText(fx0, fy0, `✓ Série ${si+1}`);
     const exoFinished = !ex.sets.some(s=>!s.done);
     const ni = nextUndone(exi);
-    if(ni>=0) startRestTimer(def.restSec, def.n, exoFinished ? ni : exi, exoFinished);
+    if(ni>=0) startRestTimer(def.restSec, def.n, exoFinished ? ni : exi, exoFinished, { exi, si });
     else stopRestTimer();
     if(exoFinished){
       if(!st.pr) confettiBurst(bx, by, 36);

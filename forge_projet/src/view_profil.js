@@ -94,6 +94,25 @@ function renderProfil(){
       </button>
     </div>
 
+    <h2 class="sh">Mes données</h2>
+    <div class="group">
+      <button class="row tap" style="width:100%" data-a="backupData">
+        ${sfIcon("download","green")}
+        <div class="grow"><div class="t">Sauvegarder mes données</div><div class="s">${backupStatusText()}</div></div>
+        <span class="chev">${icon("chev")}</span>
+      </button>
+      <button class="row tap" style="width:100%" data-a="restoreData">
+        ${sfIcon("restore","teal")}
+        <div class="grow"><div class="t">Restaurer une sauvegarde</div><div class="s">Fichier .json créé par Forge</div></div>
+        <span class="chev">${icon("chev")}</span>
+      </button>
+      ${isStandalone() ? "" : `<button class="row tap" style="width:100%" data-a="openInstall">
+        ${sfIcon("phone","blue")}
+        <div class="grow"><div class="t">Installer sur l'écran d'accueil</div><div class="s">Plein écran, hors ligne, données protégées</div></div>
+        <span class="chev">${icon("chev")}</span>
+      </button>`}
+    </div>
+
     <h2 class="sh">Réglages</h2>
     <div class="group">
       <button class="row tap" style="width:100%" data-a="openAppearance">
@@ -124,6 +143,73 @@ function renderProfil(){
     </div>
     <p class="hr-note" style="margin:16px 20px 40px">Forge v${APP_VERSION} — toutes les données restent stockées localement sur cet appareil.</p>
   </div>`;
+}
+
+// ---------- Sauvegarde / restauration / installation ----------
+// Tout est stocké sur l'appareil : sans sauvegarde, un effacement des données du site
+// (Safari efface le stockage d'un site non installé après 7 jours sans visite) serait définitif.
+function isStandalone(){ return !!(window.navigator.standalone || (window.matchMedia && matchMedia("(display-mode: standalone)").matches)); }
+function backupStatusText(){
+  const b = S.meta.lastBackup;
+  if(!b) return S.sessions.length ? "Jamais sauvegardé — recommandé" : "Un fichier à garder dans Fichiers ou iCloud";
+  const n = daysBetween(b, todayISO()), since = S.sessions.length-(S.meta.backupSessions||0);
+  return `Dernière : ${n===0?"aujourd'hui":n===1?"hier":`il y a ${n} jours`}${since>0?` · ${since} séance${since>1?"s":""} depuis`:""}`;
+}
+function backupDue(){
+  if(S.sessions.length<5) return false;
+  if(S.meta.backupSnooze && daysBetween(S.meta.backupSnooze, todayISO())<14) return false;
+  if(!S.meta.lastBackup) return true;
+  return daysBetween(S.meta.lastBackup, todayISO())>=21 && S.sessions.length-(S.meta.backupSessions||0)>=6;
+}
+async function backupData(){
+  persistNow();
+  const payload = JSON.stringify({ app:"Forge", format:1, version:APP_VERSION, exportedAt:new Date().toISOString(), data:S });
+  const name = `forge-sauvegarde-${todayISO()}.json`;
+  let shared = false;
+  try{
+    const file = new File([payload], name, { type:"application/json" });
+    if(navigator.canShare && navigator.canShare({ files:[file] })){ await navigator.share({ files:[file], title:"Sauvegarde Forge" }); shared = true; }
+  }catch(e){ if(e && e.name==="AbortError") return; }
+  if(!shared){
+    const url = URL.createObjectURL(new Blob([payload], { type:"application/json" }));
+    const a = document.createElement("a"); a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 5000);
+  }
+  S.meta.lastBackup = todayISO(); S.meta.backupSessions = S.sessions.length; delete S.meta.backupSnooze;
+  save(); changed(); sfx("set"); toast("Sauvegarde créée ✓ Garde le fichier dans Fichiers ou iCloud");
+}
+function restoreData(){
+  const inp = document.createElement("input");
+  inp.type = "file"; inp.accept = "application/json,.json"; inp.style.display = "none";
+  document.body.appendChild(inp);
+  inp.addEventListener("change", async ()=>{
+    const f = inp.files && inp.files[0]; inp.remove(); if(!f) return;
+    let data;
+    try{ const o = JSON.parse(await f.text()); data = o && o.data ? o.data : o; }catch(e){ data = null; }
+    if(!data || !Array.isArray(data.sessions)){ openModal(`<div style="font-weight:700;color:var(--red)">Fichier non reconnu</div><div class="hr-note" style="margin-top:8px">Choisis un fichier de sauvegarde créé par Forge (forge-sauvegarde-….json).</div><button class="btn secondary" style="margin-top:14px" data-a="closesheet">OK</button>`); return; }
+    const n = data.sessions.length, t = (data.templates||[]).length;
+    confirmSheet({ title:"Restaurer cette sauvegarde ?", html:`${n} séance${n>1?"s":""} et ${t} séance${t>1?"s":""} enregistrée${t>1?"s":""}. Les données actuelles de cet appareil seront remplacées (une copie de secours est gardée).`, ok:"Restaurer", danger:true, onOk:()=>{
+      try{ localStorage.setItem(STORAGE_KEY+".avant-restauration", JSON.stringify(S)); }catch(e){}
+      S = normalizeState(data);
+      S.meta.lastBackup = S.meta.lastBackup || todayISO();
+      save(); persistNow(); applyTheme(); checkMedals(true);
+      renderViewAnimated(currentTab); toast(`Sauvegarde restaurée : ${n} séance${n>1?"s":""}`);
+    }});
+  });
+  inp.click();
+}
+function openInstall(){
+  openSheet(`<div class="sheet-hd"><span class="t">Installer Forge</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
+    <div class="sheet-body">
+      <p class="body" style="margin:0 4px 14px">Installée sur l'écran d'accueil, Forge s'ouvre en plein écran comme une vraie app, fonctionne sans réseau, et Safari ne peut plus effacer tes données après quelques jours sans visite.</p>
+      <div class="group install-steps">
+        <div class="row"><span class="step-n">1</span><div class="grow"><div class="t">Touche le bouton Partager</div><div class="s">Le carré avec une flèche vers le haut, dans la barre de Safari</div></div></div>
+        <div class="row"><span class="step-n">2</span><div class="grow"><div class="t">Choisis « Sur l'écran d'accueil »</div><div class="s">Fais défiler la liste si besoin</div></div></div>
+        <div class="row"><span class="step-n">3</span><div class="grow"><div class="t">Ouvre Forge depuis son icône</div><div class="s">Tes séances actuelles ne sont pas transférées automatiquement : fais d'abord une sauvegarde, puis restaure-la dans l'app installée</div></div></div>
+      </div>
+      <div class="btnrow"><button class="btn secondary" data-a="backupData">${icon("bookmark")} Faire une sauvegarde d'abord</button></div>
+    </div>`);
 }
 
 // ---------- Matériel ----------
@@ -259,9 +345,11 @@ Object.assign(ACT, {
   },
   saveName(){ S.settings.name = ((qs("#nameInput")||{}).value||"").trim(); closeSheet(); save(); changed(); },
   openEquip, openGoals, openExoPrefs, openExportImport, openAppearance, openAbout,
+  backupData(){ backupData(); }, restoreData(){ restoreData(); }, openInstall(){ openInstall(); },
+  backupLater(){ S.meta.backupSnooze = todayISO(); save(); const c = qs(".backup-nudge"); if(c){ c.classList.add("leaving"); setTimeout(()=>changed(), 250); } else changed(); },
   toggleEquip(d){ S.equipment.owned[d.id] = !S.equipment.owned[d.id]; save(); refreshEquip(); },
   addWeight(d){
-    const input = qs("#wadd-"+d.id); const v = parseFloat(input.value);
+    const input = qs("#wadd-"+d.id); const v = parseFloat(String(input.value).replace(",", "."));
     if(!isNaN(v) && v>0){ S.equipment.weights[d.id] = Array.from(new Set([...(S.equipment.weights[d.id]||[]), v])); save(); }
     refreshEquip();
   },

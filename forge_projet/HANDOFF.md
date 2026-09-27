@@ -34,7 +34,7 @@ style.css
 data_equipment.js data_exercises.js
 core.js engine.js
 ui_shell.js sfx.js fx.js timer.js charts.js trophies.js
-view_today.js tpl_editor.js view_history.js view_progress.js view_profil.js
+view_today.js tpl_editor.js onboarding.js view_history.js view_progress.js view_profil.js
 init.js
 ```
 
@@ -170,6 +170,30 @@ Demande de YaYa : trier les exercices par matériel, en ajouter (pectoraux aux h
 - **Performances** (3 ans simulés, CPU ×4, `perf2.js`) : changement d'onglet médiane ≈ 78 → 27 ms, pire cas ≈ 270 → 82 ms ; trophées à froid ≈ 60 → 37 ms. Moyens : onglets masqués en `content-visibility:hidden` (mise en page gardée en cache) au lieu de `display:none`, rendu réutilisé si les données n'ont pas changé (`el._ver === DATA_VER`), `content-visibility:auto` sur les blocs hors écran, `contain:layout style` sur les cartes, caches de `weekKey`, `regionOf`, `isTimed`, `loadableTypeOf`, tuiles d'exercice, trophées réécrits en une passe, séances triées au chargement, pastille de repos mise à jour sans reconstruire son HTML, écran de démarrage 2 → 1,5 s.
 - **Animations** : plus aucune animation de `box-shadow` (pulsations du bouton de lancement et de « Valider », segment de progression, carte mise en avant → `transform`/`opacity` sur pseudo-éléments), flou retiré des étiquettes de la carte du jour ; ajouts : grand titre qui se replie au défilement façon iOS, feuilles avec léger ressort, interrupteurs à ressort, retour tactile sur lignes, onglets, trophées et icônes.
 - **Tests** : `v20.js` (tout ce qui précède), `perf2.js`/`perf3.js`/`prof.js` (mesures).
+
+## 9 octies. Audit v2.1 : fiabilité, progression, installation
+
+Audit complet de l'app ; améliorations classées par impact, sources vérifiées :
+- ACSM, *Progression models in resistance training* (2009) et mise à jour 2026 : +2 à 10 % de charge quand on dépasse la fourchette de répétitions ; ~10 séries par muscle et par semaine pour l'hypertrophie ; chaque groupe ≥ 2 fois par semaine ; bandes, poids du corps et entraînement à domicile efficaces ; l'adhésion prime.
+- Helms/Zourdos (2016) : échelle RPE fondée sur les répétitions en réserve (RIR).
+- Schoenfeld et al. (2017) : relation dose-réponse volume/hypertrophie. Singer et al. (2024) : repos > 60–90 s, bénéfice faible au-delà.
+- Lally et al. (2010) : ~66 jours (18–254) d'automatisation ; rater une occasion ne compromet pas l'habitude → série hebdomadaire (pas quotidienne), pas de culpabilisation.
+- WebKit, *Tracking Prevention* : stockage des sites effacé après 7 jours sans visite dans Safari, sauf app installée sur l'écran d'accueil.
+- web.dev : Screen Wake Lock disponible dans Safari iOS 16.4+ (et en app installée depuis iOS 18.4).
+- Apple HIG : cibles ≥ 44 pt, contraste ≥ 4,5:1, Dynamic Type.
+
+Changements :
+- **Moteur de progression** (`suggestForExo`, engine.js) : vraie double progression (on repart des répétitions réellement faites, +1 par série ; au-delà du haut de fourchette → charge suivante et retour en bas), modulée par le ressenti (`set.effort` : 1 = 3+ en réserve, 2 = 1–2, 3 = 0) ; charge maximale atteinte → répétitions supplémentaires ou tempo au lieu d'une fausse « augmentation » ; deux échecs (ou échec « à fond ») → charge allégée d'un cran ; reprise après ≥ 21 jours → un cran plus léger ; poids du corps +1 rep, exercices en secondes +5 s ; variante plus difficile quand l'exercice est maîtrisé (`HARDER`, bouton « Essayer maintenant », `swapHarder`). Avant : les séries étaient toujours pré-remplies au milieu de la fourchette et le RPE n'était jamais saisi.
+- **Ressenti facultatif** pendant le repos (répétitions en réserve : 0 / 1–2 / 3+ ; pour les exercices en secondes : à fond / encore un peu / large marge), conservé par `compactSession`.
+- **Données** : sauvegarde complète (`backupData`, feuille de partage iOS ou téléchargement), restauration avec copie de secours (`restoreData`, `normalizeState`), rappel discret de sauvegarde à l'accueil (`backupDue`, « Plus tard » = 14 jours), `navigator.storage.persist()`, données illisibles mises de côté au lieu d'être écrasées, avertissement si l'enregistrement échoue.
+- **Installation / hors ligne** (racine du dépôt) : `manifest.webmanifest`, icônes (`icon-180/192/512`, `icon-maskable-512`), `sw.js` (réseau d'abord, cache hors ligne ; enregistré seulement en https hors aperçu), feuille « Installer sur l'écran d'accueil ». `build.sh` recopie ces fichiers dans `dist/`.
+- **Écran allumé** pendant la séance (`keepAwake`/`syncWakeLock`, fx.js).
+- **Premier lancement** (`onboarding.js`) : prénom, matériel (avec saisie des haltères, virgule décimale gérée par `parseWeightList`), objectif, séances par semaine, durée, puis création du programme de la semaine. Montré une seule fois, « Passer » à tout moment.
+- **Volume par muscle** (Progrès › Résumé, `weekVolume`) : séries des 7 derniers jours (principal = 1, secondaires = ½), repère ≈ 10 (6 en force), fréquence « × ».
+- **Planning → Calendrier** (`buildICS`) : évènements récurrents avec rappel, depuis « Mon planning ».
+- **Échauffement** conseillé avant la première série chargée ; message « Bon retour ! » après ≥ 10 jours ; point « séance manquée » en orange (informatif, pas culpabilisant).
+- **Accessibilité** : Dynamic Type (`font: -apple-system-body`), textes secondaires plus contrastés, onglets inactifs en gris système, boutons qui passent à la ligne quand le texte est grand.
+- **Tests** : `v21.js` (11 scénarios du moteur, ressenti, variante, écran allumé simulé, volume, sauvegarde/restauration, calendrier, grand texte), `v22.js` (premier lancement) ; les autres tests passent l'accueil via `ACT.obSkip()`.
 
 ## 10. Cahier des charges d'origine (résumé)
 

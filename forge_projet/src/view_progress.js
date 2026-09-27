@@ -16,6 +16,37 @@ function muscleSets(days){
   }));
   return MUSCLES.map(m=>({ label:m.n, value:counts[m.id]||0, unit:"séries", region:REGION_OF_MUSCLE[m.id] })).filter(x=>x.value>0).sort((a,b)=>b.value-a.value);
 }
+// Volume hebdomadaire par muscle (7 derniers jours) : muscle principal = 1 série,
+// muscles secondaires = ½ série (comptage fractionné). Repères ACSM 2026 :
+// ~10 séries par muscle et par semaine pour la prise de muscle, chaque groupe ≥ 2 fois par semaine.
+const VOL_GROUPS = [["pect","Pectoraux"],["dos","Dos"],["epaules","Épaules"],["biceps","Biceps"],["triceps","Triceps"],["quadriceps","Quadriceps"],["ischios","Ischios"],["fessiers","Fessiers"],["mollets","Mollets"],["abdos","Abdos"]];
+function weekVolume(){
+  return memo("weekVol"+todayISO(), ()=>{
+    const cutoff = addDaysISO(todayISO(), -7), sets = {}, days = {};
+    for(let i=S.sessions.length-1;i>=0;i--){
+      const s = S.sessions[i]; if(s.date<=cutoff) break;
+      for(const ex of s.exos){
+        const def = EXO_MAP[ex.exoId]; if(!def) continue;
+        const n = ex.sets.filter(st=>st.done).length; if(!n) continue;
+        def.muscles.forEach((m,k)=>{ sets[m] = (sets[m]||0) + (k===0 ? n : n/2); (days[m] = days[m]||new Set()).add(s.date); });
+      }
+    }
+    return VOL_GROUPS.map(([id,n])=>({ id, n, sets:Math.round((sets[id]||0)*2)/2, freq:days[id] ? days[id].size : 0, region:REGION_OF_MUSCLE[id] }));
+  });
+}
+function weekVolumeHTML(){
+  const rows = weekVolume(), goal = S.goals.overall==="force" ? 6 : 10, max = Math.max(goal*1.6, ...rows.map(r=>r.sets));
+  const ok = rows.filter(r=>r.sets>=goal).length, low = rows.filter(r=>r.sets<goal/2).map(r=>r.n);
+  return `<div class="chart-card stagger" style="--i:6">
+    <div class="cc-h"><div class="cc-t">Volume par muscle</div><div class="cc-s">séries des 7 derniers jours · repère ≈ ${goal} par muscle</div></div>
+    <div class="wv-list">${rows.map((r,i)=>`<div class="wv-row" style="--i:${i}">
+      <span class="wv-n">${esc(r.n)}</span>
+      <span class="wv-track"><i class="r-${r.region} ${r.sets>=goal?"ok":""}" style="width:${Math.min(100, r.sets/max*100).toFixed(1)}%"></i><b style="left:${(goal/max*100).toFixed(1)}%"></b></span>
+      <span class="wv-v">${fmtDec(r.sets)}<small>${r.freq?` · ${r.freq}×`:""}</small></span>
+    </div>`).join("")}</div>
+    <div class="wv-foot">${ok}/${rows.length} groupes au repère${low.length && low.length<rows.length ? ` · à renforcer : ${low.slice(0,3).map(esc).join(", ")}` : ""}. Viser chaque muscle au moins 2 fois par semaine (le « × »).</div>
+  </div>`;
+}
 function recentPRs(n){
   const out = [];
   for(let i=S.sessions.length-1;i>=0 && out.length<n;i--){
@@ -69,6 +100,7 @@ function overviewPaneHTML(){
   const prs = recentPRs(5);
 
   return `${levelCardHTML()}${kpis}
+    ${weekVolumeHTML()}
     <div class="chart-card stagger" style="--i:6">
       <div class="cc-h"><div class="cc-t">Régularité</div><div class="cc-s">18 dernières semaines</div></div>
       ${heatmap(18)}

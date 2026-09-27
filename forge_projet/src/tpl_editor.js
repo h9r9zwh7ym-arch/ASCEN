@@ -207,3 +207,54 @@ Object.assign(ACT, {
   },
   pickerCancel(){ const p = picker; if(p && p.onCancel) p.onCancel(); else closeSheet(); },
 });
+
+// ---------- planning → Calendrier de l'iPhone (.ics) ----------
+// Fixer jour + heure (« intention de mise en œuvre ») aide à tenir une habitude, et les
+// rappels du Calendrier fonctionnent sans serveur ni notification web.
+let calTime = "18:00", calAlarm = 30;
+function openCalendarExport(){
+  const planned = S.templates.filter(t=>(t.days||[]).length);
+  openSheet(`<div class="sheet-hd"><span class="t">Ajouter au Calendrier</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
+    <div class="sheet-body" id="calBody">
+      <p class="body" style="margin:0 4px 14px">Tes séances planifiées deviennent des évènements récurrents dans le Calendrier, avec un rappel. Tu pourras les modifier ou les supprimer depuis l'app Calendrier.</p>
+      <div class="te-sec">Heure des séances</div>
+      <div class="num-field"><input id="calTime" type="time" value="${calTime}"></div>
+      <div class="te-sec">Rappel</div>
+      <div class="cal-alarm">${[[0,"Aucun"],[15,"15 min avant"],[30,"30 min avant"],[60,"1 h avant"]].map(([v,l])=>`<button class="chip ${calAlarm===v?"on":""}" data-a="calAlarm" data-v="${v}">${l}</button>`).join("")}</div>
+      <div class="te-sec">Séances</div>
+      <div class="group">${planned.map(t=>`<div class="row"><span class="tc-bar-s r-${tplRegion(t)}"></span><div class="grow"><div class="t">${esc(t.n)}</div><div class="s">${daysLabel(t.days)} · ≈ ${tplMinutes(t)} min</div></div></div>`).join("")}</div>
+    </div>`, { tall:true, footer:`<button class="btn" data-a="calExport">${icon("clock")} Créer les évènements</button>` });
+}
+function icsText(s){ return String(s).replace(/\\/g,"\\\\").replace(/[,;]/g,m=>"\\"+m).replace(/\n/g,"\\n"); }
+function buildICS(){
+  const [hh,mm] = calTime.split(":").map(Number), pad = n => String(n).padStart(2,"0");
+  const stamp = new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+/,"");
+  const BYDAY = ["MO","TU","WE","TH","FR","SA","SU"];
+  const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Forge//Planning//FR","CALSCALE:GREGORIAN","METHOD:PUBLISH"];
+  S.templates.filter(t=>(t.days||[]).length).forEach(t=>{
+    const days = t.days.slice().sort();
+    // première occurrence : le prochain jour planifié à partir d'aujourd'hui
+    let k = 0; while(!days.includes(weekdayIdx(addDaysISO(todayISO(), k)))) k++;
+    const d = addDaysISO(todayISO(), k).replace(/-/g,"");
+    const mins = tplMinutes(t);
+    lines.push("BEGIN:VEVENT", `UID:forge-${t.id}@forge.app`, `DTSTAMP:${stamp}`, `DTSTART:${d}T${pad(hh)}${pad(mm)}00`,
+      `DURATION:PT${mins}M`, `RRULE:FREQ=WEEKLY;BYDAY=${days.map(x=>BYDAY[x]).join(",")}`,
+      `SUMMARY:${icsText("Forge · "+t.n)}`, `DESCRIPTION:${icsText(`${t.exos.length} exercices · ${t.exos.reduce((a,e)=>a+e.sets,0)} séries · ≈ ${mins} min`)}`);
+    if(calAlarm) lines.push("BEGIN:VALARM","ACTION:DISPLAY",`DESCRIPTION:${icsText("Séance Forge : "+t.n)}`,`TRIGGER:-PT${calAlarm}M`,"END:VALARM");
+    lines.push("END:VEVENT");
+  });
+  lines.push("END:VCALENDAR");
+  return lines.join("\r\n")+"\r\n";
+}
+Object.assign(ACT, {
+  openCalendarExport(){ openCalendarExport(); },
+  calAlarm(d, el){ calAlarm = +d.v; qsa(".cal-alarm .chip").forEach(c=>c.classList.toggle("on", +c.dataset.v===calAlarm)); },
+  calExport(){
+    const inp = qs("#calTime"); if(inp && /^\d\d:\d\d$/.test(inp.value)) calTime = inp.value;
+    const url = URL.createObjectURL(new Blob([buildICS()], { type:"text/calendar;charset=utf-8" }));
+    const a = document.createElement("a"); a.href = url; a.download = "forge-planning.ics";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 8000);
+    closeSheet(); sfx("set"); toast("Ouvre le fichier pour ajouter tes séances au Calendrier");
+  },
+});

@@ -3,8 +3,9 @@ let restState = null; // {endAt, totalSec, label, exoIdx}
 let restInterval = null;
 
 // arrived : le repos s'affiche déjà sur l'exercice qui vient ensuite (pas de nouveau saut à la fin)
-function startRestTimer(sec, label, exoIdx, arrived){
-  restState = { endAt: Date.now()+sec*1000, totalSec:sec, label:label||"Repos", exoIdx, arrived:!!arrived };
+// src : la série qui vient d'être validée (pour noter son ressenti pendant le repos)
+function startRestTimer(sec, label, exoIdx, arrived, src){
+  restState = { endAt: Date.now()+sec*1000, totalSec:sec, label:label||"Repos", exoIdx, arrived:!!arrived, src:src||null };
   renderRestBar();
   clearInterval(restInterval);
   restInterval = setInterval(tickRest, 250);
