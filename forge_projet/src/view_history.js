@@ -99,7 +99,7 @@ function sessionDetailHTML(s){
     return `<div class="row" style="align-items:flex-start">
       ${exoIcon(def)}
       <div class="grow"><div class="t">${esc(def.n)}</div>
-      <div class="set-chips">${sets.map(st=>`<span class="chip ${st.pr?"pr":""}">${st.pr?"💥 ":""}${st.reps||"?"}${st.weight!=null&&st.weight!==""?" × "+st.weight+" kg":""}</span>`).join("")}</div></div>
+      <div class="set-chips">${sets.map(st=>`<span class="chip ${st.pr?"pr":""}">${st.pr?"💥 ":""}${st.reps||"?"}${loadSuffix(def, st.weight)}</span>`).join("")}</div></div>
     </div>`;
   }).join("");
   const time = s.startedAt ? new Date(s.startedAt).toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit"}) : "";

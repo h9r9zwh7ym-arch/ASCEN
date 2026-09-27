@@ -1326,3 +1326,11 @@ h2.sh .more.strong{font-weight:700}
 .sheet-ft .btn.ghost{margin-top:4px}
 @media (prefers-reduced-motion:reduce){.ob-body.ob-in>*,.ob-hero img{animation:none}}
 .ob-points .s,.ob-points .t{white-space:normal}
+
+/* ================= v2.2 ================= */
+.big-stepper .band-val{font-size:calc(15rem/17)!important;min-width:76px;text-align:center;line-height:1.1}
+.exo-count{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:14px 20px 0}
+.ec-t{font-size:calc(13.5rem/17);color:var(--label2)}
+.ec-t b{color:var(--label);font-size:calc(15rem/17)}
+.exo-count .mini-step button[disabled]{opacity:.3}
+.ec-limit{margin:6px 20px 0;font-size:calc(12.5rem/17);color:var(--label2);line-height:1.35}

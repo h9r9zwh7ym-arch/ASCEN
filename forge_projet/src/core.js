@@ -6,7 +6,7 @@ function defaultState(){
     v:1,
     equipment: defaultEquipment(),
     prefs: { excluded:[], included:[] },
-    goals: { overall:"hypertrophie", emphasis:{}, daysPerWeek:3, sessionLength:"moyen" },
+    goals: { overall:"hypertrophie", emphasis:{}, daysPerWeek:3, sessionLength:"moyen", level:"intermediaire", exoCount:0 },
     sessions: [],
     draft: null,
     custom: { exos:[] },   // « Ma séance » : [{exoId, sets}]
@@ -51,6 +51,14 @@ function normalizeState(parsed){
     merged.medals = parsed.medals||{};
     merged.importedProgram = parsed.importedProgram||[];
     delete merged.settings.todayMode; // v1.2 : remplacé par todayTab (« Ma séance » en premier)
+    // v2.2 : nouveaux équipements. On garde le comportement précédent : un banc servait aussi
+    // aux exercices inclinés, et quiconque faisait du squat à la barre avait des supports.
+    const po = (parsed.equipment||{}).owned||{};
+    if(po.bench && po.bench_incline===undefined) merged.equipment.owned.bench_incline = true;
+    if(po.barbell && po.rack===undefined) merged.equipment.owned.rack = true;
+    // élastiques : des niveaux de résistance 1 à 5 (et plus des « kilos »)
+    const bw = (merged.equipment.weights.bands||[]).map(Number).filter(v=>v>=1 && v<=5);
+    merged.equipment.weights.bands = bw.length ? Array.from(new Set(bw.map(Math.round))).sort() : [2,3,4];
     delete merged.trophies; // ancien système de trophées (v1.0-1.1), remplacé par les médailles à paliers
     return merged;
   }
@@ -189,7 +197,8 @@ function daysSinceTrained_raw(muscleId){
 }
 function setVolume(st){ return (st.done? (st.reps||0)*(st.weight||0) : 0); }
 function sessionVolume(s){
-  return s.exos.reduce((t,ex)=>t+ex.sets.reduce((tt,st)=>tt+setVolume(st),0),0);
+  // tonnage en kg : les élastiques (niveaux de résistance) n'y entrent pas
+  return s.exos.reduce((t,ex)=>{ const d = EXO_MAP[ex.exoId]; if(d && loadableTypeOf(d)==="bands") return t; return t+ex.sets.reduce((tt,st)=>tt+setVolume(st),0); },0);
 }
 function sessionSetCount(s){
   return s.exos.reduce((t,ex)=>t+ex.sets.filter(st=>st.done).length,0);

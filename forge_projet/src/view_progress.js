@@ -121,12 +121,12 @@ function overviewPaneHTML(){
     </div>`:""}
     ${prs.length?`<h2 class="sh">Derniers records</h2><div class="group">${prs.map((p,i)=>`<button class="row tap stagger" style="--i:${10+i}" data-a="openExoChart" data-id="${p.def.id}">
       <div class="ico" style="background:var(--orange)">💥</div>
-      <div class="grow"><div class="t">${esc(p.def.n)}</div><div class="s">${p.st.reps} reps${p.st.weight?" × "+p.st.weight+" kg":""} · ${fmtRelative(p.s.date)}</div></div>
+      <div class="grow"><div class="t">${esc(p.def.n)}</div><div class="s">${p.st.reps} reps${loadSuffix(p.def, p.st.weight)} · ${fmtRelative(p.s.date)}</div></div>
       <span class="chev">${icon("chev")}</span></button>`).join("")}</div>`:""}`;
 }
 
 function exoSeries(id){
-  const def = EXO_MAP[id], loaded = !!loadableTypeOf(def), pts = [];
+  const def = EXO_MAP[id], loaded = !!kgType(def), pts = [];
   S.sessions.forEach(s=>{
     const ex = s.exos.find(x=>x.exoId===id);
     if(!ex) return;
@@ -170,7 +170,7 @@ function exoChartSheet(id){
   const cols = columnChart(last12.map(p=>({ label:lbl(p), v: loaded?Math.round(p.vol):p.reps, tip:`${fmtDate(p.s.date,"long")} : ${loaded?fmtKg(p.vol):p.reps+" reps"}` })), { fmt: v=> loaded?fmtKg(v):v+" reps" });
   const hist = pts.slice(-8).reverse().map(p=>`<div class="row" style="align-items:flex-start">
       <div class="grow"><div class="t" style="font-size:calc(15rem/17)">${esc(fmtDate(p.s.date,"long"))}</div>
-      <div class="set-chips">${p.done.map(st=>`<span class="chip ${st.pr?"pr":""}">${st.pr?"💥 ":""}${st.reps}${st.weight?" × "+st.weight+" kg":""}</span>`).join("")}</div></div>
+      <div class="set-chips">${p.done.map(st=>`<span class="chip ${st.pr?"pr":""}">${st.pr?"💥 ":""}${st.reps}${loadSuffix(def, st.weight)}</span>`).join("")}</div></div>
     </div>`).join("");
   openSheet(`<div class="sheet-hd"><span class="t">${esc(def.n)}</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
     <div class="sheet-body">

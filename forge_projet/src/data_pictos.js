@@ -43,6 +43,10 @@ const PICTO_OF = {
   curl_biceps:"curl", curl_marteau:"curl", curl_concentre:"curl", curl_incline:"curl", curl_barre:"curl", curl_biceps_elastique:"curl", curl_poignets:"curl",
   extension_triceps_nuque:"triceps", kickback_triceps:"triceps", extension_triceps_allonge:"triceps", barre_front:"triceps", extension_triceps_elastique:"triceps",
   shrugs_halteres:"carry", marche_fermier:"carry", kb_fermier:"carry",
+  // v2.2
+  roue_abdo_genoux:"plank", roue_abdo_debout:"plank", dips_barres:"dips", releve_genoux_barres:"dips", l_sit:"dips",
+  rowing_sangles:"row", pompes_sangles:"pushup", squat_sangles:"squat", curl_sangles:"curl", fallout_sangles:"plank",
+  rowing_inverse_barre:"row", tractions_scapulaires:"hang", corde_a_sauter:"cardio",
   // v1.7
   pompes_archer:"pushup", planche_commando:"plank", russian_twist:"crunch", flutter_kicks:"crunch", montees_genoux:"cardio", fentes_sautees:"lunge",
   ytw_sol:"raise", marche_ours:"plank", rowing_appui_banc:"row", squat_bulgare_halteres:"lunge", curl_zottman:"curl", mollets_assis_haltere:"calf",

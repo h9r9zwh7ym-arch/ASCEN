@@ -173,12 +173,18 @@ function proposalPaneHTML(draft){
     return `<div class="type-scroll">${typeChips}</div>${hero}
       <div class="empty-state"><span class="em">🧰</span>Pas d'exercice disponible pour ce type de séance avec ton matériel.<br>Essaie un autre type, ou complète ton matériel dans l'onglet Profil.</div>`;
   }
-  const rows = draft.exos.map((ex,i)=>exoRowHTML(EXO_MAP[ex.exoId], `${ex.targetSets} × ${repsLabel(ex.targetReps)}${ex.sets[0]&&ex.sets[0].weight?" · "+ex.sets[0].weight+" kg":""}`, i,
+  const rows = draft.exos.map((ex,i)=>exoRowHTML(EXO_MAP[ex.exoId], `${ex.targetSets} × ${repsLabel(ex.targetReps)}${ex.sets[0]&&ex.sets[0].weight?" · "+fmtLoad(EXO_MAP[ex.exoId], ex.sets[0].weight):""}`, i,
     `<button class="icon-btn" aria-label="Remplacer" data-a="swapExoOpen" data-idx="${i}">${icon("swap")}</button>
      <button class="icon-btn" aria-label="Retirer" data-a="removeExo" data-idx="${i}">${icon("close")}</button>`)).join("");
+  freshIds = new Set();
   return `<div class="type-scroll">${typeChips}</div>
     ${hero}
-    <div class="group" style="margin-top:12px">${rows}</div>
+    <div class="exo-count">
+      <div class="ec-t"><b>${draft.exos.length}</b> exercice${draft.exos.length>1?"s":""} · ${draft.exos.reduce((t,e)=>t+e.sets.length,0)} séries · ≈ ${estimateMinutes(draft)} min</div>
+      <div class="mini-step"><button aria-label="Un exercice de moins" data-a="draftCount" data-d="-1" ${draft.exos.length<=1?"disabled":""}>−</button><span>${draft.exos.length}</span><button aria-label="Un exercice de plus" data-a="draftCount" data-d="1" ${draft.exos.length>=10?"disabled":""}>+</button></div>
+    </div>
+    ${!imported && draft.exos.length < Math.min(sessionSize(), draft.resolvedType==="core"?5:10) ? `<div class="ec-limit">Ton matériel limite ce type de séance à ${draft.exos.length} exercice${draft.exos.length>1?"s":""}. Le « + » ajoute un exercice d'un autre groupe.</div>` : ""}
+    <div class="group" style="margin-top:8px">${rows}</div>
     <div class="btnrow">
       <button class="btn secondary sm" data-a="addExoOpen">${icon("plus")} Ajouter</button>
       ${imported?"":`<button class="btn secondary sm" data-a="regenSession">${icon("repeat")} Autre proposition</button>`}
@@ -619,7 +625,7 @@ function lastTimeHTML(exoId){
   if(!last) return `<div class="fc-last">Première fois : prends tes repères</div>`;
   const done = last.exo.sets.filter(s=>s.done);
   const w = done[0] && done[0].weight;
-  return `<div class="fc-last">La dernière fois (${fmtRelative(last.session.date)}) : ${done.map(s=>s.reps).join(" · ")}${w?" × "+w+" kg":""}</div>`;
+  return `<div class="fc-last">La dernière fois (${fmtRelative(last.session.date)}) : ${done.map(s=>s.reps).join(" · ")}${loadSuffix(EXO_MAP[exoId], w)}</div>`;
 }
 
 function renderFocusCard(idx, ex, def){
@@ -640,8 +646,8 @@ function renderFocusCard(idx, ex, def){
     const remain = Math.max(0, Math.round((restState.endAt-Date.now())/1000));
     const tIdx = restTarget(restState.exoIdx, restState.arrived), tEx = tIdx>=0 ? S.draft.exos[tIdx] : null;
     const next = tEx && tEx.sets.find(s=>!s.done), nDef = tEx && EXO_MAP[tEx.exoId];
-    const nextTxt = !next ? "" : tIdx===idx ? `Ensuite : ${next.reps} ${isTimed(def)?"s":"reps"}${next.weight?" × "+next.weight+" kg":""}`
-      : `Ensuite : <b>${esc(nDef.n)}</b> · ${next.reps} ${isTimed(nDef)?"s":"reps"}${next.weight?" × "+next.weight+" kg":""}`;
+    const nextTxt = !next ? "" : tIdx===idx ? `Ensuite : ${next.reps} ${isTimed(def)?"s":"reps"}${loadSuffix(def, next.weight)}`
+      : `Ensuite : <b>${esc(nDef.n)}</b> · ${next.reps} ${isTimed(nDef)?"s":"reps"}${loadSuffix(nDef, next.weight)}`;
     return `<div class="focus-card resting r-${regionOf(def)} ${animClass}">${header}
       ${setDots(-1)}
       <div class="fc-phase">Repos · respire</div>
@@ -653,7 +659,7 @@ function renderFocusCard(idx, ex, def){
   }
 
   if(allDone){
-    const recap = ex.sets.map(s=>`<span class="chip ${s.pr?"pr":""}">${s.pr?"💥 ":""}${s.reps||"?"}${s.weight!=null?" × "+s.weight+" kg":""}</span>`).join("");
+    const recap = ex.sets.map(s=>`<span class="chip ${s.pr?"pr":""}">${s.pr?"💥 ":""}${s.reps||"?"}${loadSuffix(def, s.weight)}</span>`).join("");
     return `<div class="focus-card r-${regionOf(def)} ${animClass}">${header}
       <div class="fc-done-badge">${icon("check")}</div>
       <div class="fc-done-t">Exercice terminé</div>
@@ -680,14 +686,16 @@ function renderFocusCard(idx, ex, def){
         <button class="bs-val ${valRoll.f==="reps"?"roll-"+valRoll.d:""}" aria-label="Saisir la valeur" data-a="editVal" data-f="reps" data-exi="${idx}" data-si="${si}">${st.reps??"–"}</button>
         <button aria-label="Plus" data-a="stepReps" data-exi="${idx}" data-si="${si}" data-d="1">+</button>
       </div></div>
-      ${hasWeight?`<div class="big-stepper"><div class="bs-label">Charge (kg)</div><div class="bs-row">
+      ${hasWeight?`<div class="big-stepper ${loadableTypeOf(def)==="bands"?"band":""}"><div class="bs-label">${loadableTypeOf(def)==="bands"?"Élastique":"Charge (kg)"}</div><div class="bs-row">
         <button aria-label="Moins" data-a="stepWeight" data-exi="${idx}" data-si="${si}" data-d="-1">−</button>
-        <button class="bs-val ${valRoll.f==="weight"?"roll-"+valRoll.d:""}" aria-label="Saisir la charge" data-a="editVal" data-f="weight" data-exi="${idx}" data-si="${si}">${st.weight??"–"}</button>
+        ${loadableTypeOf(def)==="bands"
+          ? `<span class="bs-val band-val ${valRoll.f==="weight"?"roll-"+valRoll.d:""}">${st.weight?bandLabel(st.weight):"–"}</span>`
+          : `<button class="bs-val ${valRoll.f==="weight"?"roll-"+valRoll.d:""}" aria-label="Saisir la charge" data-a="editVal" data-f="weight" data-exi="${idx}" data-si="${si}">${st.weight??"–"}</button>`}
         <button aria-label="Plus" data-a="stepWeight" data-exi="${idx}" data-si="${si}" data-d="1">+</button>
       </div></div>`:""}
     </div>
     ${lastTimeHTML(ex.exoId)}
-    ${hasWeight && (st.weight||0)>=8 && !S.draft.exos.some(e=>e.sets.some(x=>x.done)) ? `<div class="warmup">🔥 Échauffement : 1 série légère (≈ ${fmtDec(Math.max(1, Math.round((st.weight||0)*0.5)))} kg) de 8 à 10 répétitions avant de commencer.</div>` : ""}
+    ${kgType(def) && (st.weight||0)>=8 && !S.draft.exos.some(e=>e.sets.some(x=>x.done)) ? `<div class="warmup">🔥 Échauffement : 1 série légère (≈ ${fmtDec(Math.max(1, Math.round((st.weight||0)*0.5)))} kg) de 8 à 10 répétitions avant de commencer.</div>` : ""}
     ${ex.note?`<div class="exo-note" style="margin:0 0 14px">${esc(ex.note)}${ex.harder&&EXO_MAP[ex.harder]&&!ex.sets.some(s=>s.done)?`<button class="note-act" data-a="swapHarder" data-idx="${idx}">Essayer maintenant ${icon("chev")}</button>`:""}</div>`:""}
     ${isTimed(def)
       ? `<button class="btn big validate hold-go ${rr?"ready":""}" data-a="holdStart" data-exi="${idx}" data-si="${si}">${icon("timer")} Lancer le chrono · ${st.reps||30} s</button>
@@ -869,7 +877,7 @@ Object.assign(ACT, {
   },
   customFill(){
     const have = S.custom.exos.map(e=>e.exoId);
-    const target = SESSION_SIZE[S.goals.sessionLength]||6;
+    const target = sessionSize();
     const n = Math.max(have.length ? 1 : 3, target-have.length);
     const add = suggestComplement(have, Math.min(n, 4));
     if(!add.length){ toast("Aucun exercice disponible avec ton matériel"); return; }
@@ -960,6 +968,20 @@ Object.assign(ACT, {
   },
   editTemplateDays(d){ openTplEditor(d.id); },
   tplDayToggle(d, el){ el.classList.toggle("on"); },
+  draftCount(d){
+    const dir = parseInt(d.d,10), ex = S.draft.exos;
+    if(dir>0){
+      if(ex.length>=10) return;
+      const add = suggestComplement(ex.map(e=>e.exoId), 1)[0];
+      if(!add){ toast("Plus d'exercice disponible avec ton matériel"); return; }
+      ex.push(sessionEntryFor(add)); freshIds.add(add.id);
+    } else {
+      if(ex.length<=1) return;
+      ex.pop();
+    }
+    S.goals.exoCount = ex.length; // retenu pour les prochaines propositions
+    sfx("step", dir>0); save(); renderView("today");
+  },
   setType(d){ regenerateDraft(d.v); renderViewAnimated("today"); },
   startSession(){ if(!S.draft.exos.length) return; S.draft.startedAt = new Date().toISOString(); liveFocusIdx = 0; completeShown = false; save(); scrollTodayTop(); renderViewAnimated("today"); showLaunch(S.draft); },
   regenSession(){ regenerateDraft(); renderViewAnimated("today"); toast("Nouvelle proposition"); },
@@ -1217,7 +1239,7 @@ Object.assign(ACT, {
     const cat = EXO_CATS.find(c=>c.id===exoCategory(e));
     const stats = pr.count ? `<div class="stat-strip" style="margin-top:14px">
         <div class="stat-box"><div class="num">${pr.count}</div><div class="lbl">séance${pr.count>1?"s":""}</div></div>
-        <div class="stat-box"><div class="num">${pr.maxWeight?fmtDec(pr.maxWeight)+" kg":"–"}</div><div class="lbl">record charge</div></div>
+        <div class="stat-box"><div class="num">${pr.maxWeight?fmtLoad(e, pr.maxWeight):"–"}</div><div class="lbl">record charge</div></div>
         <div class="stat-box"><div class="num">${last?fmtRelative(last.session.date):"–"}</div><div class="lbl">dernière fois</div></div>
       </div>` : `<div class="first-time">Tu n'as encore jamais fait cet exercice : commence léger pour prendre tes repères.</div>`;
     const similar = availableExos().filter(x=>x.id!==e.id && x.muscles[0]===e.muscles[0]).slice(0,4);

@@ -147,7 +147,7 @@ Object.assign(ACT, {
   },
   tplEdFill(){
     const have = tplEdit.exos.map(x=>x.exoId);
-    const target = SESSION_SIZE[S.goals.sessionLength]||6;
+    const target = sessionSize();
     const add = suggestComplement(have, Math.min(4, Math.max(have.length?1:3, target-have.length)));
     if(!add.length){ toast("Aucun exercice disponible avec ton matériel"); return; }
     add.forEach(e=>tplEdit.exos.push({ exoId:e.id, sets:e.sets, fresh:true }));

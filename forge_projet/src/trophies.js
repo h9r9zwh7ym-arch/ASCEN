@@ -57,7 +57,7 @@ function balancedWeeks(){
 function maxRepsOneSession(){ return S.sessions.reduce((m,s)=>Math.max(m, sessionReps(s)), 0); }
 function heaviestSet(){
   let m = 0;
-  S.sessions.forEach(s=>s.exos.forEach(ex=>ex.sets.forEach(st=>{ if(st.done && st.weight>m) m = st.weight; })));
+  S.sessions.forEach(s=>s.exos.forEach(ex=>{ if(!kgType(EXO_MAP[ex.exoId])) return; ex.sets.forEach(st=>{ if(st.done && st.weight>m) m = st.weight; }); }));
   return m;
 }
 // Progression de force sur un exercice chargé : meilleur 1RM estimé comparé à la
@@ -68,7 +68,7 @@ function bestStrengthRatio(){
   // les séances sont déjà enregistrées dans l'ordre chronologique
   for(const s of S.sessions) for(const ex of s.exos){
     const def = EXO_MAP[ex.exoId];
-    if(!def || !loadableTypeOf(def)) continue;
+    if(!def || !kgType(def)) continue;
     let e = 0;
     for(const st of ex.sets) if(st.done && st.weight){ const v = estimated1RM(st.weight, st.reps); if(v>e) e = v; }
     if(e) (hist[ex.exoId]=hist[ex.exoId]||[]).push({ date:s.date, e });

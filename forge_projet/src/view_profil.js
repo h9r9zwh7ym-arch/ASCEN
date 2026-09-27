@@ -1,6 +1,8 @@
 // ================= VUE : PROFIL =================
 const GOAL_LABELS = { force:"Force", hypertrophie:"Prise de masse", endurance:"Endurance" };
 const LEN_LABELS = { court:"Courte (≈20 min)", moyen:"Moyenne (≈35 min)", long:"Longue (≈50 min)" };
+const LEVEL_LABELS = { debutant:"Débutant·e", intermediaire:"Intermédiaire", avance:"Avancé·e" };
+const LEVEL_HINTS = { debutant:"Moins d'un an de musculation régulière : exercices accessibles, technique d'abord.", intermediaire:"Un à trois ans de pratique : tous les exercices standard.", avance:"Plus de trois ans : variantes exigeantes privilégiées." };
 
 function ownedEquipCount(){ return EQUIP_TYPES.filter(e=>!e.always && S.equipment.owned[e.id]).length; }
 
@@ -213,18 +215,26 @@ function openInstall(){
 }
 
 // ---------- Matériel ----------
-const EQUIP_GLYPH = { dumbbells:"dumbbell", barbell:"barbell", kettlebell:"kettlebell", bench:"bench", pullup_bar:"bar", bands:"band", mat:"mat", bodyweight:"person" };
-const EQUIP_COLOR = { dumbbells:"orange", barbell:"indigo", kettlebell:"brown", bench:"teal", pullup_bar:"blue", bands:"green", mat:"purple", bodyweight:"mint" };
+const EQUIP_GLYPH = { dumbbells:"dumbbell", barbell:"barbell", kettlebell:"kettlebell", bench:"bench", bench_incline:"benchIncline", bench_press:"benchPress", rack:"rack", pullup_bar:"bar", dip_bars:"dips", suspension:"straps", ab_roller:"wheel", bands:"band", jump_rope:"rope", mat:"mat", bodyweight:"person" };
+const EQUIP_COLOR = { dumbbells:"orange", barbell:"indigo", kettlebell:"brown", bench:"teal", bench_incline:"teal", bench_press:"indigo", rack:"gray", pullup_bar:"blue", dip_bars:"blue", suspension:"yellow", ab_roller:"red", bands:"green", jump_rope:"pink", mat:"purple", bodyweight:"mint" };
 function equipBodyHTML(){
   const rows = EQUIP_TYPES.filter(e=>!e.always).map(e=>{
     const on = S.equipment.owned[e.id];
     return `<div class="row">
       ${sfIcon(EQUIP_GLYPH[e.id]||"wrench", EQUIP_COLOR[e.id]||"gray")}
-      <div class="grow"><div class="t">${esc(e.n)}</div></div>
+      <div class="grow"><div class="t">${esc(e.n)}</div>${e.hint && !e.loadable ? `<div class="s">${esc(e.hint)}</div>` : ""}</div>
       <button class="switch ${on?"on":""}" data-a="toggleEquip" data-id="${e.id}"></button>
     </div>`;
   }).join("");
   const weightEditors = EQUIP_TYPES.filter(e=>e.loadable && S.equipment.owned[e.id]).map(e=>{
+    if(e.id==="bands"){
+      const own = new Set(S.equipment.weights.bands||[]);
+      return `<div class="card" style="margin-top:12px">
+        <div style="font-weight:700;margin-bottom:2px">${esc(e.n)}</div>
+        <div class="hr-note" style="margin:0 0 10px">${esc(e.hint)} La progression passera d'une résistance à la suivante.</div>
+        <div class="chips" style="padding:0">${[1,2,3,4,5].map(v=>`<button class="chip ${own.has(v)?"on":""}" data-a="toggleBand" data-v="${v}">${bandLabel(v)}</button>`).join("")}</div>
+      </div>`;
+    }
     const list = (S.equipment.weights[e.id]||[]).slice().sort((a,b)=>a-b);
     const chips = list.map(w=>`<span class="chip on">${w} ${e.unit} <button data-a="removeWeight" data-id="${e.id}" data-w="${w}" style="margin-left:4px">${icon("close")}</button></span>`).join("");
     return `<div class="card" style="margin-top:12px">
@@ -240,7 +250,7 @@ function equipBodyHTML(){
   const customs = S.equipment.custom.map(c=>`<div class="row">${sfIcon("wrench","gray")}<div class="grow"><div class="t">${esc(c.n)}</div></div><button class="icon-btn" data-a="removeCustom" data-id="${c.id}">${icon("close")}</button></div>`).join("");
   return `<div class="group">${rows}</div>${weightEditors}
     <h2 class="sh">Autre équipement</h2>
-    <div class="hr-note" style="margin-top:-6px">Informatif — ajoute librement ce que tu possèdes (banc réglable, TRX…). N'affecte pas encore la suggestion automatique.</div>
+    <div class="hr-note" style="margin-top:-6px">Pour mémoire : ces équipements n'influencent pas les séances proposées. Le matériel ci-dessus, lui, est pris en compte.</div>
     <div class="group" style="margin-top:10px">${customs}
       <div class="row"><input placeholder="Nom de l'équipement" id="customEquipName" style="flex:1;border:0;background:transparent;height:100%;font-size:calc(17rem/17)"><button class="btn sm" data-a="addCustomEquip">Ajouter</button></div>
     </div>`;
@@ -266,7 +276,14 @@ function goalsBodyHTML(){
     <div class="field" style="padding:10px 14px"><div class="stepper">
       <button data-a="stepDays" data-d="-1">−</button><div class="val">${S.goals.daysPerWeek}×/sem.</div><button data-a="stepDays" data-d="1">+</button>
     </div></div>
+    <h2 class="sh">Niveau</h2><div class="chips">${Object.keys(LEVEL_LABELS).map(k=>`<button class="chip ${(S.goals.level||"intermediaire")===k?"on":""}" data-a="setLevel" data-v="${k}">${LEVEL_LABELS[k]}</button>`).join("")}</div>
+    <p class="hr-note">${LEVEL_HINTS[S.goals.level||"intermediaire"]}</p>
     <h2 class="sh">Durée de séance</h2><div class="chips">${lenChips}</div>
+    <h2 class="sh">Exercices par séance proposée</h2>
+    <div class="field" style="padding:10px 14px"><div class="stepper">
+      <button data-a="stepExoCount" data-d="-1" aria-label="Moins d'exercices">−</button><div class="val">${sessionSize()} exercices</div><button data-a="stepExoCount" data-d="1" aria-label="Plus d'exercices">+</button>
+    </div></div>
+    <p class="hr-note">${S.goals.exoCount ? "Réglage personnalisé. " : "Réglé automatiquement selon la durée. "}Environ ${sessionSize()*3} séries, ≈ ${Math.round(sessionSize()*3*(40+75)/60/5)*5} min.</p>
     <h2 class="sh">Groupes musculaires</h2>
     <p class="hr-note" style="margin-top:-6px">Touche un groupe pour faire défiler : normal → à prioriser → à éviter.</p>
     <div class="group" style="margin-top:10px">${emphasisRows}</div>`;
@@ -347,11 +364,16 @@ Object.assign(ACT, {
   openEquip, openGoals, openExoPrefs, openExportImport, openAppearance, openAbout,
   backupData(){ backupData(); }, restoreData(){ restoreData(); }, openInstall(){ openInstall(); },
   backupLater(){ S.meta.backupSnooze = todayISO(); save(); const c = qs(".backup-nudge"); if(c){ c.classList.add("leaving"); setTimeout(()=>changed(), 250); } else changed(); },
-  toggleEquip(d){ S.equipment.owned[d.id] = !S.equipment.owned[d.id]; save(); refreshEquip(); },
+  toggleEquip(d){ S.equipment.owned[d.id] = !S.equipment.owned[d.id]; save(); refreshEquip(); regenerateDraftIfIdle(); },
   addWeight(d){
     const input = qs("#wadd-"+d.id); const v = parseFloat(String(input.value).replace(",", "."));
     if(!isNaN(v) && v>0){ S.equipment.weights[d.id] = Array.from(new Set([...(S.equipment.weights[d.id]||[]), v])); save(); }
     refreshEquip();
+  },
+  toggleBand(d){
+    const v = +d.v, cur = new Set(S.equipment.weights.bands||[]);
+    if(cur.has(v)) cur.delete(v); else cur.add(v);
+    S.equipment.weights.bands = Array.from(cur).sort(); save(); refreshEquip();
   },
   removeWeight(d){
     S.equipment.weights[d.id] = (S.equipment.weights[d.id]||[]).filter(w=>w!==parseFloat(d.w));
@@ -365,7 +387,9 @@ Object.assign(ACT, {
   removeCustom(d){ S.equipment.custom = S.equipment.custom.filter(c=>c.id!==d.id); save(); refreshEquip(); },
 
   setGoalOverall(d){ S.goals.overall = d.v; save(); refreshGoals(); },
-  setSessionLength(d){ S.goals.sessionLength = d.v; save(); refreshGoals(); },
+  setSessionLength(d){ S.goals.sessionLength = d.v; S.goals.exoCount = 0; save(); refreshGoals(); regenerateDraftIfIdle(); },
+  setLevel(d){ S.goals.level = d.v; save(); refreshGoals(); regenerateDraftIfIdle(); },
+  stepExoCount(d){ S.goals.exoCount = Math.max(2, Math.min(10, sessionSize()+parseInt(d.d,10))); save(); refreshGoals(); regenerateDraftIfIdle(); },
   stepDays(d){ S.goals.daysPerWeek = Math.max(2,Math.min(6, S.goals.daysPerWeek+parseInt(d.d,10))); save(); refreshGoals(); },
   cycleEmphasis(d){
     const cur = S.goals.emphasis[d.id]||"normal";

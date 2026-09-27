@@ -1327,6 +1327,13 @@ h2.sh .more.strong{font-weight:700}
 .sheet-ft .btn.ghost{margin-top:4px}
 @media (prefers-reduced-motion:reduce){.ob-body.ob-in>*,.ob-hero img{animation:none}}
 .ob-points .s,.ob-points .t{white-space:normal}
+
+/* ================= v2.2 ================= */
+.big-stepper .band-val{font-size:calc(15rem/17)!important;min-width:76px;text-align:center;line-height:1.1}
+.exo-count{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:14px 20px 0}
+.ec-t{font-size:calc(13.5rem/17);color:var(--label2)}
+.ec-t b{color:var(--label);font-size:calc(15rem/17)}
+.exo-count .mini-step button[disabled]{opacity:.3}
 </style></head><body><div id="app"></div><nav class="tabbar" aria-label="Onglets"></nav><div id="restbar"></div><div id="overlay" role="dialog"></div><div id="toast" role="status" aria-live="polite"></div><input type="file" id="fileImport" accept="application/json,.json" style="display:none"><script>
 // ================= MATÉRIEL =================
 // Catalogue du matériel reconnu par le moteur de suggestion. Chaque exercice de la
@@ -1339,11 +1346,23 @@ const EQUIP_TYPES = [
   { id:"dumbbells",  n:"Haltères",        em:"🏋️", loadable:true, unit:"kg", hint:"Renseigne les paires que tu possèdes (ex. 8 kg, 12 kg)." },
   { id:"barbell",    n:"Barre + disques", em:"🏋️‍♂️", loadable:true, unit:"kg", hint:"Poids total que tu peux charger (barre comprise)." },
   { id:"kettlebell", n:"Kettlebell",      em:"🔔", loadable:true, unit:"kg", hint:"Renseigne les kettlebells que tu possèdes." },
-  { id:"bench",      n:"Banc",            em:"🛋️" },
+  { id:"bench",      n:"Banc plat",       em:"🛋️", hint:"Banc de musculation à plat (ou banc solide)." },
+  { id:"bench_incline", n:"Banc inclinable", em:"📐", hint:"Dossier réglable : développé et curl inclinés." },
+  { id:"bench_press",n:"Banc de développé couché", em:"🏋️", hint:"Banc avec supports de barre : développé couché à la barre." },
+  { id:"rack",       n:"Rack / supports de squat", em:"🏗️", hint:"Indispensable pour le squat à la barre en sécurité." },
   { id:"pullup_bar", n:"Barre de traction", em:"🚪" },
-  { id:"bands",      n:"Élastiques",      em:"➰", loadable:true, unit:"niveau", hint:"Renseigne les résistances que tu possèdes (léger, moyen, fort)." },
+  { id:"dip_bars",   n:"Barres parallèles (dips)", em:"🤸" },
+  { id:"suspension", n:"Sangles de suspension", em:"🪢", hint:"Type TRX, fixées à une porte ou une barre." },
+  { id:"ab_roller",  n:"Roue abdominale", em:"🛞" },
+  { id:"bands",      n:"Élastiques",      em:"➰", loadable:true, unit:"niveau", hint:"Coche les résistances que tu possèdes." },
+  { id:"jump_rope",  n:"Corde à sauter",  em:"🪢" },
   { id:"mat",        n:"Tapis de sol",    em:"🧘" },
 ];
+// un équipement en implique d'autres (un banc de développé ou inclinable s'utilise aussi à plat)
+const EQUIP_IMPLIES = { bench_press:["bench"], bench_incline:["bench"] };
+// résistances d'élastiques : des niveaux, pas des kilos
+const BAND_LEVELS = ["", "Très légère", "Légère", "Moyenne", "Forte", "Très forte"];
+function bandLabel(v){ return BAND_LEVELS[Math.round(v)] || ("Niveau "+v); }
 const EQUIP_MAP = {};
 EQUIP_TYPES.forEach(e=>EQUIP_MAP[e.id]=e);
 
@@ -1353,15 +1372,20 @@ const DEFAULT_INCREMENT = { barbell:2.5, dumbbells:1, kettlebell:2, bands:1 };
 
 function defaultEquipment(){
   return {
-    owned:{ bodyweight:true, dumbbells:false, barbell:false, kettlebell:false, bench:false, pullup_bar:false, bands:false, mat:false },
+    owned:{ bodyweight:true, dumbbells:false, barbell:false, kettlebell:false, bench:false, bench_incline:false, bench_press:false, rack:false, pullup_bar:false, dip_bars:false, suspension:false, ab_roller:false, bands:false, jump_rope:false, mat:false },
     weights:{ dumbbells:[], barbell:[], kettlebell:[], bands:[] }, // ex. dumbbells:[8,12], bands:["léger","moyen"]
     custom:[] // [{id,n}] équipements libres, informatifs (extensibles au fil du temps)
   };
 }
 
+function ownsEquip(eq, id){
+  if(id==="bodyweight" || eq.owned[id]) return true;
+  return Object.keys(EQUIP_IMPLIES).some(k=>eq.owned[k] && EQUIP_IMPLIES[k].includes(id));
+}
+// chaque élément de la liste est requis ; « a|b » = l'un ou l'autre suffit
 function hasEquip(eq, list){
   if(!list || !list.length) return true;
-  return list.every(id=>id==="bodyweight" || eq.owned[id]);
+  return list.every(id=>id.split("|").some(x=>ownsEquip(eq, x)));
 }
 
 // Catégories d'affichage des exercices : l'équipement principal qui les caractérise
@@ -1373,9 +1397,13 @@ const EXO_CATS = [
   { id:"kettlebell", n:"Kettlebell",       em:"🔔" },
   { id:"bands",      n:"Élastiques",       em:"➰" },
   { id:"pullup_bar", n:"Barre de traction", em:"🚪" },
+  { id:"dip_bars",   n:"Barres parallèles", em:"🤸" },
+  { id:"suspension", n:"Sangles de suspension", em:"🪢" },
+  { id:"ab_roller",  n:"Roue abdominale",  em:"🛞" },
+  { id:"jump_rope",  n:"Corde à sauter",   em:"🪢" },
 ];
 function exoCategory(e){
-  for(const c of ["dumbbells","barbell","kettlebell","bands","pullup_bar"]) if(e.equip.includes(c)) return c;
+  for(const c of ["dumbbells","barbell","kettlebell","bands","pullup_bar","dip_bars","suspension","ab_roller","jump_rope"]) if(e.equip.includes(c)) return c;
   return "bodyweight";
 }
 // ================= EXERCICES =================
@@ -1479,7 +1507,7 @@ const EXO_RAW = [
 ["dc_haltere","Développé couché haltères",["pect","triceps","epaules"],["dumbbells","bench"],"push",false,{sets:3,repsMin:8,repsMax:12,restSec:90},
   ["Allongé sur le banc, haltères au niveau de la poitrine, coudes à ~45°.","Pousse les haltères vers le haut sans les entrechoquer, extension quasi complète.","Redescends contrôlé jusqu'à un étirement confortable de la poitrine."],
   "Garde toujours le contrôle de la charge, surtout en fin de série ; utilise un poids que tu peux reposer en sécurité."],
-["dc_incline_haltere","Développé incliné haltères",["pect","epaules","triceps"],["dumbbells","bench"],"push",false,{sets:3,repsMin:8,repsMax:12,restSec:90},
+["dc_incline_haltere","Développé incliné haltères",["pect","epaules","triceps"],["dumbbells","bench_incline"],"push",false,{sets:3,repsMin:8,repsMax:12,restSec:90},
   ["Banc incliné à 30-45°, haltères au niveau du haut de la poitrine.","Pousse vers le haut en gardant les omoplates serrées contre le banc.","Redescends contrôlé."],
   "Une inclinaison trop forte (>45°) sollicite davantage l'épaule que le haut des pectoraux."],
 ["ecarte_couche","Écarté couché haltères",["pect"],["dumbbells","bench"],"push",false,{sets:3,repsMin:10,repsMax:15,restSec:75},
@@ -1536,10 +1564,10 @@ const EXO_RAW = [
 ["thruster_haltere","Thruster haltères",["quadriceps","epaules","fessiers"],["dumbbells"],"squat",false,{sets:3,repsMin:8,repsMax:12,restSec:90},
   ["Haltères au niveau des épaules, descends en squat complet.","Remonte en poussant sur les jambes et enchaîne un développé épaules.","Redescends les haltères aux épaules avant la répétition suivante."],
   "Exercice combiné exigeant en cardio : commence avec une charge modérée pour garder la forme."],
-["squat_barre","Squat barre (back squat)",["quadriceps","fessiers"],["barbell"],"squat",false,{sets:4,repsMin:5,repsMax:10,restSec:120},
+["squat_barre","Squat barre (back squat)",["quadriceps","fessiers"],["barbell","rack"],"squat",false,{sets:4,repsMin:5,repsMax:10,restSec:120},
   ["Barre posée sur le haut du dos (trapèzes), pieds largeur d'épaules.","Descends hanches en arrière et vers le bas, dos neutre, genoux dans l'axe des pieds.","Remonte en poussant le sol, sans perdre l'alignement du dos."],
   "Utilise un cadre de sécurité ou des supports réglés à hauteur de squat si tu t'entraînes seul avec une charge proche du maximum."],
-["dc_barre","Développé couché barre",["pect","triceps","epaules"],["barbell","bench"],"push",false,{sets:4,repsMin:5,repsMax:10,restSec:120},
+["dc_barre","Développé couché barre",["pect","triceps","epaules"],["barbell","bench","rack|bench_press"],"push",false,{sets:4,repsMin:5,repsMax:10,restSec:120},
   ["Allongé, prise un peu plus large que les épaules, barre au niveau de la poitrine.","Descends la barre contrôlée jusqu'à toucher légèrement la poitrine.","Pousse vers le haut en expirant, sans rebondir sur la poitrine."],
   "Entraîne-toi avec un partenaire ou des butées de sécurité pour les charges proches du maximum ; ne bloque jamais les coudes brutalement."],
 ["deadlift_barre","Soulevé de terre (deadlift)",["ischios","fessiers","dos"],["barbell"],"hinge",false,{sets:4,repsMin:4,repsMax:8,restSec:150},
@@ -1625,7 +1653,7 @@ const EXO_RAW = [
 ["squeeze_press","Développé serré haltères (squeeze press)",["pect","triceps"],["dumbbells","bench"],"push",false,{sets:3,repsMin:10,repsMax:12,restSec:75},
   ["Allongé sur le banc, haltères collés l'un contre l'autre au-dessus de la poitrine.","Descends-les ensemble jusqu'à la poitrine en les pressant l'un contre l'autre.","Pousse vers le haut en maintenant la pression entre les haltères."],
   "Charge modérée : la pression constante entre les haltères suffit à solliciter fortement les pectoraux."],
-["ecarte_incline","Écarté incliné haltères",["pect","epaules"],["dumbbells","bench"],"push",false,{sets:3,repsMin:10,repsMax:15,restSec:60},
+["ecarte_incline","Écarté incliné haltères",["pect","epaules"],["dumbbells","bench_incline"],"push",false,{sets:3,repsMin:10,repsMax:15,restSec:60},
   ["Banc incliné à 30-45°, haltères au-dessus du haut de la poitrine.","Ouvre les bras en arc de cercle, coudes légèrement fléchis.","Ramène les haltères en contractant le haut des pectoraux."],
   "Nécessite un banc réglable ; ne descends pas au-delà d'un étirement confortable de l'épaule."],
 ["pullover_haltere","Pull-over haltère",["pect","dos"],["dumbbells","bench"],"pull",false,{sets:3,repsMin:10,repsMax:12,restSec:60},
@@ -1638,7 +1666,7 @@ const EXO_RAW = [
 ["curl_concentre","Curl concentré",["biceps"],["dumbbells","bench"],"pull",true,{sets:3,repsMin:10,repsMax:12,restSec:45},
   ["Assis sur le banc, coude calé contre l'intérieur de la cuisse.","Monte l'haltère vers l'épaule sans bouger le coude.","Redescends lentement jusqu'à l'extension."],
   "Isolation stricte : réduis la charge plutôt que de t'aider du buste."],
-["curl_incline","Curl incliné haltères",["biceps"],["dumbbells","bench"],"pull",false,{sets:3,repsMin:8,repsMax:12,restSec:60},
+["curl_incline","Curl incliné haltères",["biceps"],["dumbbells","bench_incline"],"pull",false,{sets:3,repsMin:8,repsMax:12,restSec:60},
   ["Assis sur un banc incliné, bras pendants, paumes vers l'avant.","Fléchis les coudes sans les avancer.","Redescends lentement jusqu'à l'extension complète."],
   "L'étirement du biceps est important en bas du mouvement : commence plus léger qu'au curl debout."],
 ["extension_triceps_allonge","Extension triceps allongé (haltères)",["triceps"],["dumbbells","bench"],"push",false,{sets:3,repsMin:8,repsMax:12,restSec:60},
@@ -1669,10 +1697,10 @@ const EXO_RAW = [
 ["rdl_barre","Soulevé de terre roumain barre",["ischios","fessiers"],["barbell"],"hinge",false,{sets:3,repsMin:6,repsMax:10,restSec:120},
   ["Debout, barre en main devant les cuisses, genoux légèrement fléchis.","Bascule le bassin en arrière, barre le long des cuisses, dos neutre.","Remonte en poussant les hanches vers l'avant."],
   "Arrête la descente dès que le dos commence à s'arrondir ; la barre reste au contact des jambes."],
-["dc_incline_barre","Développé incliné barre",["pect","epaules","triceps"],["barbell","bench"],"push",false,{sets:3,repsMin:6,repsMax:10,restSec:120},
+["dc_incline_barre","Développé incliné barre",["pect","epaules","triceps"],["barbell","bench_incline","rack"],"push",false,{sets:3,repsMin:6,repsMax:10,restSec:120},
   ["Banc incliné à 30-45°, barre au-dessus du haut de la poitrine.","Descends la barre contrôlée vers le haut de la poitrine.","Pousse vers le haut en gardant les omoplates serrées."],
   "Nécessite un banc réglable ; utilise des butées ou un partenaire pour les charges lourdes."],
-["dc_serre_barre","Développé couché prise serrée",["triceps","pect"],["barbell","bench"],"push",false,{sets:3,repsMin:6,repsMax:10,restSec:120},
+["dc_serre_barre","Développé couché prise serrée",["triceps","pect"],["barbell","bench","rack|bench_press"],"push",false,{sets:3,repsMin:6,repsMax:10,restSec:120},
   ["Allongé, mains à largeur d'épaules sur la barre.","Descends la barre vers le bas de la poitrine, coudes près du corps.","Pousse en expirant jusqu'à l'extension."],
   "Ne serre pas les mains plus que la largeur des épaules : une prise trop étroite charge les poignets."],
 ["barre_front","Barre au front",["triceps"],["barbell","bench"],"push",false,{sets:3,repsMin:8,repsMax:12,restSec:75},
@@ -1723,7 +1751,7 @@ const EXO_RAW = [
 ["marche_ours","Marche de l'ours (bear crawl)",["abdos","epaules","cardio"],["bodyweight"],"core",false,{sets:3,repsMin:20,repsMax:40,restSec:45},
   ["À quatre pattes, genoux décollés de quelques centimètres.","Avance en bougeant main et pied opposés en même temps.","Garde le dos plat et le bassin stable pendant la durée (en secondes)."],
   "Garde les genoux bas et les pas courts pour ne pas perdre le gainage."],
-["rowing_appui_banc","Rowing haltères appui sur banc incliné",["dos","biceps"],["dumbbells","bench"],"pull",false,{sets:3,repsMin:8,repsMax:12,restSec:75},
+["rowing_appui_banc","Rowing haltères appui sur banc incliné",["dos","biceps"],["dumbbells","bench_incline"],"pull",false,{sets:3,repsMin:8,repsMax:12,restSec:75},
   ["Allongé sur le ventre sur le banc incliné, un haltère dans chaque main.","Tire les coudes vers l'arrière en serrant les omoplates.","Redescends contrôlé jusqu'à l'extension des bras."],
   "Le banc soutient le buste : idéal pour épargner le bas du dos. Évite de relever la tête."],
 ["squat_bulgare_halteres","Squat bulgare haltères",["quadriceps","fessiers"],["dumbbells","bench"],"lunge",true,{sets:3,repsMin:8,repsMax:12,restSec:90},
@@ -1738,16 +1766,16 @@ const EXO_RAW = [
 ["woodchopper_haltere","Bûcheron haltère (woodchopper)",["abdos","epaules"],["dumbbells"],"core",true,{sets:3,repsMin:10,repsMax:12,restSec:45},
   ["Debout, haltère tenu à deux mains près d'une hanche, genoux légèrement fléchis.","Monte l'haltère en diagonale au-dessus de l'épaule opposée en pivotant le buste et le pied arrière.","Redescends contrôlé ; fais toutes les reps d'un côté puis change."],
   "La rotation vient des hanches et du buste ensemble : ne tords pas uniquement le bas du dos."],
-["front_squat_barre","Front squat barre",["quadriceps","fessiers","abdos"],["barbell"],"squat",false,{sets:4,repsMin:5,repsMax:8,restSec:120},
+["front_squat_barre","Front squat barre",["quadriceps","fessiers","abdos"],["barbell","rack"],"squat",false,{sets:4,repsMin:5,repsMax:8,restSec:120},
   ["Barre posée sur l'avant des épaules, coudes hauts.","Descends en gardant le buste droit, genoux dans l'axe des pieds.","Remonte en poussant le sol, coudes toujours hauts."],
   "Si les coudes tombent, la barre glisse : réduis la charge et travaille la mobilité des poignets."],
-["fente_arriere_barre","Fente arrière barre",["quadriceps","fessiers"],["barbell"],"lunge",true,{sets:3,repsMin:6,repsMax:10,restSec:90},
+["fente_arriere_barre","Fente arrière barre",["quadriceps","fessiers"],["barbell","rack"],"lunge",true,{sets:3,repsMin:6,repsMax:10,restSec:90},
   ["Barre sur le haut du dos, pieds largeur de hanches.","Recule d'un grand pas et descends jusqu'à ce que les deux genoux soient proches de 90°.","Reviens en poussant sur le talon avant."],
   "Garde le buste droit et commence léger : la barre rend l'équilibre plus délicat."],
 ["shrugs_barre","Shrugs barre",["dos"],["barbell"],"pull",false,{sets:3,repsMin:10,repsMax:15,restSec:60},
   ["Debout, barre tenue bras tendus devant les cuisses.","Monte les épaules vers les oreilles sans plier les coudes.","Tiens une seconde en haut puis redescends lentement."],
   "Ne fais pas rouler les épaules : un mouvement vertical suffit et épargne l'articulation."],
-["good_morning_barre","Good morning barre",["ischios","fessiers","dos"],["barbell"],"hinge",false,{sets:3,repsMin:8,repsMax:12,restSec:90},
+["good_morning_barre","Good morning barre",["ischios","fessiers","dos"],["barbell","rack"],"hinge",false,{sets:3,repsMin:8,repsMax:12,restSec:90},
   ["Barre sur le haut du dos, genoux légèrement fléchis.","Pousse les hanches en arrière en inclinant le buste, dos neutre.","Remonte en contractant fessiers et ischios."],
   "Exercice technique : commence avec la barre à vide et arrête la descente dès que le dos s'arrondit."],
 ["halo_kb","Halo kettlebell",["epaules","abdos"],["kettlebell"],"push",false,{sets:3,repsMin:6,repsMax:10,restSec:45},
@@ -1777,6 +1805,46 @@ const EXO_RAW = [
 ["releve_jambes_suspendu","Relevé de jambes tendues suspendu",["abdos"],["bodyweight","pullup_bar"],"core",false,{sets:3,repsMin:6,repsMax:12,restSec:75},
   ["Suspendu à la barre, épaules engagées, corps immobile.","Monte les jambes tendues jusqu'à l'horizontale ou plus haut.","Redescends lentement sans te balancer."],
   "Si tu te balances, reviens au relevé de genoux suspendu."],
+// --- ajouts v2.2 : nouveaux équipements ---
+["roue_abdo_genoux","Roue abdominale à genoux",["abdos","dos"],["ab_roller"],"core",false,{sets:3,repsMin:6,repsMax:12,restSec:60},
+  ["À genoux sur un tapis, mains sur la roue sous les épaules, bassin légèrement rentré.","Roule vers l'avant en gardant le dos plat, aussi loin que tu restes gainé.","Reviens en tirant avec les abdos, sans creuser le bas du dos."],
+  "Commence par une amplitude courte (15 à 20 cm) et allonge progressivement : le bas du dos ne doit jamais se cambrer."],
+["roue_abdo_debout","Roue abdominale debout",["abdos","dos","epaules"],["ab_roller"],"core",false,{sets:3,repsMin:3,repsMax:8,restSec:90},
+  ["Debout, jambes tendues, pose la roue au sol devant tes pieds.","Roule vers l'avant jusqu'à la limite où tu restes parfaitement gainé.","Reviens sans plier les hanches en premier."],
+  "Variante très avancée : maîtrise d'abord 12 roulés complets à genoux."],
+["dips_barres","Dips aux barres parallèles",["triceps","pect","epaules"],["dip_bars"],"push",false,{sets:3,repsMin:5,repsMax:12,restSec:90},
+  ["En appui bras tendus, épaules basses, buste légèrement penché.","Descends jusqu'à ce que les bras soient proches de l'horizontale.","Pousse pour revenir bras tendus, sans balancer."],
+  "Ne descends pas plus bas qu'un angle confortable pour l'épaule ; commence par des descentes lentes si besoin."],
+["releve_genoux_barres","Relevé de genoux aux barres parallèles",["abdos"],["dip_bars"],"core",false,{sets:3,repsMin:8,repsMax:15,restSec:60},
+  ["En appui sur les avant-bras ou bras tendus, dos contre le dossier si ta station en a un.","Monte les genoux vers la poitrine en enroulant le bassin.","Redescends lentement sans te balancer."],
+  "Garde les épaules basses et actives pendant tout l'exercice."],
+["l_sit","L-sit aux barres parallèles",["abdos","triceps"],["dip_bars"],"core",false,{sets:3,repsMin:10,repsMax:30,restSec:75},
+  ["En appui bras tendus, épaules basses.","Monte les jambes tendues à l'horizontale (ou genoux fléchis pour débuter).","Tiens la position en respirant (durée en secondes)."],
+  "Exercice avancé : commence genoux fléchis (tuck) et allonge les jambes avec le temps."],
+["rowing_sangles","Rowing aux sangles",["dos","biceps"],["suspension"],"pull",false,{sets:3,repsMin:8,repsMax:15,restSec:60},
+  ["Poignées en main, corps droit et incliné vers l'arrière, pieds devant.","Tire la poitrine vers les mains en serrant les omoplates.","Redescends contrôlé jusqu'aux bras tendus."],
+  "Plus tu avances les pieds, plus c'est difficile : règle l'inclinaison pour rester dans la fourchette de répétitions."],
+["pompes_sangles","Pompes aux sangles",["pect","triceps","epaules"],["suspension"],"push",false,{sets:3,repsMin:8,repsMax:15,restSec:75},
+  ["Mains dans les poignées, corps incliné et aligné.","Descends en ouvrant les bras jusqu'à ce que les mains arrivent à hauteur de poitrine.","Pousse en gardant les sangles près du corps."],
+  "L'instabilité rend l'exercice exigeant pour les épaules : commence debout, peu incliné."],
+["squat_sangles","Squat unilatéral assisté aux sangles",["quadriceps","fessiers"],["suspension"],"squat",true,{sets:3,repsMin:6,repsMax:12,restSec:75},
+  ["Poignées en main, en appui sur une jambe, l'autre tendue devant.","Descends en arrière, les sangles t'aidant à garder l'équilibre.","Remonte en poussant sur le talon."],
+  "Utilise les bras seulement pour l'équilibre, pas pour te tirer vers le haut."],
+["curl_sangles","Curl biceps aux sangles",["biceps"],["suspension"],"pull",false,{sets:3,repsMin:10,repsMax:15,restSec:60},
+  ["Face au point d'ancrage, paumes vers le haut, bras tendus devant.","Plie les coudes pour amener les mains vers le front, coudes fixes.","Redescends lentement."],
+  "Garde le corps gainé comme une planche pendant tout le mouvement."],
+["fallout_sangles","Roll-out aux sangles",["abdos","epaules"],["suspension"],"core",false,{sets:3,repsMin:6,repsMax:12,restSec:60},
+  ["Debout, poignées en main, bras tendus devant, corps incliné.","Monte les bras au-dessus de la tête en laissant le corps descendre vers l'avant.","Reviens en tirant avec les abdos, sans creuser le dos."],
+  "Réduis l'amplitude si le bas du dos se creuse."],
+["rowing_inverse_barre","Rowing inversé à la barre",["dos","biceps"],["barbell","rack"],"pull",false,{sets:3,repsMin:6,repsMax:15,restSec:75},
+  ["Barre posée sur les supports à hauteur de hanche, allongé dessous.","Corps droit, tire la poitrine vers la barre.","Redescends contrôlé bras tendus."],
+  "Vérifie que la barre est bien calée sur les supports avant de t'y suspendre."],
+["tractions_scapulaires","Tractions scapulaires",["dos"],["bodyweight","pullup_bar"],"pull",false,{sets:3,repsMin:8,repsMax:12,restSec:60},
+  ["Suspendu bras tendus.","Sans plier les coudes, abaisse et rapproche les omoplates pour monter de quelques centimètres.","Relâche lentement."],
+  "Excellent point de départ avant les tractions complètes, et bon échauffement des épaules."],
+["corde_a_sauter","Corde à sauter",["cardio","mollets"],["jump_rope"],"core",false,{sets:3,repsMin:30,repsMax:60,restSec:45},
+  ["Coudes près du corps, la rotation vient des poignets.","Petits sauts sur l'avant des pieds.","Garde un rythme régulier pendant la durée (en secondes)."],
+  "Sur un sol souple de préférence ; réduis la durée si les mollets ou les tibias sont sensibles."],
 ];
 
 const EXOS = EXO_RAW.map(([id,n,muscles,equip,pattern,uni,def,cues,safety])=>({
@@ -1784,6 +1852,11 @@ const EXOS = EXO_RAW.map(([id,n,muscles,equip,pattern,uni,def,cues,safety])=>({
   sets:def.sets,repsMin:def.repsMin,repsMax:def.repsMax,restSec:def.restSec,
   cues,safety
 }));
+// Niveau technique / de force requis : 1 = accessible aux débutants, 2 = standard, 3 = avancé.
+// Le moteur évite le niveau 3 pour les débutants et privilégie le niveau 1.
+const EXO_LEVEL1 = ["pompes_genoux","pompes_surelevees","squat_pdc","pont_fessier","planche","bird_dog","dead_bug","crunch","superman","jumping_jacks","chaise_murale","mollets_pdc","squat_gobelet","goblet_squat_kb","marche_fermier","kb_fermier","montees_genoux","corde_a_sauter","tractions_scapulaires","rowing_sangles","curl_sangles","rowing_inverse_barre","tirage_elastique","curl_biceps_elastique","squat_elastique","pont_fessier_elastique","suspension_barre","roue_abdo_genoux","planche_laterale","curl_biceps","elevations_laterales","rowing_uni_haltere","dc_haltere","floor_press_haltere","step_up","shrugs_halteres","mollets_halteres"];
+const EXO_LEVEL3 = ["pompes_archer","roue_abdo_debout","l_sit","releve_jambes_suspendu","tractions","tractions_suppination","renegade_row","front_squat_barre","good_morning_barre","fentes_sautees","swing_kb_uni","pompes_declinees","dips_barres","squat_sangles"];
+EXOS.forEach(e=>{ e.level = EXO_LEVEL3.includes(e.id) ? 3 : EXO_LEVEL1.includes(e.id) ? 1 : 2; });
 const EXO_MAP = {}; EXOS.forEach(e=>EXO_MAP[e.id]=e);
 // exercices mesurés en secondes plutôt qu'en répétitions (planche, chaise, marche du fermier…)
 function isTimed(def){ return def._timed!==undefined ? def._timed : (def._timed = def.cues.some(c=>/en secondes/.test(c))); }
@@ -1832,6 +1905,10 @@ const PICTO_OF = {
   curl_biceps:"curl", curl_marteau:"curl", curl_concentre:"curl", curl_incline:"curl", curl_barre:"curl", curl_biceps_elastique:"curl", curl_poignets:"curl",
   extension_triceps_nuque:"triceps", kickback_triceps:"triceps", extension_triceps_allonge:"triceps", barre_front:"triceps", extension_triceps_elastique:"triceps",
   shrugs_halteres:"carry", marche_fermier:"carry", kb_fermier:"carry",
+  // v2.2
+  roue_abdo_genoux:"plank", roue_abdo_debout:"plank", dips_barres:"dips", releve_genoux_barres:"dips", l_sit:"dips",
+  rowing_sangles:"row", pompes_sangles:"pushup", squat_sangles:"squat", curl_sangles:"curl", fallout_sangles:"plank",
+  rowing_inverse_barre:"row", tractions_scapulaires:"hang", corde_a_sauter:"cardio",
   // v1.7
   pompes_archer:"pushup", planche_commando:"plank", russian_twist:"crunch", flutter_kicks:"crunch", montees_genoux:"cardio", fentes_sautees:"lunge",
   ytw_sol:"raise", marche_ours:"plank", rowing_appui_banc:"row", squat_bulgare_halteres:"lunge", curl_zottman:"curl", mollets_assis_haltere:"calf",
@@ -1871,7 +1948,7 @@ function defaultState(){
     v:1,
     equipment: defaultEquipment(),
     prefs: { excluded:[], included:[] },
-    goals: { overall:"hypertrophie", emphasis:{}, daysPerWeek:3, sessionLength:"moyen" },
+    goals: { overall:"hypertrophie", emphasis:{}, daysPerWeek:3, sessionLength:"moyen", level:"intermediaire", exoCount:0 },
     sessions: [],
     draft: null,
     custom: { exos:[] },   // « Ma séance » : [{exoId, sets}]
@@ -1916,6 +1993,14 @@ function normalizeState(parsed){
     merged.medals = parsed.medals||{};
     merged.importedProgram = parsed.importedProgram||[];
     delete merged.settings.todayMode; // v1.2 : remplacé par todayTab (« Ma séance » en premier)
+    // v2.2 : nouveaux équipements. On garde le comportement précédent : un banc servait aussi
+    // aux exercices inclinés, et quiconque faisait du squat à la barre avait des supports.
+    const po = (parsed.equipment||{}).owned||{};
+    if(po.bench && po.bench_incline===undefined) merged.equipment.owned.bench_incline = true;
+    if(po.barbell && po.rack===undefined) merged.equipment.owned.rack = true;
+    // élastiques : des niveaux de résistance 1 à 5 (et plus des « kilos »)
+    const bw = (merged.equipment.weights.bands||[]).map(Number).filter(v=>v>=1 && v<=5);
+    merged.equipment.weights.bands = bw.length ? Array.from(new Set(bw.map(Math.round))).sort() : [2,3,4];
     delete merged.trophies; // ancien système de trophées (v1.0-1.1), remplacé par les médailles à paliers
     return merged;
   }
@@ -2054,7 +2139,8 @@ function daysSinceTrained_raw(muscleId){
 }
 function setVolume(st){ return (st.done? (st.reps||0)*(st.weight||0) : 0); }
 function sessionVolume(s){
-  return s.exos.reduce((t,ex)=>t+ex.sets.reduce((tt,st)=>tt+setVolume(st),0),0);
+  // tonnage en kg : les élastiques (niveaux de résistance) n'y entrent pas
+  return s.exos.reduce((t,ex)=>{ const d = EXO_MAP[ex.exoId]; if(d && loadableTypeOf(d)==="bands") return t; return t+ex.sets.reduce((tt,st)=>tt+setVolume(st),0); },0);
 }
 function sessionSetCount(s){
   return s.exos.reduce((t,ex)=>t+ex.sets.filter(st=>st.done).length,0);
@@ -2261,6 +2347,18 @@ function firstSessionDate_raw(){ return S.sessions.length ? S.sessions.reduce((m
 // ================= MOTEUR DE SUGGESTION (100% local, aucun appel réseau) =================
 const PATTERN_CYCLE = ["squat","hinge","push","pull","lunge","core","calf"];
 const SESSION_SIZE = { court:4, moyen:6, long:8 };
+// nombre d'exercices d'une séance proposée : choisi par l'utilisateur, sinon selon la durée
+// la proposition du jour suit les réglages (matériel, niveau, taille) tant qu'elle n'est ni
+// commencée ni issue d'un programme importé
+function regenerateDraftIfIdle(){
+  if(!S.draft || S.draft.startedAt || S.draft.source==="imported") return;
+  S.draft = generateEngineSession(S.draft.type||"auto"); save();
+}
+function sessionSize(){ return Math.max(2, Math.min(10, S.goals.exoCount || SESSION_SIZE[S.goals.sessionLength] || 6)); }
+// exercices adaptés au niveau : un débutant ne se voit pas proposer d'exercice avancé
+// (il reste libre de le choisir lui-même dans la liste)
+function levelOK(e){ return S.goals.level!=="debutant" || e.level<3; }
+function engineExos(){ const all = availableExos(), ok = all.filter(levelOK); return ok.length>=4 ? ok : all; }
 
 function normName(s){
   return (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim();
@@ -2290,6 +2388,10 @@ function scoreExo(exo){
   let score = muscleScore(primary);
   exo.muscles.slice(1).forEach(m=>score += muscleScore(m)*0.3);
   if(isIncluded(exo.id)) score += 3;
+  // niveau : les débutants privilégient les exercices accessibles, les avancés les plus exigeants
+  const lv = S.goals.level;
+  if(lv==="debutant") score += exo.level===1 ? 1.5 : 0;
+  else if(lv==="avance") score += exo.level===3 ? 1 : exo.level===1 ? -1 : 0;
   score -= recencyPenalty(exo.id);
   return score;
 }
@@ -2307,6 +2409,10 @@ function loadableTypeOf(exo){
   return (exo._load = exo.equip.find(id=>EQUIP_MAP[id] && EQUIP_MAP[id].loadable) || null);
 }
 
+// charge « réelle » en kg (les élastiques ont des niveaux de résistance, pas des kilos)
+function kgType(def){ const t = def && loadableTypeOf(def); return t && t!=="bands" ? t : null; }
+function fmtLoad(def, w){ if(w==null || w==="") return ""; return loadableTypeOf(def)==="bands" ? "élastique "+bandLabel(w).toLowerCase() : fmtDec(w)+" kg"; }
+function loadSuffix(def, w){ if(w==null || w==="" || !w) return ""; return loadableTypeOf(def)==="bands" ? " · "+fmtLoad(def, w) : " × "+fmtLoad(def, w); }
 function nextWeight(exo, current){
   const type = loadableTypeOf(exo);
   if(!type) return null;
@@ -2389,15 +2495,15 @@ function suggestForExo(exo, setsN){
       const nw = nextWeight(exo, lastW);
       if(nw>lastW+0.001){
         weight = nw; reps = new Array(n).fill(rMin);
-        note = `Charge augmentée à ${fmtDec(nw)} kg : tu as dépassé la fourchette. Reprends en bas (${rMin} reps) et remonte.`;
+        note = type==="bands" ? `Passe à l'élastique ${bandLabel(nw).toLowerCase()} : tu as dépassé la fourchette. Reprends en bas (${rMin} reps) et remonte.` : `Charge augmentée à ${fmtDec(nw)} kg : tu as dépassé la fourchette. Reprends en bas (${rMin} reps) et remonte.`;
       } else {
         reps = reps.map((_,i)=>Math.min(rMax+4, lastReps(i)+1));
-        note = "Tu es à ta charge maximale : ajoute une répétition ou ralentis la descente (3 s).";
+        note = type==="bands" ? "Tu utilises ton élastique le plus résistant : ajoute une répétition ou ralentis la descente (3 s)." : "Tu es à ta charge maximale : ajoute une répétition ou ralentis la descente (3 s).";
       }
     } else if(missed && (effort===3 || prevMissed)){
       const lw = lowerWeight(exo, lastW);
       weight = lw; reps = new Array(n).fill(rMin);
-      note = lw<lastW ? `Charge allégée à ${fmtDec(lw)} kg pour retrouver une exécution propre, puis on remonte.` : "On garde la charge : vise une exécution propre avant tout.";
+      note = lw<lastW ? `Charge allégée (${fmtLoad(exo, lw)}) pour retrouver une exécution propre, puis on remonte.` : "On garde la charge : vise une exécution propre avant tout.";
     } else if(missed){
       reps = new Array(n).fill(rMin);
       note = "Même charge : consolide les répétitions avant d'aller plus loin.";
@@ -2478,7 +2584,7 @@ function resolveAutoType(){
 
 function poolForType(typeId){
   const t = SESSION_TYPE_MAP[typeId];
-  const base = availableExos();
+  const base = engineExos();
   if(!t || !t.muscles) return base;
   const primary = base.filter(e=>t.muscles.includes(e.muscles[0]));
   if(primary.length>=3) return primary;
@@ -2488,7 +2594,7 @@ function poolForType(typeId){
 // avoid : exercices de la proposition précédente, fortement pénalisés pour que
 // « Autre proposition » change vraiment. Le léger aléa départage les ex æquo.
 function pickExosForSession(n, pool, avoid){
-  pool = pool || availableExos();
+  pool = pool || engineExos();
   avoid = avoid || new Set();
   const score = {};
   pool.forEach(e=>{ score[e.id] = scoreExo(e) + Math.random()*1.2 - (avoid.has(e.id)?6:0); });
@@ -2519,7 +2625,7 @@ function generateEngineSession(typeId, avoid){
   typeId = typeId || "auto";
   let resolved = typeId, reason = null;
   if(typeId==="auto"){ const r = resolveAutoType(); resolved = r.type; reason = r.reason; }
-  const n = SESSION_SIZE[S.goals.sessionLength] || 6;
+  const n = sessionSize();
   const exos = pickExosForSession(resolved==="core" ? Math.min(n,5) : n, poolForType(resolved), avoid);
   return {
     id: uid(), date: todayISO(), source:"engine", type:typeId, resolvedType:resolved, reason,
@@ -2677,7 +2783,7 @@ function suggestComplement(existingIds, n){
   const have = existingIds.map(id=>EXO_MAP[id]).filter(Boolean);
   const coveredMuscles = new Set(have.map(e=>e.muscles[0]));
   const coveredPatterns = new Set(have.map(e=>e.pattern));
-  const pool = availableExos().filter(e=>!existingIds.includes(e.id));
+  const pool = engineExos().filter(e=>!existingIds.includes(e.id));
   const jitter = {}; pool.forEach(e=>jitter[e.id]=Math.random()*1.2);
   const out = [];
   while(out.length<n && pool.length){
@@ -2754,6 +2860,13 @@ const GLYPHS = {
   medal:`<path d="M8 3.5 10.2 9M16 3.5 13.8 9" ${S_}/><circle cx="12" cy="14.5" r="5.5" fill="#fff"/>`,
   repeat:`<path d="M5 11V9.5A3.5 3.5 0 0 1 8.5 6H19m-3-3 3 3-3 3M19 13v1.5a3.5 3.5 0 0 1-3.5 3.5H5m3 3-3-3 3-3" ${S_}/>`,
   pencil:'<path d="m15.8 4.2 4 4L9 19l-5 1 1-5Z" fill="#fff"/>',
+  benchIncline:`<path d="M3.5 17h10M5.5 17v3M11.5 17v3M9.5 17l7-9.5" ${S_}/>`,
+  benchPress:`<path d="M3.5 14.5h11M5.5 14.5v5M12.5 14.5v5M18 4.5v15M2.5 8.5h19" ${S_}/>`,
+  rack:`<path d="M6 3.5v17M18 3.5v17M3.5 20.5h17M2.5 9h19M4 7v4M20 7v4" ${S_}/>`,
+  dips:`<path d="M4.5 20V9.5h5M19.5 20V9.5h-5" ${S_}/><path d="M9.5 9.5v2.5M14.5 9.5v2.5" ${S_}/>`,
+  straps:`<path d="M12 3v3.5M12 6.5 7.5 16M12 6.5l4.5 9.5M5 16h5M14 16h5" ${S_}/>`,
+  wheel:`<circle cx="12" cy="12" r="5.6" ${S_}/><circle cx="12" cy="12" r="1.7" fill="#fff"/><path d="M2.8 12h3.6M17.6 12h3.6" ${S_}/>`,
+  rope:`<path d="M6.5 17c0-10 11-10 11 0" ${S_}/><path d="M6.5 16.5v4M17.5 16.5v4" ${S_} stroke-width="3"/>`,
   download:`<path d="M12 3.8v11M7.6 10.6 12 15l4.4-4.4M5 19.6h14" ${S_}/>`,
   restore:`<path d="M12 20.2v-11M7.6 13.4 12 9l4.4 4.4M5 4.4h14" ${S_}/>`,
   phone:`<rect x="6.5" y="2.8" width="11" height="18.4" rx="2.6" ${S_}/><path d="M12 8.6v5.6M9.2 11.4h5.6" ${S_}/>`,
@@ -3561,7 +3674,7 @@ function balancedWeeks(){
 function maxRepsOneSession(){ return S.sessions.reduce((m,s)=>Math.max(m, sessionReps(s)), 0); }
 function heaviestSet(){
   let m = 0;
-  S.sessions.forEach(s=>s.exos.forEach(ex=>ex.sets.forEach(st=>{ if(st.done && st.weight>m) m = st.weight; })));
+  S.sessions.forEach(s=>s.exos.forEach(ex=>{ if(!kgType(EXO_MAP[ex.exoId])) return; ex.sets.forEach(st=>{ if(st.done && st.weight>m) m = st.weight; }); }));
   return m;
 }
 // Progression de force sur un exercice chargé : meilleur 1RM estimé comparé à la
@@ -3572,7 +3685,7 @@ function bestStrengthRatio(){
   // les séances sont déjà enregistrées dans l'ordre chronologique
   for(const s of S.sessions) for(const ex of s.exos){
     const def = EXO_MAP[ex.exoId];
-    if(!def || !loadableTypeOf(def)) continue;
+    if(!def || !kgType(def)) continue;
     let e = 0;
     for(const st of ex.sets) if(st.done && st.weight){ const v = estimated1RM(st.weight, st.reps); if(v>e) e = v; }
     if(e) (hist[ex.exoId]=hist[ex.exoId]||[]).push({ date:s.date, e });
@@ -3973,12 +4086,17 @@ function proposalPaneHTML(draft){
     return `<div class="type-scroll">${typeChips}</div>${hero}
       <div class="empty-state"><span class="em">🧰</span>Pas d'exercice disponible pour ce type de séance avec ton matériel.<br>Essaie un autre type, ou complète ton matériel dans l'onglet Profil.</div>`;
   }
-  const rows = draft.exos.map((ex,i)=>exoRowHTML(EXO_MAP[ex.exoId], `${ex.targetSets} × ${repsLabel(ex.targetReps)}${ex.sets[0]&&ex.sets[0].weight?" · "+ex.sets[0].weight+" kg":""}`, i,
+  const rows = draft.exos.map((ex,i)=>exoRowHTML(EXO_MAP[ex.exoId], `${ex.targetSets} × ${repsLabel(ex.targetReps)}${ex.sets[0]&&ex.sets[0].weight?" · "+fmtLoad(EXO_MAP[ex.exoId], ex.sets[0].weight):""}`, i,
     `<button class="icon-btn" aria-label="Remplacer" data-a="swapExoOpen" data-idx="${i}">${icon("swap")}</button>
      <button class="icon-btn" aria-label="Retirer" data-a="removeExo" data-idx="${i}">${icon("close")}</button>`)).join("");
+  freshIds = new Set();
   return `<div class="type-scroll">${typeChips}</div>
     ${hero}
-    <div class="group" style="margin-top:12px">${rows}</div>
+    <div class="exo-count">
+      <div class="ec-t"><b>${draft.exos.length}</b> exercice${draft.exos.length>1?"s":""} · ${draft.exos.reduce((t,e)=>t+e.sets.length,0)} séries · ≈ ${estimateMinutes(draft)} min</div>
+      <div class="mini-step"><button aria-label="Un exercice de moins" data-a="draftCount" data-d="-1" ${draft.exos.length<=1?"disabled":""}>−</button><span>${draft.exos.length}</span><button aria-label="Un exercice de plus" data-a="draftCount" data-d="1" ${draft.exos.length>=10?"disabled":""}>+</button></div>
+    </div>
+    <div class="group" style="margin-top:8px">${rows}</div>
     <div class="btnrow">
       <button class="btn secondary sm" data-a="addExoOpen">${icon("plus")} Ajouter</button>
       ${imported?"":`<button class="btn secondary sm" data-a="regenSession">${icon("repeat")} Autre proposition</button>`}
@@ -4419,7 +4537,7 @@ function lastTimeHTML(exoId){
   if(!last) return `<div class="fc-last">Première fois : prends tes repères</div>`;
   const done = last.exo.sets.filter(s=>s.done);
   const w = done[0] && done[0].weight;
-  return `<div class="fc-last">La dernière fois (${fmtRelative(last.session.date)}) : ${done.map(s=>s.reps).join(" · ")}${w?" × "+w+" kg":""}</div>`;
+  return `<div class="fc-last">La dernière fois (${fmtRelative(last.session.date)}) : ${done.map(s=>s.reps).join(" · ")}${loadSuffix(EXO_MAP[exoId], w)}</div>`;
 }
 
 function renderFocusCard(idx, ex, def){
@@ -4440,8 +4558,8 @@ function renderFocusCard(idx, ex, def){
     const remain = Math.max(0, Math.round((restState.endAt-Date.now())/1000));
     const tIdx = restTarget(restState.exoIdx, restState.arrived), tEx = tIdx>=0 ? S.draft.exos[tIdx] : null;
     const next = tEx && tEx.sets.find(s=>!s.done), nDef = tEx && EXO_MAP[tEx.exoId];
-    const nextTxt = !next ? "" : tIdx===idx ? `Ensuite : ${next.reps} ${isTimed(def)?"s":"reps"}${next.weight?" × "+next.weight+" kg":""}`
-      : `Ensuite : <b>${esc(nDef.n)}</b> · ${next.reps} ${isTimed(nDef)?"s":"reps"}${next.weight?" × "+next.weight+" kg":""}`;
+    const nextTxt = !next ? "" : tIdx===idx ? `Ensuite : ${next.reps} ${isTimed(def)?"s":"reps"}${loadSuffix(def, next.weight)}`
+      : `Ensuite : <b>${esc(nDef.n)}</b> · ${next.reps} ${isTimed(nDef)?"s":"reps"}${loadSuffix(nDef, next.weight)}`;
     return `<div class="focus-card resting r-${regionOf(def)} ${animClass}">${header}
       ${setDots(-1)}
       <div class="fc-phase">Repos · respire</div>
@@ -4453,7 +4571,7 @@ function renderFocusCard(idx, ex, def){
   }
 
   if(allDone){
-    const recap = ex.sets.map(s=>`<span class="chip ${s.pr?"pr":""}">${s.pr?"💥 ":""}${s.reps||"?"}${s.weight!=null?" × "+s.weight+" kg":""}</span>`).join("");
+    const recap = ex.sets.map(s=>`<span class="chip ${s.pr?"pr":""}">${s.pr?"💥 ":""}${s.reps||"?"}${loadSuffix(def, s.weight)}</span>`).join("");
     return `<div class="focus-card r-${regionOf(def)} ${animClass}">${header}
       <div class="fc-done-badge">${icon("check")}</div>
       <div class="fc-done-t">Exercice terminé</div>
@@ -4480,14 +4598,16 @@ function renderFocusCard(idx, ex, def){
         <button class="bs-val ${valRoll.f==="reps"?"roll-"+valRoll.d:""}" aria-label="Saisir la valeur" data-a="editVal" data-f="reps" data-exi="${idx}" data-si="${si}">${st.reps??"–"}</button>
         <button aria-label="Plus" data-a="stepReps" data-exi="${idx}" data-si="${si}" data-d="1">+</button>
       </div></div>
-      ${hasWeight?`<div class="big-stepper"><div class="bs-label">Charge (kg)</div><div class="bs-row">
+      ${hasWeight?`<div class="big-stepper ${loadableTypeOf(def)==="bands"?"band":""}"><div class="bs-label">${loadableTypeOf(def)==="bands"?"Élastique":"Charge (kg)"}</div><div class="bs-row">
         <button aria-label="Moins" data-a="stepWeight" data-exi="${idx}" data-si="${si}" data-d="-1">−</button>
-        <button class="bs-val ${valRoll.f==="weight"?"roll-"+valRoll.d:""}" aria-label="Saisir la charge" data-a="editVal" data-f="weight" data-exi="${idx}" data-si="${si}">${st.weight??"–"}</button>
+        ${loadableTypeOf(def)==="bands"
+          ? `<span class="bs-val band-val ${valRoll.f==="weight"?"roll-"+valRoll.d:""}">${st.weight?bandLabel(st.weight):"–"}</span>`
+          : `<button class="bs-val ${valRoll.f==="weight"?"roll-"+valRoll.d:""}" aria-label="Saisir la charge" data-a="editVal" data-f="weight" data-exi="${idx}" data-si="${si}">${st.weight??"–"}</button>`}
         <button aria-label="Plus" data-a="stepWeight" data-exi="${idx}" data-si="${si}" data-d="1">+</button>
       </div></div>`:""}
     </div>
     ${lastTimeHTML(ex.exoId)}
-    ${hasWeight && (st.weight||0)>=8 && !S.draft.exos.some(e=>e.sets.some(x=>x.done)) ? `<div class="warmup">🔥 Échauffement : 1 série légère (≈ ${fmtDec(Math.max(1, Math.round((st.weight||0)*0.5)))} kg) de 8 à 10 répétitions avant de commencer.</div>` : ""}
+    ${kgType(def) && (st.weight||0)>=8 && !S.draft.exos.some(e=>e.sets.some(x=>x.done)) ? `<div class="warmup">🔥 Échauffement : 1 série légère (≈ ${fmtDec(Math.max(1, Math.round((st.weight||0)*0.5)))} kg) de 8 à 10 répétitions avant de commencer.</div>` : ""}
     ${ex.note?`<div class="exo-note" style="margin:0 0 14px">${esc(ex.note)}${ex.harder&&EXO_MAP[ex.harder]&&!ex.sets.some(s=>s.done)?`<button class="note-act" data-a="swapHarder" data-idx="${idx}">Essayer maintenant ${icon("chev")}</button>`:""}</div>`:""}
     ${isTimed(def)
       ? `<button class="btn big validate hold-go ${rr?"ready":""}" data-a="holdStart" data-exi="${idx}" data-si="${si}">${icon("timer")} Lancer le chrono · ${st.reps||30} s</button>
@@ -4669,7 +4789,7 @@ Object.assign(ACT, {
   },
   customFill(){
     const have = S.custom.exos.map(e=>e.exoId);
-    const target = SESSION_SIZE[S.goals.sessionLength]||6;
+    const target = sessionSize();
     const n = Math.max(have.length ? 1 : 3, target-have.length);
     const add = suggestComplement(have, Math.min(n, 4));
     if(!add.length){ toast("Aucun exercice disponible avec ton matériel"); return; }
@@ -4760,6 +4880,20 @@ Object.assign(ACT, {
   },
   editTemplateDays(d){ openTplEditor(d.id); },
   tplDayToggle(d, el){ el.classList.toggle("on"); },
+  draftCount(d){
+    const dir = parseInt(d.d,10), ex = S.draft.exos;
+    if(dir>0){
+      if(ex.length>=10) return;
+      const add = suggestComplement(ex.map(e=>e.exoId), 1)[0];
+      if(!add){ toast("Plus d'exercice disponible avec ton matériel"); return; }
+      ex.push(sessionEntryFor(add)); freshIds.add(add.id);
+    } else {
+      if(ex.length<=1) return;
+      ex.pop();
+    }
+    S.goals.exoCount = ex.length; // retenu pour les prochaines propositions
+    sfx("step", dir>0); save(); renderView("today");
+  },
   setType(d){ regenerateDraft(d.v); renderViewAnimated("today"); },
   startSession(){ if(!S.draft.exos.length) return; S.draft.startedAt = new Date().toISOString(); liveFocusIdx = 0; completeShown = false; save(); scrollTodayTop(); renderViewAnimated("today"); showLaunch(S.draft); },
   regenSession(){ regenerateDraft(); renderViewAnimated("today"); toast("Nouvelle proposition"); },
@@ -5017,7 +5151,7 @@ Object.assign(ACT, {
     const cat = EXO_CATS.find(c=>c.id===exoCategory(e));
     const stats = pr.count ? `<div class="stat-strip" style="margin-top:14px">
         <div class="stat-box"><div class="num">${pr.count}</div><div class="lbl">séance${pr.count>1?"s":""}</div></div>
-        <div class="stat-box"><div class="num">${pr.maxWeight?fmtDec(pr.maxWeight)+" kg":"–"}</div><div class="lbl">record charge</div></div>
+        <div class="stat-box"><div class="num">${pr.maxWeight?fmtLoad(e, pr.maxWeight):"–"}</div><div class="lbl">record charge</div></div>
         <div class="stat-box"><div class="num">${last?fmtRelative(last.session.date):"–"}</div><div class="lbl">dernière fois</div></div>
       </div>` : `<div class="first-time">Tu n'as encore jamais fait cet exercice : commence léger pour prendre tes repères.</div>`;
     const similar = availableExos().filter(x=>x.id!==e.id && x.muscles[0]===e.muscles[0]).slice(0,4);
@@ -5224,7 +5358,7 @@ Object.assign(ACT, {
   },
   tplEdFill(){
     const have = tplEdit.exos.map(x=>x.exoId);
-    const target = SESSION_SIZE[S.goals.sessionLength]||6;
+    const target = sessionSize();
     const add = suggestComplement(have, Math.min(4, Math.max(have.length?1:3, target-have.length)));
     if(!add.length){ toast("Aucun exercice disponible avec ton matériel"); return; }
     add.forEach(e=>tplEdit.exos.push({ exoId:e.id, sets:e.sets, fresh:true }));
@@ -5341,7 +5475,7 @@ Object.assign(ACT, {
 // programme de la semaine. Tout reste modifiable dans le Profil ; « Passer » à tout moment.
 
 let obStep = 0;
-const OB_EQUIP = ["dumbbells","bench","barbell","kettlebell","pullup_bar","bands","mat"];
+const OB_EQUIP = ["dumbbells","kettlebell","bench","bench_incline","barbell","rack","bench_press","pullup_bar","dip_bars","suspension","ab_roller","bands","jump_rope","mat"];
 function needsOnboarding(){ return !S.meta.onboarded && !S.sessions.length && !S.templates.length; }
 function openOnboarding(){ obStep = 0; S.meta.onboarded = true; save(); renderOnboarding(); } // montré une seule fois
 function obDots(){ return `<div class="ob-dots">${[0,1,2,3].map(i=>`<i class="${i===obStep?"on":""}"></i>`).join("")}</div>`; }
@@ -5362,6 +5496,9 @@ function obBody(){
       <div class="num-field"><input id="obDb" type="text" inputmode="decimal" placeholder="Ex. 4, 6, 8, 10" value="${(S.equipment.weights.dumbbells||[]).join(", ")}"></div>` : ""}`;
   if(obStep===2) return `<div class="ob-t2">Ton objectif</div><div class="ob-s2">Il règle les fourchettes de répétitions et le volume proposé.</div>
     <div class="ob-goals">${[["hypertrophie","Prendre du muscle","8 à 12 répétitions, ~10 séries par muscle et par semaine"],["force","Devenir plus fort·e","Moins de répétitions, charges plus lourdes"],["endurance","Endurance et tonus","Plus de répétitions, repos courts"]].map(([k,t,d])=>`<button class="ob-goal ${S.goals.overall===k?"on":""}" data-a="obGoal" data-v="${k}"><b>${t}</b><small>${d}</small></button>`).join("")}</div>
+    <div class="te-sec">Ton niveau</div>
+    <div class="cal-alarm">${Object.keys(LEVEL_LABELS).map(k=>`<button class="chip ${(S.goals.level||"intermediaire")===k?"on":""}" data-a="obLevel" data-v="${k}">${LEVEL_LABELS[k]}</button>`).join("")}</div>
+    <div class="ob-note" id="obLevelHint">${LEVEL_HINTS[S.goals.level||"intermediaire"]}</div>
     <div class="te-sec">Séances par semaine</div>
     <div class="wz-n">${[2,3,4,5,6].map(n=>`<button class="${n===S.goals.daysPerWeek?"on":""}" data-a="obDays" data-v="${n}">${n}</button>`).join("")}</div>
     <div class="ob-note">2 à 3 séances suffisent pour progresser nettement : l'important est de tenir dans la durée.</div>
@@ -5404,6 +5541,7 @@ Object.assign(ACT, {
   obSkip(){ obCollect(); obDone(); closeSheet(); regenerateDraft(); changed(); },
   obEquip(d){ obCollect(); S.equipment.owned[d.id] = !S.equipment.owned[d.id]; save(); const b = qs("#obBody"); if(b){ b.innerHTML = obBody(); } sfx("seg"); },
   obGoal(d){ S.goals.overall = d.v; qsa(".ob-goal").forEach(x=>x.classList.toggle("on", x.dataset.v===d.v)); save(); },
+  obLevel(d){ S.goals.level = d.v; qsa('[data-a="obLevel"]').forEach(x=>x.classList.toggle("on", x.dataset.v===d.v)); const h = qs("#obLevelHint"); if(h) h.textContent = LEVEL_HINTS[d.v]; save(); },
   obDays(d){ S.goals.daysPerWeek = +d.v; qsa('[data-a="obDays"]').forEach(x=>x.classList.toggle("on", x.dataset.v===d.v)); save(); },
   obLen(d){ S.goals.sessionLength = d.v; qsa('[data-a="obLen"]').forEach(x=>x.classList.toggle("on", x.dataset.v===d.v)); save(); },
   obFinish(d){
@@ -5513,7 +5651,7 @@ function sessionDetailHTML(s){
     return `<div class="row" style="align-items:flex-start">
       ${exoIcon(def)}
       <div class="grow"><div class="t">${esc(def.n)}</div>
-      <div class="set-chips">${sets.map(st=>`<span class="chip ${st.pr?"pr":""}">${st.pr?"💥 ":""}${st.reps||"?"}${st.weight!=null&&st.weight!==""?" × "+st.weight+" kg":""}</span>`).join("")}</div></div>
+      <div class="set-chips">${sets.map(st=>`<span class="chip ${st.pr?"pr":""}">${st.pr?"💥 ":""}${st.reps||"?"}${loadSuffix(def, st.weight)}</span>`).join("")}</div></div>
     </div>`;
   }).join("");
   const time = s.startedAt ? new Date(s.startedAt).toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit"}) : "";
@@ -5675,12 +5813,12 @@ function overviewPaneHTML(){
     </div>`:""}
     ${prs.length?`<h2 class="sh">Derniers records</h2><div class="group">${prs.map((p,i)=>`<button class="row tap stagger" style="--i:${10+i}" data-a="openExoChart" data-id="${p.def.id}">
       <div class="ico" style="background:var(--orange)">💥</div>
-      <div class="grow"><div class="t">${esc(p.def.n)}</div><div class="s">${p.st.reps} reps${p.st.weight?" × "+p.st.weight+" kg":""} · ${fmtRelative(p.s.date)}</div></div>
+      <div class="grow"><div class="t">${esc(p.def.n)}</div><div class="s">${p.st.reps} reps${loadSuffix(p.def, p.st.weight)} · ${fmtRelative(p.s.date)}</div></div>
       <span class="chev">${icon("chev")}</span></button>`).join("")}</div>`:""}`;
 }
 
 function exoSeries(id){
-  const def = EXO_MAP[id], loaded = !!loadableTypeOf(def), pts = [];
+  const def = EXO_MAP[id], loaded = !!kgType(def), pts = [];
   S.sessions.forEach(s=>{
     const ex = s.exos.find(x=>x.exoId===id);
     if(!ex) return;
@@ -5724,7 +5862,7 @@ function exoChartSheet(id){
   const cols = columnChart(last12.map(p=>({ label:lbl(p), v: loaded?Math.round(p.vol):p.reps, tip:`${fmtDate(p.s.date,"long")} : ${loaded?fmtKg(p.vol):p.reps+" reps"}` })), { fmt: v=> loaded?fmtKg(v):v+" reps" });
   const hist = pts.slice(-8).reverse().map(p=>`<div class="row" style="align-items:flex-start">
       <div class="grow"><div class="t" style="font-size:calc(15rem/17)">${esc(fmtDate(p.s.date,"long"))}</div>
-      <div class="set-chips">${p.done.map(st=>`<span class="chip ${st.pr?"pr":""}">${st.pr?"💥 ":""}${st.reps}${st.weight?" × "+st.weight+" kg":""}</span>`).join("")}</div></div>
+      <div class="set-chips">${p.done.map(st=>`<span class="chip ${st.pr?"pr":""}">${st.pr?"💥 ":""}${st.reps}${loadSuffix(def, st.weight)}</span>`).join("")}</div></div>
     </div>`).join("");
   openSheet(`<div class="sheet-hd"><span class="t">${esc(def.n)}</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
     <div class="sheet-body">
@@ -5778,6 +5916,8 @@ VIEWS.progress = renderProgress;
 // ================= VUE : PROFIL =================
 const GOAL_LABELS = { force:"Force", hypertrophie:"Prise de masse", endurance:"Endurance" };
 const LEN_LABELS = { court:"Courte (≈20 min)", moyen:"Moyenne (≈35 min)", long:"Longue (≈50 min)" };
+const LEVEL_LABELS = { debutant:"Débutant·e", intermediaire:"Intermédiaire", avance:"Avancé·e" };
+const LEVEL_HINTS = { debutant:"Moins d'un an de musculation régulière : exercices accessibles, technique d'abord.", intermediaire:"Un à trois ans de pratique : tous les exercices standard.", avance:"Plus de trois ans : variantes exigeantes privilégiées." };
 
 function ownedEquipCount(){ return EQUIP_TYPES.filter(e=>!e.always && S.equipment.owned[e.id]).length; }
 
@@ -5990,18 +6130,26 @@ function openInstall(){
 }
 
 // ---------- Matériel ----------
-const EQUIP_GLYPH = { dumbbells:"dumbbell", barbell:"barbell", kettlebell:"kettlebell", bench:"bench", pullup_bar:"bar", bands:"band", mat:"mat", bodyweight:"person" };
-const EQUIP_COLOR = { dumbbells:"orange", barbell:"indigo", kettlebell:"brown", bench:"teal", pullup_bar:"blue", bands:"green", mat:"purple", bodyweight:"mint" };
+const EQUIP_GLYPH = { dumbbells:"dumbbell", barbell:"barbell", kettlebell:"kettlebell", bench:"bench", bench_incline:"benchIncline", bench_press:"benchPress", rack:"rack", pullup_bar:"bar", dip_bars:"dips", suspension:"straps", ab_roller:"wheel", bands:"band", jump_rope:"rope", mat:"mat", bodyweight:"person" };
+const EQUIP_COLOR = { dumbbells:"orange", barbell:"indigo", kettlebell:"brown", bench:"teal", bench_incline:"teal", bench_press:"indigo", rack:"gray", pullup_bar:"blue", dip_bars:"blue", suspension:"yellow", ab_roller:"red", bands:"green", jump_rope:"pink", mat:"purple", bodyweight:"mint" };
 function equipBodyHTML(){
   const rows = EQUIP_TYPES.filter(e=>!e.always).map(e=>{
     const on = S.equipment.owned[e.id];
     return `<div class="row">
       ${sfIcon(EQUIP_GLYPH[e.id]||"wrench", EQUIP_COLOR[e.id]||"gray")}
-      <div class="grow"><div class="t">${esc(e.n)}</div></div>
+      <div class="grow"><div class="t">${esc(e.n)}</div>${e.hint && !e.loadable ? `<div class="s">${esc(e.hint)}</div>` : ""}</div>
       <button class="switch ${on?"on":""}" data-a="toggleEquip" data-id="${e.id}"></button>
     </div>`;
   }).join("");
   const weightEditors = EQUIP_TYPES.filter(e=>e.loadable && S.equipment.owned[e.id]).map(e=>{
+    if(e.id==="bands"){
+      const own = new Set(S.equipment.weights.bands||[]);
+      return `<div class="card" style="margin-top:12px">
+        <div style="font-weight:700;margin-bottom:2px">${esc(e.n)}</div>
+        <div class="hr-note" style="margin:0 0 10px">${esc(e.hint)} La progression passera d'une résistance à la suivante.</div>
+        <div class="chips" style="padding:0">${[1,2,3,4,5].map(v=>`<button class="chip ${own.has(v)?"on":""}" data-a="toggleBand" data-v="${v}">${bandLabel(v)}</button>`).join("")}</div>
+      </div>`;
+    }
     const list = (S.equipment.weights[e.id]||[]).slice().sort((a,b)=>a-b);
     const chips = list.map(w=>`<span class="chip on">${w} ${e.unit} <button data-a="removeWeight" data-id="${e.id}" data-w="${w}" style="margin-left:4px">${icon("close")}</button></span>`).join("");
     return `<div class="card" style="margin-top:12px">
@@ -6017,7 +6165,7 @@ function equipBodyHTML(){
   const customs = S.equipment.custom.map(c=>`<div class="row">${sfIcon("wrench","gray")}<div class="grow"><div class="t">${esc(c.n)}</div></div><button class="icon-btn" data-a="removeCustom" data-id="${c.id}">${icon("close")}</button></div>`).join("");
   return `<div class="group">${rows}</div>${weightEditors}
     <h2 class="sh">Autre équipement</h2>
-    <div class="hr-note" style="margin-top:-6px">Informatif — ajoute librement ce que tu possèdes (banc réglable, TRX…). N'affecte pas encore la suggestion automatique.</div>
+    <div class="hr-note" style="margin-top:-6px">Pour mémoire : ces équipements n'influencent pas les séances proposées. Le matériel ci-dessus, lui, est pris en compte.</div>
     <div class="group" style="margin-top:10px">${customs}
       <div class="row"><input placeholder="Nom de l'équipement" id="customEquipName" style="flex:1;border:0;background:transparent;height:100%;font-size:calc(17rem/17)"><button class="btn sm" data-a="addCustomEquip">Ajouter</button></div>
     </div>`;
@@ -6043,7 +6191,14 @@ function goalsBodyHTML(){
     <div class="field" style="padding:10px 14px"><div class="stepper">
       <button data-a="stepDays" data-d="-1">−</button><div class="val">${S.goals.daysPerWeek}×/sem.</div><button data-a="stepDays" data-d="1">+</button>
     </div></div>
+    <h2 class="sh">Niveau</h2><div class="chips">${Object.keys(LEVEL_LABELS).map(k=>`<button class="chip ${(S.goals.level||"intermediaire")===k?"on":""}" data-a="setLevel" data-v="${k}">${LEVEL_LABELS[k]}</button>`).join("")}</div>
+    <p class="hr-note">${LEVEL_HINTS[S.goals.level||"intermediaire"]}</p>
     <h2 class="sh">Durée de séance</h2><div class="chips">${lenChips}</div>
+    <h2 class="sh">Exercices par séance proposée</h2>
+    <div class="field" style="padding:10px 14px"><div class="stepper">
+      <button data-a="stepExoCount" data-d="-1" aria-label="Moins d'exercices">−</button><div class="val">${sessionSize()} exercices</div><button data-a="stepExoCount" data-d="1" aria-label="Plus d'exercices">+</button>
+    </div></div>
+    <p class="hr-note">${S.goals.exoCount ? "Réglage personnalisé. " : "Réglé automatiquement selon la durée. "}Environ ${sessionSize()*3} séries, ≈ ${Math.round(sessionSize()*3*(40+75)/60/5)*5} min.</p>
     <h2 class="sh">Groupes musculaires</h2>
     <p class="hr-note" style="margin-top:-6px">Touche un groupe pour faire défiler : normal → à prioriser → à éviter.</p>
     <div class="group" style="margin-top:10px">${emphasisRows}</div>`;
@@ -6124,11 +6279,16 @@ Object.assign(ACT, {
   openEquip, openGoals, openExoPrefs, openExportImport, openAppearance, openAbout,
   backupData(){ backupData(); }, restoreData(){ restoreData(); }, openInstall(){ openInstall(); },
   backupLater(){ S.meta.backupSnooze = todayISO(); save(); const c = qs(".backup-nudge"); if(c){ c.classList.add("leaving"); setTimeout(()=>changed(), 250); } else changed(); },
-  toggleEquip(d){ S.equipment.owned[d.id] = !S.equipment.owned[d.id]; save(); refreshEquip(); },
+  toggleEquip(d){ S.equipment.owned[d.id] = !S.equipment.owned[d.id]; save(); refreshEquip(); regenerateDraftIfIdle(); },
   addWeight(d){
     const input = qs("#wadd-"+d.id); const v = parseFloat(String(input.value).replace(",", "."));
     if(!isNaN(v) && v>0){ S.equipment.weights[d.id] = Array.from(new Set([...(S.equipment.weights[d.id]||[]), v])); save(); }
     refreshEquip();
+  },
+  toggleBand(d){
+    const v = +d.v, cur = new Set(S.equipment.weights.bands||[]);
+    if(cur.has(v)) cur.delete(v); else cur.add(v);
+    S.equipment.weights.bands = Array.from(cur).sort(); save(); refreshEquip();
   },
   removeWeight(d){
     S.equipment.weights[d.id] = (S.equipment.weights[d.id]||[]).filter(w=>w!==parseFloat(d.w));
@@ -6142,7 +6302,9 @@ Object.assign(ACT, {
   removeCustom(d){ S.equipment.custom = S.equipment.custom.filter(c=>c.id!==d.id); save(); refreshEquip(); },
 
   setGoalOverall(d){ S.goals.overall = d.v; save(); refreshGoals(); },
-  setSessionLength(d){ S.goals.sessionLength = d.v; save(); refreshGoals(); },
+  setSessionLength(d){ S.goals.sessionLength = d.v; S.goals.exoCount = 0; save(); refreshGoals(); regenerateDraftIfIdle(); },
+  setLevel(d){ S.goals.level = d.v; save(); refreshGoals(); regenerateDraftIfIdle(); },
+  stepExoCount(d){ S.goals.exoCount = Math.max(2, Math.min(10, sessionSize()+parseInt(d.d,10))); save(); refreshGoals(); regenerateDraftIfIdle(); },
   stepDays(d){ S.goals.daysPerWeek = Math.max(2,Math.min(6, S.goals.daysPerWeek+parseInt(d.d,10))); save(); refreshGoals(); },
   cycleEmphasis(d){
     const cur = S.goals.emphasis[d.id]||"normal";

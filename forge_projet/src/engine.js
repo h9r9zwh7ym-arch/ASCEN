@@ -1,6 +1,18 @@
 // ================= MOTEUR DE SUGGESTION (100% local, aucun appel réseau) =================
 const PATTERN_CYCLE = ["squat","hinge","push","pull","lunge","core","calf"];
 const SESSION_SIZE = { court:4, moyen:6, long:8 };
+// nombre d'exercices d'une séance proposée : choisi par l'utilisateur, sinon selon la durée
+// la proposition du jour suit les réglages (matériel, niveau, taille) tant qu'elle n'est ni
+// commencée ni issue d'un programme importé
+function regenerateDraftIfIdle(){
+  if(!S.draft || S.draft.startedAt || S.draft.source==="imported") return;
+  S.draft = generateEngineSession(S.draft.type||"auto"); save();
+}
+function sessionSize(){ return Math.max(2, Math.min(10, S.goals.exoCount || SESSION_SIZE[S.goals.sessionLength] || 6)); }
+// exercices adaptés au niveau : un débutant ne se voit pas proposer d'exercice avancé
+// (il reste libre de le choisir lui-même dans la liste)
+function levelOK(e){ return S.goals.level!=="debutant" || e.level<3; }
+function engineExos(){ const all = availableExos(), ok = all.filter(levelOK); return ok.length>=4 ? ok : all; }
 
 function normName(s){
   return (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim();
@@ -30,6 +42,10 @@ function scoreExo(exo){
   let score = muscleScore(primary);
   exo.muscles.slice(1).forEach(m=>score += muscleScore(m)*0.3);
   if(isIncluded(exo.id)) score += 3;
+  // niveau : les débutants privilégient les exercices accessibles, les avancés les plus exigeants
+  const lv = S.goals.level;
+  if(lv==="debutant") score += exo.level===1 ? 1.5 : 0;
+  else if(lv==="avance") score += exo.level===3 ? 1 : exo.level===1 ? -1 : 0;
   score -= recencyPenalty(exo.id);
   return score;
 }
@@ -47,6 +63,10 @@ function loadableTypeOf(exo){
   return (exo._load = exo.equip.find(id=>EQUIP_MAP[id] && EQUIP_MAP[id].loadable) || null);
 }
 
+// charge « réelle » en kg (les élastiques ont des niveaux de résistance, pas des kilos)
+function kgType(def){ const t = def && loadableTypeOf(def); return t && t!=="bands" ? t : null; }
+function fmtLoad(def, w){ if(w==null || w==="") return ""; return loadableTypeOf(def)==="bands" ? "élastique "+bandLabel(w).toLowerCase() : fmtDec(w)+" kg"; }
+function loadSuffix(def, w){ if(w==null || w==="" || !w) return ""; return loadableTypeOf(def)==="bands" ? " · "+fmtLoad(def, w) : " × "+fmtLoad(def, w); }
 function nextWeight(exo, current){
   const type = loadableTypeOf(exo);
   if(!type) return null;
@@ -129,15 +149,15 @@ function suggestForExo(exo, setsN){
       const nw = nextWeight(exo, lastW);
       if(nw>lastW+0.001){
         weight = nw; reps = new Array(n).fill(rMin);
-        note = `Charge augmentée à ${fmtDec(nw)} kg : tu as dépassé la fourchette. Reprends en bas (${rMin} reps) et remonte.`;
+        note = type==="bands" ? `Passe à l'élastique ${bandLabel(nw).toLowerCase()} : tu as dépassé la fourchette. Reprends en bas (${rMin} reps) et remonte.` : `Charge augmentée à ${fmtDec(nw)} kg : tu as dépassé la fourchette. Reprends en bas (${rMin} reps) et remonte.`;
       } else {
         reps = reps.map((_,i)=>Math.min(rMax+4, lastReps(i)+1));
-        note = "Tu es à ta charge maximale : ajoute une répétition ou ralentis la descente (3 s).";
+        note = type==="bands" ? "Tu utilises ton élastique le plus résistant : ajoute une répétition ou ralentis la descente (3 s)." : "Tu es à ta charge maximale : ajoute une répétition ou ralentis la descente (3 s).";
       }
     } else if(missed && (effort===3 || prevMissed)){
       const lw = lowerWeight(exo, lastW);
       weight = lw; reps = new Array(n).fill(rMin);
-      note = lw<lastW ? `Charge allégée à ${fmtDec(lw)} kg pour retrouver une exécution propre, puis on remonte.` : "On garde la charge : vise une exécution propre avant tout.";
+      note = lw<lastW ? `Charge allégée (${fmtLoad(exo, lw)}) pour retrouver une exécution propre, puis on remonte.` : "On garde la charge : vise une exécution propre avant tout.";
     } else if(missed){
       reps = new Array(n).fill(rMin);
       note = "Même charge : consolide les répétitions avant d'aller plus loin.";
@@ -218,7 +238,7 @@ function resolveAutoType(){
 
 function poolForType(typeId){
   const t = SESSION_TYPE_MAP[typeId];
-  const base = availableExos();
+  const base = engineExos();
   if(!t || !t.muscles) return base;
   const primary = base.filter(e=>t.muscles.includes(e.muscles[0]));
   if(primary.length>=3) return primary;
@@ -228,7 +248,7 @@ function poolForType(typeId){
 // avoid : exercices de la proposition précédente, fortement pénalisés pour que
 // « Autre proposition » change vraiment. Le léger aléa départage les ex æquo.
 function pickExosForSession(n, pool, avoid){
-  pool = pool || availableExos();
+  pool = pool || engineExos();
   avoid = avoid || new Set();
   const score = {};
   pool.forEach(e=>{ score[e.id] = scoreExo(e) + Math.random()*1.2 - (avoid.has(e.id)?6:0); });
@@ -259,7 +279,7 @@ function generateEngineSession(typeId, avoid){
   typeId = typeId || "auto";
   let resolved = typeId, reason = null;
   if(typeId==="auto"){ const r = resolveAutoType(); resolved = r.type; reason = r.reason; }
-  const n = SESSION_SIZE[S.goals.sessionLength] || 6;
+  const n = sessionSize();
   const exos = pickExosForSession(resolved==="core" ? Math.min(n,5) : n, poolForType(resolved), avoid);
   return {
     id: uid(), date: todayISO(), source:"engine", type:typeId, resolvedType:resolved, reason,
@@ -417,7 +437,7 @@ function suggestComplement(existingIds, n){
   const have = existingIds.map(id=>EXO_MAP[id]).filter(Boolean);
   const coveredMuscles = new Set(have.map(e=>e.muscles[0]));
   const coveredPatterns = new Set(have.map(e=>e.pattern));
-  const pool = availableExos().filter(e=>!existingIds.includes(e.id));
+  const pool = engineExos().filter(e=>!existingIds.includes(e.id));
   const jitter = {}; pool.forEach(e=>jitter[e.id]=Math.random()*1.2);
   const out = [];
   while(out.length<n && pool.length){
