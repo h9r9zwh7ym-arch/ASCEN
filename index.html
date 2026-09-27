@@ -1353,6 +1353,8 @@ h2.sh .more.strong{font-weight:700}
 .body-add .num-field{flex:1;min-width:0}
 .body-add .btn{width:auto;flex:none;padding:0 22px;margin:0}
 .row .s.wrap{white-space:normal;line-height:1.3}
+.chip-x{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;margin:-6px -10px -6px -2px;color:inherit}
+.chip-x svg{width:16px;height:16px}
 </style></head><body><div id="app"></div><nav class="tabbar" aria-label="Onglets"></nav><div id="restbar"></div><div id="overlay" role="dialog"></div><div id="toast" role="status" aria-live="polite"></div><input type="file" id="fileImport" accept="application/json,.json" style="display:none"><script>
 // ================= MATÉRIEL =================
 // Catalogue du matériel reconnu par le moteur de suggestion. Chaque exercice de la
@@ -6234,7 +6236,7 @@ function equipBodyHTML(){
       </div>`;
     }
     const list = (S.equipment.weights[e.id]||[]).slice().sort((a,b)=>a-b);
-    const chips = list.map(w=>`<span class="chip on">${w} ${e.unit} <button data-a="removeWeight" data-id="${e.id}" data-w="${w}" style="margin-left:4px">${icon("close")}</button></span>`).join("");
+    const chips = list.map(w=>`<span class="chip on">${w} ${e.unit} <button class="chip-x" data-a="removeWeight" data-id="${e.id}" data-w="${w}" aria-label="Retirer ${w} ${e.unit}">${icon("close")}</button></span>`).join("");
     return `<div class="card" style="margin-top:12px">
       <div style="font-weight:700;margin-bottom:2px">${esc(e.n)}</div>
       <div class="hr-note" style="margin:0 0 10px">${esc(e.hint||"")}</div>

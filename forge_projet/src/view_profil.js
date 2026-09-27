@@ -241,7 +241,7 @@ function equipBodyHTML(){
       </div>`;
     }
     const list = (S.equipment.weights[e.id]||[]).slice().sort((a,b)=>a-b);
-    const chips = list.map(w=>`<span class="chip on">${w} ${e.unit} <button data-a="removeWeight" data-id="${e.id}" data-w="${w}" style="margin-left:4px">${icon("close")}</button></span>`).join("");
+    const chips = list.map(w=>`<span class="chip on">${w} ${e.unit} <button class="chip-x" data-a="removeWeight" data-id="${e.id}" data-w="${w}" aria-label="Retirer ${w} ${e.unit}">${icon("close")}</button></span>`).join("");
     return `<div class="card" style="margin-top:12px">
       <div style="font-weight:700;margin-bottom:2px">${esc(e.n)}</div>
       <div class="hr-note" style="margin:0 0 10px">${esc(e.hint||"")}</div>
