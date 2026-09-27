@@ -108,6 +108,10 @@ function renderWeekWizard(){
 }
 
 Object.assign(ACT, {
+  saveDoneSession(){
+    const p = lastDoneForSave; lastDoneForSave = null; if(!p) return;
+    openTplEditor(null, { n:p.n, exos:p.exos });
+  },
   tplNew(){ openTplEditor(null); },
   tplOpenEditor(d){ openTplEditor(d.id); },
   tplEdDay(d){

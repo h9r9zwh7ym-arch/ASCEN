@@ -46,8 +46,8 @@ input,textarea,select{font:inherit;color:inherit}
 a{color:var(--tint)}
 :focus-visible{outline:2px solid var(--tint);outline-offset:2px;border-radius:6px}
 #app{position:relative;height:100%}
-.view{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(180px + env(safe-area-inset-bottom,0px));display:none;overscroll-behavior-y:contain}
-.view.active{display:block}
+.view{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(180px + env(safe-area-inset-bottom,0px));overscroll-behavior-y:contain;visibility:hidden;pointer-events:none;content-visibility:hidden}
+.view.active{visibility:visible;pointer-events:auto;content-visibility:visible}
 .content{max-width:640px;margin:0 auto}
 
 /* navbar */
@@ -804,7 +804,7 @@ h2.sh button.more{font-size:calc(15rem/17);font-weight:500;color:var(--tint)}
 .hero-eyebrow{font-size:calc(12rem/17);font-weight:800;letter-spacing:.06em;text-transform:uppercase;opacity:.92}
 .hero-title{font-family:var(--serif);font-weight:700;font-size:calc(27rem/17);line-height:1.1;margin-top:4px;letter-spacing:-.01em;text-shadow:0 1px 10px rgba(120,30,0,.18)}
 .hero-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.hero-meta span{font-size:calc(12.5rem/17);font-weight:700;padding:3px 9px;border-radius:9px;background:rgba(255,255,255,.2);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.hero-meta span{font-size:calc(12.5rem/17);font-weight:700;padding:3px 9px;border-radius:9px;background:rgba(255,255,255,.2);}
 .hero-picts{display:flex;gap:6px;margin-top:14px;align-items:center}
 .hero-picts .hp{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.18);box-shadow:inset 0 0 0 1px rgba(255,255,255,.22);color:#fff}
 .hero-picts .hp .picto{width:80%;height:80%}
@@ -815,8 +815,9 @@ h2.sh button.more{font-size:calc(15rem/17);font-weight:500;color:var(--tint)}
 .hero-go:active{transform:scale(.97)}
 .hg-ico{width:30px;height:30px;border-radius:15px;display:grid;place-items:center;background:var(--grad);color:#fff}
 .hg-ico svg{width:14px;height:14px;margin-left:2px}
-.hero-go .hg-ico{animation:goPulse 2.2s ease-in-out infinite}
-@keyframes goPulse{0%,100%{box-shadow:0 0 0 0 rgba(242,96,26,.45)}50%{box-shadow:0 0 0 7px rgba(242,96,26,0)}}
+.hg-ico{position:relative}
+.hero-go .hg-ico::after{content:"";position:absolute;inset:0;border-radius:50%;background:rgba(242,96,26,.5);animation:goRing 2.2s cubic-bezier(.2,.8,.2,1) infinite;z-index:-1}
+@keyframes goRing{0%{transform:scale(1);opacity:.7}60%,100%{transform:scale(1.55);opacity:0}}
 .hero.done{background:linear-gradient(135deg,#34C759,#1E8E4A);box-shadow:0 18px 36px -18px rgba(30,142,74,.55)}
 .hero-badge{width:40px;height:40px;border-radius:20px;background:rgba(255,255,255,.22);display:grid;place-items:center;margin-bottom:10px}
 .hero-badge svg{width:22px;height:22px}
@@ -970,8 +971,8 @@ h2.sh button.more{font-size:calc(15rem/17);font-weight:500;color:var(--tint)}
 .focus-card.resting .ring-wrap::before{content:"";position:absolute;inset:14px;border-radius:50%;background:radial-gradient(circle,var(--tint-bg),transparent 70%);animation:breathe 4s ease-in-out infinite}
 @keyframes breathe{0%,100%{transform:scale(.85);opacity:.5}50%{transform:scale(1.05);opacity:1}}
 .validate{position:relative;overflow:hidden;background:var(--grad);box-shadow:0 10px 22px -12px var(--glow)}
-.validate.ready{animation:readyPulse 1.2s cubic-bezier(.2,.8,.2,1) 2}
-@keyframes readyPulse{0%{box-shadow:0 0 0 0 rgba(242,96,26,.55)}70%{box-shadow:0 0 0 14px rgba(242,96,26,0)}100%{box-shadow:0 0 0 0 rgba(242,96,26,0)}}
+.validate.ready{animation:readyBump .5s cubic-bezier(.32,1.5,.4,1)}
+@keyframes readyBump{0%{transform:scale(.94)}50%{transform:scale(1.04)}100%{transform:none}}
 .validate::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.35) 50%,transparent 65%);transform:translateX(-120%)}
 .validate.ready::after{animation:heroSheen 1.6s ease-in-out}
 .bs-val.roll-up{animation:rollUp .28s cubic-bezier(.2,.8,.2,1)}
@@ -1062,8 +1063,8 @@ h2.sh button.more{font-size:calc(15rem/17);font-weight:500;color:var(--tint)}
 /* célébration : pastille pleine en dégradé */
 .celebrate-ring{background:var(--grad);color:#fff;box-shadow:0 14px 30px -14px var(--glow),0 0 0 10px var(--tint-bg)}
 .stat-box.pr .num{color:var(--tint)}
-.lp-seg.grew{animation:segGlow .8s ease}
-@keyframes segGlow{0%{box-shadow:0 0 0 0 var(--glow)}40%{box-shadow:0 0 10px 1px var(--glow)}100%{box-shadow:none}}
+.lp-seg.grew{animation:segGlow .6s cubic-bezier(.32,1.5,.4,1)}
+@keyframes segGlow{0%{transform:scaleY(1)}40%{transform:scaleY(1.9)}100%{transform:scaleY(1)}}
 .lh-pct b.bump{animation:chipBump .5s cubic-bezier(.32,1.5,.4,1)}
 .validate:active{transform:scale(.96)}
 .row.tap,.row-main{transition:background .15s}
@@ -1159,8 +1160,9 @@ h2.sh .more.strong{font-weight:700}
 .tpl-empty .te-ico{font-size:32px}
 .tpl-empty .te-t{font-family:var(--serif);font-weight:700;font-size:calc(20rem/17);margin-top:4px}
 .tpl-empty .te-s{font-size:calc(14rem/17);color:var(--label2);line-height:1.4;margin:6px 0 16px}
-.tpl-card2.flash{animation:cardFlash 1.2s ease}
-@keyframes cardFlash{0%,100%{box-shadow:var(--shadow)}30%{box-shadow:0 0 0 3px var(--tint),0 14px 30px -12px var(--glow)}}
+.tpl-card2.flash::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 3px var(--tint);pointer-events:none;animation:cardFlash 1.3s ease both}
+@keyframes cardFlash{0%,100%{opacity:0}25%,55%{opacity:1}}
+.tpl-card2.flash{animation:badgePop .5s cubic-bezier(.32,1.4,.4,1)}
 /* programme de la semaine */
 .wz-n{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
 .wz-n button{height:52px;border-radius:14px;background:var(--fill2);font-family:var(--rounded);font-weight:800;font-size:calc(20rem/17);color:var(--label2);transition:background .2s,color .2s,transform .15s}
@@ -1180,3 +1182,60 @@ h2.sh .more.strong{font-weight:700}
 #wzBody>p.body{margin-left:4px;margin-right:4px}
 .pd-cur{margin-left:16px;margin-right:16px}
 .tpl-empty .btn{width:100%}
+/* ================= v2.0 ================= */
+.hist-chart .seg{margin:10px 0 12px}
+.hist-kpi{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:10px}
+.hist-kpi b{display:block;font-family:var(--rounded);font-size:calc(22rem/17);font-weight:800}
+.hist-kpi small{display:block;font-size:calc(12rem/17);color:var(--label2);font-weight:600}
+.hk-delta{text-align:right;font-weight:700;font-size:calc(14rem/17);color:var(--label2)}
+.hk-delta.up{color:var(--green)} .hk-delta.down{color:var(--orange)}
+.hist-avg{font-size:calc(12.5rem/17);color:var(--label2);margin-top:8px}
+#histChart.swap .cc-bar{animation:barGrow .55s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0) * 25ms)}
+#histChart.swap .hist-kpi,#histChart.swap .cc-val{animation:fadeUp .35s ease both}
+/* chronomètre des exercices en secondes */
+.hold-wrap.prep .ring-time{font-size:calc(64rem/17);font-family:var(--rounded);font-weight:900;color:var(--tint)}
+.ring-time.tick{animation:holdTick .8s cubic-bezier(.2,.8,.2,1)}
+@keyframes holdTick{0%{transform:scale(1.6);opacity:0}25%{transform:scale(1);opacity:1}100%{transform:scale(.9);opacity:.85}}
+.focus-card.holding{background:linear-gradient(180deg,color-mix(in srgb,var(--tint) 8%,var(--bg2)),var(--bg2) 65%)}
+.focus-card.holding .ring-fg{transition:stroke-dashoffset .12s linear}
+.hold-skip{margin-top:6px;color:var(--label2)}
+.hold-go svg{width:20px;height:20px}
+@media (prefers-reduced-motion:reduce){.ring-time.tick{animation:none}}
+.cel-save{margin-top:16px;padding:14px;border-radius:16px;background:var(--fill2);text-align:center;animation:fadeUp .5s ease .6s both}
+.cs-t{font-weight:700;font-size:calc(15rem/17)}
+.cs-s{font-size:calc(13rem/17);color:var(--label2);margin:2px 0 10px}
+/* icônes façon Réglages d'iOS */
+.sfi{width:30px;height:30px;border-radius:7.5px;flex:none;display:grid;place-items:center;background:var(--c);box-shadow:inset 0 0 0 .5px rgba(0,0,0,.08)}
+.sfi svg{width:19px;height:19px}
+.sfi.sm{width:22px;height:22px;border-radius:6px}
+.sfi.sm svg{width:15px;height:15px}
+.sh-ico{display:inline-flex;align-items:center;gap:10px}
+.pick-h .sfi{vertical-align:-5px;margin-right:4px}
+
+/* ---- performances : les onglets masqués gardent leur mise en page en cache (content-visibility),
+   les blocs hors écran ne sont ni mis en page ni peints tant qu'on n'y fait pas défiler ---- */
+#v-history .group,#v-progress .chart-card,#v-progress .medal-grid,#v-profil .group{content-visibility:auto;contain-intrinsic-size:auto 280px}
+.group,.chart-card,.tpl-card2,.medal-card,.kpi,.focus-card,.hero{contain:layout style}
+
+/* ---- animations v2.0 : ressorts et retours tactiles, uniquement transform/opacity ---- */
+.switch::after{transition:transform .35s cubic-bezier(.32,1.5,.4,1),width .2s}
+.switch:active::after{width:33px}
+.switch.on:active::after{transform:translateX(14px)}
+.sheet{transition:transform .42s cubic-bezier(.3,1.15,.4,1)}
+.row.tap:active,.tc-exo:active{transform:scale(.985)}
+.row.tap,.tc-exo{transition:transform .15s,background .15s}
+.lt{transform-origin:left bottom;will-change:auto}
+.tabbtn svg{transition:transform .25s cubic-bezier(.32,1.5,.4,1)}
+.tabbtn:active svg{transform:scale(.82)}
+.focus-card.dragging{will-change:transform}
+.cc-col:active .cc-bar{transform:scaleY(1.04)}
+.medal-card{transition:transform .2s cubic-bezier(.32,1.4,.4,1)}
+.medal-card:active{transform:scale(.95)}
+.sfi{transition:transform .2s cubic-bezier(.32,1.5,.4,1)}
+.row.tap:active .sfi{transform:scale(.88) rotate(-4deg)}
+.enter .sfi{animation:sfiIn .45s cubic-bezier(.32,1.5,.4,1) both}
+@keyframes sfiIn{from{transform:scale(.5) rotate(-12deg);opacity:0}to{transform:none;opacity:1}}
+.enter .hist-kpi b{animation:fadeUp .5s cubic-bezier(.2,.8,.2,1) .15s both}
+@media (prefers-reduced-motion:reduce){.hero-go .hg-ico::after,.validate.ready,.lp-seg.grew,.tpl-card2.flash,.tpl-card2.flash::after,.enter .sfi,.enter .hist-kpi b{animation:none!important}}
+.hist-kpi{margin-bottom:22px}
+.ph-person{width:44px;height:44px;color:var(--label3)}

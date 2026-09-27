@@ -355,7 +355,7 @@ function openPicker(opts){
 }
 function renderPickerSheet(){
   const owned = new Set(availableExos().map(exoCategory));
-  const cats = [["","Tout le matériel"]].concat(EXO_CATS.filter(c=>owned.has(c.id)).map(c=>[c.id, c.em+" "+c.n])).map(([id,n])=>`<button class="chip cat ${(picker.cat||"")===id?"on":""}" data-a="pickerCat" data-v="${id}">${esc(n)}</button>`).join("");
+  const cats = [["","Tout le matériel"]].concat(EXO_CATS.filter(c=>owned.has(c.id)).map(c=>[c.id, c.n])).map(([id,n])=>`<button class="chip cat ${(picker.cat||"")===id?"on":""}" data-a="pickerCat" data-v="${id}">${esc(n)}</button>`).join("");
   const chips = [["","Tous les muscles"]].concat(MUSCLES.map(m=>[m.id,m.n])).map(([id,n])=>`<button class="chip ${(picker.muscle||"")===id?"on":""}" data-a="pickerMuscle" data-v="${id}">${esc(n)}</button>`).join("");
   openSheet(`<div class="sheet-hd">${picker.onCancel?`<button class="te-cancel" data-a="pickerCancel">${icon("chev")}<span>Retour</span></button>`:""}<span class="t">${esc(picker.title)}</span>${picker.onCancel?`<span class="te-spacer"></span>`:`<button class="icon-btn" data-a="closesheet">${icon("close")}</button>`}</div>
     <div class="picker-top">
@@ -381,7 +381,7 @@ function pickerListHTML(){
     const list = pool.filter(e=>exoCategory(e)===c.id).sort((a,b)=>muscleOrder[a.muscles[0]]-muscleOrder[b.muscles[0]] || a.n.localeCompare(b.n,"fr"));
     if(!list.length) return "";
     let lastM = null;
-    return `<div class="pick-h"><span>${c.em}</span> ${esc(c.n)} <span class="pick-n">${list.length}</span></div><div class="group">${list.map(e=>{
+    return `<div class="pick-h">${sfIcon(EQUIP_GLYPH[c.id]||"wrench", EQUIP_COLOR[c.id]||"gray","sm")} ${esc(c.n)} <span class="pick-n">${list.length}</span></div><div class="group">${list.map(e=>{
       const on = picker.selected.includes(e.id);
       const m = e.muscles[0], sub = m!==lastM ? `<div class="pick-m">${esc(MUSCLE_MAP[m].n)}</div>` : ""; lastM = m;
       return `${sub}<div class="row pick-row ${on?"on":""}" data-id="${e.id}">
@@ -455,6 +455,23 @@ function liveStripHTML(draft){
 }
 // prochain exercice qui reste à faire après « from » (en bouclant), ou -1
 function exoFinished0(ex){ return ex.sets.every(s=>s.done); }
+// après un repos : en mode circuit (réglage par défaut) on passe à l'exercice suivant qui
+// reste à faire ; en mode classique on reste sur l'exercice tant qu'il a des séries.
+function circuitMode(){ return S.settings.flow!=="classic"; }
+function restTarget(idx, arrived){
+  if(!S.draft || idx==null || !S.draft.exos[idx]) return -1;
+  const ex = S.draft.exos[idx], left = ex.sets.some(s=>!s.done);
+  if(arrived) return left ? idx : nextUndone(idx);
+  if(circuitMode()) return nextUndone(idx);
+  return left ? idx : nextUndone(idx);
+}
+function restAdvance(idx, arrived){
+  if(!S.draft || !S.draft.startedAt) return;
+  const t = restTarget(idx, arrived);
+  if(t<0) return;
+  if(t!==liveFocusIdx){ focusAnimDir = t>liveFocusIdx || (liveFocusIdx===S.draft.exos.length-1 && t===0) ? "r" : "l"; liveFocusIdx = t; }
+  const v = qs("#v-today"); if(v && currentTab==="today" && v.scrollTop>120) v.scrollTo({ top:0, behavior:"smooth" });
+}
 function nextUndone(from){
   const ex = S.draft.exos, n = ex.length;
   for(let k=1;k<=n;k++){ const i = (from+k)%n; if(ex[i].sets.some(s=>!s.done)) return i; }
@@ -495,9 +512,9 @@ function renderFocusRegionInner(draft){
   const c = liveCounts(draft);
   if(!c.left) return sessionCompleteHTML(draft);
   const nav = `<div class="focus-nav">
-    <button class="navbtn" aria-label="Exercice précédent" data-a="focusPrev" ${idx===0?"disabled":""} style="transform:scaleX(-1)">${icon("chev")}</button>
+    <button class="navbtn" aria-label="Exercice précédent" data-a="focusPrev" ${draft.exos.length<2?"disabled":""} style="transform:scaleX(-1)">${icon("chev")}</button>
     <button class="center-link" data-a="openOverview"><span><b>${idx+1}</b> sur ${draft.exos.length}</span><small>Tout voir</small></button>
-    <button class="navbtn" aria-label="Exercice suivant" data-a="focusNext" ${idx===draft.exos.length-1?"disabled":""}>${icon("chev")}</button>
+    <button class="navbtn" aria-label="Exercice suivant" data-a="focusNext" ${draft.exos.length<2?"disabled":""}>${icon("chev")}</button>
   </div>`;
   const firstTime = idx===0 && c.done===0;
   return `${renderFocusCard(idx, ex, def)}${upNextHTML(idx)}${nav}${firstTime?`<div class="swipe-hint">Glisse la carte ou touche le bandeau pour changer d'exercice</div>`:""}`;
@@ -537,6 +554,51 @@ function sessionCompleteHTML(draft){
   </div>`;
 }
 
+// ---------- chronomètre des exercices en secondes (planche, chaise, suspension…) ----------
+// 3-2-1 de préparation, puis décompte de la durée visée ; à zéro la série est validée
+// toute seule (mains libres). « Arrêter » valide avec le temps réellement tenu.
+let hold = null, holdTimer = null;
+const HOLD_R = 76, HOLD_C = 2*Math.PI*HOLD_R;
+function holdCardHTML(idx, ex, def, si, header, animClass, setDots){
+  const prep = hold.phase==="prep";
+  const left = prep ? 3 : Math.max(0, Math.ceil(hold.target - (performance.now()-hold.t0)/1000));
+  return `<div class="focus-card holding r-${regionOf(def)} ${animClass}">${header}
+    <div class="fc-phase">${prep?"Mets-toi en position":"Tiens bon !"} · série ${si+1} / ${ex.sets.length}</div>
+    ${setDots(si)}
+    <div class="ring-wrap hold-wrap ${prep?"prep":""}"><svg viewBox="0 0 172 172">
+      <circle class="ring-bg" cx="86" cy="86" r="${HOLD_R}"/>
+      <circle class="ring-fg" id="holdFg" cx="86" cy="86" r="${HOLD_R}" stroke-dasharray="${HOLD_C.toFixed(1)}" stroke-dashoffset="${prep?HOLD_C.toFixed(1):"0"}"/>
+    </svg><div class="ring-label"><div class="ring-time" id="holdTime">${prep?left:fmtMMSS(left)}</div><div class="ring-sub" id="holdSub">${prep?"prêt…":`sur ${hold.target} s`}</div></div></div>
+    <div class="hold-actions">
+      <button class="btn big validate hold-stop" data-a="holdStop">${icon("check")} ${prep?"Annuler":"Arrêter et valider"}</button>
+    </div>
+  </div>`;
+}
+function holdTick(){
+  if(!hold || !S.draft || !S.draft.startedAt || !S.draft.exos[hold.exi]){ clearInterval(holdTimer); hold = null; return; }
+  const now = performance.now();
+  if(hold.phase==="prep"){
+    const left = 3 - Math.floor((now-hold.t0)/1000);
+    if(left<=0){ hold.phase = "hold"; hold.t0 = now; sfx("count"); haptic(35); refreshFocusRegion(); return; }
+    if(left!==hold.lastTick){ hold.lastTick = left; sfx("restTick"); const t = qs("#holdTime"); if(t){ t.textContent = left; t.classList.remove("tick"); void t.offsetWidth; t.classList.add("tick"); } }
+    return;
+  }
+  const el = (now-hold.t0)/1000, remain = Math.max(0, hold.target-el);
+  const t = qs("#holdTime"), fg = qs("#holdFg");
+  if(t) t.textContent = fmtMMSS(Math.ceil(remain));
+  if(fg) fg.setAttribute("stroke-dashoffset", (HOLD_C*(1-Math.min(1, el/hold.target))).toFixed(1));
+  const s = Math.ceil(remain);
+  if(s<=3 && s>0 && s!==hold.lastTick){ hold.lastTick = s; sfx("restTick"); haptic(10); const w = qs(".hold-wrap"); if(w) w.classList.add("ending"); }
+  if(remain<=0) holdFinish(hold.target);
+}
+function holdFinish(secs){
+  const h = hold; clearInterval(holdTimer); hold = null;
+  if(!h || !S.draft || !S.draft.exos[h.exi]) return;
+  const st = S.draft.exos[h.exi].sets.find(s=>!s.done);
+  if(st) st.reps = Math.max(1, Math.round(secs));
+  ACT.validateSet({ exi:String(h.exi) });
+}
+
 function lastTimeHTML(exoId){
   const last = lastPerformance(exoId);
   if(!last) return `<div class="fc-last">Première fois : prends tes repères</div>`;
@@ -561,12 +623,15 @@ function renderFocusCard(idx, ex, def){
 
   if(resting){
     const remain = Math.max(0, Math.round((restState.endAt-Date.now())/1000));
-    const next = ex.sets.find(s=>!s.done);
+    const tIdx = restTarget(restState.exoIdx, restState.arrived), tEx = tIdx>=0 ? S.draft.exos[tIdx] : null;
+    const next = tEx && tEx.sets.find(s=>!s.done), nDef = tEx && EXO_MAP[tEx.exoId];
+    const nextTxt = !next ? "" : tIdx===idx ? `Ensuite : ${next.reps} ${isTimed(def)?"s":"reps"}${next.weight?" × "+next.weight+" kg":""}`
+      : `Ensuite : <b>${esc(nDef.n)}</b> · ${next.reps} ${isTimed(nDef)?"s":"reps"}${next.weight?" × "+next.weight+" kg":""}`;
     return `<div class="focus-card resting r-${regionOf(def)} ${animClass}">${header}
       ${setDots(-1)}
       <div class="fc-phase">Repos · respire</div>
       ${ringSVG(remain, restState.totalSec)}
-      ${next?`<div class="fc-next">Ensuite : ${next.reps} reps${next.weight?" × "+next.weight+" kg":""}</div>`:""}
+      ${nextTxt?`<div class="fc-next">${nextTxt}</div>`:""}
       <div class="ring-adjust"><button data-a="restAdjust" data-d="-15">−15 s</button><button data-a="restAdjust" data-d="15">+15 s</button><button class="skip" data-a="restSkip">Passer</button></div>
     </div>`;
   }
@@ -587,6 +652,7 @@ function renderFocusCard(idx, ex, def){
   const st = ex.sets[si];
   const hasWeight = !!loadableTypeOf(def);
   const unit = isTimed(def) ? "Secondes" : "Répétitions";
+  if(hold && hold.exi===idx) return holdCardHTML(idx, ex, def, si, header, animClass, setDots);
   const rr = restReady; restReady = false; // animation « c'est reparti » après le repos
   setTimeout(()=>{ valRoll = {}; }, 0);
   return `<div class="focus-card r-${regionOf(def)} ${animClass}">${header}
@@ -606,7 +672,10 @@ function renderFocusCard(idx, ex, def){
     </div>
     ${lastTimeHTML(ex.exoId)}
     ${ex.note?`<div class="exo-note" style="margin:0 0 14px">${esc(ex.note)}</div>`:""}
-    <button class="btn big validate ${rr?"ready":""}" data-a="validateSet" data-exi="${idx}">${icon("check")} Valider la série ${si+1}</button>
+    ${isTimed(def)
+      ? `<button class="btn big validate hold-go ${rr?"ready":""}" data-a="holdStart" data-exi="${idx}" data-si="${si}">${icon("timer")} Lancer le chrono · ${st.reps||30} s</button>
+         <button class="btn ghost sm hold-skip" data-a="validateSet" data-exi="${idx}">Valider sans chrono</button>`
+      : `<button class="btn big validate ${rr?"ready":""}" data-a="validateSet" data-exi="${idx}">${icon("check")} Valider la série ${si+1}</button>`}
   </div>`;
 }
 
@@ -661,6 +730,7 @@ function overviewBodyHTML(){
     <div class="btnrow"><button class="btn secondary sm" data-a="addExoOpen">${icon("plus")} Ajouter des exercices</button></div>`;
 }
 
+let lastDoneForSave = null;
 function finalizeSession(){
   const draft = S.draft;
   const xpBefore = totalXP();
@@ -672,6 +742,12 @@ function finalizeSession(){
   S.draft = null;
   liveFocusIdx = 0;
   stopRestTimer();
+  // la séance composée a été faite : le constructeur repart à vide
+  S.custom = { exos:[] };
+  // proposer d'enregistrer la séance si elle ne vient pas d'une séance enregistrée
+  const ids = draft.exos.map(e=>e.exoId).join();
+  const known = draft.tplId || S.templates.some(t=>t.exos.map(e=>e.exoId).join()===ids);
+  lastDoneForSave = known || !draft.exos.length ? null : { n: draft.name && draft.source!=="engine" ? draft.name : sessionTitle(draft), exos: draft.exos.map(e=>({ exoId:e.exoId, sets:e.sets.filter(s=>s.done).length||e.sets.length })) };
   const ups = checkMedals();
   const xpAfter = totalXP();
   save();
@@ -735,7 +811,7 @@ document.addEventListener("pointermove", e=>{
     else { if(Math.abs(dy)>10) swipe = null; return; }
   }
   const n = S.draft.exos.length;
-  const edge = (liveFocusIdx===0 && dx>0) || (liveFocusIdx===n-1 && dx<0);
+  const edge = n<2;
   swipe.dx = edge ? dx*0.25 : dx;
   swipe.card.style.transform = `translateX(${swipe.dx}px) rotate(${swipe.dx/45}deg)`;
 });
@@ -745,13 +821,13 @@ function endSwipe(e){
   if(!s.active) return;
   suppressClicksUntil = Date.now()+350;
   const v = s.dx/Math.max(1, performance.now()-s.t), n = S.draft.exos.length;
-  const go = (s.dx<-70 || v<-0.6) && liveFocusIdx<n-1 ? 1 : (s.dx>70 || v>0.6) && liveFocusIdx>0 ? -1 : 0;
+  const go = n<2 ? 0 : (s.dx<-70 || v<-0.6) ? 1 : (s.dx>70 || v>0.6) ? -1 : 0;
   s.card.classList.remove("dragging");
   if(go){
     s.card.classList.add(go>0?"fly-l":"fly-r");
     sfx("swipe");
     if(navigator.vibrate) try{ navigator.vibrate(8); }catch(err){}
-    setTimeout(()=>{ liveFocusIdx += go; focusAnimDir = go>0?"r":"l"; refreshFocusRegion(); }, 170);
+    setTimeout(()=>{ liveFocusIdx = (liveFocusIdx+go+n)%n; focusAnimDir = go>0?"r":"l"; refreshFocusRegion(); }, 170);
   } else {
     s.card.classList.add("snap");
     s.card.style.transform = "";
@@ -976,11 +1052,29 @@ Object.assign(ACT, {
   },
 
   // --- séance en cours ---
-  focusPrev(){ if(liveFocusIdx>0){ liveFocusIdx--; focusAnimDir="l"; refreshFocusRegion(); } },
-  focusNext(){ if(S.draft && liveFocusIdx<S.draft.exos.length-1){ liveFocusIdx++; focusAnimDir="r"; refreshFocusRegion(); } },
+  // navigation en boucle : après le dernier exercice on revient au premier, et inversement
+  focusPrev(){ const n = S.draft ? S.draft.exos.length : 0; if(n>1){ liveFocusIdx = (liveFocusIdx-1+n)%n; focusAnimDir="l"; refreshFocusRegion(); } },
+  focusNext(){ const n = S.draft ? S.draft.exos.length : 0; if(n>1){ liveFocusIdx = (liveFocusIdx+1)%n; focusAnimDir="r"; refreshFocusRegion(); } },
   focusJump(d){ const ni=+d.idx; focusAnimDir = ni>liveFocusIdx?"r":ni<liveFocusIdx?"l":null; liveFocusIdx=ni; refreshFocusRegion(); },
   jumpFromOverview(d){ const ni=+d.idx; focusAnimDir = ni>liveFocusIdx?"r":ni<liveFocusIdx?"l":null; liveFocusIdx=ni; closeSheet(); refreshFocusRegion(); },
 
+  holdStart(d){
+    const exi = +d.exi, ex = S.draft.exos[exi], st = ex.sets.find(s=>!s.done); if(!st) return;
+    if(restState) stopRestTimer();
+    hold = { exi, target: Math.max(5, st.reps||30), phase:"prep", t0: performance.now(), lastTick:3 };
+    clearInterval(holdTimer); holdTimer = setInterval(holdTick, 100);
+    sfx("restTick"); haptic(12); refreshFocusRegion();
+  },
+  holdStop(){
+    if(!hold) return;
+    if(hold.phase==="prep"){ clearInterval(holdTimer); hold = null; refreshFocusRegion(); return; }
+    holdFinish((performance.now()-hold.t0)/1000);
+  },
+  toggleFlow(){
+    S.settings.flow = circuitMode() ? "classic" : "circuit"; save(); closeSheet();
+    toast(circuitMode() ? "Après chaque repos : exercice suivant" : "Toutes les séries d'un exercice, puis le suivant");
+    refreshFocusRegion();
+  },
   focusMenu(d){
     const i = +d.idx, def = EXO_MAP[S.draft.exos[i].exoId];
     openModal(`<div class="tm-head r-${regionOf(def)}">${exoIcon(def,"sm")}<div><div style="font-weight:700;font-size:calc(17rem/17)">${esc(def.n)}</div></div></div>
@@ -988,6 +1082,7 @@ Object.assign(ACT, {
         <button data-a="showExoInfo" data-id="${def.id}">${icon("search")}<span>Fiche et technique</span></button>
         <button data-a="swapExoOpen" data-idx="${i}">${icon("swap")}<span>Remplacer l'exercice</span></button>
         <button data-a="addSetFocus" data-exi="${i}">${icon("plus")}<span>Ajouter une série</span></button>
+        <button data-a="toggleFlow">${icon("repeat")}<span>${circuitMode()?"Enchaînement : exercice suivant après chaque repos":"Enchaînement : toutes les séries d'abord"}</span></button>
         <button class="danger" data-a="removeExo" data-idx="${i}">${icon("trash")}<span>Retirer de la séance</span></button>
       </div>
       <button class="btn ghost" style="height:40px;margin-top:6px" data-a="closesheet">Fermer</button>`);
@@ -1042,7 +1137,8 @@ Object.assign(ACT, {
     const si = ex.sets.findIndex(s=>!s.done);
     if(si<0) return;
     const st = ex.sets[si];
-    const [bx,by] = centerOf(".validate");
+    let [bx,by] = centerOf(".validate");
+    if(bx==null){ [bx,by] = centerOf(".focus-card .set-dots"); if(bx==null){ bx = innerWidth/2; by = innerHeight/2; } }
     // les textes flottants partent des points de série (même place avant et après le repos)
     const dotsR = (qs(".focus-card .set-dots")||{getBoundingClientRect:()=>null}).getBoundingClientRect();
     const fx0 = dotsR ? dotsR.left+dotsR.width/2 : bx, fy0 = dotsR ? dotsR.top-8 : by-30;
@@ -1067,7 +1163,7 @@ Object.assign(ACT, {
     if(!st.pr && !exoFinished0(ex)) floatText(fx0, fy0, `✓ Série ${si+1}`);
     const exoFinished = !ex.sets.some(s=>!s.done);
     const ni = nextUndone(exi);
-    if(ni>=0) startRestTimer(def.restSec, def.n, exoFinished ? ni : exi);
+    if(ni>=0) startRestTimer(def.restSec, def.n, exoFinished ? ni : exi, exoFinished);
     else stopRestTimer();
     if(exoFinished){
       if(!st.pr) confettiBurst(bx, by, 36);

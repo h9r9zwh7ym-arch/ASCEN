@@ -15,6 +15,17 @@ function masteredExosCount(){
   return Object.values(counts).filter(c=>c>=8).length;
 }
 const countSessions = pred => ()=>S.sessions.filter(pred).length;
+// --- valeurs des trophées ajoutés en v2.0 ---
+function doneSetsOf(pred){ let n = 0; S.sessions.forEach(s=>s.exos.forEach(ex=>{ const d = EXO_MAP[ex.exoId]; if(d && pred(d)) ex.sets.forEach(st=>{ if(st.done) n += st.reps||0; }); })); return n; }
+const BW_EQUIP = new Set(["bodyweight","bench","mat","pullup_bar"]);
+function holdMinutes(){ return doneSetsOf(d=>isTimed(d))/60; }
+function bodyweightReps(){ return doneSetsOf(d=>!isTimed(d) && d.equip.every(q=>BW_EQUIP.has(q))); }
+function legDays(){ return S.sessions.filter(s=>s.exos.reduce((t,ex)=>{ const d = EXO_MAP[ex.exoId]; return t + (d && regionOf(d)==="legs" ? ex.sets.filter(x=>x.done).length : 0); },0)>=3).length; }
+function comebacks(){
+  const days = Array.from(new Set(S.sessions.map(s=>s.date))).sort();
+  let n = 0; for(let i=1;i<days.length;i++) if(daysBetween(days[i-1], days[i])>=14) n++;
+  return n;
+}
 
 // ---- valeurs des nouvelles familles (v1.3) ----
 function spanDays(){
@@ -29,14 +40,19 @@ function intenseWeeks(){
 }
 // semaines où au moins 8 groupes musculaires différents ont été travaillés
 function balancedWeeks(){
-  const per = {};
-  S.sessions.forEach(s=>s.exos.forEach(ex=>{
-    const d = EXO_MAP[ex.exoId];
-    if(!d || !ex.sets.some(st=>st.done)) return;
+  const per = new Map();
+  for(const s of S.sessions){
     const k = weekKey(s.date);
-    d.muscles.forEach(m=>{ if(m!=="cardio") (per[k]=per[k]||new Set()).add(m); });
-  }));
-  return Object.values(per).filter(ms=>ms.size>=8).length;
+    let set = per.get(k); if(!set){ set = new Set(); per.set(k, set); }
+    if(set.size>=11) continue;
+    for(const ex of s.exos){
+      const d = EXO_MAP[ex.exoId];
+      if(!d || !ex.sets.some(st=>st.done)) continue;
+      for(const m of d.muscles) if(m!=="cardio") set.add(m);
+    }
+  }
+  let n = 0; per.forEach(ms=>{ if(ms.size>=8) n++; });
+  return n;
 }
 function maxRepsOneSession(){ return S.sessions.reduce((m,s)=>Math.max(m, sessionReps(s)), 0); }
 function heaviestSet(){
@@ -49,12 +65,14 @@ function heaviestSet(){
 // (évite qu'une progression de débutant de quelques semaines donne le platine).
 function bestStrengthRatio(){
   const hist = {};
-  S.sessions.slice().sort((a,b)=>a.date.localeCompare(b.date)).forEach(s=>s.exos.forEach(ex=>{
+  // les séances sont déjà enregistrées dans l'ordre chronologique
+  for(const s of S.sessions) for(const ex of s.exos){
     const def = EXO_MAP[ex.exoId];
-    if(!def || !loadableTypeOf(def)) return;
-    const e = Math.max(0, ...ex.sets.filter(st=>st.done&&st.weight).map(st=>estimated1RM(st.weight, st.reps)));
+    if(!def || !loadableTypeOf(def)) continue;
+    let e = 0;
+    for(const st of ex.sets) if(st.done && st.weight){ const v = estimated1RM(st.weight, st.reps); if(v>e) e = v; }
     if(e) (hist[ex.exoId]=hist[ex.exoId]||[]).push({ date:s.date, e });
-  }));
+  }
   let best = 0;
   Object.values(hist).forEach(h=>{
     if(h.length<4 || daysBetween(h[0].date, h[h.length-1].date)<90) return;
@@ -114,6 +132,13 @@ const MEDALS = [
 
   { id:"early",    cat:"style", n:"Lève-tôt",          em:"🌅", unit:"séances commencées avant 8 h", one:"séance commencée avant 8 h", t:[1,10,50,150], val:countSessions(s=>{ const h=startHour(s); return h!==null && h<8; }) },
   { id:"night",    cat:"style", n:"Oiseau de nuit",    em:"🌙", unit:"séances commencées après 21 h", one:"séance commencée après 21 h", t:[1,10,50,150], val:countSessions(s=>startHour(s)>=21) },
+  { id:"weekend",  cat:"style", n:"Guerrier du week-end", em:"🏖️", unit:"séances le week-end", one:"séance le week-end", t:[1,10,50,150], val:countSessions(s=>{ const g = parseISO(s.date).getDay(); return g===0 || g===6; }) },
+  { id:"lunch",    cat:"style", n:"Pause de midi",     em:"🥪", unit:"séances commencées entre 11 h et 14 h", one:"séance commencée entre 11 h et 14 h", t:[1,10,40,120], val:countSessions(s=>{ const h=startHour(s); return h!==null && h>=11 && h<14; }) },
+  { id:"comeback", cat:"regular", n:"Retour gagnant",  em:"🔄", unit:"reprises après 2 semaines de pause", one:"reprise après 2 semaines de pause", t:[1,3,6,12], val:comebacks, desc:"Chaque fois que tu reprends après au moins 14 jours sans séance. Revenir, c'est déjà gagner." },
+  { id:"hold",     cat:"volume", n:"Gainage d'acier",  em:"🧱", unit:"minutes de maintien", one:"minute de maintien", t:[5,60,300,1200], val:holdMinutes, fmt:v=>v<10?round1(v).toLocaleString("fr-CH"):fmtNum(v), desc:"Temps total passé sur les exercices chronométrés (planche, chaise, suspension…). Le platine représente 20 heures." },
+  { id:"bodyweight",cat:"volume", n:"Poids du corps",  em:"🤸", unit:"répétitions au poids du corps", one:"répétition au poids du corps", t:[500,5000,25000,100000], val:bodyweightReps },
+  { id:"legs",     cat:"explore", n:"Jamais sans les jambes", em:"🦵", unit:"séances avec 3 séries de jambes ou plus", one:"séance avec 3 séries de jambes ou plus", t:[1,20,100,300], val:legDays },
+  { id:"architect",cat:"explore", n:"Architecte",       em:"📐", unit:"séances enregistrées", one:"séance enregistrée", t:[1,3,6,10], val:()=>S.templates.length, desc:"Construis ta bibliothèque de séances et place-les dans ta semaine." },
   { id:"custom",   cat:"style", n:"Sur mesure",        em:"✍️", unit:"séances composées par toi", one:"séance composée par toi", t:[1,10,50,200], val:countSessions(s=>s.source==="custom") },
 ];
 const MEDAL_MAP = {}; MEDALS.forEach(m=>MEDAL_MAP[m.id]=m);
@@ -251,7 +276,12 @@ function showCelebration(session, ups, xpBefore, xpAfter){
       <div class="cel-xp-sub">${esc(after.title)}</div>
     </div>
     ${medalsHTML}
-    <button class="btn" style="margin-top:18px" data-a="closesheet">Continuer</button>
+    ${typeof lastDoneForSave!=="undefined" && lastDoneForSave ? `<div class="cel-save">
+      <div class="cs-t">Garder cette séance ?</div>
+      <div class="cs-s">Enregistre-la pour la refaire ou la placer dans ta semaine.</div>
+      <button class="btn secondary" data-a="saveDoneSession">${icon("bookmark")} Enregistrer cette séance</button>
+    </div>` : ""}
+    <button class="btn" style="margin-top:14px" data-a="closesheet">Continuer</button>
   </div>`);
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     const bar = qs("#celXp"); if(bar) bar.style.width = Math.round(after.pct*100)+"%";

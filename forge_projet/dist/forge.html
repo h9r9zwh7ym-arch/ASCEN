@@ -47,8 +47,8 @@ input,textarea,select{font:inherit;color:inherit}
 a{color:var(--tint)}
 :focus-visible{outline:2px solid var(--tint);outline-offset:2px;border-radius:6px}
 #app{position:relative;height:100%}
-.view{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(180px + env(safe-area-inset-bottom,0px));display:none;overscroll-behavior-y:contain}
-.view.active{display:block}
+.view{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(180px + env(safe-area-inset-bottom,0px));overscroll-behavior-y:contain;visibility:hidden;pointer-events:none;content-visibility:hidden}
+.view.active{visibility:visible;pointer-events:auto;content-visibility:visible}
 .content{max-width:640px;margin:0 auto}
 
 /* navbar */
@@ -805,7 +805,7 @@ h2.sh button.more{font-size:calc(15rem/17);font-weight:500;color:var(--tint)}
 .hero-eyebrow{font-size:calc(12rem/17);font-weight:800;letter-spacing:.06em;text-transform:uppercase;opacity:.92}
 .hero-title{font-family:var(--serif);font-weight:700;font-size:calc(27rem/17);line-height:1.1;margin-top:4px;letter-spacing:-.01em;text-shadow:0 1px 10px rgba(120,30,0,.18)}
 .hero-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.hero-meta span{font-size:calc(12.5rem/17);font-weight:700;padding:3px 9px;border-radius:9px;background:rgba(255,255,255,.2);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.hero-meta span{font-size:calc(12.5rem/17);font-weight:700;padding:3px 9px;border-radius:9px;background:rgba(255,255,255,.2);}
 .hero-picts{display:flex;gap:6px;margin-top:14px;align-items:center}
 .hero-picts .hp{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.18);box-shadow:inset 0 0 0 1px rgba(255,255,255,.22);color:#fff}
 .hero-picts .hp .picto{width:80%;height:80%}
@@ -816,8 +816,9 @@ h2.sh button.more{font-size:calc(15rem/17);font-weight:500;color:var(--tint)}
 .hero-go:active{transform:scale(.97)}
 .hg-ico{width:30px;height:30px;border-radius:15px;display:grid;place-items:center;background:var(--grad);color:#fff}
 .hg-ico svg{width:14px;height:14px;margin-left:2px}
-.hero-go .hg-ico{animation:goPulse 2.2s ease-in-out infinite}
-@keyframes goPulse{0%,100%{box-shadow:0 0 0 0 rgba(242,96,26,.45)}50%{box-shadow:0 0 0 7px rgba(242,96,26,0)}}
+.hg-ico{position:relative}
+.hero-go .hg-ico::after{content:"";position:absolute;inset:0;border-radius:50%;background:rgba(242,96,26,.5);animation:goRing 2.2s cubic-bezier(.2,.8,.2,1) infinite;z-index:-1}
+@keyframes goRing{0%{transform:scale(1);opacity:.7}60%,100%{transform:scale(1.55);opacity:0}}
 .hero.done{background:linear-gradient(135deg,#34C759,#1E8E4A);box-shadow:0 18px 36px -18px rgba(30,142,74,.55)}
 .hero-badge{width:40px;height:40px;border-radius:20px;background:rgba(255,255,255,.22);display:grid;place-items:center;margin-bottom:10px}
 .hero-badge svg{width:22px;height:22px}
@@ -971,8 +972,8 @@ h2.sh button.more{font-size:calc(15rem/17);font-weight:500;color:var(--tint)}
 .focus-card.resting .ring-wrap::before{content:"";position:absolute;inset:14px;border-radius:50%;background:radial-gradient(circle,var(--tint-bg),transparent 70%);animation:breathe 4s ease-in-out infinite}
 @keyframes breathe{0%,100%{transform:scale(.85);opacity:.5}50%{transform:scale(1.05);opacity:1}}
 .validate{position:relative;overflow:hidden;background:var(--grad);box-shadow:0 10px 22px -12px var(--glow)}
-.validate.ready{animation:readyPulse 1.2s cubic-bezier(.2,.8,.2,1) 2}
-@keyframes readyPulse{0%{box-shadow:0 0 0 0 rgba(242,96,26,.55)}70%{box-shadow:0 0 0 14px rgba(242,96,26,0)}100%{box-shadow:0 0 0 0 rgba(242,96,26,0)}}
+.validate.ready{animation:readyBump .5s cubic-bezier(.32,1.5,.4,1)}
+@keyframes readyBump{0%{transform:scale(.94)}50%{transform:scale(1.04)}100%{transform:none}}
 .validate::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.35) 50%,transparent 65%);transform:translateX(-120%)}
 .validate.ready::after{animation:heroSheen 1.6s ease-in-out}
 .bs-val.roll-up{animation:rollUp .28s cubic-bezier(.2,.8,.2,1)}
@@ -1063,8 +1064,8 @@ h2.sh button.more{font-size:calc(15rem/17);font-weight:500;color:var(--tint)}
 /* célébration : pastille pleine en dégradé */
 .celebrate-ring{background:var(--grad);color:#fff;box-shadow:0 14px 30px -14px var(--glow),0 0 0 10px var(--tint-bg)}
 .stat-box.pr .num{color:var(--tint)}
-.lp-seg.grew{animation:segGlow .8s ease}
-@keyframes segGlow{0%{box-shadow:0 0 0 0 var(--glow)}40%{box-shadow:0 0 10px 1px var(--glow)}100%{box-shadow:none}}
+.lp-seg.grew{animation:segGlow .6s cubic-bezier(.32,1.5,.4,1)}
+@keyframes segGlow{0%{transform:scaleY(1)}40%{transform:scaleY(1.9)}100%{transform:scaleY(1)}}
 .lh-pct b.bump{animation:chipBump .5s cubic-bezier(.32,1.5,.4,1)}
 .validate:active{transform:scale(.96)}
 .row.tap,.row-main{transition:background .15s}
@@ -1160,8 +1161,9 @@ h2.sh .more.strong{font-weight:700}
 .tpl-empty .te-ico{font-size:32px}
 .tpl-empty .te-t{font-family:var(--serif);font-weight:700;font-size:calc(20rem/17);margin-top:4px}
 .tpl-empty .te-s{font-size:calc(14rem/17);color:var(--label2);line-height:1.4;margin:6px 0 16px}
-.tpl-card2.flash{animation:cardFlash 1.2s ease}
-@keyframes cardFlash{0%,100%{box-shadow:var(--shadow)}30%{box-shadow:0 0 0 3px var(--tint),0 14px 30px -12px var(--glow)}}
+.tpl-card2.flash::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 3px var(--tint);pointer-events:none;animation:cardFlash 1.3s ease both}
+@keyframes cardFlash{0%,100%{opacity:0}25%,55%{opacity:1}}
+.tpl-card2.flash{animation:badgePop .5s cubic-bezier(.32,1.4,.4,1)}
 /* programme de la semaine */
 .wz-n{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
 .wz-n button{height:52px;border-radius:14px;background:var(--fill2);font-family:var(--rounded);font-weight:800;font-size:calc(20rem/17);color:var(--label2);transition:background .2s,color .2s,transform .15s}
@@ -1181,6 +1183,63 @@ h2.sh .more.strong{font-weight:700}
 #wzBody>p.body{margin-left:4px;margin-right:4px}
 .pd-cur{margin-left:16px;margin-right:16px}
 .tpl-empty .btn{width:100%}
+/* ================= v2.0 ================= */
+.hist-chart .seg{margin:10px 0 12px}
+.hist-kpi{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:10px}
+.hist-kpi b{display:block;font-family:var(--rounded);font-size:calc(22rem/17);font-weight:800}
+.hist-kpi small{display:block;font-size:calc(12rem/17);color:var(--label2);font-weight:600}
+.hk-delta{text-align:right;font-weight:700;font-size:calc(14rem/17);color:var(--label2)}
+.hk-delta.up{color:var(--green)} .hk-delta.down{color:var(--orange)}
+.hist-avg{font-size:calc(12.5rem/17);color:var(--label2);margin-top:8px}
+#histChart.swap .cc-bar{animation:barGrow .55s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0) * 25ms)}
+#histChart.swap .hist-kpi,#histChart.swap .cc-val{animation:fadeUp .35s ease both}
+/* chronomètre des exercices en secondes */
+.hold-wrap.prep .ring-time{font-size:calc(64rem/17);font-family:var(--rounded);font-weight:900;color:var(--tint)}
+.ring-time.tick{animation:holdTick .8s cubic-bezier(.2,.8,.2,1)}
+@keyframes holdTick{0%{transform:scale(1.6);opacity:0}25%{transform:scale(1);opacity:1}100%{transform:scale(.9);opacity:.85}}
+.focus-card.holding{background:linear-gradient(180deg,color-mix(in srgb,var(--tint) 8%,var(--bg2)),var(--bg2) 65%)}
+.focus-card.holding .ring-fg{transition:stroke-dashoffset .12s linear}
+.hold-skip{margin-top:6px;color:var(--label2)}
+.hold-go svg{width:20px;height:20px}
+@media (prefers-reduced-motion:reduce){.ring-time.tick{animation:none}}
+.cel-save{margin-top:16px;padding:14px;border-radius:16px;background:var(--fill2);text-align:center;animation:fadeUp .5s ease .6s both}
+.cs-t{font-weight:700;font-size:calc(15rem/17)}
+.cs-s{font-size:calc(13rem/17);color:var(--label2);margin:2px 0 10px}
+/* icônes façon Réglages d'iOS */
+.sfi{width:30px;height:30px;border-radius:7.5px;flex:none;display:grid;place-items:center;background:var(--c);box-shadow:inset 0 0 0 .5px rgba(0,0,0,.08)}
+.sfi svg{width:19px;height:19px}
+.sfi.sm{width:22px;height:22px;border-radius:6px}
+.sfi.sm svg{width:15px;height:15px}
+.sh-ico{display:inline-flex;align-items:center;gap:10px}
+.pick-h .sfi{vertical-align:-5px;margin-right:4px}
+
+/* ---- performances : les onglets masqués gardent leur mise en page en cache (content-visibility),
+   les blocs hors écran ne sont ni mis en page ni peints tant qu'on n'y fait pas défiler ---- */
+#v-history .group,#v-progress .chart-card,#v-progress .medal-grid,#v-profil .group{content-visibility:auto;contain-intrinsic-size:auto 280px}
+.group,.chart-card,.tpl-card2,.medal-card,.kpi,.focus-card,.hero{contain:layout style}
+
+/* ---- animations v2.0 : ressorts et retours tactiles, uniquement transform/opacity ---- */
+.switch::after{transition:transform .35s cubic-bezier(.32,1.5,.4,1),width .2s}
+.switch:active::after{width:33px}
+.switch.on:active::after{transform:translateX(14px)}
+.sheet{transition:transform .42s cubic-bezier(.3,1.15,.4,1)}
+.row.tap:active,.tc-exo:active{transform:scale(.985)}
+.row.tap,.tc-exo{transition:transform .15s,background .15s}
+.lt{transform-origin:left bottom;will-change:auto}
+.tabbtn svg{transition:transform .25s cubic-bezier(.32,1.5,.4,1)}
+.tabbtn:active svg{transform:scale(.82)}
+.focus-card.dragging{will-change:transform}
+.cc-col:active .cc-bar{transform:scaleY(1.04)}
+.medal-card{transition:transform .2s cubic-bezier(.32,1.4,.4,1)}
+.medal-card:active{transform:scale(.95)}
+.sfi{transition:transform .2s cubic-bezier(.32,1.5,.4,1)}
+.row.tap:active .sfi{transform:scale(.88) rotate(-4deg)}
+.enter .sfi{animation:sfiIn .45s cubic-bezier(.32,1.5,.4,1) both}
+@keyframes sfiIn{from{transform:scale(.5) rotate(-12deg);opacity:0}to{transform:none;opacity:1}}
+.enter .hist-kpi b{animation:fadeUp .5s cubic-bezier(.2,.8,.2,1) .15s both}
+@media (prefers-reduced-motion:reduce){.hero-go .hg-ico::after,.validate.ready,.lp-seg.grew,.tpl-card2.flash,.tpl-card2.flash::after,.enter .sfi,.enter .hist-kpi b{animation:none!important}}
+.hist-kpi{margin-bottom:22px}
+.ph-person{width:44px;height:44px;color:var(--label3)}
 </style></head><body><div id="app"></div><nav class="tabbar" aria-label="Onglets"></nav><div id="restbar"></div><div id="overlay" role="dialog"></div><div id="toast" role="status" aria-live="polite"></div><input type="file" id="fileImport" accept="application/json,.json" style="display:none"><script>
 // ================= MATÉRIEL =================
 // Catalogue du matériel reconnu par le moteur de suggestion. Chaque exercice de la
@@ -1640,7 +1699,7 @@ const EXOS = EXO_RAW.map(([id,n,muscles,equip,pattern,uni,def,cues,safety])=>({
 }));
 const EXO_MAP = {}; EXOS.forEach(e=>EXO_MAP[e.id]=e);
 // exercices mesurés en secondes plutôt qu'en répétitions (planche, chaise, marche du fermier…)
-function isTimed(def){ return def.cues.some(c=>/en secondes/.test(c)); }
+function isTimed(def){ return def._timed!==undefined ? def._timed : (def._timed = def.cues.some(c=>/en secondes/.test(c))); }
 // ================= PICTOGRAMMES DES EXERCICES =================
 // Silhouettes au trait (24×24, trait « currentColor ») : une par famille de mouvement.
 // La tête est un disque plein ; le reste est tracé en lignes arrondies.
@@ -1710,11 +1769,12 @@ const REGIONS = {
 };
 const REGION_OF_MUSCLE = {};
 Object.keys(REGIONS).forEach(r=>REGIONS[r].muscles.forEach(m=>REGION_OF_MUSCLE[m]=r));
-function regionOf(def){ return REGION_OF_MUSCLE[def.muscles[0]] || "core"; }
+function regionOf(def){ return def._region || (def._region = REGION_OF_MUSCLE[def.muscles[0]] || "core"); }
 
 // tuile d'exercice : pictogramme sur fond de la couleur de zone
 function exoIcon(def, size){
-  return `<span class="xico r-${regionOf(def)} ${size||""}" title="${esc(REGIONS[regionOf(def)].n)}">${pictoSVG(pictoKey(def))}</span>`;
+  const k = size||""; def._ico = def._ico || {};
+  return def._ico[k] || (def._ico[k] = `<span class="xico r-${regionOf(def)} ${k}" title="${esc(REGIONS[regionOf(def)].n)}">${pictoSVG(pictoKey(def))}</span>`);
 }
 // ================= ÉTAT & STOCKAGE =================
 const STORAGE_KEY = "forge.v1";
@@ -1754,7 +1814,7 @@ function load(){
     merged.settings = Object.assign({}, d.settings, parsed.settings||{});
     merged.meta = Object.assign({}, d.meta, parsed.meta||{});
     merged.custom = Object.assign({}, d.custom, parsed.custom||{});
-    merged.sessions = (parsed.sessions||[]).map(compactSession);
+    merged.sessions = (parsed.sessions||[]).map(compactSession).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0); // ordre chronologique garanti (les statistiques s'appuient dessus)
     merged.templates = parsed.templates||[];
     merged.medals = parsed.medals||{};
     merged.importedProgram = parsed.importedProgram||[];
@@ -1824,10 +1884,16 @@ function todayISO(){ return localISO(new Date()); }
 function parseISO(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); }
 function addDaysISO(iso,n){ const d=parseISO(iso); d.setDate(d.getDate()+n); return localISO(d); }
 function daysBetween(a,b){ return Math.round((parseISO(b)-parseISO(a))/86400000); }
+// une date ne change jamais de semaine : résultat mis en cache (appelé des milliers de fois
+// par les statistiques et les trophées)
+const WEEK_CACHE = new Map();
 function weekKey(iso){
+  let w = WEEK_CACHE.get(iso);
+  if(w) return w;
   const d = parseISO(iso);
   d.setDate(d.getDate()-(d.getDay()+6)%7); // lundi
-  return localISO(d);
+  w = localISO(d); WEEK_CACHE.set(iso, w);
+  return w;
 }
 const MOIS = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
 const MOIS_LONG = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
@@ -2134,7 +2200,8 @@ function repRangeForGoal(exo){
 }
 
 function loadableTypeOf(exo){
-  return exo.equip.find(id=>EQUIP_MAP[id] && EQUIP_MAP[id].loadable);
+  if(exo._load!==undefined) return exo._load;
+  return (exo._load = exo.equip.find(id=>EQUIP_MAP[id] && EQUIP_MAP[id].loadable) || null);
 }
 
 function nextWeight(exo, current){
@@ -2480,6 +2547,44 @@ const ICONS = {
   search:'<circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.9" fill="none"/><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>',
   trash:'<path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M7 7l1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
 };
+
+// ---------- icônes façon Réglages d'iOS : glyphe blanc sur pastille colorée ----------
+const IOS_COL = { orange:"#FF9500", red:"#FF3B30", yellow:"#FFCC00", green:"#34C759", mint:"#00C7BE", teal:"#30B0C7", blue:"#007AFF", indigo:"#5856D6", purple:"#AF52DE", pink:"#FF2D55", gray:"#8E8E93", brown:"#A2845E" };
+const S_ = 'stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"';
+const GLYPHS = {
+  dumbbell:`<path d="M6.5 7.5v9M17.5 7.5v9M3.8 10v4M20.2 10v4M6.5 12h11" ${S_} stroke-width="2.4"/>`,
+  flame:'<path d="M12 21c-3.4 0-6-2.5-6-5.9 0-3.4 2.4-5.3 3.6-7.8.3 1.7 1.2 2.8 2.2 3.2.2-3 1.4-5.6 3.6-7.5-.2 3.1 3.1 5.3 3.1 9.9 0 4.9-2.6 8.1-6.5 8.1Z" fill="#fff"/>',
+  star:'<path d="m12 3.3 2.7 5.4 5.9.9-4.3 4.2 1 5.9-5.3-2.8-5.3 2.8 1-5.9-4.3-4.2 5.9-.9Z" fill="#fff"/>',
+  calendar:`<rect x="4" y="5.5" width="16" height="14.5" rx="2.5" ${S_}/><path d="M4 10.2h16M8.5 3.5v3.6M15.5 3.5v3.6" ${S_}/>`,
+  stopwatch:`<circle cx="12" cy="13.5" r="7" ${S_}/><path d="M12 13.5V9.8M9.8 3h4.4M18 6.8l1.4-1.4" ${S_}/>`,
+  trophy:`<path d="M8 4h8v5.2a4 4 0 0 1-8 0Z" fill="#fff"/><path d="M8 6H5.2c0 2.3 1.2 3.8 3 4M16 6h2.8c0 2.3-1.2 3.8-3 4M12 13.3v3.7M8.5 20h7" ${S_}/>`,
+  mountain:'<path d="m2.8 19.5 6.6-11.2 4.1 6.6 2.6-3.6 5.1 8.2Z" fill="#fff"/>',
+  bolt:'<path d="M13.4 2.5 5 13.6h6.1l-1.1 7.9 8.3-11.2h-6.1Z" fill="#fff"/>',
+  toolbox:`<rect x="3.5" y="8.5" width="17" height="11" rx="2" ${S_}/><path d="M9 8.5V6h6v2.5M3.5 13.2h17M12 12v2.5" ${S_}/>`,
+  target:`<circle cx="12" cy="12" r="8" ${S_}/><circle cx="12" cy="12" r="4.4" ${S_}/><circle cx="12" cy="12" r="1.4" fill="#fff"/>`,
+  list:`<path d="M9.5 7h10M9.5 12h10M9.5 17h10" ${S_}/><circle cx="5.2" cy="7" r="1.3" fill="#fff"/><circle cx="5.2" cy="12" r="1.3" fill="#fff"/><circle cx="5.2" cy="17" r="1.3" fill="#fff"/>`,
+  sparkles:'<path d="m10.5 3 1.9 5 5 1.9-5 1.9-1.9 5-1.9-5-5-1.9 5-1.9Z" fill="#fff"/><path d="m18 13.5.9 2.3 2.3.9-2.3.9-.9 2.3-.9-2.3-2.3-.9 2.3-.9Z" fill="#fff"/>',
+  contrast:`<circle cx="12" cy="12" r="8" ${S_}/><path d="M12 4a8 8 0 0 1 0 16Z" fill="#fff"/>`,
+  speaker:`<path d="M4 9.3h3.6L12 5.3v13.4l-4.4-4H4Z" fill="#fff"/><path d="M15.3 9a4.2 4.2 0 0 1 0 6M17.8 6.6a7.6 7.6 0 0 1 0 10.8" ${S_}/>`,
+  tap:`<circle cx="12" cy="12" r="3" fill="#fff"/><circle cx="12" cy="12" r="7" ${S_} opacity=".55"/>`,
+  trash:`<path d="M4.8 7h14.4M10 4h4M7 7l.9 12.2a1.5 1.5 0 0 0 1.5 1.3h5.2a1.5 1.5 0 0 0 1.5-1.3L17 7M10.3 10.5v6M13.7 10.5v6" ${S_}/>`,
+  info:'<circle cx="12" cy="7" r="1.5" fill="#fff"/><path d="M12 10.8v7" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>',
+  person:'<circle cx="12" cy="7.5" r="3.6" fill="#fff"/><path d="M4.8 20.5c.5-4.2 3.4-6.4 7.2-6.4s6.7 2.2 7.2 6.4Z" fill="#fff"/>',
+  barbell:`<path d="M2.8 12h18.4M6 7.8v8.4M8.8 9.5v5M15.2 9.5v5M18 7.8v8.4" ${S_}/>`,
+  kettlebell:`<path d="M8.8 9a3.2 3.2 0 0 1 6.4 0" ${S_}/><circle cx="12" cy="14.8" r="5.4" fill="#fff"/>`,
+  bench:`<path d="M3.5 11h17M6 11v7.5M18 11v7.5M9 11V7.5h6V11" ${S_}/>`,
+  bar:`<path d="M3 4.8h18M8.2 4.8l2.4 4.8M15.8 4.8l-2.4 4.8M12 13.2v6.3" ${S_}/><circle cx="12" cy="11.4" r="1.9" fill="#fff"/>`,
+  band:`<path d="M3.5 12c2.2-6 6.3-6 8.5 0s6.3 6 8.5 0" ${S_}/>`,
+  mat:`<path d="M3.5 16.5h11.5a3.2 3.2 0 0 0 0-6.4H6.5a2 2 0 0 0 0 4h8.2" ${S_}/>`,
+  wrench:'<path d="M15.2 3.8a4.6 4.6 0 0 0-4.3 6.3L4.3 16.7a1.9 1.9 0 0 0 2.7 2.7l6.6-6.6a4.6 4.6 0 0 0 6.3-4.3l-2.8 2.8-2.6-.6-.6-2.6Z" fill="#fff"/>',
+  medal:`<path d="M8 3.5 10.2 9M16 3.5 13.8 9" ${S_}/><circle cx="12" cy="14.5" r="5.5" fill="#fff"/>`,
+  repeat:`<path d="M5 11V9.5A3.5 3.5 0 0 1 8.5 6H19m-3-3 3 3-3 3M19 13v1.5a3.5 3.5 0 0 1-3.5 3.5H5m3 3-3-3 3-3" ${S_}/>`,
+  pencil:'<path d="m15.8 4.2 4 4L9 19l-5 1 1-5Z" fill="#fff"/>',
+};
+function sfIcon(name, color, extra){
+  return `<span class="sfi ${extra||""}" style="--c:${IOS_COL[color]||color}" aria-hidden="true"><svg viewBox="0 0 24 24">${GLYPHS[name]||""}</svg></span>`;
+}
+
 function icon(name){ return `<svg viewBox="0 0 24 24">${ICONS[name]||""}</svg>`; }
 
 function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
@@ -2491,9 +2596,21 @@ function buildShell(){
   qs("#app").innerHTML = TABS.map(t=>`<div class="view" id="v-${t.id}"></div>`).join("");
   if(!qs("#charttip")){ const t = document.createElement("div"); t.id = "charttip"; t.setAttribute("role","tooltip"); document.body.appendChild(t); }
   qs(".tabbar").innerHTML = TABS.map(t=>`<button class="tabbtn" data-a="tab" data-id="${t.id}">${icon(t.icon)}<span class="tl">${t.n}</span></button>`).join("");
-  qsa(".view").forEach(v=>v.addEventListener("scroll",()=>{
-    v.classList.toggle("scrolled", v.scrollTop>4);
-  }));
+  // défilement : barre de navigation translucide et grand titre qui se replie façon iOS
+  // (une seule écriture par image, uniquement des propriétés composées par le GPU)
+  qsa(".view").forEach(v=>{
+    let pending = false;
+    v.addEventListener("scroll", ()=>{
+      if(pending) return; pending = true;
+      requestAnimationFrame(()=>{
+        pending = false;
+        const y = v.scrollTop;
+        v.classList.toggle("scrolled", y>4);
+        const lt = v.querySelector(".lt");
+        if(lt){ const k = Math.max(0, Math.min(1, y/70)); lt.style.opacity = (1-k*0.9).toFixed(2); lt.style.transform = k ? `translateY(${(k*6).toFixed(1)}px) scale(${(1-k*0.06).toFixed(3)})` : ""; }
+      });
+    }, { passive:true });
+  });
 }
 
 let currentTab = "today";
@@ -2504,7 +2621,7 @@ function switchTab(id){
   currentTab = id;
   qsa(".tabbtn").forEach(b=>b.classList.toggle("on", b.dataset.id===id));
   qsa(".view").forEach(v=>v.classList.toggle("active", v.id==="v-"+id));
-  renderViewAnimated(id);
+  renderViewAnimated(id, true);
   if(typeof renderRestBar==="function") renderRestBar();
 }
 
@@ -2515,6 +2632,7 @@ function renderView(id){
   const scrollTop = el.scrollTop;
   hideTip();
   el.innerHTML = VIEWS[id]();
+  el._ver = DATA_VER; el._day = todayISO(); // rendu à jour pour ces données
   el.classList.toggle("scrolled", scrollTop>4);
   el.scrollTop = scrollTop;
   settleSegs(el);
@@ -2522,11 +2640,15 @@ function renderView(id){
 // rendu avec entrée animée (apparition décalée des éléments .stagger, compteurs)
 // — réservé aux changements d'onglet ou de section, pas aux rendus après chaque action.
 let enterTimer = null;
-function renderViewAnimated(id){
+function renderViewAnimated(id, reuse){
   const el = qs("#v-"+id);
   if(!el) return;
+  el.classList.remove("enter"); void el.offsetWidth; // relance les animations d'entrée
   el.classList.add("enter");
-  renderView(id);
+  // changement d'onglet sans modification des données : on réutilise le rendu existant
+  // (ni reconstruction du HTML ni nouvelle mise en page complète)
+  if(!(reuse && el._ver===DATA_VER && el._day===todayISO() && el.firstChild)) renderView(id);
+  else settleSegs(el);
   animateCounts(el);
   clearTimeout(enterTimer);
   enterTimer = setTimeout(()=>{ el.classList.remove("enter"); el.dataset.dir = ""; }, 1200);
@@ -2709,29 +2831,48 @@ document.addEventListener("change", e=>{
 // avant cela, et si les sons sont coupés dans le Profil, sfx() ne fait rien.
 
 let AC = null, SFX_OUT = null, NOISE = null;
-function audioReady(){
-  if(!AC){
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if(!Ctx) return false;
-    try{
-      AC = new Ctx();
-      const comp = AC.createDynamicsCompressor();
-      comp.threshold.value = -18; comp.ratio.value = 4;
-      SFX_OUT = AC.createGain(); SFX_OUT.gain.value = 0.9;
-      SFX_OUT.connect(comp); comp.connect(AC.destination);
-    }catch(e){ AC = null; return false; }
-  }
-  if(AC.state==="suspended") AC.resume();
+// iOS : les sons de Forge se mélangent à la musique au lieu de l'interrompre (et ne sont
+// plus coupés quand une autre app reprend la main sur l'audio).
+try{ if(navigator.audioSession) navigator.audioSession.type = "ambient"; }catch(e){}
+function buildAudio(){
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if(!Ctx) return false;
+  try{ if(AC && AC.state!=="closed") AC.close(); }catch(e){}
+  try{
+    AC = new Ctx();
+    const comp = AC.createDynamicsCompressor();
+    comp.threshold.value = -18; comp.ratio.value = 4;
+    SFX_OUT = AC.createGain(); SFX_OUT.gain.value = 0.9;
+    SFX_OUT.connect(comp); comp.connect(AC.destination);
+    NOISE = null; // les buffers sont recréés avec le nouveau contexte
+  }catch(e){ AC = null; return false; }
   return true;
 }
-// déverrouillage au premier geste (iOS exige un son joué pendant un geste)
-["pointerdown","touchend","keydown"].forEach(ev=>document.addEventListener(ev, function unlock(){
+function audioReady(){
+  if(!AC || AC.state==="closed") if(!buildAudio()) return false;
+  if(AC.state!=="running") AC.resume().catch(()=>{});
+  return true;
+}
+function playSilent(){ try{ const b = AC.createBuffer(1,1,22050), src = AC.createBufferSource(); src.buffer = b; src.connect(AC.destination); src.start(0); }catch(e){} }
+// Le contexte audio se met en pause (écran verrouillé, appli en arrière-plan, appel,
+// autre appli qui joue du son) et iOS le laisse parfois bloqué en « interrupted » :
+// à chaque geste on le relance, et s'il ne repart pas on en crée un neuf.
+let reviveTimer = null;
+["pointerdown","touchend","keydown"].forEach(ev=>document.addEventListener(ev, ()=>{
   if(!soundOn()) return;
-  if(audioReady()){
-    const b = AC.createBuffer(1,1,22050), src = AC.createBufferSource();
-    src.buffer = b; src.connect(AC.destination); src.start(0);
+  if(!audioReady()) return;
+  playSilent();
+  if(AC.state!=="running" && !reviveTimer){
+    reviveTimer = setTimeout(()=>{
+      reviveTimer = null;
+      if(AC && AC.state!=="running"){ buildAudio(); if(AC){ AC.resume().catch(()=>{}); playSilent(); } }
+    }, 250);
   }
-}, { passive:true }));
+}, { passive:true, capture:true }));
+function wakeAudio(){ if(AC && AC.state!=="running" && AC.state!=="closed") AC.resume().catch(()=>{}); }
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) wakeAudio(); });
+window.addEventListener("pageshow", wakeAudio);
+window.addEventListener("focus", wakeAudio);
 
 function soundOn(){ return !(typeof S!=="undefined" && S.settings && S.settings.sound===false); }
 
@@ -2821,8 +2962,13 @@ function sfx(name, arg){
     if(S.settings.uiSound===false) return;              // clics de l'interface coupés à part
     const now = performance.now(); if(now-lastTok<60) return; lastTok = now; // jamais en rafale
   }
-  if(!AC || AC.state!=="running"){ if(!audioReady() || AC.state!=="running") return; }
-  try{ SFX[name](arg); }catch(e){}
+  if(!audioReady()) return;
+  const play = ()=>{ try{ SFX[name](arg); }catch(e){} };
+  if(AC.state==="running") return play();
+  // contexte en pause (ex. fin de repos écran éteint puis rallumé) : on le relance puis on joue,
+  // sauf si la relance arrive trop tard pour que le son ait encore du sens
+  const t0 = performance.now();
+  AC.resume().then(()=>{ if(performance.now()-t0<700) play(); }).catch(()=>{});
 }
 
 // petit « toc » uniquement quand on change une sélection (segments, filtres, interrupteurs) :
@@ -2961,8 +3107,9 @@ function showLaunch(session){
 let restState = null; // {endAt, totalSec, label, exoIdx}
 let restInterval = null;
 
-function startRestTimer(sec, label, exoIdx){
-  restState = { endAt: Date.now()+sec*1000, totalSec:sec, label:label||"Repos", exoIdx };
+// arrived : le repos s'affiche déjà sur l'exercice qui vient ensuite (pas de nouveau saut à la fin)
+function startRestTimer(sec, label, exoIdx, arrived){
+  restState = { endAt: Date.now()+sec*1000, totalSec:sec, label:label||"Repos", exoIdx, arrived:!!arrived };
   renderRestBar();
   clearInterval(restInterval);
   restInterval = setInterval(tickRest, 250);
@@ -2971,6 +3118,12 @@ function adjustRestTimer(delta){
   if(!restState) return;
   restState.endAt += delta*1000;
   tickRest();
+}
+// fin du repos (décompte écoulé ou « Passer ») : on amène l'écran sur ce qui vient ensuite
+function endRest(){
+  const idx = restState ? restState.exoIdx : null, arrived = restState && restState.arrived;
+  if(typeof restAdvance==="function") restAdvance(idx, arrived);
+  stopRestTimer();
 }
 function stopRestTimer(){
   restState = null;
@@ -2987,7 +3140,7 @@ function tickRest(){
     toast("⚡ C'est reparti — série suivante");
     if(typeof restReady!=="undefined") restReady = true;
     sfx("restEnd");
-    stopRestTimer();
+    endRest();
     return;
   }
   // 3 dernières secondes : l'anneau bat et le téléphone vibre à chaque seconde
@@ -3010,12 +3163,16 @@ function renderRestBar(remainOverride){
   const focusShowing = typeof currentTab!=="undefined" && currentTab==="today" && typeof liveFocusIdx!=="undefined" && liveFocusIdx===restState.exoIdx;
   if(focusShowing){ bar.classList.remove("show"); return; }
   bar.classList.add("show");
+  // appelé 4 fois par seconde : on ne touche qu'au texte une fois la pastille construite
+  const tEl = bar.querySelector(".rt-time");
+  if(tEl && bar._label===restState.label){ const t = fmtMMSS(remain); if(tEl.textContent!==t) tEl.textContent = t; return; }
+  bar._label = restState.label;
   bar.innerHTML = `<div class="rt-time">${fmtMMSS(remain)}</div><div class="rt-label">${esc(restState.label)}</div>
     <button data-a="restAdjust" data-d="-15">−15</button><button data-a="restAdjust" data-d="15">+15</button><button data-a="restSkip">Passer</button>`;
 }
 Object.assign(ACT, {
   restAdjust(d){ adjustRestTimer(parseInt(d.d,10)); },
-  restSkip(){ stopRestTimer(); },
+  restSkip(){ endRest(); },
 });
 // ================= GRAPHIQUES (sans dépendance) =================
 // Une seule série par graphique, couleur d'accent, texte en jetons de texte.
@@ -3165,6 +3322,17 @@ function masteredExosCount(){
   return Object.values(counts).filter(c=>c>=8).length;
 }
 const countSessions = pred => ()=>S.sessions.filter(pred).length;
+// --- valeurs des trophées ajoutés en v2.0 ---
+function doneSetsOf(pred){ let n = 0; S.sessions.forEach(s=>s.exos.forEach(ex=>{ const d = EXO_MAP[ex.exoId]; if(d && pred(d)) ex.sets.forEach(st=>{ if(st.done) n += st.reps||0; }); })); return n; }
+const BW_EQUIP = new Set(["bodyweight","bench","mat","pullup_bar"]);
+function holdMinutes(){ return doneSetsOf(d=>isTimed(d))/60; }
+function bodyweightReps(){ return doneSetsOf(d=>!isTimed(d) && d.equip.every(q=>BW_EQUIP.has(q))); }
+function legDays(){ return S.sessions.filter(s=>s.exos.reduce((t,ex)=>{ const d = EXO_MAP[ex.exoId]; return t + (d && regionOf(d)==="legs" ? ex.sets.filter(x=>x.done).length : 0); },0)>=3).length; }
+function comebacks(){
+  const days = Array.from(new Set(S.sessions.map(s=>s.date))).sort();
+  let n = 0; for(let i=1;i<days.length;i++) if(daysBetween(days[i-1], days[i])>=14) n++;
+  return n;
+}
 
 // ---- valeurs des nouvelles familles (v1.3) ----
 function spanDays(){
@@ -3179,14 +3347,19 @@ function intenseWeeks(){
 }
 // semaines où au moins 8 groupes musculaires différents ont été travaillés
 function balancedWeeks(){
-  const per = {};
-  S.sessions.forEach(s=>s.exos.forEach(ex=>{
-    const d = EXO_MAP[ex.exoId];
-    if(!d || !ex.sets.some(st=>st.done)) return;
+  const per = new Map();
+  for(const s of S.sessions){
     const k = weekKey(s.date);
-    d.muscles.forEach(m=>{ if(m!=="cardio") (per[k]=per[k]||new Set()).add(m); });
-  }));
-  return Object.values(per).filter(ms=>ms.size>=8).length;
+    let set = per.get(k); if(!set){ set = new Set(); per.set(k, set); }
+    if(set.size>=11) continue;
+    for(const ex of s.exos){
+      const d = EXO_MAP[ex.exoId];
+      if(!d || !ex.sets.some(st=>st.done)) continue;
+      for(const m of d.muscles) if(m!=="cardio") set.add(m);
+    }
+  }
+  let n = 0; per.forEach(ms=>{ if(ms.size>=8) n++; });
+  return n;
 }
 function maxRepsOneSession(){ return S.sessions.reduce((m,s)=>Math.max(m, sessionReps(s)), 0); }
 function heaviestSet(){
@@ -3199,12 +3372,14 @@ function heaviestSet(){
 // (évite qu'une progression de débutant de quelques semaines donne le platine).
 function bestStrengthRatio(){
   const hist = {};
-  S.sessions.slice().sort((a,b)=>a.date.localeCompare(b.date)).forEach(s=>s.exos.forEach(ex=>{
+  // les séances sont déjà enregistrées dans l'ordre chronologique
+  for(const s of S.sessions) for(const ex of s.exos){
     const def = EXO_MAP[ex.exoId];
-    if(!def || !loadableTypeOf(def)) return;
-    const e = Math.max(0, ...ex.sets.filter(st=>st.done&&st.weight).map(st=>estimated1RM(st.weight, st.reps)));
+    if(!def || !loadableTypeOf(def)) continue;
+    let e = 0;
+    for(const st of ex.sets) if(st.done && st.weight){ const v = estimated1RM(st.weight, st.reps); if(v>e) e = v; }
     if(e) (hist[ex.exoId]=hist[ex.exoId]||[]).push({ date:s.date, e });
-  }));
+  }
   let best = 0;
   Object.values(hist).forEach(h=>{
     if(h.length<4 || daysBetween(h[0].date, h[h.length-1].date)<90) return;
@@ -3264,6 +3439,13 @@ const MEDALS = [
 
   { id:"early",    cat:"style", n:"Lève-tôt",          em:"🌅", unit:"séances commencées avant 8 h", one:"séance commencée avant 8 h", t:[1,10,50,150], val:countSessions(s=>{ const h=startHour(s); return h!==null && h<8; }) },
   { id:"night",    cat:"style", n:"Oiseau de nuit",    em:"🌙", unit:"séances commencées après 21 h", one:"séance commencée après 21 h", t:[1,10,50,150], val:countSessions(s=>startHour(s)>=21) },
+  { id:"weekend",  cat:"style", n:"Guerrier du week-end", em:"🏖️", unit:"séances le week-end", one:"séance le week-end", t:[1,10,50,150], val:countSessions(s=>{ const g = parseISO(s.date).getDay(); return g===0 || g===6; }) },
+  { id:"lunch",    cat:"style", n:"Pause de midi",     em:"🥪", unit:"séances commencées entre 11 h et 14 h", one:"séance commencée entre 11 h et 14 h", t:[1,10,40,120], val:countSessions(s=>{ const h=startHour(s); return h!==null && h>=11 && h<14; }) },
+  { id:"comeback", cat:"regular", n:"Retour gagnant",  em:"🔄", unit:"reprises après 2 semaines de pause", one:"reprise après 2 semaines de pause", t:[1,3,6,12], val:comebacks, desc:"Chaque fois que tu reprends après au moins 14 jours sans séance. Revenir, c'est déjà gagner." },
+  { id:"hold",     cat:"volume", n:"Gainage d'acier",  em:"🧱", unit:"minutes de maintien", one:"minute de maintien", t:[5,60,300,1200], val:holdMinutes, fmt:v=>v<10?round1(v).toLocaleString("fr-CH"):fmtNum(v), desc:"Temps total passé sur les exercices chronométrés (planche, chaise, suspension…). Le platine représente 20 heures." },
+  { id:"bodyweight",cat:"volume", n:"Poids du corps",  em:"🤸", unit:"répétitions au poids du corps", one:"répétition au poids du corps", t:[500,5000,25000,100000], val:bodyweightReps },
+  { id:"legs",     cat:"explore", n:"Jamais sans les jambes", em:"🦵", unit:"séances avec 3 séries de jambes ou plus", one:"séance avec 3 séries de jambes ou plus", t:[1,20,100,300], val:legDays },
+  { id:"architect",cat:"explore", n:"Architecte",       em:"📐", unit:"séances enregistrées", one:"séance enregistrée", t:[1,3,6,10], val:()=>S.templates.length, desc:"Construis ta bibliothèque de séances et place-les dans ta semaine." },
   { id:"custom",   cat:"style", n:"Sur mesure",        em:"✍️", unit:"séances composées par toi", one:"séance composée par toi", t:[1,10,50,200], val:countSessions(s=>s.source==="custom") },
 ];
 const MEDAL_MAP = {}; MEDALS.forEach(m=>MEDAL_MAP[m.id]=m);
@@ -3401,7 +3583,12 @@ function showCelebration(session, ups, xpBefore, xpAfter){
       <div class="cel-xp-sub">${esc(after.title)}</div>
     </div>
     ${medalsHTML}
-    <button class="btn" style="margin-top:18px" data-a="closesheet">Continuer</button>
+    ${typeof lastDoneForSave!=="undefined" && lastDoneForSave ? `<div class="cel-save">
+      <div class="cs-t">Garder cette séance ?</div>
+      <div class="cs-s">Enregistre-la pour la refaire ou la placer dans ta semaine.</div>
+      <button class="btn secondary" data-a="saveDoneSession">${icon("bookmark")} Enregistrer cette séance</button>
+    </div>` : ""}
+    <button class="btn" style="margin-top:14px" data-a="closesheet">Continuer</button>
   </div>`);
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     const bar = qs("#celXp"); if(bar) bar.style.width = Math.round(after.pct*100)+"%";
@@ -3771,7 +3958,7 @@ function openPicker(opts){
 }
 function renderPickerSheet(){
   const owned = new Set(availableExos().map(exoCategory));
-  const cats = [["","Tout le matériel"]].concat(EXO_CATS.filter(c=>owned.has(c.id)).map(c=>[c.id, c.em+" "+c.n])).map(([id,n])=>`<button class="chip cat ${(picker.cat||"")===id?"on":""}" data-a="pickerCat" data-v="${id}">${esc(n)}</button>`).join("");
+  const cats = [["","Tout le matériel"]].concat(EXO_CATS.filter(c=>owned.has(c.id)).map(c=>[c.id, c.n])).map(([id,n])=>`<button class="chip cat ${(picker.cat||"")===id?"on":""}" data-a="pickerCat" data-v="${id}">${esc(n)}</button>`).join("");
   const chips = [["","Tous les muscles"]].concat(MUSCLES.map(m=>[m.id,m.n])).map(([id,n])=>`<button class="chip ${(picker.muscle||"")===id?"on":""}" data-a="pickerMuscle" data-v="${id}">${esc(n)}</button>`).join("");
   openSheet(`<div class="sheet-hd">${picker.onCancel?`<button class="te-cancel" data-a="pickerCancel">${icon("chev")}<span>Retour</span></button>`:""}<span class="t">${esc(picker.title)}</span>${picker.onCancel?`<span class="te-spacer"></span>`:`<button class="icon-btn" data-a="closesheet">${icon("close")}</button>`}</div>
     <div class="picker-top">
@@ -3797,7 +3984,7 @@ function pickerListHTML(){
     const list = pool.filter(e=>exoCategory(e)===c.id).sort((a,b)=>muscleOrder[a.muscles[0]]-muscleOrder[b.muscles[0]] || a.n.localeCompare(b.n,"fr"));
     if(!list.length) return "";
     let lastM = null;
-    return `<div class="pick-h"><span>${c.em}</span> ${esc(c.n)} <span class="pick-n">${list.length}</span></div><div class="group">${list.map(e=>{
+    return `<div class="pick-h">${sfIcon(EQUIP_GLYPH[c.id]||"wrench", EQUIP_COLOR[c.id]||"gray","sm")} ${esc(c.n)} <span class="pick-n">${list.length}</span></div><div class="group">${list.map(e=>{
       const on = picker.selected.includes(e.id);
       const m = e.muscles[0], sub = m!==lastM ? `<div class="pick-m">${esc(MUSCLE_MAP[m].n)}</div>` : ""; lastM = m;
       return `${sub}<div class="row pick-row ${on?"on":""}" data-id="${e.id}">
@@ -3871,6 +4058,23 @@ function liveStripHTML(draft){
 }
 // prochain exercice qui reste à faire après « from » (en bouclant), ou -1
 function exoFinished0(ex){ return ex.sets.every(s=>s.done); }
+// après un repos : en mode circuit (réglage par défaut) on passe à l'exercice suivant qui
+// reste à faire ; en mode classique on reste sur l'exercice tant qu'il a des séries.
+function circuitMode(){ return S.settings.flow!=="classic"; }
+function restTarget(idx, arrived){
+  if(!S.draft || idx==null || !S.draft.exos[idx]) return -1;
+  const ex = S.draft.exos[idx], left = ex.sets.some(s=>!s.done);
+  if(arrived) return left ? idx : nextUndone(idx);
+  if(circuitMode()) return nextUndone(idx);
+  return left ? idx : nextUndone(idx);
+}
+function restAdvance(idx, arrived){
+  if(!S.draft || !S.draft.startedAt) return;
+  const t = restTarget(idx, arrived);
+  if(t<0) return;
+  if(t!==liveFocusIdx){ focusAnimDir = t>liveFocusIdx || (liveFocusIdx===S.draft.exos.length-1 && t===0) ? "r" : "l"; liveFocusIdx = t; }
+  const v = qs("#v-today"); if(v && currentTab==="today" && v.scrollTop>120) v.scrollTo({ top:0, behavior:"smooth" });
+}
 function nextUndone(from){
   const ex = S.draft.exos, n = ex.length;
   for(let k=1;k<=n;k++){ const i = (from+k)%n; if(ex[i].sets.some(s=>!s.done)) return i; }
@@ -3911,9 +4115,9 @@ function renderFocusRegionInner(draft){
   const c = liveCounts(draft);
   if(!c.left) return sessionCompleteHTML(draft);
   const nav = `<div class="focus-nav">
-    <button class="navbtn" aria-label="Exercice précédent" data-a="focusPrev" ${idx===0?"disabled":""} style="transform:scaleX(-1)">${icon("chev")}</button>
+    <button class="navbtn" aria-label="Exercice précédent" data-a="focusPrev" ${draft.exos.length<2?"disabled":""} style="transform:scaleX(-1)">${icon("chev")}</button>
     <button class="center-link" data-a="openOverview"><span><b>${idx+1}</b> sur ${draft.exos.length}</span><small>Tout voir</small></button>
-    <button class="navbtn" aria-label="Exercice suivant" data-a="focusNext" ${idx===draft.exos.length-1?"disabled":""}>${icon("chev")}</button>
+    <button class="navbtn" aria-label="Exercice suivant" data-a="focusNext" ${draft.exos.length<2?"disabled":""}>${icon("chev")}</button>
   </div>`;
   const firstTime = idx===0 && c.done===0;
   return `${renderFocusCard(idx, ex, def)}${upNextHTML(idx)}${nav}${firstTime?`<div class="swipe-hint">Glisse la carte ou touche le bandeau pour changer d'exercice</div>`:""}`;
@@ -3953,6 +4157,51 @@ function sessionCompleteHTML(draft){
   </div>`;
 }
 
+// ---------- chronomètre des exercices en secondes (planche, chaise, suspension…) ----------
+// 3-2-1 de préparation, puis décompte de la durée visée ; à zéro la série est validée
+// toute seule (mains libres). « Arrêter » valide avec le temps réellement tenu.
+let hold = null, holdTimer = null;
+const HOLD_R = 76, HOLD_C = 2*Math.PI*HOLD_R;
+function holdCardHTML(idx, ex, def, si, header, animClass, setDots){
+  const prep = hold.phase==="prep";
+  const left = prep ? 3 : Math.max(0, Math.ceil(hold.target - (performance.now()-hold.t0)/1000));
+  return `<div class="focus-card holding r-${regionOf(def)} ${animClass}">${header}
+    <div class="fc-phase">${prep?"Mets-toi en position":"Tiens bon !"} · série ${si+1} / ${ex.sets.length}</div>
+    ${setDots(si)}
+    <div class="ring-wrap hold-wrap ${prep?"prep":""}"><svg viewBox="0 0 172 172">
+      <circle class="ring-bg" cx="86" cy="86" r="${HOLD_R}"/>
+      <circle class="ring-fg" id="holdFg" cx="86" cy="86" r="${HOLD_R}" stroke-dasharray="${HOLD_C.toFixed(1)}" stroke-dashoffset="${prep?HOLD_C.toFixed(1):"0"}"/>
+    </svg><div class="ring-label"><div class="ring-time" id="holdTime">${prep?left:fmtMMSS(left)}</div><div class="ring-sub" id="holdSub">${prep?"prêt…":`sur ${hold.target} s`}</div></div></div>
+    <div class="hold-actions">
+      <button class="btn big validate hold-stop" data-a="holdStop">${icon("check")} ${prep?"Annuler":"Arrêter et valider"}</button>
+    </div>
+  </div>`;
+}
+function holdTick(){
+  if(!hold || !S.draft || !S.draft.startedAt || !S.draft.exos[hold.exi]){ clearInterval(holdTimer); hold = null; return; }
+  const now = performance.now();
+  if(hold.phase==="prep"){
+    const left = 3 - Math.floor((now-hold.t0)/1000);
+    if(left<=0){ hold.phase = "hold"; hold.t0 = now; sfx("count"); haptic(35); refreshFocusRegion(); return; }
+    if(left!==hold.lastTick){ hold.lastTick = left; sfx("restTick"); const t = qs("#holdTime"); if(t){ t.textContent = left; t.classList.remove("tick"); void t.offsetWidth; t.classList.add("tick"); } }
+    return;
+  }
+  const el = (now-hold.t0)/1000, remain = Math.max(0, hold.target-el);
+  const t = qs("#holdTime"), fg = qs("#holdFg");
+  if(t) t.textContent = fmtMMSS(Math.ceil(remain));
+  if(fg) fg.setAttribute("stroke-dashoffset", (HOLD_C*(1-Math.min(1, el/hold.target))).toFixed(1));
+  const s = Math.ceil(remain);
+  if(s<=3 && s>0 && s!==hold.lastTick){ hold.lastTick = s; sfx("restTick"); haptic(10); const w = qs(".hold-wrap"); if(w) w.classList.add("ending"); }
+  if(remain<=0) holdFinish(hold.target);
+}
+function holdFinish(secs){
+  const h = hold; clearInterval(holdTimer); hold = null;
+  if(!h || !S.draft || !S.draft.exos[h.exi]) return;
+  const st = S.draft.exos[h.exi].sets.find(s=>!s.done);
+  if(st) st.reps = Math.max(1, Math.round(secs));
+  ACT.validateSet({ exi:String(h.exi) });
+}
+
 function lastTimeHTML(exoId){
   const last = lastPerformance(exoId);
   if(!last) return `<div class="fc-last">Première fois : prends tes repères</div>`;
@@ -3977,12 +4226,15 @@ function renderFocusCard(idx, ex, def){
 
   if(resting){
     const remain = Math.max(0, Math.round((restState.endAt-Date.now())/1000));
-    const next = ex.sets.find(s=>!s.done);
+    const tIdx = restTarget(restState.exoIdx, restState.arrived), tEx = tIdx>=0 ? S.draft.exos[tIdx] : null;
+    const next = tEx && tEx.sets.find(s=>!s.done), nDef = tEx && EXO_MAP[tEx.exoId];
+    const nextTxt = !next ? "" : tIdx===idx ? `Ensuite : ${next.reps} ${isTimed(def)?"s":"reps"}${next.weight?" × "+next.weight+" kg":""}`
+      : `Ensuite : <b>${esc(nDef.n)}</b> · ${next.reps} ${isTimed(nDef)?"s":"reps"}${next.weight?" × "+next.weight+" kg":""}`;
     return `<div class="focus-card resting r-${regionOf(def)} ${animClass}">${header}
       ${setDots(-1)}
       <div class="fc-phase">Repos · respire</div>
       ${ringSVG(remain, restState.totalSec)}
-      ${next?`<div class="fc-next">Ensuite : ${next.reps} reps${next.weight?" × "+next.weight+" kg":""}</div>`:""}
+      ${nextTxt?`<div class="fc-next">${nextTxt}</div>`:""}
       <div class="ring-adjust"><button data-a="restAdjust" data-d="-15">−15 s</button><button data-a="restAdjust" data-d="15">+15 s</button><button class="skip" data-a="restSkip">Passer</button></div>
     </div>`;
   }
@@ -4003,6 +4255,7 @@ function renderFocusCard(idx, ex, def){
   const st = ex.sets[si];
   const hasWeight = !!loadableTypeOf(def);
   const unit = isTimed(def) ? "Secondes" : "Répétitions";
+  if(hold && hold.exi===idx) return holdCardHTML(idx, ex, def, si, header, animClass, setDots);
   const rr = restReady; restReady = false; // animation « c'est reparti » après le repos
   setTimeout(()=>{ valRoll = {}; }, 0);
   return `<div class="focus-card r-${regionOf(def)} ${animClass}">${header}
@@ -4022,7 +4275,10 @@ function renderFocusCard(idx, ex, def){
     </div>
     ${lastTimeHTML(ex.exoId)}
     ${ex.note?`<div class="exo-note" style="margin:0 0 14px">${esc(ex.note)}</div>`:""}
-    <button class="btn big validate ${rr?"ready":""}" data-a="validateSet" data-exi="${idx}">${icon("check")} Valider la série ${si+1}</button>
+    ${isTimed(def)
+      ? `<button class="btn big validate hold-go ${rr?"ready":""}" data-a="holdStart" data-exi="${idx}" data-si="${si}">${icon("timer")} Lancer le chrono · ${st.reps||30} s</button>
+         <button class="btn ghost sm hold-skip" data-a="validateSet" data-exi="${idx}">Valider sans chrono</button>`
+      : `<button class="btn big validate ${rr?"ready":""}" data-a="validateSet" data-exi="${idx}">${icon("check")} Valider la série ${si+1}</button>`}
   </div>`;
 }
 
@@ -4077,6 +4333,7 @@ function overviewBodyHTML(){
     <div class="btnrow"><button class="btn secondary sm" data-a="addExoOpen">${icon("plus")} Ajouter des exercices</button></div>`;
 }
 
+let lastDoneForSave = null;
 function finalizeSession(){
   const draft = S.draft;
   const xpBefore = totalXP();
@@ -4088,6 +4345,12 @@ function finalizeSession(){
   S.draft = null;
   liveFocusIdx = 0;
   stopRestTimer();
+  // la séance composée a été faite : le constructeur repart à vide
+  S.custom = { exos:[] };
+  // proposer d'enregistrer la séance si elle ne vient pas d'une séance enregistrée
+  const ids = draft.exos.map(e=>e.exoId).join();
+  const known = draft.tplId || S.templates.some(t=>t.exos.map(e=>e.exoId).join()===ids);
+  lastDoneForSave = known || !draft.exos.length ? null : { n: draft.name && draft.source!=="engine" ? draft.name : sessionTitle(draft), exos: draft.exos.map(e=>({ exoId:e.exoId, sets:e.sets.filter(s=>s.done).length||e.sets.length })) };
   const ups = checkMedals();
   const xpAfter = totalXP();
   save();
@@ -4151,7 +4414,7 @@ document.addEventListener("pointermove", e=>{
     else { if(Math.abs(dy)>10) swipe = null; return; }
   }
   const n = S.draft.exos.length;
-  const edge = (liveFocusIdx===0 && dx>0) || (liveFocusIdx===n-1 && dx<0);
+  const edge = n<2;
   swipe.dx = edge ? dx*0.25 : dx;
   swipe.card.style.transform = `translateX(${swipe.dx}px) rotate(${swipe.dx/45}deg)`;
 });
@@ -4161,13 +4424,13 @@ function endSwipe(e){
   if(!s.active) return;
   suppressClicksUntil = Date.now()+350;
   const v = s.dx/Math.max(1, performance.now()-s.t), n = S.draft.exos.length;
-  const go = (s.dx<-70 || v<-0.6) && liveFocusIdx<n-1 ? 1 : (s.dx>70 || v>0.6) && liveFocusIdx>0 ? -1 : 0;
+  const go = n<2 ? 0 : (s.dx<-70 || v<-0.6) ? 1 : (s.dx>70 || v>0.6) ? -1 : 0;
   s.card.classList.remove("dragging");
   if(go){
     s.card.classList.add(go>0?"fly-l":"fly-r");
     sfx("swipe");
     if(navigator.vibrate) try{ navigator.vibrate(8); }catch(err){}
-    setTimeout(()=>{ liveFocusIdx += go; focusAnimDir = go>0?"r":"l"; refreshFocusRegion(); }, 170);
+    setTimeout(()=>{ liveFocusIdx = (liveFocusIdx+go+n)%n; focusAnimDir = go>0?"r":"l"; refreshFocusRegion(); }, 170);
   } else {
     s.card.classList.add("snap");
     s.card.style.transform = "";
@@ -4392,11 +4655,29 @@ Object.assign(ACT, {
   },
 
   // --- séance en cours ---
-  focusPrev(){ if(liveFocusIdx>0){ liveFocusIdx--; focusAnimDir="l"; refreshFocusRegion(); } },
-  focusNext(){ if(S.draft && liveFocusIdx<S.draft.exos.length-1){ liveFocusIdx++; focusAnimDir="r"; refreshFocusRegion(); } },
+  // navigation en boucle : après le dernier exercice on revient au premier, et inversement
+  focusPrev(){ const n = S.draft ? S.draft.exos.length : 0; if(n>1){ liveFocusIdx = (liveFocusIdx-1+n)%n; focusAnimDir="l"; refreshFocusRegion(); } },
+  focusNext(){ const n = S.draft ? S.draft.exos.length : 0; if(n>1){ liveFocusIdx = (liveFocusIdx+1)%n; focusAnimDir="r"; refreshFocusRegion(); } },
   focusJump(d){ const ni=+d.idx; focusAnimDir = ni>liveFocusIdx?"r":ni<liveFocusIdx?"l":null; liveFocusIdx=ni; refreshFocusRegion(); },
   jumpFromOverview(d){ const ni=+d.idx; focusAnimDir = ni>liveFocusIdx?"r":ni<liveFocusIdx?"l":null; liveFocusIdx=ni; closeSheet(); refreshFocusRegion(); },
 
+  holdStart(d){
+    const exi = +d.exi, ex = S.draft.exos[exi], st = ex.sets.find(s=>!s.done); if(!st) return;
+    if(restState) stopRestTimer();
+    hold = { exi, target: Math.max(5, st.reps||30), phase:"prep", t0: performance.now(), lastTick:3 };
+    clearInterval(holdTimer); holdTimer = setInterval(holdTick, 100);
+    sfx("restTick"); haptic(12); refreshFocusRegion();
+  },
+  holdStop(){
+    if(!hold) return;
+    if(hold.phase==="prep"){ clearInterval(holdTimer); hold = null; refreshFocusRegion(); return; }
+    holdFinish((performance.now()-hold.t0)/1000);
+  },
+  toggleFlow(){
+    S.settings.flow = circuitMode() ? "classic" : "circuit"; save(); closeSheet();
+    toast(circuitMode() ? "Après chaque repos : exercice suivant" : "Toutes les séries d'un exercice, puis le suivant");
+    refreshFocusRegion();
+  },
   focusMenu(d){
     const i = +d.idx, def = EXO_MAP[S.draft.exos[i].exoId];
     openModal(`<div class="tm-head r-${regionOf(def)}">${exoIcon(def,"sm")}<div><div style="font-weight:700;font-size:calc(17rem/17)">${esc(def.n)}</div></div></div>
@@ -4404,6 +4685,7 @@ Object.assign(ACT, {
         <button data-a="showExoInfo" data-id="${def.id}">${icon("search")}<span>Fiche et technique</span></button>
         <button data-a="swapExoOpen" data-idx="${i}">${icon("swap")}<span>Remplacer l'exercice</span></button>
         <button data-a="addSetFocus" data-exi="${i}">${icon("plus")}<span>Ajouter une série</span></button>
+        <button data-a="toggleFlow">${icon("repeat")}<span>${circuitMode()?"Enchaînement : exercice suivant après chaque repos":"Enchaînement : toutes les séries d'abord"}</span></button>
         <button class="danger" data-a="removeExo" data-idx="${i}">${icon("trash")}<span>Retirer de la séance</span></button>
       </div>
       <button class="btn ghost" style="height:40px;margin-top:6px" data-a="closesheet">Fermer</button>`);
@@ -4458,7 +4740,8 @@ Object.assign(ACT, {
     const si = ex.sets.findIndex(s=>!s.done);
     if(si<0) return;
     const st = ex.sets[si];
-    const [bx,by] = centerOf(".validate");
+    let [bx,by] = centerOf(".validate");
+    if(bx==null){ [bx,by] = centerOf(".focus-card .set-dots"); if(bx==null){ bx = innerWidth/2; by = innerHeight/2; } }
     // les textes flottants partent des points de série (même place avant et après le repos)
     const dotsR = (qs(".focus-card .set-dots")||{getBoundingClientRect:()=>null}).getBoundingClientRect();
     const fx0 = dotsR ? dotsR.left+dotsR.width/2 : bx, fy0 = dotsR ? dotsR.top-8 : by-30;
@@ -4483,7 +4766,7 @@ Object.assign(ACT, {
     if(!st.pr && !exoFinished0(ex)) floatText(fx0, fy0, `✓ Série ${si+1}`);
     const exoFinished = !ex.sets.some(s=>!s.done);
     const ni = nextUndone(exi);
-    if(ni>=0) startRestTimer(def.restSec, def.n, exoFinished ? ni : exi);
+    if(ni>=0) startRestTimer(def.restSec, def.n, exoFinished ? ni : exi, exoFinished);
     else stopRestTimer();
     if(exoFinished){
       if(!st.pr) confettiBurst(bx, by, 36);
@@ -4670,6 +4953,10 @@ function renderWeekWizard(){
 }
 
 Object.assign(ACT, {
+  saveDoneSession(){
+    const p = lastDoneForSave; lastDoneForSave = null; if(!p) return;
+    openTplEditor(null, { n:p.n, exos:p.exos });
+  },
   tplNew(){ openTplEditor(null); },
   tplOpenEditor(d){ openTplEditor(d.id); },
   tplEdDay(d){
@@ -4785,6 +5072,21 @@ function sessionIcon(s){
 // Affichage par paquets : l'historique complet (des centaines de séances après
 // quelques années) prenait plus de 100 ms à dessiner sur téléphone.
 let histLimit = 25;
+let histMetric = "sessions"; // graphique de l'historique : séances, durée ou séries par semaine
+const HIST_METRICS = [["sessions","Séances"],["minutes","Durée"],["sets","Séries"]];
+function histChartHTML(){
+  const weeks = memo("histWeeks", ()=>weeklyBuckets(12));
+  const m = histMetric, lab = b => fmtDate(b.wk);
+  const val = b => m==="minutes" ? Math.round(b.minutes) : b[m];
+  const fmt = v => m==="minutes" ? fmtDuration(v*60) : m==="sets" ? `${v} série${v>1?"s":""}` : `${v} séance${v>1?"s":""}`;
+  const cur = val(weeks[weeks.length-1]), prev = val(weeks[weeks.length-2]);
+  const avg = Math.round(weeks.slice(0,-1).reduce((t,b)=>t+val(b),0)/(weeks.length-1));
+  const delta = cur-prev;
+  return `<div class="hist-kpi"><div><b>${fmt(cur)}</b><small>cette semaine</small></div>
+      <div class="hk-delta ${delta>0?"up":delta<0?"down":""}">${delta>0?"▲":delta<0?"▼":"="} ${delta?fmt(Math.abs(delta)):"stable"}<small>vs semaine passée</small></div></div>
+    ${columnChart(weeks.map(b=>({ label:lab(b), v:val(b), tip:`Semaine du ${lab(b)} : ${fmt(val(b))}` })), { goal: m==="sessions" ? S.goals.daysPerWeek : 0, fmt })}
+    <div class="hist-avg">Moyenne sur 11 semaines : ${fmt(avg)}</div>`;
+}
 function renderHistory(){
   const all = S.sessions.slice().reverse();
   const sessions = all.slice(0, histLimit);
@@ -4822,11 +5124,26 @@ function renderHistory(){
   return `<div class="navbar"><div class="nb-title">Historique</div></div><div class="content">
     <h1 class="lt">Historique</h1>
     <div class="sh-sub" style="margin-top:-4px">${all.length} séance${all.length>1?"s":""} au total${totalVolumeAllTime()?" · "+fmtKg(totalVolumeAllTime())+" soulevés":""}</div>
+    <div class="chart-card hist-chart stagger" style="--i:0">
+      <div class="cc-h"><div class="cc-t">12 dernières semaines</div></div>
+      ${segHTML("histMetric", HIST_METRICS, histMetric, "histMetric")}
+      <div id="histChart">${histChartHTML()}</div>
+    </div>
     ${html}
     ${more>0?`<div class="btnrow"><button class="btn secondary" data-a="histMore">Afficher ${Math.min(more,25)} séance${Math.min(more,25)>1?"s":""} de plus <span class="muted-n">· ${more} restante${more>1?"s":""}</span></button></div>`:""}
   </div>`;
 }
 
+Object.assign(ACT, {
+  histMetric(d, el){
+    if(histMetric===d.v) return;
+    histMetric = d.v;
+    const seg = el && el.closest(".seg");
+    if(seg){ seg.dataset.cur = HIST_METRICS.findIndex(x=>x[0]===d.v); qsa("button", seg).forEach(b=>{ const on = b.dataset.v===d.v; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); }); settleSegs(seg.parentElement); }
+    const box = qs("#histChart");
+    if(box){ box.classList.remove("swap"); box.innerHTML = histChartHTML(); void box.offsetWidth; box.classList.add("swap"); }
+  },
+});
 function sessionDetailHTML(s){
   const rows = s.exos.map(ex=>{
     const def = EXO_MAP[ex.exoId];
@@ -4870,7 +5187,7 @@ Object.assign(ACT, {
     toast("Séance chargée dans « Ma séance »");
   },
   deleteSession(d){
-    confirmSheet({ title:"Supprimer cette séance ?", html:"Elle disparaîtra de l'historique et des statistiques. Les médailles déjà obtenues sont conservées.", ok:"Supprimer", danger:true,
+    confirmSheet({ title:"Supprimer cette séance ?", html:"Elle disparaîtra de l'historique et des statistiques. Les trophées déjà obtenus sont conservés.", ok:"Supprimer", danger:true,
       onOk:()=>{ S.sessions = S.sessions.filter(x=>x.id!==d.id); save(); changed(); toast("Séance supprimée"); } });
   },
 });
@@ -4903,7 +5220,7 @@ function recentPRs(n){
 }
 
 function renderProgress(){
-  const seg = segHTML("progress", [["overview","Résumé"],["exos","Exercices"],["medals","Médailles"]], progressTab, "progressTab");
+  const seg = segHTML("progress", [["overview","Résumé"],["exos","Exercices"],["medals","Trophées"]], progressTab, "progressTab");
   const pane = progressTab==="exos" ? exosPaneHTML() : progressTab==="medals" ? medalsPaneHTML() : overviewPaneHTML();
   return `<div class="navbar"><div class="nb-title">Progrès</div></div><div class="content">
     <h1 class="lt">Progrès</h1>${seg}<div class="seg-pane">${pane}</div></div>`;
@@ -5043,12 +5360,10 @@ function exoChartSheet(id){
 
 function medalsPaneHTML(){
   const c = tierCounts();
-  const pts = c.reduce((t,n,k)=>t+(k?n*TIERS[k].pts:0),0);
   const next = MEDALS.map(m=>({ m, p:medalProgress(m) })).filter(x=>x.p.next!=null).sort((a,b)=>b.p.pct-a.p.pct).slice(0,3);
   return `<div class="medal-summary stagger" style="--i:0">
       ${[1,2,3,4].map(k=>`<div class="ms-cell"><span class="pip big t${k}"></span><div class="ms-n" data-count="${c[k]}">${c[k]}</div><div class="ms-l">${TIERS[k].n}</div></div>`).join("")}
     </div>
-    <div class="sh-sub" style="margin-top:10px">${fmtNum(pts)} points de médailles · ${MEDALS.length} médailles × 4 paliers · les paliers platine demandent des années</div>
     ${next.length?`<h2 class="sh">Prochains paliers</h2><div class="group">${next.map((x,i)=>`<button class="row tap stagger" style="--i:${i+1}" data-a="showMedal" data-id="${x.m.id}">
       ${medalHTML(x.m, x.p.t, "sm")}
       <div class="grow"><div class="t">${esc(x.m.n)} <span class="tier-tag t${x.p.t+1}">${TIERS[x.p.t+1].n}</span></div>
@@ -5078,9 +5393,9 @@ function profileHeroHTML(){
   const lv = levelInfo(), name = (S.settings.name||"").trim();
   const since = firstSessionDate();
   const c = tierCounts();
-  const initial = name ? name[0].toUpperCase() : "🔥";
+  const initial = name ? esc(name[0].toUpperCase()) : `<svg viewBox="0 0 24 24" class="ph-person">${GLYPHS.person.replace(/#fff/g,"currentColor")}</svg>`;
   return `<div class="profile-hero stagger" style="--i:0">
-    <button class="ph-avatar" data-a="editName" aria-label="Modifier ton prénom"><span>${esc(initial)}</span><em>${lv.level}</em></button>
+    <button class="ph-avatar" data-a="editName" aria-label="Modifier ton prénom"><span>${initial}</span><em>${lv.level}</em></button>
     <div class="ph-main">
       <button class="ph-name" data-a="editName">${name?esc(name):"Ajoute ton prénom"} ${icon("edit")}</button>
       <div class="ph-title">Niveau ${lv.level} · ${esc(lv.title)}</div>
@@ -5098,19 +5413,19 @@ function profileStatsHTML(){
   const fav = favoriteExercise(), wd = favoriteWeekday(), moment = favoriteMoment(), bw = bestWeek();
   const avg = Math.round(totalDurationSec()/S.sessions.length);
   const rows = [
-    ["🏋️","Séances terminées", fmtNum(S.sessions.length), `${sessionsInYear()} cette année`],
-    ["🔥","Semaines d'affilée", currentStreakWeeks(), `record : ${maxStreakWeeksEver()}`],
-    ["⭐","Exercice favori", fav?`${fav.n}×`:"–", fav?esc(fav.def.n):""],
-    ["📆","Jour préféré", wd?JOURS[(wd.i+1)%7]:"–", moment?`plutôt ${moment}`:""],
-    ["⏱️","Durée moyenne", fmtDuration(avg), `${fmtDec(totalDurationSec()/3600)} h au total`],
-    ["🏆","Meilleure semaine", bw?`${bw.n} séance${bw.n>1?"s":""}`:"–", bw?`semaine du ${fmtDate(bw.wk)}`:""],
-    ["🪨","Tonnage total", fmtKg(totalVolumeAllTime()), `${fmtNum(totalSets())} séries validées`],
-    ["💥","Records battus", S.meta.prCount||0, `${distinctExosCount()} exercice${distinctExosCount()>1?"s":""} pratiqué${distinctExosCount()>1?"s":""}`],
+    [["dumbbell","orange"],"Séances terminées", fmtNum(S.sessions.length), `${sessionsInYear()} cette année`],
+    [["flame","red"],"Semaines d'affilée", currentStreakWeeks(), `record : ${maxStreakWeeksEver()}`],
+    [["star","yellow"],"Exercice favori", fav?`${fav.n}×`:"–", fav?esc(fav.def.n):""],
+    [["calendar","red"],"Jour préféré", wd?JOURS[(wd.i+1)%7]:"–", moment?`plutôt ${moment}`:""],
+    [["stopwatch","teal"],"Durée moyenne", fmtDuration(avg), `${fmtDec(totalDurationSec()/3600)} h au total`],
+    [["trophy","yellow"],"Meilleure semaine", bw?`${bw.n} séance${bw.n>1?"s":""}`:"–", bw?`semaine du ${fmtDate(bw.wk)}`:""],
+    [["mountain","brown"],"Tonnage total", fmtKg(totalVolumeAllTime()), `${fmtNum(totalSets())} séries validées`],
+    [["bolt","purple"],"Records battus", S.meta.prCount||0, `${distinctExosCount()} exercice${distinctExosCount()>1?"s":""} pratiqué${distinctExosCount()>1?"s":""}`],
   ];
   const lifts = topLifts(5);
   return `<h2 class="sh">Mes habitudes<button class="more" data-a="profMore">${profMoreOpen?"Moins":"Plus"}</button></h2>
     <div class="group habits ${profMoreOpen?"open":""}">${rows.map((r,i)=>`<div class="row stat-row stagger ${i>=4?"extra":""}" style="--i:${i+2}">
-      <div class="ico" style="background:var(--fill);font-size:16px">${r[0]}</div>
+      ${sfIcon(r[0][0], r[0][1])}
       <div class="grow"><div class="t">${r[1]}</div>${r[3]?`<div class="s">${r[3]}</div>`:""}</div>
       <div class="val strong">${r[2]}</div>
     </div>`).join("")}</div>
@@ -5139,17 +5454,17 @@ function renderProfil(){
     <h2 class="sh">Entraînement</h2>
     <div class="group">
       <button class="row tap" style="width:100%" data-a="openEquip">
-        <div class="ico" style="background:var(--tint)">🧰</div>
+        ${sfIcon("toolbox","orange")}
         <div class="grow"><div class="t">Matériel</div><div class="s">${ownedEquipCount()} équipement${ownedEquipCount()>1?"s":""} renseigné${ownedEquipCount()>1?"s":""}</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
       <button class="row tap" style="width:100%" data-a="openGoals">
-        <div class="ico" style="background:var(--tint)">🎯</div>
+        ${sfIcon("target","red")}
         <div class="grow"><div class="t">Objectifs</div><div class="s">${GOAL_LABELS[S.goals.overall]} · ${S.goals.daysPerWeek}×/sem.</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
       <button class="row tap" style="width:100%" data-a="openExoPrefs">
-        <div class="ico" style="background:var(--tint)">📋</div>
+        ${sfIcon("list","blue")}
         <div class="grow"><div class="t">Exercices inclus / exclus</div><div class="s">${S.prefs.excluded.length} exclu${S.prefs.excluded.length>1?"s":""} · ${S.prefs.included.length} privilégié${S.prefs.included.length>1?"s":""}</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
@@ -5158,7 +5473,7 @@ function renderProfil(){
     <h2 class="sh">Suggestion par IA externe</h2>
     <div class="group">
       <button class="row tap" style="width:100%" data-a="openExportImport">
-        <div class="ico" style="background:var(--tint)">🤖</div>
+        ${sfIcon("sparkles","purple")}
         <div class="grow"><div class="t">Exporter / importer un programme</div><div class="s">${S.importedProgram.length? S.importedProgram.length+" séance(s) importée(s) en attente" : "Aucun programme importé"}</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
@@ -5167,27 +5482,27 @@ function renderProfil(){
     <h2 class="sh">Réglages</h2>
     <div class="group">
       <button class="row tap" style="width:100%" data-a="openAppearance">
-        <div class="ico" style="background:var(--tint)">🌗</div>
+        ${sfIcon("contrast","indigo")}
         <div class="grow"><div class="t">Apparence</div><div class="s">${S.settings.theme==="auto"?"Automatique":S.settings.theme==="dark"?"Sombre":"Clair"}</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
       <div class="row">
-        <div class="ico" style="background:var(--blue)">🔊</div>
+        ${sfIcon("speaker","pink")}
         <div class="grow"><div class="t">Sons</div><div class="s">Séries, records, repos, lancement</div></div>
         <button class="switch ${S.settings.sound!==false?"on":""}" aria-label="Sons" data-a="toggleSound"></button>
       </div>
       <div class="row sub-setting ${S.settings.sound===false?"off":""}">
-        <div class="ico" style="background:var(--fill);color:var(--label2)">👆</div>
+        ${sfIcon("tap","gray")}
         <div class="grow"><div class="t">Clics de l'interface</div><div class="s">Petit « toc » sur les sélections et les +/−</div></div>
         <button class="switch ${S.settings.uiSound!==false?"on":""}" aria-label="Clics de l'interface" data-a="toggleUiSound"></button>
       </div>
       <button class="row tap" style="width:100%" data-a="confirmReset">
-        <div class="ico" style="background:var(--red)">🗑️</div>
+        ${sfIcon("trash","red")}
         <div class="grow"><div class="t">Réinitialiser toutes les données</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
       <button class="row tap" style="width:100%" data-a="openAbout">
-        <div class="ico" style="background:var(--tint)">ℹ️</div>
+        ${sfIcon("info","gray")}
         <div class="grow"><div class="t">À propos</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
@@ -5197,11 +5512,13 @@ function renderProfil(){
 }
 
 // ---------- Matériel ----------
+const EQUIP_GLYPH = { dumbbells:"dumbbell", barbell:"barbell", kettlebell:"kettlebell", bench:"bench", pullup_bar:"bar", bands:"band", mat:"mat", bodyweight:"person" };
+const EQUIP_COLOR = { dumbbells:"orange", barbell:"indigo", kettlebell:"brown", bench:"teal", pullup_bar:"blue", bands:"green", mat:"purple", bodyweight:"mint" };
 function equipBodyHTML(){
   const rows = EQUIP_TYPES.filter(e=>!e.always).map(e=>{
     const on = S.equipment.owned[e.id];
     return `<div class="row">
-      <div class="ico" style="background:var(--fill);color:inherit;font-size:16px">${e.em}</div>
+      ${sfIcon(EQUIP_GLYPH[e.id]||"wrench", EQUIP_COLOR[e.id]||"gray")}
       <div class="grow"><div class="t">${esc(e.n)}</div></div>
       <button class="switch ${on?"on":""}" data-a="toggleEquip" data-id="${e.id}"></button>
     </div>`;
@@ -5219,7 +5536,7 @@ function equipBodyHTML(){
       </div>
     </div>`;
   }).join("");
-  const customs = S.equipment.custom.map(c=>`<div class="row"><div class="ico" style="background:var(--fill)">🔧</div><div class="grow"><div class="t">${esc(c.n)}</div></div><button class="icon-btn" data-a="removeCustom" data-id="${c.id}">${icon("close")}</button></div>`).join("");
+  const customs = S.equipment.custom.map(c=>`<div class="row">${sfIcon("wrench","gray")}<div class="grow"><div class="t">${esc(c.n)}</div></div><button class="icon-btn" data-a="removeCustom" data-id="${c.id}">${icon("close")}</button></div>`).join("");
   return `<div class="group">${rows}</div>${weightEditors}
     <h2 class="sh">Autre équipement</h2>
     <div class="hr-note" style="margin-top:-6px">Informatif — ajoute librement ce que tu possèdes (banc réglable, TRX…). N'affecte pas encore la suggestion automatique.</div>
@@ -5272,7 +5589,7 @@ function exoPrefsBodyHTML(){
         <button class="chip ${excl?"excl":""}" data-a="toggleExcluded" data-id="${e.id}">Exclure</button>
       </div>`;
     }).join("");
-    return `<h2 class="sh">${c.em} ${esc(c.n)}<span class="more" style="color:var(--label2)">${list.length}</span></h2><div class="group">${rows}</div>`;
+    return `<h2 class="sh"><span class="sh-ico">${sfIcon(EQUIP_GLYPH[c.id]||"wrench", EQUIP_COLOR[c.id]||"gray","sm")}${esc(c.n)}</span><span class="more" style="color:var(--label2)">${list.length}</span></h2><div class="group">${rows}</div>`;
   }).join("");
 }
 const PATTERN_LABEL = { squat:"Squat", hinge:"Hanche", push:"Poussée", pull:"Tirage", lunge:"Fentes", core:"Gainage", calf:"Mollets" };
@@ -5390,7 +5707,7 @@ Object.assign(ACT, {
 });
 VIEWS.profil = renderProfil;
 // ================= INITIALISATION =================
-const APP_VERSION = "1.9";
+const APP_VERSION = "2.0";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 function applyTheme(){
@@ -5436,7 +5753,7 @@ function showSplash(){
     setTimeout(()=>sp.remove(), 450);
   };
   sp.addEventListener("click", leave);
-  setTimeout(leave, reduce ? 700 : 2000);
+  setTimeout(leave, reduce ? 600 : 1500);
 }
 
 function init(){

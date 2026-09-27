@@ -67,9 +67,10 @@ const REGIONS = {
 };
 const REGION_OF_MUSCLE = {};
 Object.keys(REGIONS).forEach(r=>REGIONS[r].muscles.forEach(m=>REGION_OF_MUSCLE[m]=r));
-function regionOf(def){ return REGION_OF_MUSCLE[def.muscles[0]] || "core"; }
+function regionOf(def){ return def._region || (def._region = REGION_OF_MUSCLE[def.muscles[0]] || "core"); }
 
 // tuile d'exercice : pictogramme sur fond de la couleur de zone
 function exoIcon(def, size){
-  return `<span class="xico r-${regionOf(def)} ${size||""}" title="${esc(REGIONS[regionOf(def)].n)}">${pictoSVG(pictoKey(def))}</span>`;
+  const k = size||""; def._ico = def._ico || {};
+  return def._ico[k] || (def._ico[k] = `<span class="xico r-${regionOf(def)} ${k}" title="${esc(REGIONS[regionOf(def)].n)}">${pictoSVG(pictoKey(def))}</span>`);
 }

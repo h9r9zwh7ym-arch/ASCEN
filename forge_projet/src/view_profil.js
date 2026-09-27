@@ -8,9 +8,9 @@ function profileHeroHTML(){
   const lv = levelInfo(), name = (S.settings.name||"").trim();
   const since = firstSessionDate();
   const c = tierCounts();
-  const initial = name ? name[0].toUpperCase() : "🔥";
+  const initial = name ? esc(name[0].toUpperCase()) : `<svg viewBox="0 0 24 24" class="ph-person">${GLYPHS.person.replace(/#fff/g,"currentColor")}</svg>`;
   return `<div class="profile-hero stagger" style="--i:0">
-    <button class="ph-avatar" data-a="editName" aria-label="Modifier ton prénom"><span>${esc(initial)}</span><em>${lv.level}</em></button>
+    <button class="ph-avatar" data-a="editName" aria-label="Modifier ton prénom"><span>${initial}</span><em>${lv.level}</em></button>
     <div class="ph-main">
       <button class="ph-name" data-a="editName">${name?esc(name):"Ajoute ton prénom"} ${icon("edit")}</button>
       <div class="ph-title">Niveau ${lv.level} · ${esc(lv.title)}</div>
@@ -28,19 +28,19 @@ function profileStatsHTML(){
   const fav = favoriteExercise(), wd = favoriteWeekday(), moment = favoriteMoment(), bw = bestWeek();
   const avg = Math.round(totalDurationSec()/S.sessions.length);
   const rows = [
-    ["🏋️","Séances terminées", fmtNum(S.sessions.length), `${sessionsInYear()} cette année`],
-    ["🔥","Semaines d'affilée", currentStreakWeeks(), `record : ${maxStreakWeeksEver()}`],
-    ["⭐","Exercice favori", fav?`${fav.n}×`:"–", fav?esc(fav.def.n):""],
-    ["📆","Jour préféré", wd?JOURS[(wd.i+1)%7]:"–", moment?`plutôt ${moment}`:""],
-    ["⏱️","Durée moyenne", fmtDuration(avg), `${fmtDec(totalDurationSec()/3600)} h au total`],
-    ["🏆","Meilleure semaine", bw?`${bw.n} séance${bw.n>1?"s":""}`:"–", bw?`semaine du ${fmtDate(bw.wk)}`:""],
-    ["🪨","Tonnage total", fmtKg(totalVolumeAllTime()), `${fmtNum(totalSets())} séries validées`],
-    ["💥","Records battus", S.meta.prCount||0, `${distinctExosCount()} exercice${distinctExosCount()>1?"s":""} pratiqué${distinctExosCount()>1?"s":""}`],
+    [["dumbbell","orange"],"Séances terminées", fmtNum(S.sessions.length), `${sessionsInYear()} cette année`],
+    [["flame","red"],"Semaines d'affilée", currentStreakWeeks(), `record : ${maxStreakWeeksEver()}`],
+    [["star","yellow"],"Exercice favori", fav?`${fav.n}×`:"–", fav?esc(fav.def.n):""],
+    [["calendar","red"],"Jour préféré", wd?JOURS[(wd.i+1)%7]:"–", moment?`plutôt ${moment}`:""],
+    [["stopwatch","teal"],"Durée moyenne", fmtDuration(avg), `${fmtDec(totalDurationSec()/3600)} h au total`],
+    [["trophy","yellow"],"Meilleure semaine", bw?`${bw.n} séance${bw.n>1?"s":""}`:"–", bw?`semaine du ${fmtDate(bw.wk)}`:""],
+    [["mountain","brown"],"Tonnage total", fmtKg(totalVolumeAllTime()), `${fmtNum(totalSets())} séries validées`],
+    [["bolt","purple"],"Records battus", S.meta.prCount||0, `${distinctExosCount()} exercice${distinctExosCount()>1?"s":""} pratiqué${distinctExosCount()>1?"s":""}`],
   ];
   const lifts = topLifts(5);
   return `<h2 class="sh">Mes habitudes<button class="more" data-a="profMore">${profMoreOpen?"Moins":"Plus"}</button></h2>
     <div class="group habits ${profMoreOpen?"open":""}">${rows.map((r,i)=>`<div class="row stat-row stagger ${i>=4?"extra":""}" style="--i:${i+2}">
-      <div class="ico" style="background:var(--fill);font-size:16px">${r[0]}</div>
+      ${sfIcon(r[0][0], r[0][1])}
       <div class="grow"><div class="t">${r[1]}</div>${r[3]?`<div class="s">${r[3]}</div>`:""}</div>
       <div class="val strong">${r[2]}</div>
     </div>`).join("")}</div>
@@ -69,17 +69,17 @@ function renderProfil(){
     <h2 class="sh">Entraînement</h2>
     <div class="group">
       <button class="row tap" style="width:100%" data-a="openEquip">
-        <div class="ico" style="background:var(--tint)">🧰</div>
+        ${sfIcon("toolbox","orange")}
         <div class="grow"><div class="t">Matériel</div><div class="s">${ownedEquipCount()} équipement${ownedEquipCount()>1?"s":""} renseigné${ownedEquipCount()>1?"s":""}</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
       <button class="row tap" style="width:100%" data-a="openGoals">
-        <div class="ico" style="background:var(--tint)">🎯</div>
+        ${sfIcon("target","red")}
         <div class="grow"><div class="t">Objectifs</div><div class="s">${GOAL_LABELS[S.goals.overall]} · ${S.goals.daysPerWeek}×/sem.</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
       <button class="row tap" style="width:100%" data-a="openExoPrefs">
-        <div class="ico" style="background:var(--tint)">📋</div>
+        ${sfIcon("list","blue")}
         <div class="grow"><div class="t">Exercices inclus / exclus</div><div class="s">${S.prefs.excluded.length} exclu${S.prefs.excluded.length>1?"s":""} · ${S.prefs.included.length} privilégié${S.prefs.included.length>1?"s":""}</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
@@ -88,7 +88,7 @@ function renderProfil(){
     <h2 class="sh">Suggestion par IA externe</h2>
     <div class="group">
       <button class="row tap" style="width:100%" data-a="openExportImport">
-        <div class="ico" style="background:var(--tint)">🤖</div>
+        ${sfIcon("sparkles","purple")}
         <div class="grow"><div class="t">Exporter / importer un programme</div><div class="s">${S.importedProgram.length? S.importedProgram.length+" séance(s) importée(s) en attente" : "Aucun programme importé"}</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
@@ -97,27 +97,27 @@ function renderProfil(){
     <h2 class="sh">Réglages</h2>
     <div class="group">
       <button class="row tap" style="width:100%" data-a="openAppearance">
-        <div class="ico" style="background:var(--tint)">🌗</div>
+        ${sfIcon("contrast","indigo")}
         <div class="grow"><div class="t">Apparence</div><div class="s">${S.settings.theme==="auto"?"Automatique":S.settings.theme==="dark"?"Sombre":"Clair"}</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
       <div class="row">
-        <div class="ico" style="background:var(--blue)">🔊</div>
+        ${sfIcon("speaker","pink")}
         <div class="grow"><div class="t">Sons</div><div class="s">Séries, records, repos, lancement</div></div>
         <button class="switch ${S.settings.sound!==false?"on":""}" aria-label="Sons" data-a="toggleSound"></button>
       </div>
       <div class="row sub-setting ${S.settings.sound===false?"off":""}">
-        <div class="ico" style="background:var(--fill);color:var(--label2)">👆</div>
+        ${sfIcon("tap","gray")}
         <div class="grow"><div class="t">Clics de l'interface</div><div class="s">Petit « toc » sur les sélections et les +/−</div></div>
         <button class="switch ${S.settings.uiSound!==false?"on":""}" aria-label="Clics de l'interface" data-a="toggleUiSound"></button>
       </div>
       <button class="row tap" style="width:100%" data-a="confirmReset">
-        <div class="ico" style="background:var(--red)">🗑️</div>
+        ${sfIcon("trash","red")}
         <div class="grow"><div class="t">Réinitialiser toutes les données</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
       <button class="row tap" style="width:100%" data-a="openAbout">
-        <div class="ico" style="background:var(--tint)">ℹ️</div>
+        ${sfIcon("info","gray")}
         <div class="grow"><div class="t">À propos</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
@@ -127,11 +127,13 @@ function renderProfil(){
 }
 
 // ---------- Matériel ----------
+const EQUIP_GLYPH = { dumbbells:"dumbbell", barbell:"barbell", kettlebell:"kettlebell", bench:"bench", pullup_bar:"bar", bands:"band", mat:"mat", bodyweight:"person" };
+const EQUIP_COLOR = { dumbbells:"orange", barbell:"indigo", kettlebell:"brown", bench:"teal", pullup_bar:"blue", bands:"green", mat:"purple", bodyweight:"mint" };
 function equipBodyHTML(){
   const rows = EQUIP_TYPES.filter(e=>!e.always).map(e=>{
     const on = S.equipment.owned[e.id];
     return `<div class="row">
-      <div class="ico" style="background:var(--fill);color:inherit;font-size:16px">${e.em}</div>
+      ${sfIcon(EQUIP_GLYPH[e.id]||"wrench", EQUIP_COLOR[e.id]||"gray")}
       <div class="grow"><div class="t">${esc(e.n)}</div></div>
       <button class="switch ${on?"on":""}" data-a="toggleEquip" data-id="${e.id}"></button>
     </div>`;
@@ -149,7 +151,7 @@ function equipBodyHTML(){
       </div>
     </div>`;
   }).join("");
-  const customs = S.equipment.custom.map(c=>`<div class="row"><div class="ico" style="background:var(--fill)">🔧</div><div class="grow"><div class="t">${esc(c.n)}</div></div><button class="icon-btn" data-a="removeCustom" data-id="${c.id}">${icon("close")}</button></div>`).join("");
+  const customs = S.equipment.custom.map(c=>`<div class="row">${sfIcon("wrench","gray")}<div class="grow"><div class="t">${esc(c.n)}</div></div><button class="icon-btn" data-a="removeCustom" data-id="${c.id}">${icon("close")}</button></div>`).join("");
   return `<div class="group">${rows}</div>${weightEditors}
     <h2 class="sh">Autre équipement</h2>
     <div class="hr-note" style="margin-top:-6px">Informatif — ajoute librement ce que tu possèdes (banc réglable, TRX…). N'affecte pas encore la suggestion automatique.</div>
@@ -202,7 +204,7 @@ function exoPrefsBodyHTML(){
         <button class="chip ${excl?"excl":""}" data-a="toggleExcluded" data-id="${e.id}">Exclure</button>
       </div>`;
     }).join("");
-    return `<h2 class="sh">${c.em} ${esc(c.n)}<span class="more" style="color:var(--label2)">${list.length}</span></h2><div class="group">${rows}</div>`;
+    return `<h2 class="sh"><span class="sh-ico">${sfIcon(EQUIP_GLYPH[c.id]||"wrench", EQUIP_COLOR[c.id]||"gray","sm")}${esc(c.n)}</span><span class="more" style="color:var(--label2)">${list.length}</span></h2><div class="group">${rows}</div>`;
   }).join("");
 }
 const PATTERN_LABEL = { squat:"Squat", hinge:"Hanche", push:"Poussée", pull:"Tirage", lunge:"Fentes", core:"Gainage", calf:"Mollets" };

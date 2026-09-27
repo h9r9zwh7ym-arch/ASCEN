@@ -5,29 +5,48 @@
 // avant cela, et si les sons sont coupés dans le Profil, sfx() ne fait rien.
 
 let AC = null, SFX_OUT = null, NOISE = null;
-function audioReady(){
-  if(!AC){
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if(!Ctx) return false;
-    try{
-      AC = new Ctx();
-      const comp = AC.createDynamicsCompressor();
-      comp.threshold.value = -18; comp.ratio.value = 4;
-      SFX_OUT = AC.createGain(); SFX_OUT.gain.value = 0.9;
-      SFX_OUT.connect(comp); comp.connect(AC.destination);
-    }catch(e){ AC = null; return false; }
-  }
-  if(AC.state==="suspended") AC.resume();
+// iOS : les sons de Forge se mélangent à la musique au lieu de l'interrompre (et ne sont
+// plus coupés quand une autre app reprend la main sur l'audio).
+try{ if(navigator.audioSession) navigator.audioSession.type = "ambient"; }catch(e){}
+function buildAudio(){
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if(!Ctx) return false;
+  try{ if(AC && AC.state!=="closed") AC.close(); }catch(e){}
+  try{
+    AC = new Ctx();
+    const comp = AC.createDynamicsCompressor();
+    comp.threshold.value = -18; comp.ratio.value = 4;
+    SFX_OUT = AC.createGain(); SFX_OUT.gain.value = 0.9;
+    SFX_OUT.connect(comp); comp.connect(AC.destination);
+    NOISE = null; // les buffers sont recréés avec le nouveau contexte
+  }catch(e){ AC = null; return false; }
   return true;
 }
-// déverrouillage au premier geste (iOS exige un son joué pendant un geste)
-["pointerdown","touchend","keydown"].forEach(ev=>document.addEventListener(ev, function unlock(){
+function audioReady(){
+  if(!AC || AC.state==="closed") if(!buildAudio()) return false;
+  if(AC.state!=="running") AC.resume().catch(()=>{});
+  return true;
+}
+function playSilent(){ try{ const b = AC.createBuffer(1,1,22050), src = AC.createBufferSource(); src.buffer = b; src.connect(AC.destination); src.start(0); }catch(e){} }
+// Le contexte audio se met en pause (écran verrouillé, appli en arrière-plan, appel,
+// autre appli qui joue du son) et iOS le laisse parfois bloqué en « interrupted » :
+// à chaque geste on le relance, et s'il ne repart pas on en crée un neuf.
+let reviveTimer = null;
+["pointerdown","touchend","keydown"].forEach(ev=>document.addEventListener(ev, ()=>{
   if(!soundOn()) return;
-  if(audioReady()){
-    const b = AC.createBuffer(1,1,22050), src = AC.createBufferSource();
-    src.buffer = b; src.connect(AC.destination); src.start(0);
+  if(!audioReady()) return;
+  playSilent();
+  if(AC.state!=="running" && !reviveTimer){
+    reviveTimer = setTimeout(()=>{
+      reviveTimer = null;
+      if(AC && AC.state!=="running"){ buildAudio(); if(AC){ AC.resume().catch(()=>{}); playSilent(); } }
+    }, 250);
   }
-}, { passive:true }));
+}, { passive:true, capture:true }));
+function wakeAudio(){ if(AC && AC.state!=="running" && AC.state!=="closed") AC.resume().catch(()=>{}); }
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) wakeAudio(); });
+window.addEventListener("pageshow", wakeAudio);
+window.addEventListener("focus", wakeAudio);
 
 function soundOn(){ return !(typeof S!=="undefined" && S.settings && S.settings.sound===false); }
 
@@ -117,8 +136,13 @@ function sfx(name, arg){
     if(S.settings.uiSound===false) return;              // clics de l'interface coupés à part
     const now = performance.now(); if(now-lastTok<60) return; lastTok = now; // jamais en rafale
   }
-  if(!AC || AC.state!=="running"){ if(!audioReady() || AC.state!=="running") return; }
-  try{ SFX[name](arg); }catch(e){}
+  if(!audioReady()) return;
+  const play = ()=>{ try{ SFX[name](arg); }catch(e){} };
+  if(AC.state==="running") return play();
+  // contexte en pause (ex. fin de repos écran éteint puis rallumé) : on le relance puis on joue,
+  // sauf si la relance arrive trop tard pour que le son ait encore du sens
+  const t0 = performance.now();
+  AC.resume().then(()=>{ if(performance.now()-t0<700) play(); }).catch(()=>{});
 }
 
 // petit « toc » uniquement quand on change une sélection (segments, filtres, interrupteurs) :

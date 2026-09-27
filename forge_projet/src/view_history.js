@@ -18,6 +18,21 @@ function sessionIcon(s){
 // Affichage par paquets : l'historique complet (des centaines de séances après
 // quelques années) prenait plus de 100 ms à dessiner sur téléphone.
 let histLimit = 25;
+let histMetric = "sessions"; // graphique de l'historique : séances, durée ou séries par semaine
+const HIST_METRICS = [["sessions","Séances"],["minutes","Durée"],["sets","Séries"]];
+function histChartHTML(){
+  const weeks = memo("histWeeks", ()=>weeklyBuckets(12));
+  const m = histMetric, lab = b => fmtDate(b.wk);
+  const val = b => m==="minutes" ? Math.round(b.minutes) : b[m];
+  const fmt = v => m==="minutes" ? fmtDuration(v*60) : m==="sets" ? `${v} série${v>1?"s":""}` : `${v} séance${v>1?"s":""}`;
+  const cur = val(weeks[weeks.length-1]), prev = val(weeks[weeks.length-2]);
+  const avg = Math.round(weeks.slice(0,-1).reduce((t,b)=>t+val(b),0)/(weeks.length-1));
+  const delta = cur-prev;
+  return `<div class="hist-kpi"><div><b>${fmt(cur)}</b><small>cette semaine</small></div>
+      <div class="hk-delta ${delta>0?"up":delta<0?"down":""}">${delta>0?"▲":delta<0?"▼":"="} ${delta?fmt(Math.abs(delta)):"stable"}<small>vs semaine passée</small></div></div>
+    ${columnChart(weeks.map(b=>({ label:lab(b), v:val(b), tip:`Semaine du ${lab(b)} : ${fmt(val(b))}` })), { goal: m==="sessions" ? S.goals.daysPerWeek : 0, fmt })}
+    <div class="hist-avg">Moyenne sur 11 semaines : ${fmt(avg)}</div>`;
+}
 function renderHistory(){
   const all = S.sessions.slice().reverse();
   const sessions = all.slice(0, histLimit);
@@ -55,11 +70,26 @@ function renderHistory(){
   return `<div class="navbar"><div class="nb-title">Historique</div></div><div class="content">
     <h1 class="lt">Historique</h1>
     <div class="sh-sub" style="margin-top:-4px">${all.length} séance${all.length>1?"s":""} au total${totalVolumeAllTime()?" · "+fmtKg(totalVolumeAllTime())+" soulevés":""}</div>
+    <div class="chart-card hist-chart stagger" style="--i:0">
+      <div class="cc-h"><div class="cc-t">12 dernières semaines</div></div>
+      ${segHTML("histMetric", HIST_METRICS, histMetric, "histMetric")}
+      <div id="histChart">${histChartHTML()}</div>
+    </div>
     ${html}
     ${more>0?`<div class="btnrow"><button class="btn secondary" data-a="histMore">Afficher ${Math.min(more,25)} séance${Math.min(more,25)>1?"s":""} de plus <span class="muted-n">· ${more} restante${more>1?"s":""}</span></button></div>`:""}
   </div>`;
 }
 
+Object.assign(ACT, {
+  histMetric(d, el){
+    if(histMetric===d.v) return;
+    histMetric = d.v;
+    const seg = el && el.closest(".seg");
+    if(seg){ seg.dataset.cur = HIST_METRICS.findIndex(x=>x[0]===d.v); qsa("button", seg).forEach(b=>{ const on = b.dataset.v===d.v; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); }); settleSegs(seg.parentElement); }
+    const box = qs("#histChart");
+    if(box){ box.classList.remove("swap"); box.innerHTML = histChartHTML(); void box.offsetWidth; box.classList.add("swap"); }
+  },
+});
 function sessionDetailHTML(s){
   const rows = s.exos.map(ex=>{
     const def = EXO_MAP[ex.exoId];
@@ -103,7 +133,7 @@ Object.assign(ACT, {
     toast("Séance chargée dans « Ma séance »");
   },
   deleteSession(d){
-    confirmSheet({ title:"Supprimer cette séance ?", html:"Elle disparaîtra de l'historique et des statistiques. Les médailles déjà obtenues sont conservées.", ok:"Supprimer", danger:true,
+    confirmSheet({ title:"Supprimer cette séance ?", html:"Elle disparaîtra de l'historique et des statistiques. Les trophées déjà obtenus sont conservés.", ok:"Supprimer", danger:true,
       onOk:()=>{ S.sessions = S.sessions.filter(x=>x.id!==d.id); save(); changed(); toast("Séance supprimée"); } });
   },
 });

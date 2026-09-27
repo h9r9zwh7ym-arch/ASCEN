@@ -43,7 +43,8 @@ function repRangeForGoal(exo){
 }
 
 function loadableTypeOf(exo){
-  return exo.equip.find(id=>EQUIP_MAP[id] && EQUIP_MAP[id].loadable);
+  if(exo._load!==undefined) return exo._load;
+  return (exo._load = exo.equip.find(id=>EQUIP_MAP[id] && EQUIP_MAP[id].loadable) || null);
 }
 
 function nextWeight(exo, current){

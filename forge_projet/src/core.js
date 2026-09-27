@@ -36,7 +36,7 @@ function load(){
     merged.settings = Object.assign({}, d.settings, parsed.settings||{});
     merged.meta = Object.assign({}, d.meta, parsed.meta||{});
     merged.custom = Object.assign({}, d.custom, parsed.custom||{});
-    merged.sessions = (parsed.sessions||[]).map(compactSession);
+    merged.sessions = (parsed.sessions||[]).map(compactSession).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0); // ordre chronologique garanti (les statistiques s'appuient dessus)
     merged.templates = parsed.templates||[];
     merged.medals = parsed.medals||{};
     merged.importedProgram = parsed.importedProgram||[];
@@ -106,10 +106,16 @@ function todayISO(){ return localISO(new Date()); }
 function parseISO(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); }
 function addDaysISO(iso,n){ const d=parseISO(iso); d.setDate(d.getDate()+n); return localISO(d); }
 function daysBetween(a,b){ return Math.round((parseISO(b)-parseISO(a))/86400000); }
+// une date ne change jamais de semaine : résultat mis en cache (appelé des milliers de fois
+// par les statistiques et les trophées)
+const WEEK_CACHE = new Map();
 function weekKey(iso){
+  let w = WEEK_CACHE.get(iso);
+  if(w) return w;
   const d = parseISO(iso);
   d.setDate(d.getDate()-(d.getDay()+6)%7); // lundi
-  return localISO(d);
+  w = localISO(d); WEEK_CACHE.set(iso, w);
+  return w;
 }
 const MOIS = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
 const MOIS_LONG = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];

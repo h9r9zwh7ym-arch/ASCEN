@@ -1,5 +1,5 @@
 // ================= INITIALISATION =================
-const APP_VERSION = "1.9";
+const APP_VERSION = "2.0";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 function applyTheme(){
@@ -45,7 +45,7 @@ function showSplash(){
     setTimeout(()=>sp.remove(), 450);
   };
   sp.addEventListener("click", leave);
-  setTimeout(leave, reduce ? 700 : 2000);
+  setTimeout(leave, reduce ? 600 : 1500);
 }
 
 function init(){

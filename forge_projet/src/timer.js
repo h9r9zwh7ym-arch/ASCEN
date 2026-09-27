@@ -2,8 +2,9 @@
 let restState = null; // {endAt, totalSec, label, exoIdx}
 let restInterval = null;
 
-function startRestTimer(sec, label, exoIdx){
-  restState = { endAt: Date.now()+sec*1000, totalSec:sec, label:label||"Repos", exoIdx };
+// arrived : le repos s'affiche déjà sur l'exercice qui vient ensuite (pas de nouveau saut à la fin)
+function startRestTimer(sec, label, exoIdx, arrived){
+  restState = { endAt: Date.now()+sec*1000, totalSec:sec, label:label||"Repos", exoIdx, arrived:!!arrived };
   renderRestBar();
   clearInterval(restInterval);
   restInterval = setInterval(tickRest, 250);
@@ -12,6 +13,12 @@ function adjustRestTimer(delta){
   if(!restState) return;
   restState.endAt += delta*1000;
   tickRest();
+}
+// fin du repos (décompte écoulé ou « Passer ») : on amène l'écran sur ce qui vient ensuite
+function endRest(){
+  const idx = restState ? restState.exoIdx : null, arrived = restState && restState.arrived;
+  if(typeof restAdvance==="function") restAdvance(idx, arrived);
+  stopRestTimer();
 }
 function stopRestTimer(){
   restState = null;
@@ -28,7 +35,7 @@ function tickRest(){
     toast("⚡ C'est reparti — série suivante");
     if(typeof restReady!=="undefined") restReady = true;
     sfx("restEnd");
-    stopRestTimer();
+    endRest();
     return;
   }
   // 3 dernières secondes : l'anneau bat et le téléphone vibre à chaque seconde
@@ -51,10 +58,14 @@ function renderRestBar(remainOverride){
   const focusShowing = typeof currentTab!=="undefined" && currentTab==="today" && typeof liveFocusIdx!=="undefined" && liveFocusIdx===restState.exoIdx;
   if(focusShowing){ bar.classList.remove("show"); return; }
   bar.classList.add("show");
+  // appelé 4 fois par seconde : on ne touche qu'au texte une fois la pastille construite
+  const tEl = bar.querySelector(".rt-time");
+  if(tEl && bar._label===restState.label){ const t = fmtMMSS(remain); if(tEl.textContent!==t) tEl.textContent = t; return; }
+  bar._label = restState.label;
   bar.innerHTML = `<div class="rt-time">${fmtMMSS(remain)}</div><div class="rt-label">${esc(restState.label)}</div>
     <button data-a="restAdjust" data-d="-15">−15</button><button data-a="restAdjust" data-d="15">+15</button><button data-a="restSkip">Passer</button>`;
 }
 Object.assign(ACT, {
   restAdjust(d){ adjustRestTimer(parseInt(d.d,10)); },
-  restSkip(){ stopRestTimer(); },
+  restSkip(){ endRest(); },
 });

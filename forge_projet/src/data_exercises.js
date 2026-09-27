@@ -406,4 +406,4 @@ const EXOS = EXO_RAW.map(([id,n,muscles,equip,pattern,uni,def,cues,safety])=>({
 }));
 const EXO_MAP = {}; EXOS.forEach(e=>EXO_MAP[e.id]=e);
 // exercices mesurés en secondes plutôt qu'en répétitions (planche, chaise, marche du fermier…)
-function isTimed(def){ return def.cues.some(c=>/en secondes/.test(c)); }
+function isTimed(def){ return def._timed!==undefined ? def._timed : (def._timed = def.cues.some(c=>/en secondes/.test(c))); }
