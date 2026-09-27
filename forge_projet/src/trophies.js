@@ -276,6 +276,7 @@ function showCelebration(session, ups, xpBefore, xpAfter){
       <div class="cel-xp-sub">${esc(after.title)}</div>
     </div>
     ${medalsHTML}
+    <button class="cel-note-btn" data-a="celNote" data-id="${esc(session.id)}">${icon("edit")} Ajouter une note</button>
     ${typeof lastDoneForSave!=="undefined" && lastDoneForSave ? `<div class="cel-save">
       <div class="cs-t">Garder cette séance ?</div>
       <div class="cs-s">Enregistre-la pour la refaire ou la placer dans ta semaine.</div>
@@ -293,4 +294,11 @@ function showCelebration(session, ups, xpBefore, xpAfter){
 
 Object.assign(ACT, {
   showMedal(d){ showMedalModal(d.id); },
+  // la note reste repliée : un appui l'ouvre, pour ne pas alourdir l'écran de fin
+  celNote(d, el){
+    const t = document.createElement("textarea");
+    t.className = "note-in pop-in"; t.rows = 2; t.maxLength = 280; t.dataset.c = "saveNote"; t.dataset.id = d.id;
+    t.placeholder = "Sensations, douleur, contexte…"; t.setAttribute("aria-label", "Note sur la séance");
+    el.replaceWith(t); t.focus();
+  },
 });

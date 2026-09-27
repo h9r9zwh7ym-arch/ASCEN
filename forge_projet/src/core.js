@@ -12,6 +12,7 @@ function defaultState(){
     custom: { exos:[] },   // « Ma séance » : [{exoId, sets}]
     templates: [],         // modèles enregistrés : [{id, n, exos:[{exoId, sets}]}]
     importedProgram: [],
+    body: [],               // pesées facultatives [{d:"AAAA-MM-JJ", kg}]
     medals: {},            // {familleId: {t: palier atteint 0-4, d: {1: iso, 2: iso…}}}
     settings: { theme:"auto", unit:"kg", todayTab:"custom", name:"", sound:true },
     meta: { createdAt: new Date().toISOString(), prCount:0 },
@@ -50,6 +51,7 @@ function normalizeState(parsed){
     merged.templates = parsed.templates||[];
     merged.medals = parsed.medals||{};
     merged.importedProgram = parsed.importedProgram||[];
+    merged.body = (Array.isArray(parsed.body)?parsed.body:[]).filter(e=>e && /^\d{4}-\d{2}-\d{2}$/.test(e.d) && e.kg>=20 && e.kg<=400).sort((a,b)=>a.d<b.d?-1:1);
     delete merged.settings.todayMode; // v1.2 : remplacé par todayTab (« Ma séance » en premier)
     // v2.2 : nouveaux équipements. On garde le comportement précédent : un banc servait aussi
     // aux exercices inclinés, et quiconque faisait du squat à la barre avait des supports.
@@ -57,8 +59,18 @@ function normalizeState(parsed){
     if(po.bench && po.bench_incline===undefined) merged.equipment.owned.bench_incline = true;
     if(po.barbell && po.rack===undefined) merged.equipment.owned.rack = true;
     // élastiques : des niveaux de résistance 1 à 5 (et plus des « kilos »)
-    const bw = (merged.equipment.weights.bands||[]).map(Number).filter(v=>v>=1 && v<=5);
-    merged.equipment.weights.bands = bw.length ? Array.from(new Set(bw.map(Math.round))).sort() : [2,3,4];
+    // anciennes valeurs en kg (> 5) : converties par rang, du plus léger au plus fort
+    let bw = (merged.equipment.weights.bands||[]).map(Number).filter(v=>v>0);
+    if(bw.some(v=>v>5)){
+      const kg = Array.from(new Set(bw)).sort((a,b)=>a-b);
+      bw = kg.map((v,i)=>kg.length>1 ? 1+i*4/(kg.length-1) : 3);
+      // séries d'élastique déjà enregistrées en kg : même correspondance (au plus proche)
+      const lvl = w=>Math.round(bw[kg.reduce((bi,v,i)=>Math.abs(v-w)<Math.abs(kg[bi]-w)?i:bi, 0)]);
+      merged.sessions.forEach(ss=>ss.exos.forEach(ex=>{ const d = EXO_MAP[ex.exoId];
+        if(d && loadableTypeOf(d)==="bands") ex.sets.forEach(st=>{ if(st.weight>5) st.weight = lvl(st.weight); }); }));
+    }
+    bw = bw.filter(v=>v>=1 && v<=5);
+    merged.equipment.weights.bands = bw.length ? Array.from(new Set(bw.map(Math.round))).sort((a,b)=>a-b) : [2,3,4];
     delete merged.trophies; // ancien système de trophées (v1.0-1.1), remplacé par les médailles à paliers
     return merged;
   }
@@ -83,7 +95,7 @@ let persistTimer = null, persistBlocked = false, persistFailed = false;
 // ressenti vide, séries non faites) : on les retire pour garder le stockage léger.
 function compactSession(s){
   const out = {};
-  ["id","date","source","type","resolvedType","name","tplId","planned","startedAt","completedAt","durationSec"].forEach(k=>{ if(s[k]!=null && s[k]!==false) out[k] = s[k]; });
+  ["id","date","source","type","resolvedType","name","tplId","planned","startedAt","completedAt","durationSec","note"].forEach(k=>{ if(s[k]!=null && s[k]!==false) out[k] = s[k]; });
   out.exos = (s.exos||[]).map(ex=>({
     exoId: ex.exoId,
     targetReps: ex.targetReps,
@@ -159,6 +171,8 @@ function fmtRelative(iso){
   if(n<31) return `il y a ${Math.floor(n/7)} sem.`;
   return fmtDate(iso);
 }
+// « 1 série », « 2 séries » (en français, 0 et 1 sont au singulier)
+function nb(n, w){ return `${n} ${w}${Math.abs(n)>=2?"s":""}`; }
 function fmtNum(n){ return Math.round(n).toLocaleString("fr-CH"); }
 function fmtDec(n){ return round1(n).toLocaleString("fr-CH"); }
 function fmtKg(kg){
@@ -204,7 +218,8 @@ function sessionSetCount(s){
   return s.exos.reduce((t,ex)=>t+ex.sets.filter(st=>st.done).length,0);
 }
 function sessionReps(s){
-  return s.exos.reduce((t,ex)=>t+ex.sets.filter(st=>st.done).reduce((a,st)=>a+(st.reps||0),0),0);
+  // les exercices chronométrés (gainage, corde…) stockent des secondes : ils ne comptent pas comme répétitions
+  return s.exos.reduce((t,ex)=>{ const d = EXO_MAP[ex.exoId]; if(d && isTimed(d)) return t; return t+ex.sets.filter(st=>st.done).reduce((a,st)=>a+(st.reps||0),0); },0);
 }
 function sessionPRCount(s){
   return s.exos.reduce((t,ex)=>t+ex.sets.filter(st=>st.done&&st.pr).length,0);

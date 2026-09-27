@@ -24,14 +24,24 @@ function histChartHTML(){
   const weeks = memo("histWeeks", ()=>weeklyBuckets(12));
   const m = histMetric, lab = b => fmtDate(b.wk);
   const val = b => m==="minutes" ? Math.round(b.minutes) : b[m];
-  const fmt = v => m==="minutes" ? fmtDuration(v*60) : m==="sets" ? `${v} série${v>1?"s":""}` : `${v} séance${v>1?"s":""}`;
+  const fmt = v => m==="minutes" ? fmtDuration(v*60) : `${fmtDec(v)} ${m==="sets"?"série":"séance"}${v>=2?"s":""}`;
   const cur = val(weeks[weeks.length-1]), prev = val(weeks[weeks.length-2]);
-  const avg = Math.round(weeks.slice(0,-1).reduce((t,b)=>t+val(b),0)/(weeks.length-1));
+  // moyenne à une décimale pour les séances et séries (3 séances en 11 semaines ≠ « 0 séance »)
+  const avgRaw = weeks.slice(0,-1).reduce((t,b)=>t+val(b),0)/(weeks.length-1);
+  const avg = m==="minutes" ? Math.round(avgRaw) : round1(avgRaw);
   const delta = cur-prev;
   return `<div class="hist-kpi"><div><b>${fmt(cur)}</b><small>cette semaine</small></div>
       <div class="hk-delta ${delta>0?"up":delta<0?"down":""}">${delta>0?"▲":delta<0?"▼":"="} ${delta?fmt(Math.abs(delta)):"stable"}<small>vs semaine passée</small></div></div>
     ${columnChart(weeks.map(b=>({ label:lab(b), v:val(b), tip:`Semaine du ${lab(b)} : ${fmt(val(b))}` })), { goal: m==="sessions" ? S.goals.daysPerWeek : 0, fmt })}
     <div class="hist-avg">Moyenne sur 11 semaines : ${fmt(avg)}</div>`;
+}
+// écart avec le mois précédent (pas pour le mois en cours, encore incomplet)
+function monthDeltaHTML(key, perMonth, curMonth, firstMonth){
+  if(key===curMonth || key<=firstMonth) return "";
+  const d = parseISO(key+"-01"); d.setMonth(d.getMonth()-1);
+  const pk = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+  const diff = (perMonth[key]||0)-(perMonth[pk]||0);
+  return ` · <span class="md ${diff>0?"up":diff<0?"down":""}">${diff>0?"+"+diff:diff<0?"−"+Math.abs(diff):"autant"} vs ${MOIS[d.getMonth()]}</span>`;
 }
 function renderHistory(){
   const all = S.sessions.slice().reverse();
@@ -49,6 +59,10 @@ function renderHistory(){
     if(!m || m.key!==key){ m = { key, list:[] }; months.push(m); }
     m.list.push(s);
   });
+  // séances par mois sur tout l'historique (pas seulement la partie affichée)
+  const perMonth = {};
+  all.forEach(s=>{ const k = s.date.slice(0,7); perMonth[k] = (perMonth[k]||0)+1; });
+  const curMonth = todayISO().slice(0,7), firstMonth = S.sessions[0].date.slice(0,7);
   let i = 0;
   const html = months.map(m=>{
     const d = parseISO(m.key+"-01");
@@ -58,12 +72,12 @@ function renderHistory(){
       return `<button class="row tap stagger" style="--i:${Math.min(i++,12)}" data-a="openSessionDetail" data-id="${s.id}">
         ${sessionIcon(s)}
         <div class="grow"><div class="t">${esc(sessionTitle(s))}${prs?` <span class="pr-badge">💥 ${prs}</span>`:""}</div>
-        <div class="s">${esc(fmtDate(s.date,"short"))} · ${sessionSetCount(s)} séries${sessionVolume(s)?" · "+fmtKg(sessionVolume(s)):""}</div></div>
+        <div class="s">${esc(fmtDate(s.date,"short"))} · ${nb(sessionSetCount(s),"série")}${sessionVolume(s)?" · "+fmtKg(sessionVolume(s)):""}</div>${s.note?`<div class="hn">${esc(s.note)}</div>`:""}</div>
         <div class="val">${s.durationSec?fmtDuration(s.durationSec):""}</div><span class="chev">${icon("chev")}</span>
       </button>`;
     }).join("");
     return `<h2 class="sh">${MOIS_LONG[d.getMonth()].replace(/^./,c=>c.toUpperCase())} ${d.getFullYear()}</h2>
-      <div class="sh-sub">${m.list.length} séance${m.list.length>1?"s":""}${vol?" · "+fmtKg(vol):""}</div>
+      <div class="sh-sub">${m.list.length} séance${m.list.length>1?"s":""}${vol?" · "+fmtKg(vol):""}${monthDeltaHTML(m.key, perMonth, curMonth, firstMonth)}</div>
       <div class="group">${rows}</div>`;
   }).join("");
   const more = all.length - sessions.length;
@@ -113,6 +127,8 @@ function sessionDetailHTML(s){
       ${sessionPRCount(s) ? `<div class="stat-box pr"><div class="num">${sessionPRCount(s)}</div><div class="lbl">record${sessionPRCount(s)>1?"s":""}</div></div>` : ""}
     </div>
     <div class="group" style="margin-top:14px">${rows||'<div style="padding:16px" class="s">Aucune série complétée.</div>'}</div>
+    <div class="te-sec">Note</div>
+    <textarea class="note-in" rows="3" maxlength="280" data-c="saveNote" data-id="${esc(s.id)}" placeholder="Sensations, douleur, contexte… (facultatif)" aria-label="Note sur la séance">${esc(s.note||"")}</textarea>
     <div class="btnrow"><button class="btn secondary" data-a="redoSession" data-id="${s.id}">${icon("repeat")} Refaire cette séance</button></div>
     <div class="btnrow"><button class="btn ghost" style="color:var(--red)" data-a="deleteSession" data-id="${s.id}">Supprimer de l'historique</button></div>
     </div>`;
@@ -120,6 +136,13 @@ function sessionDetailHTML(s){
 
 Object.assign(ACT, {
   histMore(){ histLimit += 25; changed(); },
+  saveNote(d, el){
+    const s = S.sessions.find(x=>x.id===d.id); if(!s) return;
+    const v = el.value.trim().slice(0,280);
+    if(v===(s.note||"")) return;
+    if(v) s.note = v; else delete s.note;
+    changed();
+  },
   openSessionDetail(d){
     const s = S.sessions.find(x=>x.id===d.id);
     if(s) openSheet(sessionDetailHTML(s));

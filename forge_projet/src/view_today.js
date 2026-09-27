@@ -74,7 +74,7 @@ function heroHTML(draft){
       <span class="hero-badge">${icon("check")}</span>
       <span class="hero-eyebrow">Séance du jour faite</span>
       <span class="hero-title">${esc(sessionTitle(s))}</span>
-      <span class="hero-meta"><span>${fmtDuration(s.durationSec||0)}</span><span>${sessionSetCount(s)} séries</span><span>${sessionVolume(s) ? fmtKg(sessionVolume(s)) : sessionReps(s)+" reps"}</span></span>
+      <span class="hero-meta"><span>${fmtDuration(s.durationSec||0)}</span><span>${nb(sessionSetCount(s),"série")}</span><span>${sessionVolume(s) ? fmtKg(sessionVolume(s)) : sessionReps(s)+" reps"}</span></span>
       <span class="hero-foot">Récupère bien — voir le détail ${icon("chev")}</span>
       ${nextPlannedLine()}
     </button>`;
@@ -742,7 +742,7 @@ function overviewBodyHTML(){
     return `<div class="row ov-row ${i===liveFocusIdx?"current":""} ${allDone?"done":""}">
       <button class="row-main" data-a="jumpFromOverview" data-idx="${i}">
         <span class="ls-ring r-${regionOf(def)}" style="--p:${Math.round(done/n*100)}"><span>${allDone?icon("check"):pictoSVG(pictoKey(def))}</span></span>
-        <div class="grow"><div class="t">${esc(def.n)}</div><div class="s">${allDone?"Terminé":i===liveFocusIdx?`En cours · ${done}/${n} séries`:`${done}/${n} séries`}</div></div>
+        <div class="grow"><div class="t">${esc(def.n)}</div><div class="s">${allDone?"Terminé":i===liveFocusIdx?`En cours · ${done}/${n} séries`:`${done}/${nb(n,"série")}`}</div></div>
       </button>
       <button class="icon-btn" aria-label="Remplacer" data-a="swapExoOpen" data-idx="${i}">${icon("swap")}</button>
       <button class="icon-btn" aria-label="Retirer" data-a="removeExoOverview" data-idx="${i}">${icon("close")}</button>

@@ -195,13 +195,37 @@ Changements :
 - **Accessibilité** : Dynamic Type (`font: -apple-system-body`), textes secondaires plus contrastés, onglets inactifs en gris système, boutons qui passent à la ligne quand le texte est grand.
 - **Tests** : `v21.js` (11 scénarios du moteur, ressenti, variante, écran allumé simulé, volume, sauvegarde/restauration, calendrier, grand texte), `v22.js` (premier lancement) ; les autres tests passent l'accueil via `ACT.obSkip()`.
 
+## 9 nonies. Version 2.2 : matériel, niveau, taille des séances, suivi long terme
+
+- **Matériel étendu** (`data_equipment.js`) : banc plat / banc inclinable / banc de développé couché, rack (supports de squat), barres parallèles, sangles de suspension, roue abdominale, corde à sauter. `EQUIP_IMPLIES` : un banc inclinable ou de développé couché compte comme banc plat. `hasEquip` accepte des alternatives (`"rack|bench_press"`).
+- **Sécurité des exercices à la barre** : squat, front squat, fente et good morning à la barre demandent un rack. Le développé couché à la barre demande un rack ou un banc de développé couché. Les exercices inclinés demandent un banc inclinable.
+- **13 nouveaux exercices** (137 au total) : roue abdominale (genoux/debout), dips, relevés de genoux, L-sit, 5 exercices aux sangles, rowing inversé à la barre, tractions scapulaires, corde à sauter.
+- **Niveau** (`S.goals.level`, `EXO_LEVEL1`/`EXO_LEVEL3`) : un·e débutant·e ne reçoit pas d'exercices de niveau 3 (repli sur tout le catalogue si le choix devient trop maigre), et le score favorise les exercices adaptés au niveau.
+- **Nombre d'exercices** (`S.goals.exoCount`, `sessionSize()`) : 0 = automatique selon la durée. Réglable dans Objectifs et directement sur la séance proposée (stepper « − n + »). Une séance non commencée est regénérée quand le matériel, le niveau ou la durée changent (`regenerateDraftIfIdle`).
+- **Variété** (`exoFamily`) : deux variantes du même mouvement (ex. deux pompes) sont pénalisées dans une même séance. Sur 11 520 séances simulées, les doublons de famille passent de 42 % à 30 % ; ceux qui restent viennent de petits choix de matériel.
+- **Élastiques = niveaux de résistance** (1 à 5, `bandLabel`) et non plus des kg. Ils sont exclus du tonnage et des trophées de force. Affichage via `fmtLoad`/`loadSuffix`. Migration : les anciennes valeurs en kg sont converties par rang, historique compris.
+- **Suivi long terme** :
+  - note facultative par séance (fin de séance repliée derrière « Ajouter une note », éditable dans le détail de l'historique, visible dans la liste) ;
+  - poids du corps (Profil › Poids du corps, `S.body`) : une pesée par jour au plus, courbe sur 12 mois, tendance calculée sur des moyennes de 14 jours, sans jugement ;
+  - écart de séances avec le mois précédent dans l'historique.
+- **Corrections** :
+  - `sessionReps` ne compte plus les secondes des exercices chronométrés ;
+  - accords au singulier/pluriel (`nb()`) ;
+  - moyenne hebdomadaire à une décimale (« 0,3 séance » au lieu de « 0 séance ») ;
+  - champs de charge en `type="text" inputmode="decimal"` (virgule acceptée), Entrée pour valider ;
+  - bouton « Ajouter » qui débordait de la feuille Matériel ;
+  - élastiques par défaut [2,3,4] dès la création.
+- **Tests** :
+  - `v23.js` : migration, écart mensuel, note, poids du corps, niveau et taille, note de fin de séance ;
+  - `gen_audit.js` : 8 configurations de matériel × 3 niveaux × 3 tailles × 8 types × 20 tirages ; vérifie matériel, niveau, doublons, élastiques, NaN.
+
 ## 10. Cahier des charges d'origine (résumé)
 
 Voir le fichier `4a3df5ee-cahier-des-charges-forge.md` fourni au lancement du projet pour le texte complet. Points clés déjà couverts en v1.0 : matériel personnalisable et extensible, bibliothèque d'exercices filtrée, inclusion/exclusion d'exercices, objectifs personnalisés, suivi détaillé de séance (éditable, timer de repos, coche rapide), moteur de suggestion 100% local avec export/import IA, graphiques de progression, PR, streaks/régularité, trophées, écran d'accueil = séance du jour, thème clair/sombre automatique, page À propos avec copyright.
 
 ## 11. Chantiers proposés pour la suite
 
-1. Historique modifiable a posteriori (éditer les séries d'une séance déjà enregistrée ; la suppression existe depuis la v1.2).
+1. Historique modifiable a posteriori (la note l'est depuis la v2.2) (éditer les séries d'une séance déjà enregistrée ; la suppression existe depuis la v1.2).
 2. Export/partage d'une séance ou d'un récap (image), comme le Rewind de Zeste.
 3. Tests automatisés versionnés dans le dépôt (actuellement les tests Playwright ont été écrits et exécutés en session mais pas committés — à formaliser dans un dossier `tests/` si utile).
 4. Vérification de chaque exercice avec une source nommée (NSCA/ACSM/NASM) si YaYa souhaite le même niveau de rigueur que les recettes de Zeste.

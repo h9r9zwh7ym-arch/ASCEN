@@ -1334,6 +1334,25 @@ h2.sh .more.strong{font-weight:700}
 .ec-t{font-size:calc(13.5rem/17);color:var(--label2)}
 .ec-t b{color:var(--label);font-size:calc(15rem/17)}
 .exo-count .mini-step button[disabled]{opacity:.3}
+.ec-limit{margin:6px 20px 0;font-size:calc(12.5rem/17);color:var(--label2);line-height:1.35}
+/* v2.2 : note de séance, écart mensuel, poids du corps */
+.note-in{display:block;width:calc(100% - 32px);box-sizing:border-box;margin:0 16px;padding:11px 14px;border:0;border-radius:12px;background:var(--fill2);font-size:calc(15rem/17);line-height:1.35;resize:none;outline:none;transition:box-shadow .2s}
+.note-in:focus{box-shadow:0 0 0 2px var(--orange) inset}
+.note-in::placeholder{color:var(--label3)}
+.sheet-body .note-in{background:var(--bg2)}
+.sheet-body > .te-sec{margin:22px 20px 8px}
+.cel .note-in{width:100%;margin:14px 0 0;text-align:left}
+.cel-note-btn{display:inline-flex;align-items:center;gap:6px;margin:14px auto 0;padding:8px 14px;border-radius:18px;color:var(--tint);font-weight:600;font-size:calc(15rem/17)}
+.cel-note-btn svg{width:18px;height:18px}
+.note-in.pop-in{animation:noteIn .28s cubic-bezier(.32,.72,0,1)}
+@keyframes noteIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+.hn{font-size:calc(13rem/17);color:var(--label2);font-style:italic;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hn::before{content:"“"} .hn::after{content:"”"}
+.sh-sub .md.up{color:var(--green)} .sh-sub .md.down{color:var(--orange)}
+.body-add{display:flex;gap:10px;align-items:stretch;margin:0 16px}
+.body-add .num-field{flex:1;min-width:0}
+.body-add .btn{width:auto;flex:none;padding:0 22px;margin:0}
+.row .s.wrap{white-space:normal;line-height:1.3}
 </style></head><body><div id="app"></div><nav class="tabbar" aria-label="Onglets"></nav><div id="restbar"></div><div id="overlay" role="dialog"></div><div id="toast" role="status" aria-live="polite"></div><input type="file" id="fileImport" accept="application/json,.json" style="display:none"><script>
 // ================= MATÉRIEL =================
 // Catalogue du matériel reconnu par le moteur de suggestion. Chaque exercice de la
@@ -1373,7 +1392,7 @@ const DEFAULT_INCREMENT = { barbell:2.5, dumbbells:1, kettlebell:2, bands:1 };
 function defaultEquipment(){
   return {
     owned:{ bodyweight:true, dumbbells:false, barbell:false, kettlebell:false, bench:false, bench_incline:false, bench_press:false, rack:false, pullup_bar:false, dip_bars:false, suspension:false, ab_roller:false, bands:false, jump_rope:false, mat:false },
-    weights:{ dumbbells:[], barbell:[], kettlebell:[], bands:[] }, // ex. dumbbells:[8,12], bands:["léger","moyen"]
+    weights:{ dumbbells:[], barbell:[], kettlebell:[], bands:[2,3,4] }, // kg ; élastiques : niveaux de résistance 1 à 5
     custom:[] // [{id,n}] équipements libres, informatifs (extensibles au fil du temps)
   };
 }
@@ -1954,6 +1973,7 @@ function defaultState(){
     custom: { exos:[] },   // « Ma séance » : [{exoId, sets}]
     templates: [],         // modèles enregistrés : [{id, n, exos:[{exoId, sets}]}]
     importedProgram: [],
+    body: [],               // pesées facultatives [{d:"AAAA-MM-JJ", kg}]
     medals: {},            // {familleId: {t: palier atteint 0-4, d: {1: iso, 2: iso…}}}
     settings: { theme:"auto", unit:"kg", todayTab:"custom", name:"", sound:true },
     meta: { createdAt: new Date().toISOString(), prCount:0 },
@@ -1992,6 +2012,7 @@ function normalizeState(parsed){
     merged.templates = parsed.templates||[];
     merged.medals = parsed.medals||{};
     merged.importedProgram = parsed.importedProgram||[];
+    merged.body = (Array.isArray(parsed.body)?parsed.body:[]).filter(e=>e && /^\d{4}-\d{2}-\d{2}$/.test(e.d) && e.kg>=20 && e.kg<=400).sort((a,b)=>a.d<b.d?-1:1);
     delete merged.settings.todayMode; // v1.2 : remplacé par todayTab (« Ma séance » en premier)
     // v2.2 : nouveaux équipements. On garde le comportement précédent : un banc servait aussi
     // aux exercices inclinés, et quiconque faisait du squat à la barre avait des supports.
@@ -1999,8 +2020,18 @@ function normalizeState(parsed){
     if(po.bench && po.bench_incline===undefined) merged.equipment.owned.bench_incline = true;
     if(po.barbell && po.rack===undefined) merged.equipment.owned.rack = true;
     // élastiques : des niveaux de résistance 1 à 5 (et plus des « kilos »)
-    const bw = (merged.equipment.weights.bands||[]).map(Number).filter(v=>v>=1 && v<=5);
-    merged.equipment.weights.bands = bw.length ? Array.from(new Set(bw.map(Math.round))).sort() : [2,3,4];
+    // anciennes valeurs en kg (> 5) : converties par rang, du plus léger au plus fort
+    let bw = (merged.equipment.weights.bands||[]).map(Number).filter(v=>v>0);
+    if(bw.some(v=>v>5)){
+      const kg = Array.from(new Set(bw)).sort((a,b)=>a-b);
+      bw = kg.map((v,i)=>kg.length>1 ? 1+i*4/(kg.length-1) : 3);
+      // séries d'élastique déjà enregistrées en kg : même correspondance (au plus proche)
+      const lvl = w=>Math.round(bw[kg.reduce((bi,v,i)=>Math.abs(v-w)<Math.abs(kg[bi]-w)?i:bi, 0)]);
+      merged.sessions.forEach(ss=>ss.exos.forEach(ex=>{ const d = EXO_MAP[ex.exoId];
+        if(d && loadableTypeOf(d)==="bands") ex.sets.forEach(st=>{ if(st.weight>5) st.weight = lvl(st.weight); }); }));
+    }
+    bw = bw.filter(v=>v>=1 && v<=5);
+    merged.equipment.weights.bands = bw.length ? Array.from(new Set(bw.map(Math.round))).sort((a,b)=>a-b) : [2,3,4];
     delete merged.trophies; // ancien système de trophées (v1.0-1.1), remplacé par les médailles à paliers
     return merged;
   }
@@ -2025,7 +2056,7 @@ let persistTimer = null, persistBlocked = false, persistFailed = false;
 // ressenti vide, séries non faites) : on les retire pour garder le stockage léger.
 function compactSession(s){
   const out = {};
-  ["id","date","source","type","resolvedType","name","tplId","planned","startedAt","completedAt","durationSec"].forEach(k=>{ if(s[k]!=null && s[k]!==false) out[k] = s[k]; });
+  ["id","date","source","type","resolvedType","name","tplId","planned","startedAt","completedAt","durationSec","note"].forEach(k=>{ if(s[k]!=null && s[k]!==false) out[k] = s[k]; });
   out.exos = (s.exos||[]).map(ex=>({
     exoId: ex.exoId,
     targetReps: ex.targetReps,
@@ -2101,6 +2132,8 @@ function fmtRelative(iso){
   if(n<31) return `il y a ${Math.floor(n/7)} sem.`;
   return fmtDate(iso);
 }
+// « 1 série », « 2 séries » (en français, 0 et 1 sont au singulier)
+function nb(n, w){ return `${n} ${w}${Math.abs(n)>=2?"s":""}`; }
 function fmtNum(n){ return Math.round(n).toLocaleString("fr-CH"); }
 function fmtDec(n){ return round1(n).toLocaleString("fr-CH"); }
 function fmtKg(kg){
@@ -2146,7 +2179,8 @@ function sessionSetCount(s){
   return s.exos.reduce((t,ex)=>t+ex.sets.filter(st=>st.done).length,0);
 }
 function sessionReps(s){
-  return s.exos.reduce((t,ex)=>t+ex.sets.filter(st=>st.done).reduce((a,st)=>a+(st.reps||0),0),0);
+  // les exercices chronométrés (gainage, corde…) stockent des secondes : ils ne comptent pas comme répétitions
+  return s.exos.reduce((t,ex)=>{ const d = EXO_MAP[ex.exoId]; if(d && isTimed(d)) return t; return t+ex.sets.filter(st=>st.done).reduce((a,st)=>a+(st.reps||0),0); },0);
 }
 function sessionPRCount(s){
   return s.exos.reduce((t,ex)=>t+ex.sets.filter(st=>st.done&&st.pr).length,0);
@@ -2593,6 +2627,9 @@ function poolForType(typeId){
 
 // avoid : exercices de la proposition précédente, fortement pénalisés pour que
 // « Autre proposition » change vraiment. Le léger aléa départage les ex æquo.
+// famille d'un exercice (« pompes », « squat », « rowing »…) : deux variantes du même
+// mouvement dans une séance font doublon, on préfère varier quand c'est possible
+function exoFamily(e){ return e.id.split("_")[0]; }
 function pickExosForSession(n, pool, avoid){
   pool = pool || engineExos();
   avoid = avoid || new Set();
@@ -2603,12 +2640,17 @@ function pickExosForSession(n, pool, avoid){
   const usedIds = new Set();
   for(let bucketI=0; chosen.length<n && bucketI<PATTERN_CYCLE.length*3; bucketI++){
     const pattern = PATTERN_CYCLE[bucketI % PATTERN_CYCLE.length];
-    const candidates = pool.filter(e=>e.pattern===pattern && !usedIds.has(e.id)).sort(byScore);
+    const fams = new Set(chosen.map(exoFamily));
+    const adj = e=>score[e.id] - (fams.has(exoFamily(e))?3:0);
+    const candidates = pool.filter(e=>e.pattern===pattern && !usedIds.has(e.id)).sort((a,b)=>adj(b)-adj(a));
     if(candidates.length){ chosen.push(candidates[0]); usedIds.add(candidates[0].id); }
   }
-  if(chosen.length<n){
-    const rest = pool.filter(e=>!usedIds.has(e.id)).sort(byScore);
-    for(const e of rest){ if(chosen.length>=n) break; chosen.push(e); usedIds.add(e.id); }
+  while(chosen.length<n){
+    const fams = new Set(chosen.map(exoFamily));
+    const rest = pool.filter(e=>!usedIds.has(e.id));
+    if(!rest.length) break;
+    const e = rest.reduce((b,x)=>score[x.id]-(fams.has(exoFamily(x))?3:0) > score[b.id]-(fams.has(exoFamily(b))?3:0) ? x : b);
+    chosen.push(e); usedIds.add(e.id);
   }
   return chosen;
 }
@@ -2783,6 +2825,7 @@ function suggestComplement(existingIds, n){
   const have = existingIds.map(id=>EXO_MAP[id]).filter(Boolean);
   const coveredMuscles = new Set(have.map(e=>e.muscles[0]));
   const coveredPatterns = new Set(have.map(e=>e.pattern));
+  const fams = new Set(have.map(exoFamily));
   const pool = engineExos().filter(e=>!existingIds.includes(e.id));
   const jitter = {}; pool.forEach(e=>jitter[e.id]=Math.random()*1.2);
   const out = [];
@@ -2790,12 +2833,12 @@ function suggestComplement(existingIds, n){
     let best=null, bestScore=-Infinity;
     pool.forEach(e=>{
       if(out.includes(e)) return;
-      const sc = scoreExo(e) + jitter[e.id] - (coveredMuscles.has(e.muscles[0])?5:0) - (coveredPatterns.has(e.pattern)?2:0);
+      const sc = scoreExo(e) + jitter[e.id] - (coveredMuscles.has(e.muscles[0])?5:0) - (coveredPatterns.has(e.pattern)?2:0) - (fams.has(exoFamily(e))?3:0);
       if(sc>bestScore){ bestScore=sc; best=e; }
     });
     if(!best) break;
     out.push(best);
-    coveredMuscles.add(best.muscles[0]); coveredPatterns.add(best.pattern);
+    coveredMuscles.add(best.muscles[0]); coveredPatterns.add(best.pattern); fams.add(exoFamily(best));
   }
   return out;
 }
@@ -2841,6 +2884,7 @@ const GLYPHS = {
   mountain:'<path d="m2.8 19.5 6.6-11.2 4.1 6.6 2.6-3.6 5.1 8.2Z" fill="#fff"/>',
   bolt:'<path d="M13.4 2.5 5 13.6h6.1l-1.1 7.9 8.3-11.2h-6.1Z" fill="#fff"/>',
   toolbox:`<rect x="3.5" y="8.5" width="17" height="11" rx="2" ${S_}/><path d="M9 8.5V6h6v2.5M3.5 13.2h17M12 12v2.5" ${S_}/>`,
+  scale:`<rect x="4.2" y="4.2" width="15.6" height="15.6" rx="4.2" ${S_}/><path d="M8.6 10a4.6 4.6 0 0 1 6.8 0" ${S_}/><path d="m12 12 1.3-2.2" ${S_}/>`,
   target:`<circle cx="12" cy="12" r="8" ${S_}/><circle cx="12" cy="12" r="4.4" ${S_}/><circle cx="12" cy="12" r="1.4" fill="#fff"/>`,
   list:`<path d="M9.5 7h10M9.5 12h10M9.5 17h10" ${S_}/><circle cx="5.2" cy="7" r="1.3" fill="#fff"/><circle cx="5.2" cy="12" r="1.3" fill="#fff"/><circle cx="5.2" cy="17" r="1.3" fill="#fff"/>`,
   sparkles:'<path d="m10.5 3 1.9 5 5 1.9-5 1.9-1.9 5-1.9-5-5-1.9 5-1.9Z" fill="#fff"/><path d="m18 13.5.9 2.3 2.3.9-2.3.9-.9 2.3-.9-2.3-2.3-.9 2.3-.9Z" fill="#fff"/>',
@@ -3105,6 +3149,8 @@ document.addEventListener("click", e=>{
 document.addEventListener("keydown", e=>{
   if(e.key==="Enter" && e.target && e.target.id==="numInput"){ e.preventDefault(); ACT.numOk(); }
   if(e.key==="Enter" && e.target && e.target.id==="tplEdName"){ e.preventDefault(); e.target.blur(); }
+  if(e.key==="Enter" && e.target && e.target.id==="bodyIn"){ e.preventDefault(); ACT.bodyAdd(); }
+  if(e.key==="Enter" && e.target && /^wadd-/.test(e.target.id||"")){ e.preventDefault(); ACT.addWeight({ id:e.target.id.slice(5) }); }
   if(e.key==="Enter" && e.target && (e.target.id==="nameInput" || e.target.id==="tplName")){
     e.preventDefault(); const b = qs('.center-modal [data-a^="save"]'); if(b) b.click();
   }
@@ -3588,7 +3634,7 @@ function heatmap(weeks){
       if(iso>today){ cells.push(`<i class="hm-c fut"></i>`); continue; }
       const e = days[iso];
       const lvl = !e ? 0 : e.sets/maxSets>0.66 ? 3 : e.sets/maxSets>0.33 ? 2 : 1;
-      const tip = e ? `${fmtDate(iso,"long")} : ${e.sessions} séance${e.sessions>1?"s":""}, ${e.sets} séries` : `${fmtDate(iso,"long")} : repos`;
+      const tip = e ? `${fmtDate(iso,"long")} : ${nb(e.sessions,"séance")}, ${nb(e.sets,"série")}` : `${fmtDate(iso,"long")} : repos`;
       cells.push(`<i class="hm-c l${lvl} ${iso===today?"today":""}" data-tip="${esc(tip)}"></i>`);
     }
   }
@@ -3893,6 +3939,7 @@ function showCelebration(session, ups, xpBefore, xpAfter){
       <div class="cel-xp-sub">${esc(after.title)}</div>
     </div>
     ${medalsHTML}
+    <button class="cel-note-btn" data-a="celNote" data-id="${esc(session.id)}">${icon("edit")} Ajouter une note</button>
     ${typeof lastDoneForSave!=="undefined" && lastDoneForSave ? `<div class="cel-save">
       <div class="cs-t">Garder cette séance ?</div>
       <div class="cs-s">Enregistre-la pour la refaire ou la placer dans ta semaine.</div>
@@ -3910,6 +3957,13 @@ function showCelebration(session, ups, xpBefore, xpAfter){
 
 Object.assign(ACT, {
   showMedal(d){ showMedalModal(d.id); },
+  // la note reste repliée : un appui l'ouvre, pour ne pas alourdir l'écran de fin
+  celNote(d, el){
+    const t = document.createElement("textarea");
+    t.className = "note-in pop-in"; t.rows = 2; t.maxLength = 280; t.dataset.c = "saveNote"; t.dataset.id = d.id;
+    t.placeholder = "Sensations, douleur, contexte…"; t.setAttribute("aria-label", "Note sur la séance");
+    el.replaceWith(t); t.focus();
+  },
 });
 // ================= VUE : AUJOURD'HUI =================
 // Avant la séance : deux sections — « Proposée » (moteur, avec choix du type de séance)
@@ -3987,7 +4041,7 @@ function heroHTML(draft){
       <span class="hero-badge">${icon("check")}</span>
       <span class="hero-eyebrow">Séance du jour faite</span>
       <span class="hero-title">${esc(sessionTitle(s))}</span>
-      <span class="hero-meta"><span>${fmtDuration(s.durationSec||0)}</span><span>${sessionSetCount(s)} séries</span><span>${sessionVolume(s) ? fmtKg(sessionVolume(s)) : sessionReps(s)+" reps"}</span></span>
+      <span class="hero-meta"><span>${fmtDuration(s.durationSec||0)}</span><span>${nb(sessionSetCount(s),"série")}</span><span>${sessionVolume(s) ? fmtKg(sessionVolume(s)) : sessionReps(s)+" reps"}</span></span>
       <span class="hero-foot">Récupère bien — voir le détail ${icon("chev")}</span>
       ${nextPlannedLine()}
     </button>`;
@@ -4096,6 +4150,7 @@ function proposalPaneHTML(draft){
       <div class="ec-t"><b>${draft.exos.length}</b> exercice${draft.exos.length>1?"s":""} · ${draft.exos.reduce((t,e)=>t+e.sets.length,0)} séries · ≈ ${estimateMinutes(draft)} min</div>
       <div class="mini-step"><button aria-label="Un exercice de moins" data-a="draftCount" data-d="-1" ${draft.exos.length<=1?"disabled":""}>−</button><span>${draft.exos.length}</span><button aria-label="Un exercice de plus" data-a="draftCount" data-d="1" ${draft.exos.length>=10?"disabled":""}>+</button></div>
     </div>
+    ${!imported && draft.exos.length < Math.min(sessionSize(), draft.resolvedType==="core"?5:10) ? `<div class="ec-limit">Ton matériel limite ce type de séance à ${draft.exos.length} exercice${draft.exos.length>1?"s":""}. Le « + » ajoute un exercice d'un autre groupe.</div>` : ""}
     <div class="group" style="margin-top:8px">${rows}</div>
     <div class="btnrow">
       <button class="btn secondary sm" data-a="addExoOpen">${icon("plus")} Ajouter</button>
@@ -4654,7 +4709,7 @@ function overviewBodyHTML(){
     return `<div class="row ov-row ${i===liveFocusIdx?"current":""} ${allDone?"done":""}">
       <button class="row-main" data-a="jumpFromOverview" data-idx="${i}">
         <span class="ls-ring r-${regionOf(def)}" style="--p:${Math.round(done/n*100)}"><span>${allDone?icon("check"):pictoSVG(pictoKey(def))}</span></span>
-        <div class="grow"><div class="t">${esc(def.n)}</div><div class="s">${allDone?"Terminé":i===liveFocusIdx?`En cours · ${done}/${n} séries`:`${done}/${n} séries`}</div></div>
+        <div class="grow"><div class="t">${esc(def.n)}</div><div class="s">${allDone?"Terminé":i===liveFocusIdx?`En cours · ${done}/${n} séries`:`${done}/${nb(n,"série")}`}</div></div>
       </button>
       <button class="icon-btn" aria-label="Remplacer" data-a="swapExoOpen" data-idx="${i}">${icon("swap")}</button>
       <button class="icon-btn" aria-label="Retirer" data-a="removeExoOverview" data-idx="${i}">${icon("close")}</button>
@@ -5576,14 +5631,24 @@ function histChartHTML(){
   const weeks = memo("histWeeks", ()=>weeklyBuckets(12));
   const m = histMetric, lab = b => fmtDate(b.wk);
   const val = b => m==="minutes" ? Math.round(b.minutes) : b[m];
-  const fmt = v => m==="minutes" ? fmtDuration(v*60) : m==="sets" ? `${v} série${v>1?"s":""}` : `${v} séance${v>1?"s":""}`;
+  const fmt = v => m==="minutes" ? fmtDuration(v*60) : `${fmtDec(v)} ${m==="sets"?"série":"séance"}${v>=2?"s":""}`;
   const cur = val(weeks[weeks.length-1]), prev = val(weeks[weeks.length-2]);
-  const avg = Math.round(weeks.slice(0,-1).reduce((t,b)=>t+val(b),0)/(weeks.length-1));
+  // moyenne à une décimale pour les séances et séries (3 séances en 11 semaines ≠ « 0 séance »)
+  const avgRaw = weeks.slice(0,-1).reduce((t,b)=>t+val(b),0)/(weeks.length-1);
+  const avg = m==="minutes" ? Math.round(avgRaw) : round1(avgRaw);
   const delta = cur-prev;
   return `<div class="hist-kpi"><div><b>${fmt(cur)}</b><small>cette semaine</small></div>
       <div class="hk-delta ${delta>0?"up":delta<0?"down":""}">${delta>0?"▲":delta<0?"▼":"="} ${delta?fmt(Math.abs(delta)):"stable"}<small>vs semaine passée</small></div></div>
     ${columnChart(weeks.map(b=>({ label:lab(b), v:val(b), tip:`Semaine du ${lab(b)} : ${fmt(val(b))}` })), { goal: m==="sessions" ? S.goals.daysPerWeek : 0, fmt })}
     <div class="hist-avg">Moyenne sur 11 semaines : ${fmt(avg)}</div>`;
+}
+// écart avec le mois précédent (pas pour le mois en cours, encore incomplet)
+function monthDeltaHTML(key, perMonth, curMonth, firstMonth){
+  if(key===curMonth || key<=firstMonth) return "";
+  const d = parseISO(key+"-01"); d.setMonth(d.getMonth()-1);
+  const pk = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+  const diff = (perMonth[key]||0)-(perMonth[pk]||0);
+  return ` · <span class="md ${diff>0?"up":diff<0?"down":""}">${diff>0?"+"+diff:diff<0?"−"+Math.abs(diff):"autant"} vs ${MOIS[d.getMonth()]}</span>`;
 }
 function renderHistory(){
   const all = S.sessions.slice().reverse();
@@ -5601,6 +5666,10 @@ function renderHistory(){
     if(!m || m.key!==key){ m = { key, list:[] }; months.push(m); }
     m.list.push(s);
   });
+  // séances par mois sur tout l'historique (pas seulement la partie affichée)
+  const perMonth = {};
+  all.forEach(s=>{ const k = s.date.slice(0,7); perMonth[k] = (perMonth[k]||0)+1; });
+  const curMonth = todayISO().slice(0,7), firstMonth = S.sessions[0].date.slice(0,7);
   let i = 0;
   const html = months.map(m=>{
     const d = parseISO(m.key+"-01");
@@ -5610,12 +5679,12 @@ function renderHistory(){
       return `<button class="row tap stagger" style="--i:${Math.min(i++,12)}" data-a="openSessionDetail" data-id="${s.id}">
         ${sessionIcon(s)}
         <div class="grow"><div class="t">${esc(sessionTitle(s))}${prs?` <span class="pr-badge">💥 ${prs}</span>`:""}</div>
-        <div class="s">${esc(fmtDate(s.date,"short"))} · ${sessionSetCount(s)} séries${sessionVolume(s)?" · "+fmtKg(sessionVolume(s)):""}</div></div>
+        <div class="s">${esc(fmtDate(s.date,"short"))} · ${nb(sessionSetCount(s),"série")}${sessionVolume(s)?" · "+fmtKg(sessionVolume(s)):""}</div>${s.note?`<div class="hn">${esc(s.note)}</div>`:""}</div>
         <div class="val">${s.durationSec?fmtDuration(s.durationSec):""}</div><span class="chev">${icon("chev")}</span>
       </button>`;
     }).join("");
     return `<h2 class="sh">${MOIS_LONG[d.getMonth()].replace(/^./,c=>c.toUpperCase())} ${d.getFullYear()}</h2>
-      <div class="sh-sub">${m.list.length} séance${m.list.length>1?"s":""}${vol?" · "+fmtKg(vol):""}</div>
+      <div class="sh-sub">${m.list.length} séance${m.list.length>1?"s":""}${vol?" · "+fmtKg(vol):""}${monthDeltaHTML(m.key, perMonth, curMonth, firstMonth)}</div>
       <div class="group">${rows}</div>`;
   }).join("");
   const more = all.length - sessions.length;
@@ -5665,6 +5734,8 @@ function sessionDetailHTML(s){
       ${sessionPRCount(s) ? `<div class="stat-box pr"><div class="num">${sessionPRCount(s)}</div><div class="lbl">record${sessionPRCount(s)>1?"s":""}</div></div>` : ""}
     </div>
     <div class="group" style="margin-top:14px">${rows||'<div style="padding:16px" class="s">Aucune série complétée.</div>'}</div>
+    <div class="te-sec">Note</div>
+    <textarea class="note-in" rows="3" maxlength="280" data-c="saveNote" data-id="${esc(s.id)}" placeholder="Sensations, douleur, contexte… (facultatif)" aria-label="Note sur la séance">${esc(s.note||"")}</textarea>
     <div class="btnrow"><button class="btn secondary" data-a="redoSession" data-id="${s.id}">${icon("repeat")} Refaire cette séance</button></div>
     <div class="btnrow"><button class="btn ghost" style="color:var(--red)" data-a="deleteSession" data-id="${s.id}">Supprimer de l'historique</button></div>
     </div>`;
@@ -5672,6 +5743,13 @@ function sessionDetailHTML(s){
 
 Object.assign(ACT, {
   histMore(){ histLimit += 25; changed(); },
+  saveNote(d, el){
+    const s = S.sessions.find(x=>x.id===d.id); if(!s) return;
+    const v = el.value.trim().slice(0,280);
+    if(v===(s.note||"")) return;
+    if(v) s.note = v; else delete s.note;
+    changed();
+  },
   openSessionDetail(d){
     const s = S.sessions.find(x=>x.id===d.id);
     if(s) openSheet(sessionDetailHTML(s));
@@ -5995,6 +6073,11 @@ function renderProfil(){
         <div class="grow"><div class="t">Objectifs</div><div class="s">${GOAL_LABELS[S.goals.overall]} · ${S.goals.daysPerWeek}×/sem.</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
+      <button class="row tap" style="width:100%" data-a="openBody">
+        ${sfIcon("scale","mint")}
+        <div class="grow"><div class="t">Poids du corps</div><div class="s">${bodyRowText()}</div></div>
+        <span class="chev">${icon("chev")}</span>
+      </button>
       <button class="row tap" style="width:100%" data-a="openExoPrefs">
         ${sfIcon("list","blue")}
         <div class="grow"><div class="t">Exercices inclus / exclus</div><div class="s">${S.prefs.excluded.length} exclu${S.prefs.excluded.length>1?"s":""} · ${S.prefs.included.length} privilégié${S.prefs.included.length>1?"s":""}</div></div>
@@ -6137,7 +6220,7 @@ function equipBodyHTML(){
     const on = S.equipment.owned[e.id];
     return `<div class="row">
       ${sfIcon(EQUIP_GLYPH[e.id]||"wrench", EQUIP_COLOR[e.id]||"gray")}
-      <div class="grow"><div class="t">${esc(e.n)}</div>${e.hint && !e.loadable ? `<div class="s">${esc(e.hint)}</div>` : ""}</div>
+      <div class="grow"><div class="t">${esc(e.n)}</div>${e.hint && !e.loadable ? `<div class="s wrap">${esc(e.hint)}</div>` : ""}</div>
       <button class="switch ${on?"on":""}" data-a="toggleEquip" data-id="${e.id}"></button>
     </div>`;
   }).join("");
@@ -6155,10 +6238,10 @@ function equipBodyHTML(){
     return `<div class="card" style="margin-top:12px">
       <div style="font-weight:700;margin-bottom:2px">${esc(e.n)}</div>
       <div class="hr-note" style="margin:0 0 10px">${esc(e.hint||"")}</div>
-      <div class="chips" style="padding:0 0 10px">${chips||'<span class="hr-note">Aucun poids renseigné</span>'}</div>
+      <div class="chips" style="padding:0 0 10px">${chips||'<span class="hr-note" style="margin:0">Aucun poids renseigné</span>'}</div>
       <div style="display:flex;gap:8px">
-        <input type="number" inputmode="decimal" placeholder="${e.unit}" id="wadd-${e.id}" style="flex:1;background:var(--fill2);border:0;border-radius:10px;padding:0 12px;height:38px">
-        <button class="btn sm" data-a="addWeight" data-id="${e.id}">Ajouter</button>
+        <input type="text" inputmode="decimal" placeholder="${e.unit}" id="wadd-${e.id}" style="flex:1;min-width:0;background:var(--fill2);border:0;border-radius:10px;padding:0 12px;height:38px">
+        <button class="btn sm" style="flex:none;width:auto" data-a="addWeight" data-id="${e.id}">Ajouter</button>
       </div>
     </div>`;
   }).join("");
@@ -6282,7 +6365,7 @@ Object.assign(ACT, {
   toggleEquip(d){ S.equipment.owned[d.id] = !S.equipment.owned[d.id]; save(); refreshEquip(); regenerateDraftIfIdle(); },
   addWeight(d){
     const input = qs("#wadd-"+d.id); const v = parseFloat(String(input.value).replace(",", "."));
-    if(!isNaN(v) && v>0){ S.equipment.weights[d.id] = Array.from(new Set([...(S.equipment.weights[d.id]||[]), v])); save(); }
+    if(!isNaN(v) && v>0 && v<=500){ S.equipment.weights[d.id] = Array.from(new Set([...(S.equipment.weights[d.id]||[]), v])); save(); }
     refreshEquip();
   },
   toggleBand(d){
@@ -6348,8 +6431,52 @@ Object.assign(ACT, {
   },
 });
 VIEWS.profil = renderProfil;
+
+// ---------- poids du corps (facultatif) ----------
+// Le poids varie de 1 à 2 kg d'un jour à l'autre (eau, glycogène, repas) : on montre la
+// tendance sur plusieurs semaines plutôt que la dernière pesée seule.
+function bodyLast(){ return S.body[S.body.length-1]; }
+function bodyRowText(){
+  const l = bodyLast();
+  return l ? `${fmtDec(l.kg)} kg · ${fmtRelative(l.d)}` : "Facultatif · suivre la tendance";
+}
+function bodyTrend(){
+  // moyenne des pesées des 14 derniers jours comparée à celle des 14 jours précédant il y a 30 jours
+  const t = todayISO(), avg = (from, to)=>{ const l = S.body.filter(e=>e.d>from && e.d<=to); return l.length ? l.reduce((a,e)=>a+e.kg,0)/l.length : null; };
+  const now = avg(addDaysISO(t,-14), t), before = avg(addDaysISO(t,-44), addDaysISO(t,-30));
+  return now!=null && before!=null ? round1(now-before) : null;
+}
+function bodyBodyHTML(){
+  const l = bodyLast();
+  const pts = S.body.filter(e=>e.d>addDaysISO(todayISO(),-365)).map(e=>{ const d = parseISO(e.d); return { label:`${d.getDate()} ${MOIS[d.getMonth()]}`, v:e.kg, tip:`${fmtDate(e.d)} : ${fmtDec(e.kg)} kg` }; });
+  const tr = bodyTrend();
+  const recent = S.body.slice(-6).reverse();
+  return `<p class="body" style="margin-bottom:14px">Facultatif. Une pesée par semaine, le matin à jeun, suffit : le poids varie naturellement d'un à deux kilos d'un jour à l'autre, seule la tendance compte.</p>
+    <div class="body-add"><div class="num-field"><input id="bodyIn" type="text" inputmode="decimal" maxlength="6" placeholder="${l?fmtDec(l.kg):"Ex. 72,5"}" aria-label="Poids en kg"><span>kg</span></div>
+    <button class="btn" data-a="bodyAdd">Ajouter</button></div>
+    ${pts.length ? `<div class="chart-card" style="margin-top:14px">
+      <div class="cc-h"><div class="cc-t">12 derniers mois</div>${tr!=null?`<div class="cc-s">${tr>0?"+":tr<0?"−":"±"}${fmtDec(Math.abs(tr))} kg en 1 mois</div>`:""}</div>
+      ${lineChart(pts, { fmt:v=>fmtDec(v)+" kg", aria:"Évolution du poids du corps" })}</div>` : ""}
+    ${recent.length ? `<h2 class="sh">Pesées récentes</h2><div class="group">${recent.map(e=>`<div class="row"><div class="grow"><div class="t">${fmtDec(e.kg)} kg</div><div class="s">${esc(fmtDate(e.d,"long"))}</div></div><button class="icon-btn" data-a="bodyDel" data-d="${e.d}" aria-label="Supprimer cette pesée">${icon("close")}</button></div>`).join("")}</div>` : ""}`;
+}
+function refreshBody(){ const b = qs("#bodyBody"); if(b) b.innerHTML = bodyBodyHTML(); }
+Object.assign(ACT, {
+  openBody(){
+    openSheet(`<div class="sheet-hd"><span class="t">Poids du corps</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
+      <div class="sheet-body" id="bodyBody">${bodyBodyHTML()}</div>`, { tall:true });
+  },
+  bodyAdd(){
+    const inp = qs("#bodyIn"); if(!inp) return;
+    const v = round1(parseFloat(inp.value.replace(",",".")));
+    if(!(v>=20 && v<=400)){ toast("Indique un poids entre 20 et 400 kg"); inp.focus(); return; }
+    const d = todayISO();
+    S.body = S.body.filter(e=>e.d!==d).concat([{ d, kg:v }]).sort((a,b)=>a.d<b.d?-1:1); // une pesée par jour
+    changed(); refreshBody(); sfx("seg"); toast("Pesée enregistrée");
+  },
+  bodyDel(d){ S.body = S.body.filter(e=>e.d!==d.d); changed(); refreshBody(); },
+});
 // ================= INITIALISATION =================
-const APP_VERSION = "2.1";
+const APP_VERSION = "2.2";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 function applyTheme(){

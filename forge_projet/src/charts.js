@@ -102,7 +102,7 @@ function heatmap(weeks){
       if(iso>today){ cells.push(`<i class="hm-c fut"></i>`); continue; }
       const e = days[iso];
       const lvl = !e ? 0 : e.sets/maxSets>0.66 ? 3 : e.sets/maxSets>0.33 ? 2 : 1;
-      const tip = e ? `${fmtDate(iso,"long")} : ${e.sessions} séance${e.sessions>1?"s":""}, ${e.sets} séries` : `${fmtDate(iso,"long")} : repos`;
+      const tip = e ? `${fmtDate(iso,"long")} : ${nb(e.sessions,"séance")}, ${nb(e.sets,"série")}` : `${fmtDate(iso,"long")} : repos`;
       cells.push(`<i class="hm-c l${lvl} ${iso===today?"today":""}" data-tip="${esc(tip)}"></i>`);
     }
   }

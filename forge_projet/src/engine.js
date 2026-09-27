@@ -247,6 +247,9 @@ function poolForType(typeId){
 
 // avoid : exercices de la proposition précédente, fortement pénalisés pour que
 // « Autre proposition » change vraiment. Le léger aléa départage les ex æquo.
+// famille d'un exercice (« pompes », « squat », « rowing »…) : deux variantes du même
+// mouvement dans une séance font doublon, on préfère varier quand c'est possible
+function exoFamily(e){ return e.id.split("_")[0]; }
 function pickExosForSession(n, pool, avoid){
   pool = pool || engineExos();
   avoid = avoid || new Set();
@@ -257,12 +260,17 @@ function pickExosForSession(n, pool, avoid){
   const usedIds = new Set();
   for(let bucketI=0; chosen.length<n && bucketI<PATTERN_CYCLE.length*3; bucketI++){
     const pattern = PATTERN_CYCLE[bucketI % PATTERN_CYCLE.length];
-    const candidates = pool.filter(e=>e.pattern===pattern && !usedIds.has(e.id)).sort(byScore);
+    const fams = new Set(chosen.map(exoFamily));
+    const adj = e=>score[e.id] - (fams.has(exoFamily(e))?3:0);
+    const candidates = pool.filter(e=>e.pattern===pattern && !usedIds.has(e.id)).sort((a,b)=>adj(b)-adj(a));
     if(candidates.length){ chosen.push(candidates[0]); usedIds.add(candidates[0].id); }
   }
-  if(chosen.length<n){
-    const rest = pool.filter(e=>!usedIds.has(e.id)).sort(byScore);
-    for(const e of rest){ if(chosen.length>=n) break; chosen.push(e); usedIds.add(e.id); }
+  while(chosen.length<n){
+    const fams = new Set(chosen.map(exoFamily));
+    const rest = pool.filter(e=>!usedIds.has(e.id));
+    if(!rest.length) break;
+    const e = rest.reduce((b,x)=>score[x.id]-(fams.has(exoFamily(x))?3:0) > score[b.id]-(fams.has(exoFamily(b))?3:0) ? x : b);
+    chosen.push(e); usedIds.add(e.id);
   }
   return chosen;
 }
@@ -437,6 +445,7 @@ function suggestComplement(existingIds, n){
   const have = existingIds.map(id=>EXO_MAP[id]).filter(Boolean);
   const coveredMuscles = new Set(have.map(e=>e.muscles[0]));
   const coveredPatterns = new Set(have.map(e=>e.pattern));
+  const fams = new Set(have.map(exoFamily));
   const pool = engineExos().filter(e=>!existingIds.includes(e.id));
   const jitter = {}; pool.forEach(e=>jitter[e.id]=Math.random()*1.2);
   const out = [];
@@ -444,12 +453,12 @@ function suggestComplement(existingIds, n){
     let best=null, bestScore=-Infinity;
     pool.forEach(e=>{
       if(out.includes(e)) return;
-      const sc = scoreExo(e) + jitter[e.id] - (coveredMuscles.has(e.muscles[0])?5:0) - (coveredPatterns.has(e.pattern)?2:0);
+      const sc = scoreExo(e) + jitter[e.id] - (coveredMuscles.has(e.muscles[0])?5:0) - (coveredPatterns.has(e.pattern)?2:0) - (fams.has(exoFamily(e))?3:0);
       if(sc>bestScore){ bestScore=sc; best=e; }
     });
     if(!best) break;
     out.push(best);
-    coveredMuscles.add(best.muscles[0]); coveredPatterns.add(best.pattern);
+    coveredMuscles.add(best.muscles[0]); coveredPatterns.add(best.pattern); fams.add(exoFamily(best));
   }
   return out;
 }

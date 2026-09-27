@@ -80,6 +80,11 @@ function renderProfil(){
         <div class="grow"><div class="t">Objectifs</div><div class="s">${GOAL_LABELS[S.goals.overall]} · ${S.goals.daysPerWeek}×/sem.</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
+      <button class="row tap" style="width:100%" data-a="openBody">
+        ${sfIcon("scale","mint")}
+        <div class="grow"><div class="t">Poids du corps</div><div class="s">${bodyRowText()}</div></div>
+        <span class="chev">${icon("chev")}</span>
+      </button>
       <button class="row tap" style="width:100%" data-a="openExoPrefs">
         ${sfIcon("list","blue")}
         <div class="grow"><div class="t">Exercices inclus / exclus</div><div class="s">${S.prefs.excluded.length} exclu${S.prefs.excluded.length>1?"s":""} · ${S.prefs.included.length} privilégié${S.prefs.included.length>1?"s":""}</div></div>
@@ -222,7 +227,7 @@ function equipBodyHTML(){
     const on = S.equipment.owned[e.id];
     return `<div class="row">
       ${sfIcon(EQUIP_GLYPH[e.id]||"wrench", EQUIP_COLOR[e.id]||"gray")}
-      <div class="grow"><div class="t">${esc(e.n)}</div>${e.hint && !e.loadable ? `<div class="s">${esc(e.hint)}</div>` : ""}</div>
+      <div class="grow"><div class="t">${esc(e.n)}</div>${e.hint && !e.loadable ? `<div class="s wrap">${esc(e.hint)}</div>` : ""}</div>
       <button class="switch ${on?"on":""}" data-a="toggleEquip" data-id="${e.id}"></button>
     </div>`;
   }).join("");
@@ -240,10 +245,10 @@ function equipBodyHTML(){
     return `<div class="card" style="margin-top:12px">
       <div style="font-weight:700;margin-bottom:2px">${esc(e.n)}</div>
       <div class="hr-note" style="margin:0 0 10px">${esc(e.hint||"")}</div>
-      <div class="chips" style="padding:0 0 10px">${chips||'<span class="hr-note">Aucun poids renseigné</span>'}</div>
+      <div class="chips" style="padding:0 0 10px">${chips||'<span class="hr-note" style="margin:0">Aucun poids renseigné</span>'}</div>
       <div style="display:flex;gap:8px">
-        <input type="number" inputmode="decimal" placeholder="${e.unit}" id="wadd-${e.id}" style="flex:1;background:var(--fill2);border:0;border-radius:10px;padding:0 12px;height:38px">
-        <button class="btn sm" data-a="addWeight" data-id="${e.id}">Ajouter</button>
+        <input type="text" inputmode="decimal" placeholder="${e.unit}" id="wadd-${e.id}" style="flex:1;min-width:0;background:var(--fill2);border:0;border-radius:10px;padding:0 12px;height:38px">
+        <button class="btn sm" style="flex:none;width:auto" data-a="addWeight" data-id="${e.id}">Ajouter</button>
       </div>
     </div>`;
   }).join("");
@@ -367,7 +372,7 @@ Object.assign(ACT, {
   toggleEquip(d){ S.equipment.owned[d.id] = !S.equipment.owned[d.id]; save(); refreshEquip(); regenerateDraftIfIdle(); },
   addWeight(d){
     const input = qs("#wadd-"+d.id); const v = parseFloat(String(input.value).replace(",", "."));
-    if(!isNaN(v) && v>0){ S.equipment.weights[d.id] = Array.from(new Set([...(S.equipment.weights[d.id]||[]), v])); save(); }
+    if(!isNaN(v) && v>0 && v<=500){ S.equipment.weights[d.id] = Array.from(new Set([...(S.equipment.weights[d.id]||[]), v])); save(); }
     refreshEquip();
   },
   toggleBand(d){
@@ -433,3 +438,47 @@ Object.assign(ACT, {
   },
 });
 VIEWS.profil = renderProfil;
+
+// ---------- poids du corps (facultatif) ----------
+// Le poids varie de 1 à 2 kg d'un jour à l'autre (eau, glycogène, repas) : on montre la
+// tendance sur plusieurs semaines plutôt que la dernière pesée seule.
+function bodyLast(){ return S.body[S.body.length-1]; }
+function bodyRowText(){
+  const l = bodyLast();
+  return l ? `${fmtDec(l.kg)} kg · ${fmtRelative(l.d)}` : "Facultatif · suivre la tendance";
+}
+function bodyTrend(){
+  // moyenne des pesées des 14 derniers jours comparée à celle des 14 jours précédant il y a 30 jours
+  const t = todayISO(), avg = (from, to)=>{ const l = S.body.filter(e=>e.d>from && e.d<=to); return l.length ? l.reduce((a,e)=>a+e.kg,0)/l.length : null; };
+  const now = avg(addDaysISO(t,-14), t), before = avg(addDaysISO(t,-44), addDaysISO(t,-30));
+  return now!=null && before!=null ? round1(now-before) : null;
+}
+function bodyBodyHTML(){
+  const l = bodyLast();
+  const pts = S.body.filter(e=>e.d>addDaysISO(todayISO(),-365)).map(e=>{ const d = parseISO(e.d); return { label:`${d.getDate()} ${MOIS[d.getMonth()]}`, v:e.kg, tip:`${fmtDate(e.d)} : ${fmtDec(e.kg)} kg` }; });
+  const tr = bodyTrend();
+  const recent = S.body.slice(-6).reverse();
+  return `<p class="body" style="margin-bottom:14px">Facultatif. Une pesée par semaine, le matin à jeun, suffit : le poids varie naturellement d'un à deux kilos d'un jour à l'autre, seule la tendance compte.</p>
+    <div class="body-add"><div class="num-field"><input id="bodyIn" type="text" inputmode="decimal" maxlength="6" placeholder="${l?fmtDec(l.kg):"Ex. 72,5"}" aria-label="Poids en kg"><span>kg</span></div>
+    <button class="btn" data-a="bodyAdd">Ajouter</button></div>
+    ${pts.length ? `<div class="chart-card" style="margin-top:14px">
+      <div class="cc-h"><div class="cc-t">12 derniers mois</div>${tr!=null?`<div class="cc-s">${tr>0?"+":tr<0?"−":"±"}${fmtDec(Math.abs(tr))} kg en 1 mois</div>`:""}</div>
+      ${lineChart(pts, { fmt:v=>fmtDec(v)+" kg", aria:"Évolution du poids du corps" })}</div>` : ""}
+    ${recent.length ? `<h2 class="sh">Pesées récentes</h2><div class="group">${recent.map(e=>`<div class="row"><div class="grow"><div class="t">${fmtDec(e.kg)} kg</div><div class="s">${esc(fmtDate(e.d,"long"))}</div></div><button class="icon-btn" data-a="bodyDel" data-d="${e.d}" aria-label="Supprimer cette pesée">${icon("close")}</button></div>`).join("")}</div>` : ""}`;
+}
+function refreshBody(){ const b = qs("#bodyBody"); if(b) b.innerHTML = bodyBodyHTML(); }
+Object.assign(ACT, {
+  openBody(){
+    openSheet(`<div class="sheet-hd"><span class="t">Poids du corps</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
+      <div class="sheet-body" id="bodyBody">${bodyBodyHTML()}</div>`, { tall:true });
+  },
+  bodyAdd(){
+    const inp = qs("#bodyIn"); if(!inp) return;
+    const v = round1(parseFloat(inp.value.replace(",",".")));
+    if(!(v>=20 && v<=400)){ toast("Indique un poids entre 20 et 400 kg"); inp.focus(); return; }
+    const d = todayISO();
+    S.body = S.body.filter(e=>e.d!==d).concat([{ d, kg:v }]).sort((a,b)=>a.d<b.d?-1:1); // une pesée par jour
+    changed(); refreshBody(); sfx("seg"); toast("Pesée enregistrée");
+  },
+  bodyDel(d){ S.body = S.body.filter(e=>e.d!==d.d); changed(); refreshBody(); },
+});

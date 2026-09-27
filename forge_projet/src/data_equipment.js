@@ -36,7 +36,7 @@ const DEFAULT_INCREMENT = { barbell:2.5, dumbbells:1, kettlebell:2, bands:1 };
 function defaultEquipment(){
   return {
     owned:{ bodyweight:true, dumbbells:false, barbell:false, kettlebell:false, bench:false, bench_incline:false, bench_press:false, rack:false, pullup_bar:false, dip_bars:false, suspension:false, ab_roller:false, bands:false, jump_rope:false, mat:false },
-    weights:{ dumbbells:[], barbell:[], kettlebell:[], bands:[] }, // ex. dumbbells:[8,12], bands:["léger","moyen"]
+    weights:{ dumbbells:[], barbell:[], kettlebell:[], bands:[2,3,4] }, // kg ; élastiques : niveaux de résistance 1 à 5
     custom:[] // [{id,n}] équipements libres, informatifs (extensibles au fil du temps)
   };
 }

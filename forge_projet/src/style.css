@@ -1334,3 +1334,21 @@ h2.sh .more.strong{font-weight:700}
 .ec-t b{color:var(--label);font-size:calc(15rem/17)}
 .exo-count .mini-step button[disabled]{opacity:.3}
 .ec-limit{margin:6px 20px 0;font-size:calc(12.5rem/17);color:var(--label2);line-height:1.35}
+/* v2.2 : note de séance, écart mensuel, poids du corps */
+.note-in{display:block;width:calc(100% - 32px);box-sizing:border-box;margin:0 16px;padding:11px 14px;border:0;border-radius:12px;background:var(--fill2);font-size:calc(15rem/17);line-height:1.35;resize:none;outline:none;transition:box-shadow .2s}
+.note-in:focus{box-shadow:0 0 0 2px var(--orange) inset}
+.note-in::placeholder{color:var(--label3)}
+.sheet-body .note-in{background:var(--bg2)}
+.sheet-body > .te-sec{margin:22px 20px 8px}
+.cel .note-in{width:100%;margin:14px 0 0;text-align:left}
+.cel-note-btn{display:inline-flex;align-items:center;gap:6px;margin:14px auto 0;padding:8px 14px;border-radius:18px;color:var(--tint);font-weight:600;font-size:calc(15rem/17)}
+.cel-note-btn svg{width:18px;height:18px}
+.note-in.pop-in{animation:noteIn .28s cubic-bezier(.32,.72,0,1)}
+@keyframes noteIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+.hn{font-size:calc(13rem/17);color:var(--label2);font-style:italic;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hn::before{content:"“"} .hn::after{content:"”"}
+.sh-sub .md.up{color:var(--green)} .sh-sub .md.down{color:var(--orange)}
+.body-add{display:flex;gap:10px;align-items:stretch;margin:0 16px}
+.body-add .num-field{flex:1;min-width:0}
+.body-add .btn{width:auto;flex:none;padding:0 22px;margin:0}
+.row .s.wrap{white-space:normal;line-height:1.3}
