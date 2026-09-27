@@ -237,6 +237,7 @@ document.addEventListener("click", e=>{
 });
 document.addEventListener("keydown", e=>{
   if(e.key==="Enter" && e.target && e.target.id==="numInput"){ e.preventDefault(); ACT.numOk(); }
+  if(e.key==="Enter" && e.target && e.target.id==="tplEdName"){ e.preventDefault(); e.target.blur(); }
   if(e.key==="Enter" && e.target && (e.target.id==="nameInput" || e.target.id==="tplName")){
     e.preventDefault(); const b = qs('.center-modal [data-a^="save"]'); if(b) b.click();
   }

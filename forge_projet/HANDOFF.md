@@ -34,7 +34,7 @@ style.css
 data_equipment.js data_exercises.js
 core.js engine.js
 ui_shell.js sfx.js fx.js timer.js charts.js trophies.js
-view_today.js view_history.js view_progress.js view_profil.js
+view_today.js tpl_editor.js view_history.js view_progress.js view_profil.js
 init.js
 ```
 
@@ -149,6 +149,13 @@ Demande de YaYa : trier les exercices par matériel, en ajouter (pectoraux aux h
 - **Audit automatique** (`audit.js`, paramètres `W`, `DARK`, `ENGINE`) : parcourt ~35 écrans et feuilles avec des données « pires cas » (noms longs, 124 exercices, matériel complet) et signale débordements hors écran, textes coupés sans points de suspension, cibles tactiles < 28 px, erreurs. Passé à 320, 375, 390 et 430 px, clair et sombre, Chromium et WebKit.
 - **Corrigé grâce à l'audit et aux captures 320 px** : steppers « Répétitions / Charge » qui dépassaient de la carte, titre de la barre de navigation qui passait sous « ✕ » et « Terminer », pastilles de l'accueil tronquées (désormais icône / valeur / libellé en colonne), salutation trop grande avec un prénom long, titre de « Ma séance » écrasé par « Réorganiser / Vider » (remplacés par **Modifier** → « Vider » + « OK », façon iOS), segment « Vue d'ensemble » sur deux lignes (→ « Résumé »), « Exercice favori » tronqué (le nom passe en sous-titre), dates longues de l'historique (→ « ven. 25 sept. »), noms coupés dans l'aperçu de séance (deux lignes), icônes 📋 du planning remplacées par le picto et la couleur de la séance, bouton « Composer une nouvelle séance… » sur deux lignes, zones tactiles des liens texte agrandies à 44 px.
 - **Séance** : les textes flottants partent des points de série et sont posés sur une pastille lisible ; le toast « Nouveau record » (doublon du texte flottant) est supprimé ; quand tout est validé, plus aucun exercice n'apparaît « en cours » dans le bandeau.
+
+## 9 sexies. Plusieurs séances perso et programme de la semaine (v1.9)
+
+- **Éditeur de séances enregistrées** (`tpl_editor.js`, après `view_today.js`) : une feuille dédiée « Nouvelle séance / Modifier la séance » (Annuler · titre · « Enregistrer la séance » en pied) avec nom, jours de la semaine (les jours déjà pris affichent le nom de la séance qui les occupe et un avertissement de remplacement), exercices (séries +/−, retirer, « Ordre » ↑/↓), « Ajouter » (sélecteur avec bouton « Retour » vers l'éditeur : option `onCancel` de `openPicker`) et « ✨ Compléter ». État `tplEdit` ; « Annuler » avec des changements propose « Abandonner / Continuer l'édition ». Indépendant de « Ma séance » : on crée autant de séances qu'on veut sans toucher au constructeur. Points d'entrée : bouton **+** dans l'en-tête « Mes séances », rangée « Nouvelle séance / Programme de la semaine » sous la liste, état vide dédié, « Modifier » des cartes et du menu •••, jour vide du planning (« Nouvelle séance pour le … », jour pré-coché), feuille d'un jour planifié (carte « Prévu le … » + Modifier), et « Enregistrer » de Ma séance (éditeur pré-rempli, `fromCustom`). L'ancien `openTemplateModal`/`saveTemplateOk` est supprimé.
+- **Programme de la semaine** (`openWeekWizard`, `WEEK_SPLITS`) : choisir 2 à 6 jours → répartition (2-3 : corps complet A/B/C ; 4 : haut/bas ×2 ; 5 : poussée, tirage, jambes, haut, bas ; 6 : PPL ×2), aperçu jour par jour, puis création des séances par le moteur (`generateEngineSession(type, déjà_utilisés)` pour varier A/B) et placement dans la semaine ; les séances qui occupaient ces jours sont gardées mais libérées. Met aussi à jour l'objectif de jours par semaine.
+- **Planning** : `since` (date de planification) sur chaque séance ; un jour passé n'est marqué « manqué » que si la séance y était déjà prévue (un programme créé en milieu de semaine ne produit plus de fausses pastilles rouges). Carte du jour : ligne « Ensuite le lundi · Haut du corps A » (`nextPlannedLine`).
+- **Tests** : `v19.js` (création de plusieurs séances, jours en conflit, annulation, retour du sélecteur, modification, programme 4 jours, jour planifié, enregistrement de Ma séance) ; `v12`/`v13`/`v14` adaptés au nouvel éditeur.
 
 ## 10. Cahier des charges d'origine (résumé)
 

@@ -59,6 +59,13 @@ function heroPicts(ids){
   const more = defs.length>5 ? `<span class="hp-more">+${defs.length-5}</span>` : "";
   return `<div class="hero-picts">${defs.slice(0,5).map((d,i)=>`<span class="hp" style="--k:${i}">${pictoSVG(pictoKey(d))}</span>`).join("")}${more}</div>`;
 }
+// « Ensuite : jeu. · Jambes » — la prochaine séance planifiée, pour voir sa semaine d'un coup d'œil
+function nextPlannedLine(){
+  const n = nextPlanned();
+  if(!n) return "";
+  const when = n.k===1 ? "demain" : JOURS[(weekdayIdx(n.iso)+1)%7];
+  return `<span class="hero-next">Ensuite ${n.k===1?"":"le "}${when} · ${esc(n.t.n)}</span>`;
+}
 function heroHTML(draft){
   const today = sessionsToday();
   if(today.length){
@@ -69,6 +76,7 @@ function heroHTML(draft){
       <span class="hero-title">${esc(sessionTitle(s))}</span>
       <span class="hero-meta"><span>${fmtDuration(s.durationSec||0)}</span><span>${sessionSetCount(s)} séries</span><span>${sessionVolume(s) ? fmtKg(sessionVolume(s)) : sessionReps(s)+" reps"}</span></span>
       <span class="hero-foot">Récupère bien — voir le détail ${icon("chev")}</span>
+      ${nextPlannedLine()}
     </button>`;
   }
   const planned = plannedTemplate();
@@ -102,6 +110,7 @@ function heroHTML(draft){
     <span class="hero-meta">${meta.map(m=>`<span>${m}</span>`).join("")}</span>
     ${heroPicts(ids)}
     <button class="hero-go" ${act}><span class="hg-ico">${icon("play")}</span>C'est parti</button>
+    ${nextPlannedLine()}
   </div>`;
 }
 
@@ -210,7 +219,8 @@ function weekPlanBodyHTML(){
   return `<div class="wp-days">${JOURS_COURTS.map((j,i)=>{
       const iso = addDaysISO(monday,i);
       const t = S.templates.find(t=>(t.days||[]).includes(i));
-      const done = doneDays.has(iso), missed = t && iso<today && !done;
+      // « manquée » seulement si la séance était déjà prévue ce jour-là (pas pour un programme créé après)
+      const done = doneDays.has(iso), missed = t && iso<today && !done && (!t.since || iso>=t.since);
       return `<button class="wp-day ${iso===today?"today":""} ${t?"has r-"+tplRegion(t):""} ${done?"done":""} ${missed?"missed":""}" style="--k:${i}" data-a="planDay" data-d="${i}" aria-label="${JOURS[(i+1)%7]} ${parseISO(iso).getDate()} : ${t?esc(t.n):"rien de prévu"}${done?", séance faite":""}${missed?", séance manquée":""}">
         <span class="wp-j">${j}</span><span class="wp-n">${parseISO(iso).getDate()}</span>
         <span class="wp-t">${t?esc(t.n):"—"}</span>
@@ -234,7 +244,7 @@ function tplCardHTML(t, i){
   const open = openTpls.has(t.id), region = tplRegion(t), loaded = S.custom.tplId===t.id;
   const sets = t.exos.reduce((a,e)=>a+e.sets,0);
   const list = open ? tplBodyHTML(t) : "";
-  return `<div class="tpl-card2 r-${region} ${open?"open":""} ${loaded?"loaded":""} stagger" style="--i:${Math.min(i+1,10)}">
+  return `<div class="tpl-card2 r-${region} ${open?"open":""} ${loaded?"loaded":""} stagger" data-id="${t.id}" style="--i:${Math.min(i+1,10)}">
     <button class="tc-head" data-a="toggleTpl" data-id="${t.id}" aria-expanded="${open}">
       <span class="tc-bar"></span>
       <span class="tc-main">
@@ -252,7 +262,7 @@ function tplBodyHTML(t){
   return `<div class="tc-list">${t.exos.map(e=>{ const d=EXO_MAP[e.exoId]; return d?`<button class="tc-exo" data-a="showExoInfo" data-id="${d.id}">${exoIcon(d,"sm")}<span class="tc-n">${esc(d.n)}</span><span class="tc-s">${e.sets}×</span></button>`:""; }).join("")}</div>
     <div class="tc-actions">
       <button class="btn sm" data-a="startTemplate" data-id="${t.id}">${icon("play")} Commencer</button>
-      <button class="btn secondary sm" data-a="loadTemplate" data-id="${t.id}">${icon("edit")} Modifier</button>
+      <button class="btn secondary sm" data-a="tplOpenEditor" data-id="${t.id}">${icon("edit")} Modifier</button>
       <button class="btn secondary sm icon-only" aria-label="Plus d'options" data-a="templateMenu" data-id="${t.id}">•••</button>
     </div>`;
 }
@@ -262,13 +272,33 @@ function tplListHTML(){
   const hidden = S.templates.length - list.length;
   return `<div class="tpl-list">${list.map(tplCardHTML).join("")}</div>
       ${hidden>0 ? `<button class="show-more" data-a="tplShowAll">Afficher les ${hidden} autre${hidden>1?"s":""} ${icon("chev")}</button>`
-        : S.templates.length>3 ? `<button class="show-more up" data-a="tplShowAll">Afficher moins ${icon("chev")}</button>` : ""}`;
+        : S.templates.length>3 ? `<button class="show-more up" data-a="tplShowAll">Afficher moins ${icon("chev")}</button>` : ""}
+      ${tplAddRowHTML()}`;
+}
+function tplAddRowHTML(){
+  return `<div class="tpl-add-row">
+    <button class="tpl-add" data-a="tplNew">${icon("plus")}<span>Nouvelle séance</span></button>
+    <button class="tpl-add" data-a="weekWizard">✨<span>Programme de la semaine</span></button>
+  </div>`;
 }
 function templatesHTML(){
-  if(!S.templates.length) return "";
+  if(!S.templates.length){
+    return `<div class="tpl-section stagger" style="--i:5">
+      <div class="tpl-empty">
+        <div class="te-ico">🗓️</div>
+        <div class="te-t">Tes séances de la semaine</div>
+        <div class="te-s">Crée plusieurs séances (haut, bas, jambes…), puis place chacune sur ses jours : elle s'affichera toute seule le jour venu.</div>
+        <button class="btn sm" data-a="tplNew">${icon("plus")} Nouvelle séance</button>
+        <button class="btn secondary sm" style="margin-top:8px" data-a="weekWizard">✨ Programme de la semaine</button>
+      </div>
+    </div>`;
+  }
   const open = uiState().tplOpen;
   return `<div class="tpl-section stagger" style="--i:5">
-    ${sectionHead(`${icon("bookmark")}<span>Mes séances enregistrées</span><span class="sec-count">${S.templates.length}</span>`, "tplOpen")}
+    <div class="sec-row">
+      ${sectionHead(`${icon("bookmark")}<span>Mes séances</span><span class="sec-count">${S.templates.length}</span>`, "tplOpen")}
+      <button class="sec-add" aria-label="Nouvelle séance" data-a="tplNew">${icon("plus")}</button>
+    </div>
     <div class="clp">${open ? tplListHTML() : ""}</div>
   </div>`;
 }
@@ -327,7 +357,7 @@ function renderPickerSheet(){
   const owned = new Set(availableExos().map(exoCategory));
   const cats = [["","Tout le matériel"]].concat(EXO_CATS.filter(c=>owned.has(c.id)).map(c=>[c.id, c.em+" "+c.n])).map(([id,n])=>`<button class="chip cat ${(picker.cat||"")===id?"on":""}" data-a="pickerCat" data-v="${id}">${esc(n)}</button>`).join("");
   const chips = [["","Tous les muscles"]].concat(MUSCLES.map(m=>[m.id,m.n])).map(([id,n])=>`<button class="chip ${(picker.muscle||"")===id?"on":""}" data-a="pickerMuscle" data-v="${id}">${esc(n)}</button>`).join("");
-  openSheet(`<div class="sheet-hd"><span class="t">${esc(picker.title)}</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
+  openSheet(`<div class="sheet-hd">${picker.onCancel?`<button class="te-cancel" data-a="pickerCancel">${icon("chev")}<span>Retour</span></button>`:""}<span class="t">${esc(picker.title)}</span>${picker.onCancel?`<span class="te-spacer"></span>`:`<button class="icon-btn" data-a="closesheet">${icon("close")}</button>`}</div>
     <div class="picker-top">
       <label class="search">${icon("search")}<input id="pickerSearch" type="search" placeholder="Rechercher un exercice" autocomplete="off"></label>
       <div class="chip-scroll" id="pickerCats">${cats}</div>
@@ -659,16 +689,6 @@ function centerOf(sel){
 }
 
 // ---------- planning : séances enregistrées assignées à des jours ----------
-function openTemplateModal(name, days, id){
-  openModal(`<div style="font-weight:700;font-size:calc(17rem/17);margin-bottom:4px">${id?"Séance enregistrée":"Enregistrer ma séance"}</div>
-    <div class="hr-note" style="margin:0 0 12px">Choisis les jours où tu veux la faire : elle s'affichera directement ces jours-là à l'ouverture de l'app.</div>
-    <div class="num-field"><input id="tplName" type="text" maxlength="40" placeholder="Ex. Haut du corps A" value="${esc(name)}"></div>
-    <div class="tpl-daypick">${JOURS_COURTS.map((j,i)=>`<button class="${days.includes(i)||(!id&&(S.custom.pendingDays||[]).includes(i))?"on":""}" data-a="tplDayToggle" data-d="${i}">${j}</button>`).join("")}</div>
-    <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
-      <button class="btn" data-a="saveTemplateOk" ${id?`data-id="${id}"`:""} ${id&&S.custom.tplId!==id?'data-edit="1"':""}>Enregistrer</button>
-      <button class="btn ghost" data-a="closesheet" style="height:40px">Annuler</button>
-    </div>`);
-}
 function openPlanDaySheet(day){
   const cur = S.templates.find(t=>(t.days||[]).includes(day));
   const label = JOURS[(day+1)%7];
@@ -678,7 +698,9 @@ function openPlanDaySheet(day){
     </button>`).join("");
   openSheet(`<div class="sheet-hd"><span class="t">Le ${label}</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
     <div class="sheet-body">
-      ${S.templates.length ? `<p class="body" style="margin-bottom:12px">Quelle séance enregistrée veux-tu faire chaque ${label} ?</p><div class="group">${rows}</div>
+      ${cur ? `<div class="pd-cur r-${tplRegion(cur)}"><span class="tc-bar-s"></span><div class="grow"><div class="pd-k">Prévu le ${label}</div><div class="pd-t">${esc(cur.n)}</div></div>
+        <button class="btn secondary sm" data-a="tplOpenEditor" data-id="${cur.id}">${icon("edit")} Modifier</button></div>` : ""}
+      ${S.templates.length ? `<p class="body" style="margin-bottom:12px">${cur?"Changer pour une autre séance :":`Quelle séance enregistrée veux-tu faire chaque ${label} ?`}</p><div class="group">${rows}</div>
         ${cur?`<div class="btnrow"><button class="btn ghost" data-a="planSet" data-d="${day}">Ne rien prévoir le ${label}</button></div>`:""}`
       : `<div class="empty-state" style="padding:24px 20px"><span class="em">📋</span>Tu n'as pas encore de séance enregistrée.</div>`}
       <div class="btnrow"><button class="btn ${S.templates.length?"secondary":""}" data-a="planNew" data-d="${day}">${icon("plus")} Nouvelle séance pour le ${label}</button></div>
@@ -766,7 +788,7 @@ Object.assign(ACT, {
   planSet(d){
     const day = +d.d;
     S.templates.forEach(t=>{ t.days = (t.days||[]).filter(x=>x!==day); });
-    if(d.id){ const t = S.templates.find(x=>x.id===d.id); if(t) t.days.push(day); }
+    if(d.id){ const t = S.templates.find(x=>x.id===d.id); if(t){ t.days.push(day); t.since = todayISO(); } }
     save(); closeSheet(); changed();
     if(day===weekdayIdx(todayISO())) applyPlannedSession(true);
     toast(d.id ? `Planifié le ${JOURS[(day+1)%7]}` : "Jour libéré");
@@ -777,8 +799,8 @@ Object.assign(ACT, {
       <div class="hr-note" style="margin:2px 0 0">${t.exos.length} exercices · ${(t.days||[]).length?daysLabel(t.days):"aucun jour fixe"}</div></div></div>
       <div class="menu-list">
         <button data-a="startTemplate" data-id="${t.id}">${icon("play")}<span>Commencer maintenant</span></button>
-        <button data-a="loadTemplate" data-id="${t.id}">${icon("edit")}<span>Modifier les exercices</span></button>
-        <button data-a="editTemplateDays" data-id="${t.id}">${icon("clock")}<span>Jours et nom</span></button>
+        <button data-a="tplOpenEditor" data-id="${t.id}">${icon("edit")}<span>Modifier (exercices, jours, nom)</span></button>
+        <button data-a="loadTemplate" data-id="${t.id}">${icon("repeat")}<span>Charger dans Ma séance</span></button>
         <button data-a="duplicateTemplate" data-id="${t.id}">${icon("bookmark")}<span>Dupliquer</span></button>
         <button class="danger" data-a="deleteTemplate" data-id="${t.id}">${icon("trash")}<span>Supprimer</span></button>
       </div>
@@ -786,7 +808,7 @@ Object.assign(ACT, {
   },
   toggleSection(d, el){
     const u = uiState(); u[d.k] = !u[d.k]; save();
-    const clp = el && el.parentElement.querySelector(":scope > .clp");
+    const sec = el && el.closest(".tpl-section, .week-plan"), clp = sec && sec.querySelector(":scope > .clp");
     if(!clp) return changed();
     el.setAttribute("aria-expanded", u[d.k]);
     const ch = el.querySelector(".sec-chev"); if(ch) ch.classList.toggle("open", u[d.k]);
@@ -833,12 +855,7 @@ Object.assign(ACT, {
     openTpls.add(copy.id);
     closeSheet(); save(); changed(); toast("Séance dupliquée");
   },
-  planNew(d){
-    S.custom = { exos:[], pendingDays:[+d.d] };
-    S.settings.todayTab = "custom";
-    closeSheet(); save(); renderViewAnimated("today");
-    setTimeout(()=>ACT.customAddOpen(), 380);
-  },
+  planNew(d){ openTplEditor(null, { days:[+d.d] }); },
   pickerInfo(d){ ACT.showExoInfo({ id:d.id, back:"1" }); },
   backToPicker(){ if(picker) renderPickerSheet(); },
   swapFromInfo(d){
@@ -848,7 +865,7 @@ Object.assign(ACT, {
     closeSheet(); save(); refreshFocusRegion();
     toast(`Remplacé par ${EXO_MAP[d.id].n}`);
   },
-  editTemplateDays(d){ const t = S.templates.find(x=>x.id===d.id); if(t) openTemplateModal(t.n, t.days||[], t.id); },
+  editTemplateDays(d){ openTplEditor(d.id); },
   tplDayToggle(d, el){ el.classList.toggle("on"); },
   setType(d){ regenerateDraft(d.v); renderViewAnimated("today"); },
   startSession(){ if(!S.draft.exos.length) return; S.draft.startedAt = new Date().toISOString(); liveFocusIdx = 0; completeShown = false; save(); scrollTodayTop(); renderViewAnimated("today"); showLaunch(S.draft); },
@@ -936,24 +953,12 @@ Object.assign(ACT, {
     showLaunch(S.draft);
   },
   saveTemplateOpen(){
-    const t = S.custom.tplId && S.templates.find(x=>x.id===S.custom.tplId);
-    openTemplateModal(S.custom.name||"", t ? (t.days||[]) : [], t ? t.id : null);
+    // « Ma séance » s'enregistre via l'éditeur, pré-rempli (et relié à sa séance si elle en vient)
+    openTplEditor(S.custom.tplId || null, { n:S.custom.name||"", exos:S.custom.exos.map(e=>({ exoId:e.exoId, sets:e.sets })), fromCustom:true,
+      ...(S.custom.tplId ? {} : { days:(S.custom.pendingDays||[]).slice() }) });
+    tplEdit.dirty = true;
   },
-  saveTemplateOk(d){
-    const name = ((qs("#tplName")||{}).value||"").trim() || `Séance ${S.templates.length+1}`;
-    const days = qsa(".tpl-daypick .on").map(b=>+b.dataset.d);
-    const editOnly = d.edit==="1";
-    let t = d.id ? S.templates.find(x=>x.id===d.id) : S.templates.find(x=>x.n.toLowerCase()===name.toLowerCase());
-    // un jour de la semaine ne porte qu'une seule séance
-    S.templates.forEach(x=>{ if(x!==t) x.days = (x.days||[]).filter(k=>!days.includes(k)); });
-    if(t){ t.n = name; t.days = days; if(!editOnly) t.exos = clone(S.custom.exos.map(e=>({ exoId:e.exoId, sets:e.sets }))); }
-    else { t = { id:uid(), n:name, days, exos:clone(S.custom.exos.map(e=>({ exoId:e.exoId, sets:e.sets }))) }; S.templates.push(t); }
-    if(!editOnly || S.custom.tplId===t.id){ S.custom.name = name; S.custom.tplId = t.id; }
-    delete S.custom.pendingDays;
-    openTpls.add(t.id);
-    closeSheet(); save(); changed();
-    toast(days.length ? `« ${name} » enregistrée pour le ${days.slice().sort().map(k=>JOURS[(k+1)%7]).join(", ")}` : `« ${name} » enregistrée`);
-  },
+
   loadTemplate(d){
     const t = S.templates.find(x=>x.id===d.id); if(!t) return;
     S.custom = { exos: clone(t.exos), name: t.n, tplId: t.id };

@@ -1121,6 +1121,66 @@ h2.sh .more.strong{font-weight:700}
 .float-txt{background:var(--bg2);padding:6px 14px;border-radius:18px;box-shadow:0 8px 24px -8px rgba(0,0,0,.3),0 0 0 .5px var(--sep);font-size:calc(15rem/17)}
 .float-txt.pr,.float-txt.big{font-size:calc(17rem/17)}
 .hero-title{font-size:clamp(calc(22rem/17), 7.2vw, calc(27rem/17))}
+
+/* ================= v1.9 : éditeur de séances, programme de la semaine ================= */
+.te-hd{display:grid;grid-template-columns:1fr auto 1fr;align-items:center}
+.te-hd .t{text-align:center}
+.te-cancel{justify-self:start;display:inline-flex;align-items:center;gap:2px;min-height:44px;color:var(--tint);font-size:calc(16rem/17);font-weight:500}
+.te-cancel svg{width:16px;height:16px;transform:scaleX(-1)}
+.te-spacer{justify-self:end}
+.te-sec{margin:18px 4px 8px;font-size:calc(13rem/17);font-weight:700;color:var(--label2);text-transform:uppercase;letter-spacing:.05em}
+#tplEdBody>.te-sec:first-child,#wzBody>.te-sec:first-of-type{margin-top:4px}
+.te-sec-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.te-sum{text-transform:none;letter-spacing:0;font-weight:600;color:var(--label3)}
+.te-name input{font-size:calc(18rem/17);font-weight:600}
+.te-days{margin-top:0}
+.te-days button{height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:0 2px;min-width:0}
+.te-days button b{font-size:calc(13rem/17)}
+.te-days button small{font-size:calc(9.5rem/17);font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.8;min-height:1.1em}
+.te-days button.taken:not(.on){background:repeating-linear-gradient(135deg,var(--fill2) 0 6px,var(--fill) 6px 12px)}
+.te-days button.on{box-shadow:0 6px 14px -8px var(--glow)}
+.te-days button.on b{animation:badgePop .3s cubic-bezier(.32,1.4,.4,1)}
+.te-hint{font-size:calc(12.5rem/17);color:var(--label2);margin:8px 4px 0;line-height:1.35}
+.te-bar{margin:0 4px 10px}
+.te-list .row .t{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.2}
+.te-empty{padding:22px 16px;border-radius:16px;border:1.5px dashed var(--sep);text-align:center;color:var(--label2);font-size:calc(14rem/17)}
+.te-actions{display:flex;gap:8px;margin-top:12px}
+.te-actions .btn{flex:1;width:auto;padding:0 10px}
+.te-del{color:var(--red);margin-top:18px}
+.sec-row{display:flex;align-items:center;gap:6px}
+.sec-row .sec-h{flex:1;min-width:0}
+.sec-add{width:34px;height:34px;border-radius:17px;flex:none;display:grid;place-items:center;background:var(--tint-bg);color:var(--tint);transition:transform .15s}
+.sec-add svg{width:18px;height:18px}
+.sec-add:active{transform:scale(.88)}
+.tpl-add-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.tpl-add{display:flex;align-items:center;justify-content:center;gap:6px;min-height:48px;padding:8px 10px;border-radius:16px;border:1.5px dashed var(--sep);color:var(--tint);font-weight:600;font-size:calc(14rem/17);text-align:center;line-height:1.2;transition:background .15s,transform .15s}
+.tpl-add svg{width:16px;height:16px;flex:none}
+.tpl-add:active{background:var(--tint-bg);transform:scale(.97)}
+.tpl-empty{background:var(--bg2);border-radius:20px;padding:20px 18px 16px;text-align:center;box-shadow:var(--shadow)}
+.tpl-empty .te-ico{font-size:32px}
+.tpl-empty .te-t{font-family:var(--serif);font-weight:700;font-size:calc(20rem/17);margin-top:4px}
+.tpl-empty .te-s{font-size:calc(14rem/17);color:var(--label2);line-height:1.4;margin:6px 0 16px}
+.tpl-card2.flash{animation:cardFlash 1.2s ease}
+@keyframes cardFlash{0%,100%{box-shadow:var(--shadow)}30%{box-shadow:0 0 0 3px var(--tint),0 14px 30px -12px var(--glow)}}
+/* programme de la semaine */
+.wz-n{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.wz-n button{height:52px;border-radius:14px;background:var(--fill2);font-family:var(--rounded);font-weight:800;font-size:calc(20rem/17);color:var(--label2);transition:background .2s,color .2s,transform .15s}
+.wz-n button.on{background:var(--label);color:var(--bg2);transform:scale(1.04)}
+.wz-row{gap:12px;animation:clpIn .4s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--k) * 50ms)}
+.wz-day{width:44px;flex:none;font-weight:800;font-size:calc(13rem/17);color:var(--label2);text-transform:uppercase}
+.tc-bar-s{width:5px;align-self:stretch;border-radius:3px;background:var(--rc);flex:none}
+@media (prefers-reduced-motion:reduce){.wz-row,.tpl-card2.flash,.te-days button.on b{animation:none!important}}
+.hero-next{display:block;margin-top:8px;font-size:calc(12.5rem/17);font-weight:600;opacity:.85}
+.hero .hero-go + .hero-next{margin-top:12px;text-align:center;align-self:stretch}
+.pd-cur{display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:14px;border-radius:16px;background:var(--bg2);box-shadow:var(--shadow)}
+.pd-k{font-size:calc(11.5rem/17);font-weight:700;color:var(--label2);text-transform:uppercase;letter-spacing:.05em}
+.pd-t{font-weight:700;font-size:calc(16rem/17)}
+.pd-cur .btn{width:auto;flex:none}
+#tplEdBody,#wzBody{padding-left:16px;padding-right:16px}
+#tplEdBody .group,#wzBody .group{margin-left:0;margin-right:0}
+#wzBody>p.body{margin-left:4px;margin-right:4px}
+.pd-cur{margin-left:16px;margin-right:16px}
+.tpl-empty .btn{width:100%}
 </style></head><body><div id="app"></div><nav class="tabbar" aria-label="Onglets"></nav><div id="restbar"></div><div id="overlay" role="dialog"></div><div id="toast" role="status" aria-live="polite"></div><input type="file" id="fileImport" accept="application/json,.json" style="display:none"><script>
 // ================= MATÉRIEL =================
 // Catalogue du matériel reconnu par le moteur de suggestion. Chaque exercice de la
@@ -2631,6 +2691,7 @@ document.addEventListener("click", e=>{
 });
 document.addEventListener("keydown", e=>{
   if(e.key==="Enter" && e.target && e.target.id==="numInput"){ e.preventDefault(); ACT.numOk(); }
+  if(e.key==="Enter" && e.target && e.target.id==="tplEdName"){ e.preventDefault(); e.target.blur(); }
   if(e.key==="Enter" && e.target && (e.target.id==="nameInput" || e.target.id==="tplName")){
     e.preventDefault(); const b = qs('.center-modal [data-a^="save"]'); if(b) b.click();
   }
@@ -3414,6 +3475,13 @@ function heroPicts(ids){
   const more = defs.length>5 ? `<span class="hp-more">+${defs.length-5}</span>` : "";
   return `<div class="hero-picts">${defs.slice(0,5).map((d,i)=>`<span class="hp" style="--k:${i}">${pictoSVG(pictoKey(d))}</span>`).join("")}${more}</div>`;
 }
+// « Ensuite : jeu. · Jambes » — la prochaine séance planifiée, pour voir sa semaine d'un coup d'œil
+function nextPlannedLine(){
+  const n = nextPlanned();
+  if(!n) return "";
+  const when = n.k===1 ? "demain" : JOURS[(weekdayIdx(n.iso)+1)%7];
+  return `<span class="hero-next">Ensuite ${n.k===1?"":"le "}${when} · ${esc(n.t.n)}</span>`;
+}
 function heroHTML(draft){
   const today = sessionsToday();
   if(today.length){
@@ -3424,6 +3492,7 @@ function heroHTML(draft){
       <span class="hero-title">${esc(sessionTitle(s))}</span>
       <span class="hero-meta"><span>${fmtDuration(s.durationSec||0)}</span><span>${sessionSetCount(s)} séries</span><span>${sessionVolume(s) ? fmtKg(sessionVolume(s)) : sessionReps(s)+" reps"}</span></span>
       <span class="hero-foot">Récupère bien — voir le détail ${icon("chev")}</span>
+      ${nextPlannedLine()}
     </button>`;
   }
   const planned = plannedTemplate();
@@ -3457,6 +3526,7 @@ function heroHTML(draft){
     <span class="hero-meta">${meta.map(m=>`<span>${m}</span>`).join("")}</span>
     ${heroPicts(ids)}
     <button class="hero-go" ${act}><span class="hg-ico">${icon("play")}</span>C'est parti</button>
+    ${nextPlannedLine()}
   </div>`;
 }
 
@@ -3565,7 +3635,8 @@ function weekPlanBodyHTML(){
   return `<div class="wp-days">${JOURS_COURTS.map((j,i)=>{
       const iso = addDaysISO(monday,i);
       const t = S.templates.find(t=>(t.days||[]).includes(i));
-      const done = doneDays.has(iso), missed = t && iso<today && !done;
+      // « manquée » seulement si la séance était déjà prévue ce jour-là (pas pour un programme créé après)
+      const done = doneDays.has(iso), missed = t && iso<today && !done && (!t.since || iso>=t.since);
       return `<button class="wp-day ${iso===today?"today":""} ${t?"has r-"+tplRegion(t):""} ${done?"done":""} ${missed?"missed":""}" style="--k:${i}" data-a="planDay" data-d="${i}" aria-label="${JOURS[(i+1)%7]} ${parseISO(iso).getDate()} : ${t?esc(t.n):"rien de prévu"}${done?", séance faite":""}${missed?", séance manquée":""}">
         <span class="wp-j">${j}</span><span class="wp-n">${parseISO(iso).getDate()}</span>
         <span class="wp-t">${t?esc(t.n):"—"}</span>
@@ -3589,7 +3660,7 @@ function tplCardHTML(t, i){
   const open = openTpls.has(t.id), region = tplRegion(t), loaded = S.custom.tplId===t.id;
   const sets = t.exos.reduce((a,e)=>a+e.sets,0);
   const list = open ? tplBodyHTML(t) : "";
-  return `<div class="tpl-card2 r-${region} ${open?"open":""} ${loaded?"loaded":""} stagger" style="--i:${Math.min(i+1,10)}">
+  return `<div class="tpl-card2 r-${region} ${open?"open":""} ${loaded?"loaded":""} stagger" data-id="${t.id}" style="--i:${Math.min(i+1,10)}">
     <button class="tc-head" data-a="toggleTpl" data-id="${t.id}" aria-expanded="${open}">
       <span class="tc-bar"></span>
       <span class="tc-main">
@@ -3607,7 +3678,7 @@ function tplBodyHTML(t){
   return `<div class="tc-list">${t.exos.map(e=>{ const d=EXO_MAP[e.exoId]; return d?`<button class="tc-exo" data-a="showExoInfo" data-id="${d.id}">${exoIcon(d,"sm")}<span class="tc-n">${esc(d.n)}</span><span class="tc-s">${e.sets}×</span></button>`:""; }).join("")}</div>
     <div class="tc-actions">
       <button class="btn sm" data-a="startTemplate" data-id="${t.id}">${icon("play")} Commencer</button>
-      <button class="btn secondary sm" data-a="loadTemplate" data-id="${t.id}">${icon("edit")} Modifier</button>
+      <button class="btn secondary sm" data-a="tplOpenEditor" data-id="${t.id}">${icon("edit")} Modifier</button>
       <button class="btn secondary sm icon-only" aria-label="Plus d'options" data-a="templateMenu" data-id="${t.id}">•••</button>
     </div>`;
 }
@@ -3617,13 +3688,33 @@ function tplListHTML(){
   const hidden = S.templates.length - list.length;
   return `<div class="tpl-list">${list.map(tplCardHTML).join("")}</div>
       ${hidden>0 ? `<button class="show-more" data-a="tplShowAll">Afficher les ${hidden} autre${hidden>1?"s":""} ${icon("chev")}</button>`
-        : S.templates.length>3 ? `<button class="show-more up" data-a="tplShowAll">Afficher moins ${icon("chev")}</button>` : ""}`;
+        : S.templates.length>3 ? `<button class="show-more up" data-a="tplShowAll">Afficher moins ${icon("chev")}</button>` : ""}
+      ${tplAddRowHTML()}`;
+}
+function tplAddRowHTML(){
+  return `<div class="tpl-add-row">
+    <button class="tpl-add" data-a="tplNew">${icon("plus")}<span>Nouvelle séance</span></button>
+    <button class="tpl-add" data-a="weekWizard">✨<span>Programme de la semaine</span></button>
+  </div>`;
 }
 function templatesHTML(){
-  if(!S.templates.length) return "";
+  if(!S.templates.length){
+    return `<div class="tpl-section stagger" style="--i:5">
+      <div class="tpl-empty">
+        <div class="te-ico">🗓️</div>
+        <div class="te-t">Tes séances de la semaine</div>
+        <div class="te-s">Crée plusieurs séances (haut, bas, jambes…), puis place chacune sur ses jours : elle s'affichera toute seule le jour venu.</div>
+        <button class="btn sm" data-a="tplNew">${icon("plus")} Nouvelle séance</button>
+        <button class="btn secondary sm" style="margin-top:8px" data-a="weekWizard">✨ Programme de la semaine</button>
+      </div>
+    </div>`;
+  }
   const open = uiState().tplOpen;
   return `<div class="tpl-section stagger" style="--i:5">
-    ${sectionHead(`${icon("bookmark")}<span>Mes séances enregistrées</span><span class="sec-count">${S.templates.length}</span>`, "tplOpen")}
+    <div class="sec-row">
+      ${sectionHead(`${icon("bookmark")}<span>Mes séances</span><span class="sec-count">${S.templates.length}</span>`, "tplOpen")}
+      <button class="sec-add" aria-label="Nouvelle séance" data-a="tplNew">${icon("plus")}</button>
+    </div>
     <div class="clp">${open ? tplListHTML() : ""}</div>
   </div>`;
 }
@@ -3682,7 +3773,7 @@ function renderPickerSheet(){
   const owned = new Set(availableExos().map(exoCategory));
   const cats = [["","Tout le matériel"]].concat(EXO_CATS.filter(c=>owned.has(c.id)).map(c=>[c.id, c.em+" "+c.n])).map(([id,n])=>`<button class="chip cat ${(picker.cat||"")===id?"on":""}" data-a="pickerCat" data-v="${id}">${esc(n)}</button>`).join("");
   const chips = [["","Tous les muscles"]].concat(MUSCLES.map(m=>[m.id,m.n])).map(([id,n])=>`<button class="chip ${(picker.muscle||"")===id?"on":""}" data-a="pickerMuscle" data-v="${id}">${esc(n)}</button>`).join("");
-  openSheet(`<div class="sheet-hd"><span class="t">${esc(picker.title)}</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
+  openSheet(`<div class="sheet-hd">${picker.onCancel?`<button class="te-cancel" data-a="pickerCancel">${icon("chev")}<span>Retour</span></button>`:""}<span class="t">${esc(picker.title)}</span>${picker.onCancel?`<span class="te-spacer"></span>`:`<button class="icon-btn" data-a="closesheet">${icon("close")}</button>`}</div>
     <div class="picker-top">
       <label class="search">${icon("search")}<input id="pickerSearch" type="search" placeholder="Rechercher un exercice" autocomplete="off"></label>
       <div class="chip-scroll" id="pickerCats">${cats}</div>
@@ -4014,16 +4105,6 @@ function centerOf(sel){
 }
 
 // ---------- planning : séances enregistrées assignées à des jours ----------
-function openTemplateModal(name, days, id){
-  openModal(`<div style="font-weight:700;font-size:calc(17rem/17);margin-bottom:4px">${id?"Séance enregistrée":"Enregistrer ma séance"}</div>
-    <div class="hr-note" style="margin:0 0 12px">Choisis les jours où tu veux la faire : elle s'affichera directement ces jours-là à l'ouverture de l'app.</div>
-    <div class="num-field"><input id="tplName" type="text" maxlength="40" placeholder="Ex. Haut du corps A" value="${esc(name)}"></div>
-    <div class="tpl-daypick">${JOURS_COURTS.map((j,i)=>`<button class="${days.includes(i)||(!id&&(S.custom.pendingDays||[]).includes(i))?"on":""}" data-a="tplDayToggle" data-d="${i}">${j}</button>`).join("")}</div>
-    <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
-      <button class="btn" data-a="saveTemplateOk" ${id?`data-id="${id}"`:""} ${id&&S.custom.tplId!==id?'data-edit="1"':""}>Enregistrer</button>
-      <button class="btn ghost" data-a="closesheet" style="height:40px">Annuler</button>
-    </div>`);
-}
 function openPlanDaySheet(day){
   const cur = S.templates.find(t=>(t.days||[]).includes(day));
   const label = JOURS[(day+1)%7];
@@ -4033,7 +4114,9 @@ function openPlanDaySheet(day){
     </button>`).join("");
   openSheet(`<div class="sheet-hd"><span class="t">Le ${label}</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
     <div class="sheet-body">
-      ${S.templates.length ? `<p class="body" style="margin-bottom:12px">Quelle séance enregistrée veux-tu faire chaque ${label} ?</p><div class="group">${rows}</div>
+      ${cur ? `<div class="pd-cur r-${tplRegion(cur)}"><span class="tc-bar-s"></span><div class="grow"><div class="pd-k">Prévu le ${label}</div><div class="pd-t">${esc(cur.n)}</div></div>
+        <button class="btn secondary sm" data-a="tplOpenEditor" data-id="${cur.id}">${icon("edit")} Modifier</button></div>` : ""}
+      ${S.templates.length ? `<p class="body" style="margin-bottom:12px">${cur?"Changer pour une autre séance :":`Quelle séance enregistrée veux-tu faire chaque ${label} ?`}</p><div class="group">${rows}</div>
         ${cur?`<div class="btnrow"><button class="btn ghost" data-a="planSet" data-d="${day}">Ne rien prévoir le ${label}</button></div>`:""}`
       : `<div class="empty-state" style="padding:24px 20px"><span class="em">📋</span>Tu n'as pas encore de séance enregistrée.</div>`}
       <div class="btnrow"><button class="btn ${S.templates.length?"secondary":""}" data-a="planNew" data-d="${day}">${icon("plus")} Nouvelle séance pour le ${label}</button></div>
@@ -4121,7 +4204,7 @@ Object.assign(ACT, {
   planSet(d){
     const day = +d.d;
     S.templates.forEach(t=>{ t.days = (t.days||[]).filter(x=>x!==day); });
-    if(d.id){ const t = S.templates.find(x=>x.id===d.id); if(t) t.days.push(day); }
+    if(d.id){ const t = S.templates.find(x=>x.id===d.id); if(t){ t.days.push(day); t.since = todayISO(); } }
     save(); closeSheet(); changed();
     if(day===weekdayIdx(todayISO())) applyPlannedSession(true);
     toast(d.id ? `Planifié le ${JOURS[(day+1)%7]}` : "Jour libéré");
@@ -4132,8 +4215,8 @@ Object.assign(ACT, {
       <div class="hr-note" style="margin:2px 0 0">${t.exos.length} exercices · ${(t.days||[]).length?daysLabel(t.days):"aucun jour fixe"}</div></div></div>
       <div class="menu-list">
         <button data-a="startTemplate" data-id="${t.id}">${icon("play")}<span>Commencer maintenant</span></button>
-        <button data-a="loadTemplate" data-id="${t.id}">${icon("edit")}<span>Modifier les exercices</span></button>
-        <button data-a="editTemplateDays" data-id="${t.id}">${icon("clock")}<span>Jours et nom</span></button>
+        <button data-a="tplOpenEditor" data-id="${t.id}">${icon("edit")}<span>Modifier (exercices, jours, nom)</span></button>
+        <button data-a="loadTemplate" data-id="${t.id}">${icon("repeat")}<span>Charger dans Ma séance</span></button>
         <button data-a="duplicateTemplate" data-id="${t.id}">${icon("bookmark")}<span>Dupliquer</span></button>
         <button class="danger" data-a="deleteTemplate" data-id="${t.id}">${icon("trash")}<span>Supprimer</span></button>
       </div>
@@ -4141,7 +4224,7 @@ Object.assign(ACT, {
   },
   toggleSection(d, el){
     const u = uiState(); u[d.k] = !u[d.k]; save();
-    const clp = el && el.parentElement.querySelector(":scope > .clp");
+    const sec = el && el.closest(".tpl-section, .week-plan"), clp = sec && sec.querySelector(":scope > .clp");
     if(!clp) return changed();
     el.setAttribute("aria-expanded", u[d.k]);
     const ch = el.querySelector(".sec-chev"); if(ch) ch.classList.toggle("open", u[d.k]);
@@ -4188,12 +4271,7 @@ Object.assign(ACT, {
     openTpls.add(copy.id);
     closeSheet(); save(); changed(); toast("Séance dupliquée");
   },
-  planNew(d){
-    S.custom = { exos:[], pendingDays:[+d.d] };
-    S.settings.todayTab = "custom";
-    closeSheet(); save(); renderViewAnimated("today");
-    setTimeout(()=>ACT.customAddOpen(), 380);
-  },
+  planNew(d){ openTplEditor(null, { days:[+d.d] }); },
   pickerInfo(d){ ACT.showExoInfo({ id:d.id, back:"1" }); },
   backToPicker(){ if(picker) renderPickerSheet(); },
   swapFromInfo(d){
@@ -4203,7 +4281,7 @@ Object.assign(ACT, {
     closeSheet(); save(); refreshFocusRegion();
     toast(`Remplacé par ${EXO_MAP[d.id].n}`);
   },
-  editTemplateDays(d){ const t = S.templates.find(x=>x.id===d.id); if(t) openTemplateModal(t.n, t.days||[], t.id); },
+  editTemplateDays(d){ openTplEditor(d.id); },
   tplDayToggle(d, el){ el.classList.toggle("on"); },
   setType(d){ regenerateDraft(d.v); renderViewAnimated("today"); },
   startSession(){ if(!S.draft.exos.length) return; S.draft.startedAt = new Date().toISOString(); liveFocusIdx = 0; completeShown = false; save(); scrollTodayTop(); renderViewAnimated("today"); showLaunch(S.draft); },
@@ -4291,24 +4369,12 @@ Object.assign(ACT, {
     showLaunch(S.draft);
   },
   saveTemplateOpen(){
-    const t = S.custom.tplId && S.templates.find(x=>x.id===S.custom.tplId);
-    openTemplateModal(S.custom.name||"", t ? (t.days||[]) : [], t ? t.id : null);
+    // « Ma séance » s'enregistre via l'éditeur, pré-rempli (et relié à sa séance si elle en vient)
+    openTplEditor(S.custom.tplId || null, { n:S.custom.name||"", exos:S.custom.exos.map(e=>({ exoId:e.exoId, sets:e.sets })), fromCustom:true,
+      ...(S.custom.tplId ? {} : { days:(S.custom.pendingDays||[]).slice() }) });
+    tplEdit.dirty = true;
   },
-  saveTemplateOk(d){
-    const name = ((qs("#tplName")||{}).value||"").trim() || `Séance ${S.templates.length+1}`;
-    const days = qsa(".tpl-daypick .on").map(b=>+b.dataset.d);
-    const editOnly = d.edit==="1";
-    let t = d.id ? S.templates.find(x=>x.id===d.id) : S.templates.find(x=>x.n.toLowerCase()===name.toLowerCase());
-    // un jour de la semaine ne porte qu'une seule séance
-    S.templates.forEach(x=>{ if(x!==t) x.days = (x.days||[]).filter(k=>!days.includes(k)); });
-    if(t){ t.n = name; t.days = days; if(!editOnly) t.exos = clone(S.custom.exos.map(e=>({ exoId:e.exoId, sets:e.sets }))); }
-    else { t = { id:uid(), n:name, days, exos:clone(S.custom.exos.map(e=>({ exoId:e.exoId, sets:e.sets }))) }; S.templates.push(t); }
-    if(!editOnly || S.custom.tplId===t.id){ S.custom.name = name; S.custom.tplId = t.id; }
-    delete S.custom.pendingDays;
-    openTpls.add(t.id);
-    closeSheet(); save(); changed();
-    toast(days.length ? `« ${name} » enregistrée pour le ${days.slice().sort().map(k=>JOURS[(k+1)%7]).join(", ")}` : `« ${name} » enregistrée`);
-  },
+
   loadTemplate(d){
     const t = S.templates.find(x=>x.id===d.id); if(!t) return;
     S.custom = { exos: clone(t.exos), name: t.n, tplId: t.id };
@@ -4494,6 +4560,211 @@ Object.assign(ACT, {
   },
 });
 VIEWS.today = renderToday;
+// ================= ÉDITEUR DE SÉANCES ENREGISTRÉES & PROGRAMME DE LA SEMAINE =================
+// Une séance enregistrée se crée et se modifie ici, indépendamment de « Ma séance » :
+// nom, jours de la semaine, exercices et séries. Le programme de la semaine génère
+// plusieurs séances d'un coup (répartition selon le nombre de jours) et les place.
+
+let tplEdit = null; // { id, n, days, exos:[{exoId,sets}], fromCustom, dirty, order }
+
+function openTplEditor(id, preset){
+  const t = id && S.templates.find(x=>x.id===id);
+  tplEdit = t ? { id:t.id, n:t.n, days:(t.days||[]).slice(), exos:clone(t.exos) } : { id:null, n:"", days:[], exos:[] };
+  if(preset) Object.assign(tplEdit, clone(preset));
+  tplEdit.dirty = !!(preset && preset.exos && preset.exos.length && !t);
+  tplEdit.order = false;
+  renderTplEditor();
+}
+function tplEdTakenDays(){
+  const taken = {};
+  S.templates.forEach(t=>{ if(t.id!==tplEdit.id) (t.days||[]).forEach(d=>taken[d]=t.n); });
+  return taken;
+}
+function tplEdBodyHTML(){
+  const e = tplEdit, taken = tplEdTakenDays();
+  const sets = e.exos.reduce((a,x)=>a+x.sets,0);
+  const regions = {}; e.exos.forEach(x=>{ const d=EXO_MAP[x.exoId]; if(d) regions[regionOf(d)]=(regions[regionOf(d)]||0)+x.sets; });
+  const balance = Object.keys(REGIONS).filter(r=>regions[r]).map(r=>`<span class="rb r-${r}" style="flex:${regions[r]}"></span>`).join("");
+  const stolen = e.days.filter(d=>taken[d]);
+  const rows = e.exos.map((x,i)=>{
+    const d = EXO_MAP[x.exoId]; if(!d) return "";
+    const ctl = e.order
+      ? `<div class="mini-step order"><button aria-label="Monter" data-a="tplEdMove" data-i="${i}" data-d="-1" ${i===0?"disabled":""}>↑</button><button aria-label="Descendre" data-a="tplEdMove" data-i="${i}" data-d="1" ${i===e.exos.length-1?"disabled":""}>↓</button></div>`
+      : `<div class="mini-step"><button aria-label="Moins de séries" data-a="tplEdSets" data-i="${i}" data-d="-1">−</button><span>${x.sets}×</span><button aria-label="Plus de séries" data-a="tplEdSets" data-i="${i}" data-d="1">+</button></div>
+         <button class="icon-btn" aria-label="Retirer" data-a="tplEdRemove" data-i="${i}">${icon("close")}</button>`;
+    return `<div class="row te-row ${x.fresh?"fresh":""}">${exoIcon(d)}<div class="grow"><div class="t">${esc(d.n)}</div><div class="s">${esc(MUSCLE_MAP[d.muscles[0]].n)}</div></div>${ctl}</div>`;
+  }).join("");
+  e.exos.forEach(x=>delete x.fresh);
+  return `
+    <div class="te-sec">Nom</div>
+    <div class="num-field te-name"><input id="tplEdName" type="text" maxlength="40" placeholder="Ex. Haut du corps A" value="${esc(e.n)}" autocomplete="off"></div>
+    <div class="te-sec">Jours dans la semaine</div>
+    <div class="tpl-daypick te-days">${JOURS_COURTS.map((j,i)=>{
+      const on = e.days.includes(i);
+      return `<button class="${on?"on":""} ${taken[i]?"taken":""}" data-a="tplEdDay" data-d="${i}" aria-pressed="${on}"><b>${j}</b><small>${on?"✓":taken[i]?esc(taken[i]):""}</small></button>`;
+    }).join("")}</div>
+    <div class="te-hint">${stolen.length ? `⚠︎ ${stolen.map(d=>JOURS[(d+1)%7]).join(", ")} : remplacera « ${esc(taken[stolen[0]])} ».` : e.days.length ? `Elle s'affichera directement ${e.days.length>1?"ces jours-là":"ce jour-là"} à l'ouverture de l'app.` : "Aucun jour : elle restera disponible dans tes séances enregistrées."}</div>
+    <div class="te-sec te-sec-row"><span>Exercices</span>${e.exos.length?`<span class="te-sum">${e.exos.length} · ${sets} séries · ≈ ${tplMinutes(e)} min</span>`:""}</div>
+    ${e.exos.length ? `<div class="region-bar te-bar" aria-hidden="true">${balance}</div>
+      <div class="group builder te-list ${e.order?"reorder":""}">${rows}</div>` : `<div class="te-empty">Ajoute des exercices, ou laisse l'app en proposer.</div>`}
+    <div class="te-actions">
+      <button class="btn secondary sm" data-a="tplEdAdd">${icon("plus")} Ajouter</button>
+      <button class="btn secondary sm" data-a="tplEdFill">✨ Compléter</button>
+      ${e.exos.length>1?`<button class="btn secondary sm" data-a="tplEdOrder">${e.order?"OK":"Ordre"}</button>`:""}
+    </div>
+    ${e.id?`<button class="btn ghost te-del" data-a="tplEdDelete">Supprimer cette séance</button>`:""}`;
+}
+function renderTplEditor(){
+  openSheet(`<div class="sheet-hd te-hd">
+      <button class="te-cancel" data-a="tplEdCancel">Annuler</button>
+      <span class="t">${tplEdit.id?"Modifier la séance":"Nouvelle séance"}</span>
+      <span class="te-spacer"></span>
+    </div>
+    <div class="sheet-body" id="tplEdBody">${tplEdBodyHTML()}</div>`,
+    { tall:true, footer:`<button class="btn" id="tplEdSaveBtn" data-a="tplEdSave" ${tplEdit.exos.length?"":"disabled"}>Enregistrer la séance</button>` });
+  bindTplEdName();
+}
+function refreshTplEditor(){
+  const b = qs("#tplEdBody"); if(!b) return renderTplEditor();
+  const st = b.scrollTop;
+  b.innerHTML = tplEdBodyHTML(); b.scrollTop = st;
+  const s = qs("#tplEdSaveBtn"); if(s) s.disabled = !tplEdit.exos.length;
+  bindTplEdName();
+}
+function bindTplEdName(){
+  const inp = qs("#tplEdName");
+  if(inp) inp.addEventListener("input", ()=>{ tplEdit.n = inp.value; tplEdit.dirty = true; });
+}
+
+// ---------- programme de la semaine ----------
+const WEEK_SPLITS = {
+  2: [["full","Corps complet A",0],["full","Corps complet B",3]],
+  3: [["full","Corps complet A",0],["full","Corps complet B",2],["full","Corps complet C",4]],
+  4: [["haut","Haut du corps A",0],["bas","Bas du corps A",1],["haut","Haut du corps B",3],["bas","Bas du corps B",4]],
+  5: [["push","Poussée",0],["pull","Tirage",1],["bas","Jambes",2],["haut","Haut du corps",4],["bas","Bas du corps",5]],
+  6: [["push","Poussée A",0],["pull","Tirage A",1],["bas","Jambes A",2],["push","Poussée B",3],["pull","Tirage B",4],["bas","Jambes B",5]],
+};
+let wizardN = 3;
+function openWeekWizard(){
+  wizardN = Math.min(6, Math.max(2, S.goals.daysPerWeek||3));
+  renderWeekWizard();
+}
+function weekWizardBody(){
+  const split = WEEK_SPLITS[wizardN];
+  const clash = S.templates.filter(t=>(t.days||[]).some(d=>split.some(s=>s[2]===d)));
+  return `<p class="body" style="margin:0 4px 14px">Forge crée tes séances à partir de ton matériel et de tes objectifs, puis les place dans la semaine. Tu pourras tout modifier ensuite.</p>
+    <div class="te-sec">Jours d'entraînement par semaine</div>
+    <div class="wz-n">${[2,3,4,5,6].map(n=>`<button class="${n===wizardN?"on":""}" data-a="wizardN" data-v="${n}">${n}</button>`).join("")}</div>
+    <div class="te-sec">Ta semaine</div>
+    <div class="group wz-list">${split.map(([type,name,day],i)=>{
+      const t = SESSION_TYPE_MAP[type];
+      const region = type==="bas" ? "legs" : type==="pull" ? "pull" : type==="push" || type==="haut" ? "push" : "core";
+      return `<div class="row wz-row" style="--k:${i}"><span class="wz-day">${JOURS_COURTS[day]}</span><span class="tc-bar-s r-${region}"></span><div class="grow"><div class="t">${esc(name)}</div><div class="s">${esc(t.n)}</div></div></div>`;
+    }).join("")}</div>
+    ${clash.length?`<div class="te-hint">⚠︎ Ces jours sont déjà pris par ${clash.map(t=>`« ${esc(t.n)} »`).join(", ")} : ces séances seront gardées mais retirées de ces jours.</div>`:""}`;
+}
+function renderWeekWizard(){
+  openSheet(`<div class="sheet-hd"><span class="t">Programme de la semaine</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
+    <div class="sheet-body" id="wzBody">${weekWizardBody()}</div>`,
+    { tall:true, footer:`<button class="btn" data-a="wizardCreate">✨ Créer mes ${wizardN} séances</button>` });
+}
+
+Object.assign(ACT, {
+  tplNew(){ openTplEditor(null); },
+  tplOpenEditor(d){ openTplEditor(d.id); },
+  tplEdDay(d){
+    const k = +d.d, i = tplEdit.days.indexOf(k);
+    if(i>=0) tplEdit.days.splice(i,1); else tplEdit.days.push(k);
+    tplEdit.dirty = true; refreshTplEditor();
+  },
+  tplEdSets(d){
+    const x = tplEdit.exos[+d.i]; x.sets = Math.max(1, Math.min(10, x.sets+parseInt(d.d,10)));
+    tplEdit.dirty = true; sfx("step", parseInt(d.d,10)>0); refreshTplEditor();
+  },
+  tplEdRemove(d, el){
+    sfx("remove");
+    const row = el && el.closest(".row");
+    const go = ()=>{ tplEdit.exos.splice(+d.i,1); tplEdit.dirty = true; refreshTplEditor(); };
+    if(row){ row.classList.add("leaving"); setTimeout(go, 200); } else go();
+  },
+  tplEdMove(d){
+    const i = +d.i, j = i+parseInt(d.d,10), a = tplEdit.exos;
+    if(j<0 || j>=a.length) return;
+    [a[i],a[j]] = [a[j],a[i]]; a[j].fresh = true;
+    tplEdit.dirty = true; refreshTplEditor();
+  },
+  tplEdOrder(){ tplEdit.order = !tplEdit.order; refreshTplEditor(); },
+  tplEdAdd(){
+    openPicker({ title:"Ajouter des exercices", multi:true, exclude:new Set(tplEdit.exos.map(x=>x.exoId)),
+      onCancel:()=>renderTplEditor(),
+      onDone:ids=>{
+        ids.forEach(id=>{ const d = EXO_MAP[id]; tplEdit.exos.push({ exoId:id, sets:d.sets||3, fresh:true }); });
+        tplEdit.dirty = true; renderTplEditor();
+        setTimeout(()=>{ const b = qs("#tplEdBody"); if(b) b.scrollTo({ top:b.scrollHeight, behavior:"smooth" }); }, 350);
+      } });
+  },
+  tplEdFill(){
+    const have = tplEdit.exos.map(x=>x.exoId);
+    const target = SESSION_SIZE[S.goals.sessionLength]||6;
+    const add = suggestComplement(have, Math.min(4, Math.max(have.length?1:3, target-have.length)));
+    if(!add.length){ toast("Aucun exercice disponible avec ton matériel"); return; }
+    add.forEach(e=>tplEdit.exos.push({ exoId:e.id, sets:e.sets, fresh:true }));
+    tplEdit.dirty = true; sfx("open"); refreshTplEditor();
+  },
+  tplEdCancel(){
+    if(!tplEdit || !tplEdit.dirty){ tplEdit = null; closeSheet(); return; }
+    openModal(`<div style="font-weight:700;font-size:calc(17rem/17);margin-bottom:6px">Abandonner les modifications ?</div>
+      <div style="color:var(--label2);font-size:calc(14.5rem/17);margin-bottom:18px">Ce que tu as changé dans cette séance ne sera pas enregistré.</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn danger" data-a="tplEdDiscard">Abandonner</button>
+        <button class="btn ghost" data-a="tplEdResume">Continuer l'édition</button>
+      </div>`);
+  },
+  tplEdDiscard(){ tplEdit = null; closeSheet(); },
+  tplEdResume(){ renderTplEditor(); },
+  tplEdDelete(){ const id = tplEdit.id; tplEdit = null; ACT.deleteTemplate({ id }); },
+  tplEdSave(){
+    const e = tplEdit; if(!e || !e.exos.length) return;
+    const name = (e.n||"").trim() || `Séance ${S.templates.length+(e.id?0:1)}`;
+    // un jour de la semaine ne porte qu'une seule séance
+    S.templates.forEach(x=>{ if(x.id!==e.id) x.days = (x.days||[]).filter(k=>!e.days.includes(k)); });
+    const exos = e.exos.map(x=>({ exoId:x.exoId, sets:x.sets }));
+    let t = e.id && S.templates.find(x=>x.id===e.id);
+    const days = e.days.slice().sort();
+    if(t){ if(days.join()!==(t.days||[]).join()) t.since = todayISO(); t.n = name; t.days = days; t.exos = exos; }
+    else { t = { id:uid(), n:name, days, exos, since:todayISO() }; S.templates.push(t); }
+    if(e.fromCustom || S.custom.tplId===t.id){ S.custom.name = name; S.custom.tplId = t.id; if(e.fromCustom) S.custom.exos = clone(exos); delete S.custom.pendingDays; }
+    openTpls.add(t.id); uiState().tplOpen = true;
+    tplEdit = null;
+    if(t.days.includes(weekdayIdx(todayISO())) && !(S.draft && S.draft.startedAt)) applyPlannedSession(true);
+    closeSheet(); save(); changed(); sfx("set");
+    toast(t.days.length ? `« ${name} » : ${t.days.map(k=>JOURS_COURTS[k].toLowerCase()+".").join(" ")}` : `« ${name} » enregistrée`);
+    setTimeout(()=>{ const c = qs(`.tpl-card2[data-id="${t.id}"]`); if(c){ c.scrollIntoView({ behavior:"smooth", block:"center" }); c.classList.add("flash"); } }, 380);
+  },
+  weekWizard(){ openWeekWizard(); },
+  wizardN(d){ wizardN = +d.v; const b = qs("#wzBody"); if(b) b.innerHTML = weekWizardBody(); const f = qs('[data-a="wizardCreate"]'); if(f) f.textContent = `✨ Créer mes ${wizardN} séances`; },
+  wizardCreate(){
+    const split = WEEK_SPLITS[wizardN], days = split.map(s=>s[2]);
+    S.templates.forEach(t=>{ t.days = (t.days||[]).filter(d=>!days.includes(d)); });
+    const used = new Set(); let made = 0;
+    split.forEach(([type,name,day])=>{
+      const s = generateEngineSession(type, used);
+      if(!s.exos.length) return;
+      s.exos.forEach(x=>used.add(x.exoId));
+      const n = S.templates.some(t=>t.n===name) ? `${name} (${JOURS_COURTS[day]})` : name;
+      const t = { id:uid(), n, days:[day], since:todayISO(), exos:s.exos.map(x=>({ exoId:x.exoId, sets:x.sets.length })) };
+      S.templates.push(t); openTpls.delete(t.id); made++;
+    });
+    if(!made){ toast("Pas assez d'exercices avec ton matériel"); return; }
+    S.goals.daysPerWeek = wizardN;
+    uiState().tplOpen = true; uiState().planOpen = true; showAllTpls = true;
+    if(!(S.draft && S.draft.startedAt)) applyPlannedSession(true);
+    closeSheet(); save(); renderViewAnimated("today"); sfx("exo");
+    toast(`✨ ${made} séances créées et placées dans ta semaine`);
+    setTimeout(()=>{ const w = qs("#v-today .week-plan"); if(w) w.scrollIntoView({ behavior:"smooth", block:"center" }); }, 420);
+  },
+  pickerCancel(){ const p = picker; if(p && p.onCancel) p.onCancel(); else closeSheet(); },
+});
 // ================= VUE : HISTORIQUE =================
 function sessionTitle(s){
   if(s.name) return s.name;
@@ -5119,7 +5390,7 @@ Object.assign(ACT, {
 });
 VIEWS.profil = renderProfil;
 // ================= INITIALISATION =================
-const APP_VERSION = "1.8";
+const APP_VERSION = "1.9";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 function applyTheme(){
