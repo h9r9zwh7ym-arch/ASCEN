@@ -5,7 +5,7 @@
 // avant cela, et si les sons sont coupés dans le Profil, sfx() ne fait rien.
 
 let AC = null, SFX_OUT = null, NOISE = null;
-// iOS : les sons de Forge se mélangent à la musique au lieu de l'interrompre (et ne sont
+// iOS : les sons d'ASCEN se mélangent à la musique au lieu de l'interrompre (et ne sont
 // plus coupés quand une autre app reprend la main sur l'audio).
 try{ if(navigator.audioSession) navigator.audioSession.type = "ambient"; }catch(e){}
 function buildAudio(){

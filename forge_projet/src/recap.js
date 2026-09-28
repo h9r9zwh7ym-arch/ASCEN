@@ -78,7 +78,8 @@ function iconTile(ctx, name, x, y, size, color){
   ctx.fillStyle = color; rrect(ctx, x, y, size, size, size*0.26); ctx.fill();
   drawGlyph(ctx, name, x+size*0.17, y+size*0.17, size*0.66, "#fff");
 }
-function recapFont(w, px, serif){ return `${w} ${px}px ${serif ? 'ui-serif,"New York","Iowan Old Style",Georgia,serif' : '-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif'}`; }
+// titres en Geist (police de la marque, embarquée), chiffres en Barlow Semi Condensed ; repli système
+function recapFont(w, px, display){ return `${w} ${px}px ${display ? '"Geist ASCEN",' : '"ASCEN Num",'}-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif`; }
 function recapFit(ctx, txt, max){
   if(ctx.measureText(txt).width<=max) return txt;
   while(txt.length>1 && ctx.measureText(txt+"…").width>max) txt = txt.slice(0,-1);
@@ -91,15 +92,18 @@ function drawRecap(kind, key){
   const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
   const ctx = cv.getContext("2d");
   // fond : braise sombre, lueur orange en haut
-  const bg = ctx.createLinearGradient(0,0,0,H); bg.addColorStop(0,"#231107"); bg.addColorStop(1,"#0C0704");
+  const bg = ctx.createLinearGradient(0,0,0,H); bg.addColorStop(0,"#1B1815"); bg.addColorStop(1,"#141210");
   ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
-  const glow = ctx.createRadialGradient(W*0.78, 90, 20, W*0.78, 90, 720); glow.addColorStop(0,"rgba(255,122,26,.55)"); glow.addColorStop(1,"rgba(255,122,26,0)");
+  const glow = ctx.createRadialGradient(W*0.78, 90, 20, W*0.78, 90, 720); glow.addColorStop(0,"rgba(255,107,61,.32)"); glow.addColorStop(1,"rgba(255,107,61,0)");
   ctx.fillStyle = glow; ctx.fillRect(0,0,W,H);
-  const X = 84, orange = "#FF8A3D", white = "#FFFFFF", mute = "rgba(255,255,255,.62)";
+  const X = 84, orange = "#FF6B3D", white = "#FFFFFF", mute = "rgba(255,255,255,.62)";
   ctx.textBaseline = "alphabetic";
   // en-tête
-  ctx.fillStyle = orange; ctx.font = recapFont(800, 30); ctx.letterSpacing = "8px";
-  ctx.fillText("FORGE", X, 120); ctx.letterSpacing = "0px";
+  // logotype ASCEN au trait (mêmes tracés que ascenMark)
+  ctx.save(); ctx.translate(X-2, 86); ctx.scale(.62, .62); ctx.translate(0, -5);
+  ctx.lineWidth = 6.5; ctx.lineCap = ctx.lineJoin = "round";
+  ctx.strokeStyle = white; ctx.stroke(new Path2D(ASCEN_LETTERS)); ctx.strokeStyle = orange; ctx.stroke(new Path2D(ASCEN_BAR));
+  ctx.restore();
   ctx.fillStyle = white; ctx.font = recapFont(700, 84, true);
   ctx.fillText(recapFit(ctx, recapTitle(kind, key), W-2*X), X, 224);
   ctx.fillStyle = mute; ctx.font = recapFont(500, 34);
@@ -148,7 +152,7 @@ function drawRecap(kind, key){
   hl.slice(0,3).forEach(([g, c, t],i)=>{ const y = 1128+i*54; iconTile(ctx, g, X, y-32, 40, c); ctx.fillStyle = white; ctx.font = recapFont(600, 34); ctx.fillText(recapFit(ctx, t, W-2*X-58), X+58, y); });
   // pied
   ctx.fillStyle = "rgba(255,255,255,.4)"; ctx.font = recapFont(500, 26);
-  ctx.fillText("Forge · musculation à la maison", X, H-50);
+  ctx.fillText("ASCEN · musculation à la maison", X, H-50);
   return cv;
 }
 
@@ -170,7 +174,7 @@ function rwCoverHTML(kind, key){
   const st = recapStats(kind, key);
   return `<button class="rw-cover" data-a="openRewind" data-kind="${kind}" data-key="${key}" ${st.n?"":"disabled"}>
     <span class="rwc-bg"></span>
-    <span class="rwc-k">Forge Rewind</span>
+    <span class="rwc-k">ASCEN Rewind</span>
     <span class="rwc-t">${esc(recapTitle(kind, key))}</span>
     <span class="rwc-s">${st.n ? `${nb(st.n,"séance")} · ${fmtHours(st.dur)}` : "Aucune séance sur cette période"}</span>
     <span class="rwc-play">${icon("play")}</span>
@@ -207,7 +211,7 @@ Object.assign(ACT, {
   recapLater(){ S.meta.recapSeen = recapNudgeKey(); changed(); },
   async recapShare(){
     const cv = drawRecap(recap.kind, recap.key);
-    const name = `forge-bilan-${recap.key}.png`;
+    const name = `ascen-bilan-${recap.key}.png`;
     const blob = await new Promise(r=>cv.toBlob(r, "image/png"));
     if(!blob) return toast("Impossible de créer l'image");
     try{

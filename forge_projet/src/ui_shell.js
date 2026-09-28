@@ -34,7 +34,7 @@ const ICONS = {
 };
 
 // ---------- icônes façon Réglages d'iOS : glyphe blanc sur pastille colorée ----------
-const IOS_COL = { orange:"#FF9500", red:"#FF3B30", yellow:"#FFCC00", green:"#34C759", mint:"#00C7BE", teal:"#30B0C7", blue:"#007AFF", indigo:"#5856D6", purple:"#AF52DE", pink:"#FF2D55", gray:"#8E8E93", brown:"#A2845E" };
+const IOS_COL = { orange:"#F2622F", red:"#FF3B30", yellow:"#FFCC00", green:"#34C759", mint:"#00C7BE", teal:"#30B0C7", blue:"#007AFF", indigo:"#5856D6", purple:"#AF52DE", pink:"#FF2D55", gray:"#8E8E93", brown:"#A2845E" };
 const S_ = 'stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"';
 const GLYPHS = {
   dumbbell:`<path d="M6.5 7.5v9M17.5 7.5v9M3.8 10v4M20.2 10v4M6.5 12h11" ${S_} stroke-width="2.4"/>`,
@@ -109,6 +109,15 @@ function sfIcon(name, color, extra){
 }
 
 function icon(name){ return `<svg viewBox="0 0 24 24">${ICONS[name]||""}</svg>`; }
+// ---------- logotype ASCEN ----------
+// Mot dessiné au trait (une seule épaisseur, bouts arrondis) ; la barre du A est relevée près du
+// sommet et porte l'orange. ASCEN_MONO = ce A seul (icône d'app, petites tailles).
+const ASCEN_LETTERS = "M4 52L21 12L38 52M69.66 17A10 10 0 1 0 61 32A10 10 0 1 1 52.34 47M118.55 19.79A19 19 0 1 0 118.55 44.21M160 12H132V52H160M132 32H156M171 52V12L199 52V12";
+const ASCEN_BAR = "M8 20H34";
+const ASCEN_MONO = { a:"M15 54L32 11L49 54", bar:"M18 21H46" };
+function ascenMark(cls, withBar){
+  return `<svg class="ascen-mark ${cls||""}" viewBox="0 5 206 56" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="ASCEN"><path d="${ASCEN_LETTERS}"/>${withBar===false?"":`<path class="bar" d="${ASCEN_BAR}"/>`}</svg>`;
+}
 // petite icône alignée sur le texte (remplace les emojis dans les libellés)
 function ii(name, cls){ return `<svg class="ii ${cls||""}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]||""}</svg>`; }
 

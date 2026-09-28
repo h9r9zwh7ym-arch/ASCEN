@@ -1,5 +1,5 @@
 // ================= INITIALISATION =================
-const APP_VERSION = "2.7";
+const APP_VERSION = "2.8";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 function applyTheme(){
@@ -10,32 +10,26 @@ function applyTheme(){
 }
 
 // ---------- animation de lancement ----------
-// Les animations portent sur des <div> (le marteau, l'enclume, les étincelles) et
-// jamais sur des éléments internes aux SVG : piège Safari documenté dans Zeste.
+// Le mot ASCEN apparaît en balayage, puis la barre du A monte de mi-hauteur à sa place :
+// on « relève la barre ». Les animations portent sur des <div>, jamais sur des éléments
+// internes aux SVG : piège Safari documenté dans Zeste.
 function splashTagline(){
   const t = plannedTemplate();
   if(t && !sessionsToday().some(s=>s.tplId===t.id)) return `Aujourd'hui : ${t.n}`;
   const streak = currentStreakWeeks();
   if(streak>=2) return `${streak} semaines d'affilée — on continue`;
   if(sessionsToday().length) return "Séance du jour déjà faite, bravo";
-  return "Forge ton corps, séance après séance";
+  return "Un cran plus haut, à chaque séance";
 }
 function showSplash(){
   const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   const sp = document.createElement("div");
   sp.id = "splash";
   sp.className = reduce ? "splash reduce" : "splash";
-  const sparks = Array.from({length:18}, (_,i)=>{
-    const a = -170 + i*(160/17) + (Math.random()*10-5);
-    return `<i style="--a:${a.toFixed(0)}deg;--d:${(46+Math.random()*50).toFixed(0)}px;--t:${(Math.random()*0.08).toFixed(2)}s;--s:${(0.6+Math.random()*0.7).toFixed(2)}"></i>`;
-  }).join("");
-  sp.innerHTML = `<div class="sp-stage">
-      <div class="sp-glow"></div>
-      <div class="sp-anvil"><svg viewBox="0 0 120 64" aria-hidden="true"><path d="M4 6H86c14 0 26 4 32 10H86v8c0 6-6 8-12 10l-4 12h12v12H38V46h12l-4-12c-10-2-20-6-26-14H4Z" fill="#34343a"/><path d="M4 6H86c14 0 26 4 32 10H86" stroke="#7a7a84" stroke-width="3" fill="none"/></svg></div>
-      <div class="sp-hammer"><svg viewBox="0 0 80 80" aria-hidden="true"><rect x="36" y="18" width="8" height="60" rx="3" fill="#8a5a34"/><rect x="12" y="4" width="56" height="18" rx="4" fill="#9aa0a8"/><rect x="12" y="4" width="56" height="5" rx="2" fill="#c8ccd2"/></svg></div>
-      <div class="sp-sparks">${sparks}</div>
+  sp.innerHTML = `<div class="sp-logo">
+      <div class="sp-letters">${ascenMark("", false)}</div>
+      <div class="sp-bar"><svg class="ascen-mark" viewBox="0 5 206 56" stroke-width="6.5" stroke-linecap="round" aria-hidden="true"><path class="bar" d="${ASCEN_BAR}"/></svg></div>
     </div>
-    <div class="sp-word">${"Forge".split("").map((c,i)=>`<span style="--i:${i}">${c}</span>`).join("")}</div>
     <div class="sp-tag">${esc(splashTagline())}</div>`;
   document.body.appendChild(sp);
   let gone = false;

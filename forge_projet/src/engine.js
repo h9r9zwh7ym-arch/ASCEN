@@ -392,7 +392,7 @@ function buildExportPrompt(){
     return `${fmtDate(s.date)}${s.durationSec?" ("+Math.round(s.durationSec/60)+" min)":""}\n${lines}`;
   }).join("\n");
 
-  return `Voici mon profil d'entraînement (app Forge). Peux-tu me proposer un programme de musculation adapté ?
+  return `Voici mon profil d'entraînement (app ASCEN). Peux-tu me proposer un programme de musculation adapté ?
 
 MATÉRIEL DISPONIBLE :
 ${ownedList.map(x=>"- "+x).join("\n")||"- (aucun renseigné)"}
@@ -415,7 +415,7 @@ RÉPONSE ATTENDUE : réponds UNIQUEMENT avec un fichier JSON respectant exacteme
     ] }
   ]
 }
-Le champ "poids" est facultatif (Forge peut le calculer automatiquement). Propose entre 2 et 4 séances.`;
+Le champ "poids" est facultatif (ASCEN peut le calculer automatiquement). Propose entre 2 et 4 séances.`;
 }
 
 function importProgramJSON(text){

@@ -50,7 +50,7 @@ function rwSlides(kind, key){
   const d = rewindData(kind, key), per = kind==="year" ? "cette année" : "ce mois-ci";
   const prevLbl = kind==="year" ? `${+key-1}` : MOIS_LONG[parseISO(recapPrevKey("month", key)+"-01").getMonth()];
   const slides = [];
-  slides.push({ bg:"ember", html:`<div class="rw-kicker">Forge Rewind</div>
+  slides.push({ bg:"ember", html:`<div class="rw-kicker">ASCEN Rewind</div>
     <div class="rw-tape" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M22 12 6 24l16 12Z"/><path d="M42 12 26 24l16 12Z"/></svg></div>
     <div class="rw-date" id="rwDate">${esc(fmtDate(todayISO(),"long"))}</div>
     <div class="rw-sub rw-d2" id="rwSub">On rembobine…</div>`, intro:true });

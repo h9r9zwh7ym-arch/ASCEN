@@ -36,5 +36,6 @@ Variables utiles :
 | `gen_audit.js` | 11 520 séances générées : matériel, niveau, doublons, élastiques, valeurs invalides |
 | `offline.js` | Installation PWA et fonctionnement hors ligne (via un serveur local) |
 | `perf2.js` | Temps de rendu avec 470 séances (informatif) |
+| `brand.js` | Captures de l'identité ASCEN : écrans clés en clair, en sombre, à 1280 px et à l'accueil (hors `run.sh`, `BRAND_DIR=nom`) |
 
 Les tests partent d'un état vierge. Ils passent le premier lancement avec `ACT.obSkip()` ou injectent leurs données avec `addInitScript`.

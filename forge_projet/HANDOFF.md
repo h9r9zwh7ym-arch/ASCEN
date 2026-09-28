@@ -1,6 +1,6 @@
-# Passation du projet Forge — pour Claude Code
+# Passation du projet ASCEN (anciennement Forge) — pour Claude Code
 
-Tu reprends **Forge**, une app web de suivi de musculation pour iPhone, développée pour **Yannick Wahler** (« YaYa ») selon la même méthode que son autre app, **Zeste** (bar à cocktails). Lis ce document avant de toucher au code.
+Tu reprends **ASCEN** (nom affiché depuis la v2.8 ; « Forge » avant), une app web de suivi de musculation pour iPhone, développée pour **Yannick Wahler** (« YaYa ») selon la même méthode que son autre app, **Zeste** (bar à cocktails). Lis ce document avant de toucher au code.
 
 ## 1. Le propriétaire et ses exigences
 
@@ -358,6 +358,19 @@ Changements :
   - les copies « illisibles » en trop sont supprimées (on garde la plus récente) ;
   - Profil › Espace de stockage détaille les données, la copie compressée et le total sur l'appareil.
 
+## 9 quindecies. Version 2.8 : nouvelle identité ASCEN
+
+YaYa a renommé l'app **ASCEN** et choisi, parmi trois pistes présentées sur une planche de comparaison, la direction **C « Barre relevée »**, adoucie (il aimait aussi la douceur de la piste A et la lisibilité de la piste B).
+
+- **Logo** : le mot ASCEN dessiné au trait, une seule épaisseur, bouts arrondis ; la barre du A est remontée près du sommet (« relever la barre ») et c'est le seul trait orange. Tracés dans `ui_shell.js` : `ASCEN_LETTERS`, `ASCEN_BAR`, `ascenMark()` (SVG inline, `currentColor`). Le A seul sert de monogramme : `favicon.svg` et `icon-*.png` à la racine (tuile orange, A encre). Les PNG ont été rendus depuis le SVG avec Chromium (script jetable, non versionné ; tracés dans `favicon.svg`).
+- **Couleurs** (`:root` de `style.css`, seul endroit à modifier) : fond craie `#F4F3F1`, encre `#141210`, orange `--tint` `#FF6B3D` pour les aplats (texte **encre** dessus, `--on-tint`), `--tint-ink` `#C2461B` pour le texte et les pictos orange sur fond clair (contraste AA). Mode sombre : `#0B0B0A`, orange `#FF7A4D`. `--ink`/`--on-ink` : cartes encre (carte du jour, bannière). Plus de dégradés décoratifs ni de reflets animés sur les boutons ; les médailles gardent leurs métaux.
+- **Typographie** : `--display` = Geist (titres, graisse 700, approche serrée), `--num` = Barlow Semi Condensed (chiffres façon tableau d'affichage), `--sans` = police système (texte courant, lisibilité). Les deux polices sont des **sous-ensembles** (`src/fonts/*.woff2`, ~13 Ko + 5 Ko, licence OFL) que `build.sh` embarque en base64 : aucune requête réseau, marche hors ligne. `ASCEN Num` ne couvre que chiffres et ponctuation (`unicode-range`) : les lettres retombent sur la police système.
+- **Écrans touchés** : lancement (le mot apparaît, puis la barre monte de mi-hauteur à sa place), carte du jour en encre avec bouton orange, décompte de séance sobre, couverture Rewind, image de bilan (logotype tracé au canvas avec `Path2D`), accueil, « À propos ».
+- **Renommage** : tous les textes visibles, niveaux (« Régulier·e », « Confirmé·e », « Au sommet » remplacent les titres « forgeron »), export agenda, sauvegarde (`app:"ASCEN"` ; les anciens fichiers Forge restent acceptés).
+- **Gardé volontairement** : les identifiants internes (`forge.v1` dans localStorage, base IndexedDB `forge`, cache `forge-v5`, `window.FORGE_THREE`, `dist/forge.html`, `three-forge.js`). Les changer ferait perdre les données déjà enregistrées sur l'iPhone ; ils ne sont jamais montrés.
+- **Vérification visuelle** : `tests/brand.js` capture les écrans clés en clair, en sombre, sur ordinateur (1280 px) et à l'accueil (`BRAND_DIR=… node tests/brand.js dist/forge.html`, images dans `tests/out/`).
+- Correctif livré juste avant : la copie de secours IndexedDB est enregistrée en octets bruts (`ArrayBuffer`) et non plus en `Blob`, que WebKit refuse en navigation privée (v26 échouait sous WebKit).
+
 ## 10. Cahier des charges d'origine (résumé)
 
 Voir le fichier `4a3df5ee-cahier-des-charges-forge.md` fourni au lancement du projet pour le texte complet. Points clés déjà couverts en v1.0 : matériel personnalisable et extensible, bibliothèque d'exercices filtrée, inclusion/exclusion d'exercices, objectifs personnalisés, suivi détaillé de séance (éditable, timer de repos, coche rapide), moteur de suggestion 100% local avec export/import IA, graphiques de progression, PR, streaks/régularité, trophées, écran d'accueil = séance du jour, thème clair/sombre automatique, page À propos avec copyright.
@@ -373,7 +386,7 @@ Voir le fichier `4a3df5ee-cahier-des-charges-forge.md` fourni au lancement du pr
 
 ## 12. Aperçu en artifact Claude
 
-En plus du dépôt Git (source de vérité), l'app peut être publiée comme Artifact claude.ai pour un aperçu rapide sans avoir à cloner/ouvrir le fichier : extraire le `<title>`, le `<style>` et le contenu de `<body>` de `dist/forge.html` (sans les balises `<!doctype>`/`<html>`/`<head>`/`<body>`, qu'un Artifact fournit lui-même), puis publier ce fragment avec l'outil Artifact. L'app n'utilise aucune ressource externe (polices système, pas de script CDN), donc elle passe telle quelle la politique de sécurité des Artifacts. Ce n'est qu'un aperçu de confort : le livrable réel reste le fichier unique du dépôt.
+En plus du dépôt Git (source de vérité), l'app peut être publiée comme Artifact claude.ai pour un aperçu rapide sans avoir à cloner/ouvrir le fichier : extraire le `<title>`, le `<style>` et le contenu de `<body>` de `dist/forge.html` (sans les balises `<!doctype>`/`<html>`/`<head>`/`<body>`, qu'un Artifact fournit lui-même), puis publier ce fragment avec l'outil Artifact. L'app n'utilise aucune ressource externe (polices de la marque embarquées, pas de script CDN), donc elle passe telle quelle la politique de sécurité des Artifacts. Ce n'est qu'un aperçu de confort : le livrable réel reste le fichier unique du dépôt.
 
 ## 13. Méthode de travail attendue
 

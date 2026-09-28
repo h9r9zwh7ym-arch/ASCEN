@@ -504,7 +504,7 @@ function dayMap_raw(){
 }
 
 // ---------- niveau (XP) ----------
-const LEVEL_TITLES = [[15,"Légende de la forge"],[10,"Maître forgeron·ne"],[6,"Forgeron·ne"],[3,"Compagnon·ne"],[1,"Apprenti·e"]];
+const LEVEL_TITLES = [[15,"Au sommet"],[10,"Confirmé·e"],[6,"Régulier·e"],[3,"Compagnon·ne"],[1,"Apprenti·e"]];
 function totalXP(){ return memo("totalXP", totalXP_raw); }
 function totalXP_raw(){
   // un trophée secret vaut autant qu'un palier or

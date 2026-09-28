@@ -81,7 +81,7 @@ fs.mkdirSync(OUT, { recursive: true });
   await page.click('[data-a="calAlarm"][data-v="15"]');
   const [ics] = await Promise.all([page.waitForEvent('download'), page.click('[data-a="calExport"]')]);
   const icsPath = OUT + '/p.ics'; await ics.saveAs(icsPath); const txt = fs.readFileSync(icsPath, 'utf8');
-  log('ICS:', txt.includes('RRULE:FREQ=WEEKLY;BYDAY=MO,TH'), txt.includes('TRIGGER:-PT15M'), txt.includes('SUMMARY:Forge · Haut\\, du corps'), txt.includes('\r\n'));
+  log('ICS:', txt.includes('RRULE:FREQ=WEEKLY;BYDAY=MO,TH'), txt.includes('TRIGGER:-PT15M'), txt.includes('SUMMARY:ASCEN · Haut\\, du corps'), txt.includes('\r\n'));
   // ---- texte agrandi (Dynamic Type simulé)
   await page.addStyleTag({ content: 'html{font-size:23px!important}' }); await wait(300);
   const over = await page.evaluate(() => document.documentElement.scrollWidth);

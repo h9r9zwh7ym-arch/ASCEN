@@ -90,7 +90,7 @@ function openWeekWizard(){
 function weekWizardBody(){
   const split = WEEK_SPLITS[wizardN];
   const clash = S.templates.filter(t=>(t.days||[]).some(d=>split.some(s=>s[2]===d)));
-  return `<p class="body" style="margin:0 4px 14px">Forge crée tes séances à partir de ton matériel et de tes objectifs, puis les place dans la semaine. Tu pourras tout modifier ensuite.</p>
+  return `<p class="body" style="margin:0 4px 14px">ASCEN crée tes séances à partir de ton matériel et de tes objectifs, puis les place dans la semaine. Tu pourras tout modifier ensuite.</p>
     <div class="te-sec">Jours d'entraînement par semaine</div>
     <div class="wz-n">${[2,3,4,5,6].map(n=>`<button class="${n===wizardN?"on":""}" data-a="wizardN" data-v="${n}">${n}</button>`).join("")}</div>
     <div class="te-sec">Ta semaine</div>
@@ -230,7 +230,7 @@ function buildICS(){
   const [hh,mm] = calTime.split(":").map(Number), pad = n => String(n).padStart(2,"0");
   const stamp = new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+/,"");
   const BYDAY = ["MO","TU","WE","TH","FR","SA","SU"];
-  const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Forge//Planning//FR","CALSCALE:GREGORIAN","METHOD:PUBLISH"];
+  const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//ASCEN//Planning//FR","CALSCALE:GREGORIAN","METHOD:PUBLISH"];
   S.templates.filter(t=>(t.days||[]).length).forEach(t=>{
     const days = t.days.slice().sort();
     // première occurrence : le prochain jour planifié à partir d'aujourd'hui
@@ -239,8 +239,8 @@ function buildICS(){
     const mins = tplMinutes(t);
     lines.push("BEGIN:VEVENT", `UID:forge-${t.id}@forge.app`, `DTSTAMP:${stamp}`, `DTSTART:${d}T${pad(hh)}${pad(mm)}00`,
       `DURATION:PT${mins}M`, `RRULE:FREQ=WEEKLY;BYDAY=${days.map(x=>BYDAY[x]).join(",")}`,
-      `SUMMARY:${icsText("Forge · "+t.n)}`, `DESCRIPTION:${icsText(`${t.exos.length} exercices · ${t.exos.reduce((a,e)=>a+e.sets,0)} séries · ≈ ${mins} min`)}`);
-    if(calAlarm) lines.push("BEGIN:VALARM","ACTION:DISPLAY",`DESCRIPTION:${icsText("Séance Forge : "+t.n)}`,`TRIGGER:-PT${calAlarm}M`,"END:VALARM");
+      `SUMMARY:${icsText("ASCEN · "+t.n)}`, `DESCRIPTION:${icsText(`${t.exos.length} exercices · ${t.exos.reduce((a,e)=>a+e.sets,0)} séries · ≈ ${mins} min`)}`);
+    if(calAlarm) lines.push("BEGIN:VALARM","ACTION:DISPLAY",`DESCRIPTION:${icsText("Séance ASCEN : "+t.n)}`,`TRIGGER:-PT${calAlarm}M`,"END:VALARM");
     lines.push("END:VEVENT");
   });
   lines.push("END:VCALENDAR");
@@ -252,7 +252,7 @@ Object.assign(ACT, {
   calExport(){
     const inp = qs("#calTime"); if(inp && /^\d\d:\d\d$/.test(inp.value)) calTime = inp.value;
     const url = URL.createObjectURL(new Blob([buildICS()], { type:"text/calendar;charset=utf-8" }));
-    const a = document.createElement("a"); a.href = url; a.download = "forge-planning.ics";
+    const a = document.createElement("a"); a.href = url; a.download = "ascen-planning.ics";
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url), 8000);
     closeSheet(); sfx("set"); toast("Ouvre le fichier pour ajouter tes séances au Calendrier");

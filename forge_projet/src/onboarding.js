@@ -9,7 +9,7 @@ function needsOnboarding(){ return !S.meta.onboarded && !S.sessions.length && !S
 function openOnboarding(){ obStep = 0; S.meta.onboarded = true; save(); renderOnboarding(); } // montré une seule fois
 function obDots(){ return `<div class="ob-dots">${[0,1,2,3].map(i=>`<i class="${i===obStep?"on":""}"></i>`).join("")}</div>`; }
 function obBody(){
-  if(obStep===0) return `<div class="ob-hero"><img src="icon-192.png" alt="" onerror="this.remove()"><div class="ob-t">Bienvenue sur Forge</div>
+  if(obStep===0) return `<div class="ob-hero"><div class="ob-logo">${ascenMark()}</div><div class="ob-t">Bienvenue sur ASCEN</div>
       <div class="ob-s">Ta musculation à la maison, avec le matériel que tu as vraiment.</div></div>
     <div class="group ob-points">
       <div class="row">${sfIcon("sparkles","orange")}<div class="grow"><div class="t">Une séance prête chaque jour</div><div class="s">Adaptée à ton matériel, à ton objectif et à ta récupération</div></div></div>
@@ -34,7 +34,7 @@ function obBody(){
     <div class="te-sec">Durée d'une séance</div>
     <div class="cal-alarm">${[["court","≈ 20 min"],["moyen","≈ 35 min"],["long","≈ 50 min"]].map(([k,l])=>`<button class="chip ${S.goals.sessionLength===k?"on":""}" data-a="obLen" data-v="${k}">${l}</button>`).join("")}</div>`;
   const split = WEEK_SPLITS[Math.min(6, Math.max(2, S.goals.daysPerWeek))];
-  return `<div class="ob-t2">Ta semaine</div><div class="ob-s2">Forge peut créer tes ${split.length} séances et les placer dans la semaine. Chaque jour prévu, ta séance s'affichera directement.</div>
+  return `<div class="ob-t2">Ta semaine</div><div class="ob-s2">ASCEN peut créer tes ${split.length} séances et les placer dans la semaine. Chaque jour prévu, ta séance s'affichera directement.</div>
     <div class="group wz-list">${split.map(([type,name,day],i)=>`<div class="row wz-row" style="--k:${i}"><span class="wz-day">${JOURS_COURTS[day]}</span><div class="grow"><div class="t">${esc(name)}</div><div class="s">${esc(SESSION_TYPE_MAP[type].n)}</div></div></div>`).join("")}</div>
     <div class="ob-note">Tu pourras changer les jours, les exercices et les noms quand tu veux.</div>`;
 }

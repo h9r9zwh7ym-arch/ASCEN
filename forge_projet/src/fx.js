@@ -74,7 +74,7 @@ function animateCollapse(el, open, html){
 // ---------- lancement de séance ----------
 const LAUNCH_LINES = [
   "Chaque série compte.",
-  "Aujourd'hui, tu forges.",
+  "Un cran plus haut.",
   "Concentré. Régulier. Plus fort.",
   "Le toi de demain te remercie.",
   "Une rep après l'autre.",
