@@ -219,15 +219,36 @@ Changements :
   - `v23.js` : migration, écart mensuel, note, poids du corps, niveau et taille, note de fin de séance ;
   - `gen_audit.js` : 8 configurations de matériel × 3 niveaux × 3 tailles × 8 types × 20 tirages ; vérifie matériel, niveau, doublons, élastiques, NaN.
 
+## 9 decies. Version 2.3 : édition, objectifs, bilan, tests versionnés
+
+- **Modifier une séance enregistrée** (Historique › séance › Modifier, `histEdit` dans `view_history.js`).
+  - On peut changer la date, la durée, les répétitions ou secondes et la charge de chaque série (le niveau pour un élastique). On peut aussi ajouter ou retirer une série ou un exercice.
+  - Tout se fait sur une copie : « Annuler » ne change rien.
+  - À l'enregistrement, les séances sont triées à nouveau et `recomputePRFlags()` (`core.js`) recalcule les records avec la même règle qu'en direct. `S.meta.prCount` est ajusté de l'écart.
+  - Les paliers de trophées atteints grâce à la correction sont notés sans célébration (`checkMedals(true)`).
+- **Objectifs chiffrés** (Progrès › Résumé, `S.targets`, `view_progress.js`).
+  - Trois types : répétitions sur une série, charge sur une série, secondes pour un exercice chronométré.
+  - La valeur proposée est un peu au-dessus du record. `bestOf()` est mis en cache par `memo`.
+  - 6 objectifs actifs au maximum. Un objectif atteint (`checkTargets()` en fin de séance et après une modification) est célébré, puis reste visible. Le relever le rouvre.
+- **Bilan en image** (`recap.js`, nouveau fichier ajouté à `build.sh`).
+  - Image canvas 1080 × 1350, par mois ou par année : séances et écart avec la période précédente, temps, séries, tonnage, records, activité par jour ou par mois, exercice favori, objectifs atteints, meilleure série de semaines, trophées débloqués.
+  - Accessible depuis l'Historique. Suggéré discrètement sur l'accueil pendant la première semaine d'un nouveau mois, si le mois précédent compte au moins 2 séances (`S.meta.recapSeen`).
+  - Partage par le menu d'iOS (`navigator.share`), sinon téléchargement.
+- **Cibles tactiles** : les liens d'en-tête (« Modifier », « Plus ») et les ronds de sélection du sélecteur d'exercices font 44 pt, avec des marges négatives pour ne pas changer la mise en page.
+- **Tests versionnés** (`tests/`) :
+  - `sh tests/run.sh` reconstruit l'app puis lance les suites dans Chromium et WebKit, l'audit de mise en page (320, 390, 430 px et mode sombre), l'audit de génération, le test hors ligne et la mesure de performance ;
+  - `tests/README.md` décrit chaque fichier ;
+  - `v24.js` couvre la v2.3.
+
 ## 10. Cahier des charges d'origine (résumé)
 
 Voir le fichier `4a3df5ee-cahier-des-charges-forge.md` fourni au lancement du projet pour le texte complet. Points clés déjà couverts en v1.0 : matériel personnalisable et extensible, bibliothèque d'exercices filtrée, inclusion/exclusion d'exercices, objectifs personnalisés, suivi détaillé de séance (éditable, timer de repos, coche rapide), moteur de suggestion 100% local avec export/import IA, graphiques de progression, PR, streaks/régularité, trophées, écran d'accueil = séance du jour, thème clair/sombre automatique, page À propos avec copyright.
 
 ## 11. Chantiers proposés pour la suite
 
-1. Historique modifiable a posteriori (la note l'est depuis la v2.2) (éditer les séries d'une séance déjà enregistrée ; la suppression existe depuis la v1.2).
-2. Export/partage d'une séance ou d'un récap (image), comme le Rewind de Zeste.
-3. Tests automatisés versionnés dans le dépôt (actuellement les tests Playwright ont été écrits et exécutés en session mais pas committés — à formaliser dans un dossier `tests/` si utile).
+1. ~~Historique modifiable a posteriori~~ fait en v2.3 (éditer les séries d'une séance déjà enregistrée ; la suppression existe depuis la v1.2).
+2. ~~Récap en image~~ fait en v2.3 (bilan mensuel et annuel).
+3. ~~Tests versionnés~~ fait en v2.3 (`tests/`, `sh tests/run.sh`).
 4. Vérification de chaque exercice avec une source nommée (NSCA/ACSM/NASM) si YaYa souhaite le même niveau de rigueur que les recettes de Zeste.
 5. ~~Test WebKit~~ fait depuis la v1.4 (WebKit 26 via Playwright). Reste : un essai sur un vrai iPhone (gestes, retour haptique, safe areas). Historique de la note : WebKit était **bloqué dans cet environnement cloud** — `playwright install webkit` télécharge le binaire depuis `cdn.playwright.dev` / `playwright.download.prss.microsoft.com`, tous deux refusés par la politique réseau de l'environnement (403 « request blocked »). Les dépendances système WebKitGTK, elles, s'installent sans problème. Pour débloquer : ajouter l'un de ces deux hôtes à la liste des domaines autorisés dans les réglages réseau de l'environnement (menu de l'environnement cloud → Modifier), puis relancer `playwright install webkit`.
 6. Geste de balayage (swipe) pour naviguer entre exercices en mode focus, en plus des flèches actuelles — nécessiterait de gérer `touchstart`/`touchend` proprement sans casser le scroll vertical.

@@ -12,6 +12,7 @@ function defaultState(){
     custom: { exos:[] },   // « Ma séance » : [{exoId, sets}]
     templates: [],         // modèles enregistrés : [{id, n, exos:[{exoId, sets}]}]
     importedProgram: [],
+    targets: [],            // objectifs chiffrés [{id, exoId, kind:"reps"|"kg"|"sec", value, start, createdAt, doneAt}]
     body: [],               // pesées facultatives [{d:"AAAA-MM-JJ", kg}]
     medals: {},            // {familleId: {t: palier atteint 0-4, d: {1: iso, 2: iso…}}}
     settings: { theme:"auto", unit:"kg", todayTab:"custom", name:"", sound:true },
@@ -51,6 +52,7 @@ function normalizeState(parsed){
     merged.templates = parsed.templates||[];
     merged.medals = parsed.medals||{};
     merged.importedProgram = parsed.importedProgram||[];
+    merged.targets = (Array.isArray(parsed.targets)?parsed.targets:[]).filter(t=>t && t.id && t.exoId && ["reps","kg","sec"].includes(t.kind) && t.value>0);
     merged.body = (Array.isArray(parsed.body)?parsed.body:[]).filter(e=>e && /^\d{4}-\d{2}-\d{2}$/.test(e.d) && e.kg>=20 && e.kg<=400).sort((a,b)=>a.d<b.d?-1:1);
     delete merged.settings.todayMode; // v1.2 : remplacé par todayTab (« Ma séance » en premier)
     // v2.2 : nouveaux équipements. On garde le comportement précédent : un banc servait aussi
@@ -276,6 +278,27 @@ function isNewPR(exoId, weight, reps){
   const pr = exoPRs(exoId);
   if(!pr.count) return false; // la toute première fois n'est pas un « record battu »
   return weight>pr.maxWeight || estimated1RM(weight,reps)>pr.best1rm+0.01;
+}
+
+// Records recalculés après la modification d'une séance passée : même règle qu'en direct
+// (battre l'historique ET les séries précédentes de la séance, jamais à la 1re fois).
+function recomputePRFlags(){
+  const best = {}; let before = 0, after = 0;
+  S.sessions.forEach(s=>{
+    const cur = {};
+    s.exos.forEach(ex=>{
+      const b = best[ex.exoId], c = cur[ex.exoId] || (cur[ex.exoId] = { w:b?b.w:0, r:b?b.r:0 });
+      ex.sets.forEach(st=>{
+        if(!st.done) return;
+        if(st.pr) before++;
+        const w = st.weight||0, r = st.reps||0, e = estimated1RM(w,r);
+        if(b && (w||r) && (w>c.w || e>c.r+0.01)){ st.pr = true; after++; } else delete st.pr;
+        c.w = Math.max(c.w,w); c.r = Math.max(c.r,e);
+      });
+    });
+    Object.keys(cur).forEach(id=>{ best[id] = cur[id]; });
+  });
+  S.meta.prCount = Math.max(0, (S.meta.prCount||0) + after - before);
 }
 
 // ---------- régularité ----------

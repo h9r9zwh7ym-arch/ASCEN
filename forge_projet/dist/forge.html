@@ -1355,6 +1355,64 @@ h2.sh .more.strong{font-weight:700}
 .row .s.wrap{white-space:normal;line-height:1.3}
 .chip-x{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;margin:-6px -10px -6px -2px;color:inherit}
 .chip-x svg{width:16px;height:16px}
+/* v2.3 : modifier une séance enregistrée */
+#heBody{padding-left:16px;padding-right:16px}
+#heBody .group{margin-left:0;margin-right:0}
+#heBody>.te-sec{margin:18px 4px 8px}
+#heBody>.te-sec:first-child{margin-top:4px}
+.he-exo{margin-bottom:12px}
+.he-set{display:flex;align-items:center;gap:6px;padding:4px 8px 4px 16px;border-top:.5px solid var(--sep)}
+.he-n{width:20px;color:var(--label2);font-weight:600;font-variant-numeric:tabular-nums}
+.he-in{width:58px;height:38px;border:0;border-radius:10px;background:var(--fill2);text-align:center;font-weight:700;font-size:calc(16rem/17);font-variant-numeric:tabular-nums;outline:none}
+.he-in:focus{box-shadow:0 0 0 2px var(--tint) inset}
+.he-u{color:var(--label2);font-size:calc(13rem/17)}
+.he-x{color:var(--label3);margin:0 2px}
+.he-sel{height:38px;border:0;border-radius:10px;background:var(--fill2);padding:0 10px;font-weight:600;font-size:calc(15rem/17);max-width:140px}
+.he-del{width:44px;height:44px;color:var(--label3)}
+.he-del svg{width:16px;height:16px}
+.he-add{display:flex;align-items:center;gap:6px;width:100%;min-height:44px;padding:0 16px;border-top:.5px solid var(--sep);color:var(--tint);font-weight:600;font-size:calc(15rem/17)}
+.he-add svg{width:16px;height:16px}
+.he-meta{gap:8px}
+.he-date{flex:1;min-width:0;height:38px;border:0;border-radius:10px;background:var(--fill2);padding:0 10px;font-size:calc(16rem/17);font-weight:600;color:inherit}
+.btnrow.two{flex-wrap:nowrap}.btnrow.two .btn{flex:1;width:auto;min-width:0;padding:0 12px}
+/* v2.3 : objectifs chiffrés */
+.tg-group{margin-bottom:14px}
+.tg-v{color:var(--tint);font-weight:700}
+.tg-bar{height:6px;margin:7px 0 3px}
+.tg-row.done .tg-v{color:var(--green)}
+.tg-row.done{opacity:.8}
+.tg-seg{margin:14px 16px 0}
+.tg-seg .seg{margin:0}
+#tgBody>.te-sec{margin:20px 20px 8px}
+.tg-step{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 16px;padding:10px;border-radius:16px;background:var(--bg2)}
+.tg-step button{width:52px;height:52px;border-radius:14px;background:var(--fill2);color:var(--tint);font-size:26px;font-weight:600}
+.tg-step button:active{transform:scale(.94)}
+.tg-val{flex:1;text-align:center;font-size:calc(28rem/17);font-weight:800;font-variant-numeric:tabular-nums}
+.tg-val.bump{animation:tgBump .22s cubic-bezier(.3,1.6,.5,1)}
+@keyframes tgBump{from{transform:scale(1.08)}to{transform:none}}
+.tg-hint{margin:10px 20px 0}
+.cel-target{margin-top:10px;padding:8px 12px;border-radius:12px;background:rgba(52,199,89,.14);color:var(--green);font-weight:700;font-size:calc(14rem/17);animation:noteIn .4s calc(var(--i)*120ms + .3s) both cubic-bezier(.32,.72,0,1)}
+/* v2.3 : bilan en image */
+.rc-entry{margin-top:12px}
+#rcBody .seg{margin:4px 16px 8px}
+.rc-nav{display:flex;align-items:center;justify-content:space-between;margin:0 10px 10px}
+.rc-nav b{font-size:calc(17rem/17)}
+.rc-nav .icon-btn{width:44px;height:44px;background:none;color:var(--tint)}
+.rc-nav .icon-btn:first-child svg{transform:scaleX(-1)}
+.rc-nav .icon-btn[disabled]{opacity:.25}
+.rc-img{margin:0 16px;border-radius:18px;overflow:hidden;aspect-ratio:4/5;background:#140A05;box-shadow:0 12px 30px -12px rgba(0,0,0,.45)}
+.rc-img img{display:block;width:100%;height:100%}
+.rc-img img.in{animation:rcIn .35s cubic-bezier(.32,.72,0,1)}
+@keyframes rcIn{from{opacity:.3;transform:scale(.98)}to{opacity:1;transform:none}}
+/* v2.3 : cibles tactiles de 44 pt (Apple HIG) sans changer la mise en page */
+h2.sh button.more{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;margin:-12px -8px;padding:0 8px}
+h2.sh button.more::after{content:none}
+.pick-check{width:44px;height:44px;margin:-10px;border-radius:0;box-shadow:none;background:none!important}
+.pick-check::after{content:none}
+.pick-check::before{content:"";position:absolute;inset:10px;border-radius:12px;box-shadow:inset 0 0 0 1.5px var(--sep);transition:background .15s}
+.pick-row.on .pick-check{box-shadow:none}
+.pick-row.on .pick-check::before{background:var(--tint);box-shadow:none}
+.pick-check svg{position:relative;z-index:1}
 </style></head><body><div id="app"></div><nav class="tabbar" aria-label="Onglets"></nav><div id="restbar"></div><div id="overlay" role="dialog"></div><div id="toast" role="status" aria-live="polite"></div><input type="file" id="fileImport" accept="application/json,.json" style="display:none"><script>
 // ================= MATÉRIEL =================
 // Catalogue du matériel reconnu par le moteur de suggestion. Chaque exercice de la
@@ -1975,6 +2033,7 @@ function defaultState(){
     custom: { exos:[] },   // « Ma séance » : [{exoId, sets}]
     templates: [],         // modèles enregistrés : [{id, n, exos:[{exoId, sets}]}]
     importedProgram: [],
+    targets: [],            // objectifs chiffrés [{id, exoId, kind:"reps"|"kg"|"sec", value, start, createdAt, doneAt}]
     body: [],               // pesées facultatives [{d:"AAAA-MM-JJ", kg}]
     medals: {},            // {familleId: {t: palier atteint 0-4, d: {1: iso, 2: iso…}}}
     settings: { theme:"auto", unit:"kg", todayTab:"custom", name:"", sound:true },
@@ -2014,6 +2073,7 @@ function normalizeState(parsed){
     merged.templates = parsed.templates||[];
     merged.medals = parsed.medals||{};
     merged.importedProgram = parsed.importedProgram||[];
+    merged.targets = (Array.isArray(parsed.targets)?parsed.targets:[]).filter(t=>t && t.id && t.exoId && ["reps","kg","sec"].includes(t.kind) && t.value>0);
     merged.body = (Array.isArray(parsed.body)?parsed.body:[]).filter(e=>e && /^\d{4}-\d{2}-\d{2}$/.test(e.d) && e.kg>=20 && e.kg<=400).sort((a,b)=>a.d<b.d?-1:1);
     delete merged.settings.todayMode; // v1.2 : remplacé par todayTab (« Ma séance » en premier)
     // v2.2 : nouveaux équipements. On garde le comportement précédent : un banc servait aussi
@@ -2239,6 +2299,27 @@ function isNewPR(exoId, weight, reps){
   const pr = exoPRs(exoId);
   if(!pr.count) return false; // la toute première fois n'est pas un « record battu »
   return weight>pr.maxWeight || estimated1RM(weight,reps)>pr.best1rm+0.01;
+}
+
+// Records recalculés après la modification d'une séance passée : même règle qu'en direct
+// (battre l'historique ET les séries précédentes de la séance, jamais à la 1re fois).
+function recomputePRFlags(){
+  const best = {}; let before = 0, after = 0;
+  S.sessions.forEach(s=>{
+    const cur = {};
+    s.exos.forEach(ex=>{
+      const b = best[ex.exoId], c = cur[ex.exoId] || (cur[ex.exoId] = { w:b?b.w:0, r:b?b.r:0 });
+      ex.sets.forEach(st=>{
+        if(!st.done) return;
+        if(st.pr) before++;
+        const w = st.weight||0, r = st.reps||0, e = estimated1RM(w,r);
+        if(b && (w||r) && (w>c.w || e>c.r+0.01)){ st.pr = true; after++; } else delete st.pr;
+        c.w = Math.max(c.w,w); c.r = Math.max(c.r,e);
+      });
+    });
+    Object.keys(cur).forEach(id=>{ best[id] = cur[id]; });
+  });
+  S.meta.prCount = Math.max(0, (S.meta.prCount||0) + after - before);
 }
 
 // ---------- régularité ----------
@@ -3917,7 +3998,7 @@ function confettiBurst(x, y, count){
 }
 
 // ---------- fin de séance ----------
-function showCelebration(session, ups, xpBefore, xpAfter){
+function showCelebration(session, ups, xpBefore, xpAfter, hits){
   const vol = Math.round(sessionVolume(session));
   const sets = sessionSetCount(session);
   const prs = sessionPRCount(session);
@@ -3930,11 +4011,12 @@ function showCelebration(session, ups, xpBefore, xpAfter){
     <div class="cel-title">Séance terminée !</div>
     <div class="cel-stats">
       <div><div class="n">${fmtDuration(session.durationSec||0)}</div><div class="l">durée</div></div>
-      <div><div class="n" data-count="${sets}">${sets}</div><div class="l">séries</div></div>
+      <div><div class="n" data-count="${sets}">${sets}</div><div class="l">série${sets>=2?"s":""}</div></div>
       ${vol ? `<div><div class="n" data-count="${vol}" data-unit="kg">${fmtNum(vol)} kg</div><div class="l">soulevés</div></div>`
             : `<div><div class="n" data-count="${reps}">${reps}</div><div class="l">répétitions</div></div>`}
     </div>
     ${prs?`<div class="cel-pr">💥 ${prs} record${prs>1?"s":""} battu${prs>1?"s":""}</div>`:""}
+    ${(hits||[]).map((t,i)=>`<div class="cel-target" style="--i:${i}">🎯 Objectif atteint : ${esc(EXO_MAP[t.exoId].n)}, ${fmtTarget(t.kind, t.value)}</div>`).join("")}
     <div class="cel-xp">
       <div class="cel-xp-hd"><span>${levelUp?`Niveau ${after.level} atteint !`:`Niveau ${after.level}`}</span><span class="xpg">+${xpAfter-xpBefore} XP</span></div>
       <div class="xpbar"><span id="celXp" style="width:${Math.round((levelUp?0:before.pct)*100)}%"></span></div>
@@ -3953,8 +4035,8 @@ function showCelebration(session, ups, xpBefore, xpAfter){
     const bar = qs("#celXp"); if(bar) bar.style.width = Math.round(after.pct*100)+"%";
     animateCounts(qs(".cel"));
   }));
-  setTimeout(()=>confettiBurst(null, innerHeight*0.3, ups.length||levelUp ? 150 : 90), 150);
-  setTimeout(()=>sfx(ups.length||levelUp ? "medal" : "exo"), 200);
+  setTimeout(()=>confettiBurst(null, innerHeight*0.3, ups.length||levelUp||(hits&&hits.length) ? 150 : 90), 150);
+  setTimeout(()=>sfx(ups.length||levelUp||(hits&&hits.length) ? "medal" : "exo"), 200);
 }
 
 Object.assign(ACT, {
@@ -4094,6 +4176,7 @@ function renderTodayPreview(draft){
     </div>
     ${statPillsHTML()}
     ${heroHTML(draft)}
+    ${recapNudgeKey() ? `<div class="backup-nudge rc-nudge stagger" style="--i:3">${sfIcon("sparkles","orange")}<div class="grow"><div class="t">Ton bilan de ${MOIS_LONG[parseISO(recapNudgeKey()+"-01").getMonth()]} est prêt</div><div class="s">Tes séances du mois dernier, en une image.</div></div><div class="bn-act"><button data-a="openRecap">Voir</button><button class="later" data-a="recapLater">Plus tard</button></div></div>` : ""}
     ${backupDue() ? `<div class="backup-nudge stagger" style="--i:3">${sfIcon("download","green")}<div class="grow"><div class="t">Sauvegarde conseillée</div><div class="s">${S.sessions.length} séances sont stockées uniquement sur ce téléphone.</div></div><div class="bn-act"><button data-a="backupData">Sauvegarder</button><button class="later" data-a="backupLater">Plus tard</button></div></div>` : ""}
     <div class="home-sep stagger" style="--i:3"><span>Préparer une séance</span></div>
     ${segHTML("today", [["custom","Ma séance"],["proposal","Proposée par l'app"]], mode, "todayMode")}
@@ -4743,11 +4826,12 @@ function finalizeSession(){
   const known = draft.tplId || S.templates.some(t=>t.exos.map(e=>e.exoId).join()===ids);
   lastDoneForSave = known || !draft.exos.length ? null : { n: draft.name && draft.source!=="engine" ? draft.name : sessionTitle(draft), exos: draft.exos.map(e=>({ exoId:e.exoId, sets:e.sets.filter(s=>s.done).length||e.sets.length })) };
   const ups = checkMedals();
+  const hits = checkTargets();
   const xpAfter = totalXP();
   save();
   scrollTodayTop();
   renderViewAnimated("today");
-  showCelebration(draft, ups, xpBefore, xpAfter);
+  showCelebration(draft, ups, xpBefore, xpAfter, hits);
 }
 
 // changer d'écran (aperçu ↔ séance en cours) repart du haut de la page
@@ -5698,6 +5782,7 @@ function renderHistory(){
       ${segHTML("histMetric", HIST_METRICS, histMetric, "histMetric")}
       <div id="histChart">${histChartHTML()}</div>
     </div>
+    <div class="group rc-entry stagger" style="--i:1"><button class="row tap" style="width:100%" data-a="openRecap">${sfIcon("sparkles","orange")}<div class="grow"><div class="t">Ton bilan en image</div><div class="s">Du mois ou de l'année, à garder ou partager</div></div><span class="chev">${icon("chev")}</span></button></div>
     ${html}
     ${more>0?`<div class="btnrow"><button class="btn secondary" data-a="histMore">Afficher ${Math.min(more,25)} séance${Math.min(more,25)>1?"s":""} de plus <span class="muted-n">· ${more} restante${more>1?"s":""}</span></button></div>`:""}
   </div>`;
@@ -5738,7 +5823,7 @@ function sessionDetailHTML(s){
     <div class="group" style="margin-top:14px">${rows||'<div style="padding:16px" class="s">Aucune série complétée.</div>'}</div>
     <div class="te-sec">Note</div>
     <textarea class="note-in" rows="3" maxlength="280" data-c="saveNote" data-id="${esc(s.id)}" placeholder="Sensations, douleur, contexte… (facultatif)" aria-label="Note sur la séance">${esc(s.note||"")}</textarea>
-    <div class="btnrow"><button class="btn secondary" data-a="redoSession" data-id="${s.id}">${icon("repeat")} Refaire cette séance</button></div>
+    <div class="btnrow two"><button class="btn secondary" data-a="histEdit" data-id="${s.id}">${icon("edit")} Modifier</button><button class="btn secondary" data-a="redoSession" data-id="${s.id}">${icon("repeat")} Refaire</button></div>
     <div class="btnrow"><button class="btn ghost" style="color:var(--red)" data-a="deleteSession" data-id="${s.id}">Supprimer de l'historique</button></div>
     </div>`;
 }
@@ -5770,6 +5855,306 @@ Object.assign(ACT, {
   },
 });
 VIEWS.history = renderHistory;
+
+// ---------- modifier une séance enregistrée ----------
+// On travaille sur une copie : rien n'est touché tant qu'on n'a pas appuyé sur « Enregistrer ».
+let histEdit = null;
+function heTime(s){ return s.startedAt ? new Date(s.startedAt).toTimeString().slice(0,5) : ""; }
+function heSetRow(def, i, j, st){
+  const lt = loadableTypeOf(def), timed = isTimed(def);
+  const load = lt==="bands"
+    ? `<select class="he-sel" data-c="heVal" data-i="${i}" data-j="${j}" data-k="weight" aria-label="Résistance de l'élastique">${[1,2,3,4,5].map(v=>`<option value="${v}" ${Math.round(st.weight||0)===v?"selected":""}>${bandLabel(v)}</option>`).join("")}</select>`
+    : lt ? `<span class="he-x">×</span><input class="he-in" type="text" inputmode="decimal" maxlength="5" value="${st.weight!=null?fmtDec(st.weight):""}" placeholder="0" data-c="heVal" data-i="${i}" data-j="${j}" data-k="weight" aria-label="Charge en kg"><span class="he-u">kg</span>` : "";
+  return `<div class="he-set"><span class="he-n">${j+1}</span>
+    <input class="he-in" type="text" inputmode="numeric" maxlength="4" value="${st.reps||""}" placeholder="0" data-c="heVal" data-i="${i}" data-j="${j}" data-k="reps" aria-label="${timed?"Secondes":"Répétitions"}"><span class="he-u">${timed?"s":"reps"}</span>
+    ${load}<span class="grow"></span>
+    <button class="icon-btn he-del" aria-label="Retirer la série ${j+1}" data-a="heDelSet" data-i="${i}" data-j="${j}">${icon("close")}</button></div>`;
+}
+function histEditBodyHTML(){
+  const e = histEdit;
+  const exos = e.exos.map((ex,i)=>{
+    const def = EXO_MAP[ex.exoId]; if(!def) return "";
+    return `<div class="group he-exo">
+      <div class="row">${exoIcon(def)}<div class="grow"><div class="t">${esc(def.n)}</div></div>
+        <button class="icon-btn" aria-label="Retirer ${esc(def.n)}" data-a="heDelExo" data-i="${i}">${icon("trash")}</button></div>
+      ${ex.sets.map((st,j)=>heSetRow(def, i, j, st)).join("")}
+      <button class="he-add" data-a="heAddSet" data-i="${i}">${icon("plus")} Ajouter une série</button>
+    </div>`;
+  }).join("");
+  return `<div class="te-sec">Date et durée</div>
+    <div class="group"><div class="row he-meta">
+      <input type="date" class="he-date" max="${todayISO()}" value="${e.date}" data-c="heMeta" data-k="date" aria-label="Date">
+      <input class="he-in" type="text" inputmode="numeric" maxlength="3" value="${e.min||""}" placeholder="–" data-c="heMeta" data-k="min" aria-label="Durée en minutes"><span class="he-u">min</span>
+    </div></div>
+    <div class="te-sec">Exercices</div>
+    ${exos || `<div class="te-empty">Aucun exercice.</div>`}
+    <div class="te-actions"><button class="btn secondary sm" data-a="heAddExo">${icon("plus")} Ajouter un exercice</button></div>`;
+}
+function renderHistEdit(){
+  openSheet(`<div class="sheet-hd te-hd">
+      <button class="te-cancel" data-a="heCancel">Annuler</button>
+      <span class="t">Modifier la séance</span>
+      <span class="te-spacer"></span>
+    </div>
+    <div class="sheet-body" id="heBody">${histEditBodyHTML()}</div>`,
+    { tall:true, footer:`<button class="btn" data-a="heSave">Enregistrer les modifications</button>` });
+}
+function refreshHistEdit(){
+  const b = qs("#heBody"); if(!b) return renderHistEdit();
+  const st = b.scrollTop; b.innerHTML = histEditBodyHTML(); b.scrollTop = st;
+}
+function heNum(v){ return parseFloat(String(v).replace(",", ".")); }
+Object.assign(ACT, {
+  histEdit(d){
+    const s = S.sessions.find(x=>x.id===d.id); if(!s) return;
+    histEdit = { id:s.id, date:s.date, min: s.durationSec ? Math.round(s.durationSec/60) : 0,
+      exos: clone(s.exos).map(ex=>({ exoId:ex.exoId, targetReps:ex.targetReps, sets:ex.sets.filter(st=>st.done) })) };
+    renderHistEdit();
+  },
+  heCancel(){ const s = histEdit && S.sessions.find(x=>x.id===histEdit.id); histEdit = null; if(s) openSheet(sessionDetailHTML(s)); else closeSheet(); },
+  heVal(d, el){
+    const st = histEdit && histEdit.exos[+d.i] && histEdit.exos[+d.i].sets[+d.j]; if(!st) return;
+    const v = heNum(el.value);
+    if(d.k==="reps") st.reps = v>0 ? Math.min(9999, Math.round(v)) : 0;
+    else if(isNaN(v) || v<=0) delete st.weight; else st.weight = Math.min(500, round1(v));
+  },
+  heMeta(d, el){
+    if(!histEdit) return;
+    if(d.k==="date"){ if(/^\d{4}-\d{2}-\d{2}$/.test(el.value) && el.value<=todayISO()) histEdit.date = el.value; else el.value = histEdit.date; }
+    else { const v = heNum(el.value); histEdit.min = v>0 ? Math.min(600, Math.round(v)) : 0; }
+  },
+  heAddSet(d){
+    const ex = histEdit.exos[+d.i]; if(!ex) return;
+    const last = ex.sets[ex.sets.length-1], def = EXO_MAP[ex.exoId];
+    ex.sets.push(last ? Object.assign({}, last, { pr:undefined, effort:undefined }) : { reps: def ? def.repsMin : 10, done:true });
+    refreshHistEdit();
+  },
+  heDelSet(d){ const ex = histEdit.exos[+d.i]; if(!ex) return; ex.sets.splice(+d.j,1); if(!ex.sets.length) histEdit.exos.splice(+d.i,1); refreshHistEdit(); },
+  heDelExo(d){ histEdit.exos.splice(+d.i,1); refreshHistEdit(); },
+  heAddExo(){
+    openPicker({ title:"Ajouter un exercice", multi:true, exclude:new Set(histEdit.exos.map(x=>x.exoId)),
+      onCancel:()=>renderHistEdit(),
+      onDone:ids=>{
+        ids.forEach(id=>{ const def = EXO_MAP[id]; if(!def) return;
+          const lt = loadableTypeOf(def), sug = suggestForExo(def, def.sets);
+          const w = lt ? (lt==="bands" ? ((S.equipment.weights.bands||[])[0]||2) : sug.weight) : null;
+          histEdit.exos.push({ exoId:id, sets:Array.from({ length:def.sets }, ()=>{ const o = { reps: sug.reps || def.repsMin, done:true }; if(w) o.weight = w; return o; }) });
+        });
+        renderHistEdit();
+      } });
+  },
+  heSave(){
+    // un champ encore en cours de saisie n'a pas forcément déclenché « change »
+    const a = document.activeElement; if(a && a.dataset && a.dataset.c && ACT[a.dataset.c]) ACT[a.dataset.c](a.dataset, a);
+    const e = histEdit, s = e && S.sessions.find(x=>x.id===e.id); if(!s) return closeSheet();
+    const exos = e.exos.map(ex=>Object.assign({}, ex, { sets: ex.sets.filter(st=>st.reps>0).map(st=>{ const o = Object.assign({}, st, { done:true }); if(o.pr===undefined) delete o.pr; if(o.effort===undefined) delete o.effort; return o; }) })).filter(ex=>ex.sets.length && EXO_MAP[ex.exoId]);
+    if(!exos.length){ toast("Garde au moins une série, ou supprime la séance"); return; }
+    if(e.date!==s.date && s.startedAt){
+      // même heure, nouveau jour
+      const t = new Date(s.startedAt), n = parseISO(e.date); n.setHours(t.getHours(), t.getMinutes(), 0, 0);
+      s.startedAt = n.toISOString();
+    }
+    s.date = e.date; s.exos = exos;
+    if(e.min){ s.durationSec = e.min*60; if(s.startedAt) s.completedAt = new Date(Date.parse(s.startedAt)+s.durationSec*1000).toISOString(); }
+    else delete s.durationSec;
+    S.sessions.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
+    recomputePRFlags();
+    checkMedals(true); // un palier atteint grâce à la correction est noté sans fête
+    const hits = checkTargets();
+    histEdit = null;
+    changed();
+    openSheet(sessionDetailHTML(s));
+    sfx("seg"); toast(hits.length ? `Séance modifiée · 🎯 objectif atteint` : "Séance modifiée");
+  },
+});
+// ================= BILAN EN IMAGE (mois / année) =================
+// Une image 1080 × 1350 dessinée localement (canvas), à garder ou partager depuis le
+// menu de partage d'iOS. Aucune donnée ne quitte le téléphone sans action de l'utilisateur.
+
+let recap = null; // { kind:"month"|"year", key:"2026-09"|"2026" }
+function recapPrevKey(kind, key){
+  if(kind==="year") return String(+key-1);
+  const d = parseISO(key+"-01"); d.setMonth(d.getMonth()-1);
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+}
+function recapNextKey(kind, key){
+  if(kind==="year") return String(+key+1);
+  const d = parseISO(key+"-01"); d.setMonth(d.getMonth()+1);
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+}
+function recapTitle(kind, key){
+  if(kind==="year") return `Mon année ${key}`;
+  const d = parseISO(key+"-01");
+  return MOIS_LONG[d.getMonth()].replace(/^./, c=>c.toUpperCase())+" "+d.getFullYear();
+}
+function recapDefault(kind){
+  const t = todayISO();
+  if(kind==="year") return t.slice(0,4);
+  // en début de mois, le mois précédent est plus parlant que le mois qui commence
+  const cur = t.slice(0,7);
+  return S.sessions.some(s=>s.date.startsWith(cur)) && +t.slice(8)>7 ? cur : recapPrevKey("month", cur);
+}
+function recapStats(kind, key){
+  const list = S.sessions.filter(s=>s.date.startsWith(key));
+  const prevN = S.sessions.filter(s=>s.date.startsWith(recapPrevKey(kind, key))).length;
+  const sets = {}, days = {};
+  let volume = 0, dur = 0, nSets = 0, prs = 0;
+  list.forEach(s=>{
+    volume += sessionVolume(s); dur += s.durationSec||0; prs += sessionPRCount(s);
+    const n = sessionSetCount(s); nSets += n; days[s.date] = (days[s.date]||0)+n;
+    s.exos.forEach(ex=>{ const c = ex.sets.filter(st=>st.done).length; if(c) sets[ex.exoId] = (sets[ex.exoId]||0)+c; });
+  });
+  const fav = Object.keys(sets).filter(id=>EXO_MAP[id]).sort((a,b)=>sets[b]-sets[a])[0];
+  // meilleure série de semaines consécutives dans la période
+  const weeks = Array.from(new Set(list.map(s=>weekKey(s.date)))).sort();
+  let streak = 0, run = 0, prevW = null;
+  weeks.forEach(w=>{ run = prevW && addDaysISO(prevW,7)===w ? run+1 : 1; streak = Math.max(streak, run); prevW = w; });
+  let medals = 0;
+  Object.values(S.medals||{}).forEach(m=>Object.values(m.d||{}).forEach(iso=>{ if(iso && localISO(new Date(iso)).startsWith(key)) medals++; }));
+  const targets = S.targets.filter(t=>t.doneAt && t.doneAt.startsWith(key) && EXO_MAP[t.exoId]);
+  // barres : séries par jour (mois) ou séances par mois (année)
+  let bars;
+  if(kind==="month"){
+    const d0 = parseISO(key+"-01"), nDays = new Date(d0.getFullYear(), d0.getMonth()+1, 0).getDate();
+    bars = Array.from({ length:nDays }, (_,i)=>({ v: days[key+"-"+String(i+1).padStart(2,"0")]||0, l: [0,7,14,21,28].includes(i) ? String(i+1) : "" }));
+  } else {
+    bars = Array.from({ length:12 }, (_,i)=>({ v: list.filter(s=>+s.date.slice(5,7)===i+1).length, l: "JFMAMJJASOND"[i] }));
+  }
+  return { n:list.length, prevN, volume, dur, nSets, prs, fav, favSets: fav ? sets[fav] : 0, activeDays:Object.keys(days).length, streak, medals, targets, bars };
+}
+
+// ---------- dessin ----------
+function recapFont(w, px, serif){ return `${w} ${px}px ${serif ? 'ui-serif,"New York","Iowan Old Style",Georgia,serif' : '-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif'}`; }
+function recapFit(ctx, txt, max){
+  if(ctx.measureText(txt).width<=max) return txt;
+  while(txt.length>1 && ctx.measureText(txt+"…").width>max) txt = txt.slice(0,-1);
+  return txt.trim()+"…";
+}
+function rrect(ctx, x, y, w, h, r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function fmtHours(sec){ const h = Math.floor(sec/3600), m = Math.round((sec%3600)/60); return h ? `${h} h${m?" "+String(m).padStart(2,"0"):""}` : `${m} min`; }
+function drawRecap(kind, key){
+  const W = 1080, H = 1350, st = recapStats(kind, key);
+  const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const ctx = cv.getContext("2d");
+  // fond : braise sombre, lueur orange en haut
+  const bg = ctx.createLinearGradient(0,0,0,H); bg.addColorStop(0,"#231107"); bg.addColorStop(1,"#0C0704");
+  ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+  const glow = ctx.createRadialGradient(W*0.78, 90, 20, W*0.78, 90, 720); glow.addColorStop(0,"rgba(255,122,26,.55)"); glow.addColorStop(1,"rgba(255,122,26,0)");
+  ctx.fillStyle = glow; ctx.fillRect(0,0,W,H);
+  const X = 84, orange = "#FF8A3D", white = "#FFFFFF", mute = "rgba(255,255,255,.62)";
+  ctx.textBaseline = "alphabetic";
+  // en-tête
+  ctx.fillStyle = orange; ctx.font = recapFont(800, 30); ctx.letterSpacing = "8px";
+  ctx.fillText("FORGE", X, 120); ctx.letterSpacing = "0px";
+  ctx.fillStyle = white; ctx.font = recapFont(700, 84, true);
+  ctx.fillText(recapFit(ctx, recapTitle(kind, key), W-2*X), X, 224);
+  ctx.fillStyle = mute; ctx.font = recapFont(500, 34);
+  const who = S.settings.name ? `${S.settings.name}, ` : "";
+  const sub = (st.n ? `${who}voici ${kind==="year"?"ton année":"ton mois"} d'entraînement.` : `${who}aucune séance sur cette période.`);
+  ctx.fillText(recapFit(ctx, who ? sub : sub.replace(/^./, c=>c.toUpperCase()), W-2*X), X, 280);
+  // chiffre principal
+  ctx.fillStyle = white; ctx.font = recapFont(800, 210);
+  ctx.fillText(String(st.n), X-6, 500);
+  const nW = ctx.measureText(String(st.n)).width;
+  ctx.font = recapFont(700, 46); ctx.fillText(st.n>=2 ? "séances" : "séance", X+nW+22, 440);
+  const diff = st.n-st.prevN;
+  if(st.prevN){ // pas de comparaison sans période précédente
+    const lbl = diff>0 ? `+${diff} vs ${kind==="year"?"l'an dernier":"le mois dernier"}` : diff<0 ? `−${-diff} vs ${kind==="year"?"l'an dernier":"le mois dernier"}` : `autant que ${kind==="year"?"l'an dernier":"le mois dernier"}`;
+    ctx.font = recapFont(700, 30); const tw = ctx.measureText(lbl).width;
+    ctx.fillStyle = diff>0 ? "rgba(52,199,89,.2)" : "rgba(255,255,255,.1)"; rrect(ctx, X+nW+22, 462, tw+36, 52, 26); ctx.fill();
+    ctx.fillStyle = diff>0 ? "#5BE08A" : mute; ctx.fillText(lbl, X+nW+40, 498);
+  }
+  // quatre tuiles
+  const tiles = [["Temps", fmtHours(st.dur)], ["Séries", fmtNum(st.nSets)], ["Tonnage", st.volume>=10000 ? fmtDec(st.volume/1000)+" t" : fmtNum(st.volume)+" kg"], ["Records", fmtNum(st.prs)]];
+  const tw2 = (W-2*X-24)/2, th = 150;
+  tiles.forEach(([l,v],i)=>{
+    const x = X + (i%2)*(tw2+24), y = 560 + Math.floor(i/2)*(th+24);
+    ctx.fillStyle = "rgba(255,255,255,.07)"; rrect(ctx, x, y, tw2, th, 30); ctx.fill();
+    ctx.fillStyle = mute; ctx.font = recapFont(600, 30); ctx.fillText(l, x+32, y+54);
+    ctx.fillStyle = white; ctx.font = recapFont(800, 58); ctx.fillText(recapFit(ctx, v, tw2-64), x+32, y+122);
+  });
+  // barres d'activité
+  const cy = 1024, ch = 96, cw = W-2*X, n = st.bars.length, gap = kind==="year" ? 16 : 6;
+  const bw = (cw-gap*(n-1))/n, max = Math.max(1, ...st.bars.map(b=>b.v));
+  st.bars.forEach((b,i)=>{
+    const x = X + i*(bw+gap), h = b.v ? Math.max(10, b.v/max*ch) : 6;
+    const g = ctx.createLinearGradient(0, cy-h, 0, cy); g.addColorStop(0,"#FFB300"); g.addColorStop(1,"#FF6A1A");
+    ctx.fillStyle = b.v ? g : "rgba(255,255,255,.12)"; rrect(ctx, x, cy-h, bw, h, Math.min(bw/2, h/2, 8)); ctx.fill();
+    if(b.l){ ctx.fillStyle = mute; ctx.font = recapFont(600, 24); ctx.textAlign = kind==="year" ? "center" : "left"; ctx.fillText(b.l, kind==="year" ? x+bw/2 : x, cy+38); ctx.textAlign = "left"; }
+  });
+  // points forts
+  const hl = [];
+  const short = id=>EXO_MAP[id].n.replace(/\s*\([^)]*\)/g, "");
+  if(st.fav) hl.push(`💪  Favori : ${short(st.fav)} · ${nb(st.favSets,"série")}`);
+  if(st.targets.length) hl.push(`🎯  ${st.targets.length>1 ? `${st.targets.length} objectifs atteints` : `Objectif atteint : ${short(st.targets[0].exoId)}, ${fmtTarget(st.targets[0].kind, st.targets[0].value)}`}`);
+  if(st.streak>=2) hl.push(`🔥  ${st.streak} semaines d'affilée`);
+  if(st.medals) hl.push(`🏅  ${nb(st.medals,"trophée")} débloqué${st.medals>=2?"s":""}`);
+  if(hl.length<3 && st.activeDays) hl.push(`📅  ${nb(st.activeDays,"jour")} d'entraînement`);
+  ctx.font = recapFont(600, 34); ctx.fillStyle = white;
+  hl.slice(0,3).forEach((t,i)=>ctx.fillText(recapFit(ctx, t, W-2*X), X, 1128+i*54));
+  // pied
+  ctx.fillStyle = "rgba(255,255,255,.4)"; ctx.font = recapFont(500, 26);
+  ctx.fillText("Forge · musculation à la maison", X, H-50);
+  return cv;
+}
+
+// ---------- feuille ----------
+function recapBodyHTML(){
+  const { kind, key } = recap;
+  const next = recapNextKey(kind, key), canNext = next<=todayISO().slice(0, kind==="year"?4:7);
+  const first = S.sessions.length ? S.sessions[0].date.slice(0, kind==="year"?4:7) : key;
+  const canPrev = recapPrevKey(kind, key)>=first;
+  return `${segHTML("recap", [["month","Mois"],["year","Année"]], kind, "recapKind")}
+    <div class="rc-nav"><button class="icon-btn" data-a="recapStep" data-d="-1" aria-label="Période précédente" ${canPrev?"":"disabled"}>${icon("chev")}</button>
+      <b>${esc(recapTitle(kind, key))}</b>
+      <button class="icon-btn" data-a="recapStep" data-d="1" aria-label="Période suivante" ${canNext?"":"disabled"}>${icon("chev")}</button></div>
+    <div class="rc-img"><img id="rcImg" alt="Bilan ${esc(recapTitle(kind, key))}"></div>`;
+}
+function paintRecap(){
+  const img = qs("#rcImg"); if(!img) return;
+  const cv = drawRecap(recap.kind, recap.key);
+  img.src = cv.toDataURL("image/png");
+  img.classList.remove("in"); void img.offsetWidth; img.classList.add("in");
+}
+function openRecap(kind, key){
+  recap = { kind: kind||"month", key: key || recapDefault(kind||"month") };
+  if(recap.kind==="month") S.meta.recapSeen = recap.key; // la suggestion de l'accueil disparaît
+  save();
+  openSheet(`<div class="sheet-hd"><span class="t">Ton bilan</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
+    <div class="sheet-body" id="rcBody">${recapBodyHTML()}</div>`,
+    { tall:true, footer:`<button class="btn" data-a="recapShare">${icon("download")} Enregistrer ou partager</button>` });
+  settleSegs(qs("#rcBody"));
+  requestAnimationFrame(paintRecap);
+}
+function refreshRecap(){ const b = qs("#rcBody"); if(b){ b.innerHTML = recapBodyHTML(); settleSegs(b); paintRecap(); } }
+// suggestion discrète sur l'accueil pendant la première semaine d'un nouveau mois
+function recapNudgeKey(){
+  const t = todayISO(); if(+t.slice(8)>7) return null;
+  const prev = recapPrevKey("month", t.slice(0,7));
+  if(S.meta.recapSeen===prev || S.sessions.filter(s=>s.date.startsWith(prev)).length<2) return null;
+  return prev;
+}
+Object.assign(ACT, {
+  openRecap(d){ openRecap(d && d.kind, d && d.key); },
+  recapKind(d){ if(recap.kind===d.v) return; recap = { kind:d.v, key:recapDefault(d.v) }; refreshRecap(); },
+  recapStep(d){ recap.key = +d.d>0 ? recapNextKey(recap.kind, recap.key) : recapPrevKey(recap.kind, recap.key); refreshRecap(); sfx("seg"); },
+  recapLater(){ S.meta.recapSeen = recapNudgeKey(); changed(); },
+  async recapShare(){
+    const cv = drawRecap(recap.kind, recap.key);
+    const name = `forge-bilan-${recap.key}.png`;
+    const blob = await new Promise(r=>cv.toBlob(r, "image/png"));
+    if(!blob) return toast("Impossible de créer l'image");
+    try{
+      const file = new File([blob], name, { type:"image/png" });
+      if(navigator.canShare && navigator.canShare({ files:[file] })){ await navigator.share({ files:[file], title:recapTitle(recap.kind, recap.key) }); return; }
+    }catch(e){ if(e && e.name==="AbortError") return; }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 5000);
+    toast("Image enregistrée");
+  },
+});
 // ================= VUE : PROGRÈS =================
 let progressTab = "overview";
 
@@ -5849,7 +6234,7 @@ function levelCardHTML(){
 
 function overviewPaneHTML(){
   if(!S.sessions.length){
-    return `${levelCardHTML()}<div class="empty-state"><span class="em">📈</span>Tes statistiques apparaîtront ici après ta première séance : régularité, tonnage, répartition musculaire, records…</div>`;
+    return `${levelCardHTML()}${targetsHTML()}<div class="empty-state"><span class="em">📈</span>Tes statistiques apparaîtront ici après ta première séance : régularité, tonnage, répartition musculaire, records…</div>`;
   }
   const vol = totalVolumeAllTime(), hours = totalDurationSec()/3600;
   const kpis = `<div class="kpi-grid">
@@ -5871,7 +6256,7 @@ function overviewPaneHTML(){
   const musc = muscleSets(30);
   const prs = recentPRs(5);
 
-  return `${levelCardHTML()}${kpis}
+  return `${levelCardHTML()}${targetsHTML()}${kpis}
     ${weekVolumeHTML()}
     <div class="chart-card stagger" style="--i:6">
       <div class="cc-h"><div class="cc-t">Régularité</div><div class="cc-s">18 dernières semaines</div></div>
@@ -5991,6 +6376,103 @@ function medalsPaneHTML(){
 Object.assign(ACT, {
   progressTab(d){ progressTab = d.v; renderViewAnimated("progress"); qs("#v-progress").scrollTop = 0; },
   openExoChart(d){ exoChartSheet(d.id); },
+});
+// ---------- objectifs personnels chiffrés ----------
+// Un objectif précis et un peu ambitieux (« 10 tractions ») motive davantage qu'un vague
+// « progresser » (Locke & Latham). On en garde peu d'actifs à la fois pour rester lisible.
+const TARGET_MAX = 6;
+function targetKindsFor(def){ return isTimed(def) ? ["sec"] : kgType(def) ? ["kg","reps"] : ["reps"]; }
+function fmtTarget(kind, v, short){ return kind==="kg" ? fmtDec(v)+" kg" : kind==="sec" ? `${Math.round(v)} s` : short ? `${Math.round(v)} reps` : nb(Math.round(v), "répétition"); }
+// meilleure valeur sur une série : répétitions, charge (au moins 1 répétition) ou secondes
+function bestOf(exoId, kind){
+  return memo("best:"+exoId+":"+kind, ()=>{
+    let b = 0;
+    S.sessions.forEach(s=>s.exos.forEach(ex=>{ if(ex.exoId!==exoId) return;
+      ex.sets.forEach(st=>{ if(!st.done || !(st.reps>0)) return; b = Math.max(b, kind==="kg" ? (st.weight||0) : st.reps); }); }));
+    return b;
+  });
+}
+function targetPct(t){ const cur = bestOf(t.exoId, t.kind); return t.doneAt ? 1 : Math.max(0, Math.min(1, (cur-t.start)/Math.max(0.001, t.value-t.start))); }
+// objectifs atteints depuis la dernière vérification (fin de séance, séance modifiée)
+function checkTargets(){
+  const hit = [];
+  S.targets.forEach(t=>{ if(!t.doneAt && EXO_MAP[t.exoId] && bestOf(t.exoId, t.kind)>=t.value){ t.doneAt = todayISO(); hit.push(t); } });
+  return hit;
+}
+function targetRowHTML(t){
+  const def = EXO_MAP[t.exoId]; if(!def) return "";
+  const cur = bestOf(t.exoId, t.kind), pct = targetPct(t);
+  return `<button class="row tap tg-row ${t.doneAt?"done":""}" style="width:100%" data-a="openTarget" data-id="${t.id}">
+    ${exoIcon(def)}
+    <div class="grow"><div class="t">${esc(def.n)}</div>
+      ${t.doneAt ? `<div class="s">🎯 <b class="tg-v">${fmtTarget(t.kind, t.value)}</b> · atteint ${esc(fmtRelative(t.doneAt))}</div>`
+        : `<div class="s">Objectif <b class="tg-v">${fmtTarget(t.kind, t.value, 1)}</b> · ${cur ? `record ${fmtTarget(t.kind, cur, 1)}` : "pas encore pratiqué"}</div><div class="xpbar tg-bar"><span style="width:${Math.round(pct*100)}%"></span></div>`}</div>
+    <span class="chev">${icon("chev")}</span></button>`;
+}
+function targetsHTML(){
+  const active = S.targets.filter(t=>!t.doneAt), done = S.targets.filter(t=>t.doneAt).slice(-3).reverse();
+  const add = active.length<TARGET_MAX ? `<button class="row tap tg-add" style="width:100%" data-a="newTarget">${sfIcon("target","red")}<div class="grow"><div class="t">${S.targets.length ? "Ajouter un objectif" : "Te fixer un objectif"}</div>${S.targets.length ? "" : `<div class="s">Ex. 10 tractions, 24 kg au développé, 90 s de gainage</div>`}</div><span class="chev">${icon("chev")}</span></button>` : "";
+  return `<h2 class="sh">Mes objectifs</h2><div class="group tg-group stagger" style="--i:1">${active.map(targetRowHTML).join("")}${add}${done.map(targetRowHTML).join("")}</div>`;
+}
+let targetDraft = null;
+function targetSheetHTML(){
+  const t = targetDraft, def = EXO_MAP[t.exoId], kinds = targetKindsFor(def);
+  const cur = bestOf(t.exoId, t.kind);
+  const step = t.kind==="kg" ? (DEFAULT_INCREMENT[kgType(def)]||2) : t.kind==="sec" ? 5 : 1;
+  return `<div class="sheet-hd te-hd"><button class="te-cancel" data-a="${t.id?"closesheet":"newTarget"}">${t.id?"Fermer":"Retour"}</button><span class="t">${t.id?"Objectif":"Nouvel objectif"}</span><span class="te-spacer"></span></div>
+    <div class="sheet-body" id="tgBody">
+      <div class="group"><div class="row">${exoIcon(def)}<div class="grow"><div class="t">${esc(def.n)}</div><div class="s">${cur ? `Ton record : ${fmtTarget(t.kind, cur)}` : "Pas encore pratiqué"}</div></div></div></div>
+      ${kinds.length>1 && !t.id ? `<div class="tg-seg">${segHTML("tgKind", [["kg","Charge"],["reps","Répétitions"]], t.kind, "tgKind")}</div>` : ""}
+      <div class="te-sec">${t.kind==="kg" ? "Charge à atteindre (sur une série)" : t.kind==="sec" ? "Durée à tenir (sur une série)" : "Répétitions en une série"}</div>
+      <div class="tg-step"><button data-a="tgStep" data-d="-${step}" aria-label="Moins">−</button><div class="tg-val" id="tgVal">${fmtTarget(t.kind, t.value)}</div><button data-a="tgStep" data-d="${step}" aria-label="Plus">+</button></div>
+      <p class="hr-note tg-hint">${t.value<=cur ? "Déjà atteint : vise un peu plus haut." : "Un objectif atteignable en quelques semaines motive le plus : ni trop facile, ni hors de portée."}</p>
+      ${t.id ? `<button class="btn ghost te-del" data-a="delTarget" data-id="${t.id}">Supprimer l'objectif</button>` : ""}
+    </div>`;
+}
+function openTargetSheet(){
+  const t = targetDraft;
+  openSheet(targetSheetHTML(), { footer: t.id ? null : `<button class="btn" id="tgSave" data-a="saveTarget" ${t.value>bestOf(t.exoId,t.kind)?"":"disabled"}>Enregistrer l'objectif</button>` });
+  settleSegs(qs("#tgBody"));
+}
+function suggestTarget(exoId, kind){
+  const def = EXO_MAP[exoId], cur = bestOf(exoId, kind);
+  if(kind==="kg"){
+    if(!cur) return 10;
+    const v = nextWeight(def, nextWeight(def, cur)) || 0;
+    return v>cur ? v : round1(cur + 2*(DEFAULT_INCREMENT[kgType(def)]||2)); // au-delà des charges possédées
+  }
+  if(kind==="sec") return Math.max(30, Math.ceil(cur*1.25/5)*5);
+  return Math.max(def.repsMin||5, Math.ceil(cur*1.3) || def.repsMax || 10);
+}
+Object.assign(ACT, {
+  newTarget(){
+    openPicker({ title:"Objectif sur quel exercice ?", exclude:new Set(S.targets.filter(t=>!t.doneAt).map(t=>t.exoId)),
+      onDone:ids=>{ const def = EXO_MAP[ids[0]]; if(!def) return; const kind = targetKindsFor(def)[0];
+        targetDraft = { exoId:def.id, kind, value:suggestTarget(def.id, kind) }; openTargetSheet(); } });
+  },
+  tgKind(d, el){
+    if(!targetDraft || targetDraft.kind===d.v) return;
+    targetDraft.kind = d.v; targetDraft.value = suggestTarget(targetDraft.exoId, d.v); openTargetSheet();
+  },
+  tgStep(d){
+    const t = targetDraft; if(!t) return;
+    t.value = Math.max(t.kind==="kg" ? 0.5 : 1, round1(t.value + parseFloat(d.d)));
+    const v = qs("#tgVal"); if(v){ v.textContent = fmtTarget(t.kind, t.value); v.classList.remove("bump"); void v.offsetWidth; v.classList.add("bump"); }
+    const cur = bestOf(t.exoId, t.kind), b = qs("#tgSave"); if(b) b.disabled = t.value<=cur;
+    const h = qs(".tg-hint"); if(h) h.textContent = t.value<=cur ? "Déjà atteint : vise un peu plus haut." : "Un objectif atteignable en quelques semaines motive le plus : ni trop facile, ni hors de portée.";
+    if(t.id){ const real = S.targets.find(x=>x.id===t.id); if(real && t.value>cur){ real.value = t.value; delete real.doneAt; changed(); } }
+    sfx("seg");
+  },
+  saveTarget(){
+    const t = targetDraft; if(!t || t.value<=bestOf(t.exoId, t.kind)) return;
+    S.targets.push({ id:uid(), exoId:t.exoId, kind:t.kind, value:t.value, start:bestOf(t.exoId, t.kind), createdAt:todayISO() });
+    targetDraft = null; closeSheet(); changed(); toast("Objectif enregistré 🎯");
+  },
+  openTarget(d){
+    const t = S.targets.find(x=>x.id===d.id); if(!t) return;
+    targetDraft = Object.assign({}, t); openTargetSheet();
+  },
+  delTarget(d){ S.targets = S.targets.filter(x=>x.id!==d.id); targetDraft = null; closeSheet(); changed(); },
 });
 VIEWS.progress = renderProgress;
 // ================= VUE : PROFIL =================
@@ -6478,7 +6960,7 @@ Object.assign(ACT, {
   bodyDel(d){ S.body = S.body.filter(e=>e.d!==d.d); changed(); refreshBody(); },
 });
 // ================= INITIALISATION =================
-const APP_VERSION = "2.2";
+const APP_VERSION = "2.3";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 function applyTheme(){

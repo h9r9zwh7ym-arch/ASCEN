@@ -125,6 +125,7 @@ function renderTodayPreview(draft){
     </div>
     ${statPillsHTML()}
     ${heroHTML(draft)}
+    ${recapNudgeKey() ? `<div class="backup-nudge rc-nudge stagger" style="--i:3">${sfIcon("sparkles","orange")}<div class="grow"><div class="t">Ton bilan de ${MOIS_LONG[parseISO(recapNudgeKey()+"-01").getMonth()]} est prêt</div><div class="s">Tes séances du mois dernier, en une image.</div></div><div class="bn-act"><button data-a="openRecap">Voir</button><button class="later" data-a="recapLater">Plus tard</button></div></div>` : ""}
     ${backupDue() ? `<div class="backup-nudge stagger" style="--i:3">${sfIcon("download","green")}<div class="grow"><div class="t">Sauvegarde conseillée</div><div class="s">${S.sessions.length} séances sont stockées uniquement sur ce téléphone.</div></div><div class="bn-act"><button data-a="backupData">Sauvegarder</button><button class="later" data-a="backupLater">Plus tard</button></div></div>` : ""}
     <div class="home-sep stagger" style="--i:3"><span>Préparer une séance</span></div>
     ${segHTML("today", [["custom","Ma séance"],["proposal","Proposée par l'app"]], mode, "todayMode")}
@@ -774,11 +775,12 @@ function finalizeSession(){
   const known = draft.tplId || S.templates.some(t=>t.exos.map(e=>e.exoId).join()===ids);
   lastDoneForSave = known || !draft.exos.length ? null : { n: draft.name && draft.source!=="engine" ? draft.name : sessionTitle(draft), exos: draft.exos.map(e=>({ exoId:e.exoId, sets:e.sets.filter(s=>s.done).length||e.sets.length })) };
   const ups = checkMedals();
+  const hits = checkTargets();
   const xpAfter = totalXP();
   save();
   scrollTodayTop();
   renderViewAnimated("today");
-  showCelebration(draft, ups, xpBefore, xpAfter);
+  showCelebration(draft, ups, xpBefore, xpAfter, hits);
 }
 
 // changer d'écran (aperçu ↔ séance en cours) repart du haut de la page

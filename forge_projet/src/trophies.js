@@ -252,7 +252,7 @@ function confettiBurst(x, y, count){
 }
 
 // ---------- fin de séance ----------
-function showCelebration(session, ups, xpBefore, xpAfter){
+function showCelebration(session, ups, xpBefore, xpAfter, hits){
   const vol = Math.round(sessionVolume(session));
   const sets = sessionSetCount(session);
   const prs = sessionPRCount(session);
@@ -265,11 +265,12 @@ function showCelebration(session, ups, xpBefore, xpAfter){
     <div class="cel-title">Séance terminée !</div>
     <div class="cel-stats">
       <div><div class="n">${fmtDuration(session.durationSec||0)}</div><div class="l">durée</div></div>
-      <div><div class="n" data-count="${sets}">${sets}</div><div class="l">séries</div></div>
+      <div><div class="n" data-count="${sets}">${sets}</div><div class="l">série${sets>=2?"s":""}</div></div>
       ${vol ? `<div><div class="n" data-count="${vol}" data-unit="kg">${fmtNum(vol)} kg</div><div class="l">soulevés</div></div>`
             : `<div><div class="n" data-count="${reps}">${reps}</div><div class="l">répétitions</div></div>`}
     </div>
     ${prs?`<div class="cel-pr">💥 ${prs} record${prs>1?"s":""} battu${prs>1?"s":""}</div>`:""}
+    ${(hits||[]).map((t,i)=>`<div class="cel-target" style="--i:${i}">🎯 Objectif atteint : ${esc(EXO_MAP[t.exoId].n)}, ${fmtTarget(t.kind, t.value)}</div>`).join("")}
     <div class="cel-xp">
       <div class="cel-xp-hd"><span>${levelUp?`Niveau ${after.level} atteint !`:`Niveau ${after.level}`}</span><span class="xpg">+${xpAfter-xpBefore} XP</span></div>
       <div class="xpbar"><span id="celXp" style="width:${Math.round((levelUp?0:before.pct)*100)}%"></span></div>
@@ -288,8 +289,8 @@ function showCelebration(session, ups, xpBefore, xpAfter){
     const bar = qs("#celXp"); if(bar) bar.style.width = Math.round(after.pct*100)+"%";
     animateCounts(qs(".cel"));
   }));
-  setTimeout(()=>confettiBurst(null, innerHeight*0.3, ups.length||levelUp ? 150 : 90), 150);
-  setTimeout(()=>sfx(ups.length||levelUp ? "medal" : "exo"), 200);
+  setTimeout(()=>confettiBurst(null, innerHeight*0.3, ups.length||levelUp||(hits&&hits.length) ? 150 : 90), 150);
+  setTimeout(()=>sfx(ups.length||levelUp||(hits&&hits.length) ? "medal" : "exo"), 200);
 }
 
 Object.assign(ACT, {

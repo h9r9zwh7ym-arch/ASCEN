@@ -77,7 +77,7 @@ function levelCardHTML(){
 
 function overviewPaneHTML(){
   if(!S.sessions.length){
-    return `${levelCardHTML()}<div class="empty-state"><span class="em">📈</span>Tes statistiques apparaîtront ici après ta première séance : régularité, tonnage, répartition musculaire, records…</div>`;
+    return `${levelCardHTML()}${targetsHTML()}<div class="empty-state"><span class="em">📈</span>Tes statistiques apparaîtront ici après ta première séance : régularité, tonnage, répartition musculaire, records…</div>`;
   }
   const vol = totalVolumeAllTime(), hours = totalDurationSec()/3600;
   const kpis = `<div class="kpi-grid">
@@ -99,7 +99,7 @@ function overviewPaneHTML(){
   const musc = muscleSets(30);
   const prs = recentPRs(5);
 
-  return `${levelCardHTML()}${kpis}
+  return `${levelCardHTML()}${targetsHTML()}${kpis}
     ${weekVolumeHTML()}
     <div class="chart-card stagger" style="--i:6">
       <div class="cc-h"><div class="cc-t">Régularité</div><div class="cc-s">18 dernières semaines</div></div>
@@ -219,5 +219,102 @@ function medalsPaneHTML(){
 Object.assign(ACT, {
   progressTab(d){ progressTab = d.v; renderViewAnimated("progress"); qs("#v-progress").scrollTop = 0; },
   openExoChart(d){ exoChartSheet(d.id); },
+});
+// ---------- objectifs personnels chiffrés ----------
+// Un objectif précis et un peu ambitieux (« 10 tractions ») motive davantage qu'un vague
+// « progresser » (Locke & Latham). On en garde peu d'actifs à la fois pour rester lisible.
+const TARGET_MAX = 6;
+function targetKindsFor(def){ return isTimed(def) ? ["sec"] : kgType(def) ? ["kg","reps"] : ["reps"]; }
+function fmtTarget(kind, v, short){ return kind==="kg" ? fmtDec(v)+" kg" : kind==="sec" ? `${Math.round(v)} s` : short ? `${Math.round(v)} reps` : nb(Math.round(v), "répétition"); }
+// meilleure valeur sur une série : répétitions, charge (au moins 1 répétition) ou secondes
+function bestOf(exoId, kind){
+  return memo("best:"+exoId+":"+kind, ()=>{
+    let b = 0;
+    S.sessions.forEach(s=>s.exos.forEach(ex=>{ if(ex.exoId!==exoId) return;
+      ex.sets.forEach(st=>{ if(!st.done || !(st.reps>0)) return; b = Math.max(b, kind==="kg" ? (st.weight||0) : st.reps); }); }));
+    return b;
+  });
+}
+function targetPct(t){ const cur = bestOf(t.exoId, t.kind); return t.doneAt ? 1 : Math.max(0, Math.min(1, (cur-t.start)/Math.max(0.001, t.value-t.start))); }
+// objectifs atteints depuis la dernière vérification (fin de séance, séance modifiée)
+function checkTargets(){
+  const hit = [];
+  S.targets.forEach(t=>{ if(!t.doneAt && EXO_MAP[t.exoId] && bestOf(t.exoId, t.kind)>=t.value){ t.doneAt = todayISO(); hit.push(t); } });
+  return hit;
+}
+function targetRowHTML(t){
+  const def = EXO_MAP[t.exoId]; if(!def) return "";
+  const cur = bestOf(t.exoId, t.kind), pct = targetPct(t);
+  return `<button class="row tap tg-row ${t.doneAt?"done":""}" style="width:100%" data-a="openTarget" data-id="${t.id}">
+    ${exoIcon(def)}
+    <div class="grow"><div class="t">${esc(def.n)}</div>
+      ${t.doneAt ? `<div class="s">🎯 <b class="tg-v">${fmtTarget(t.kind, t.value)}</b> · atteint ${esc(fmtRelative(t.doneAt))}</div>`
+        : `<div class="s">Objectif <b class="tg-v">${fmtTarget(t.kind, t.value, 1)}</b> · ${cur ? `record ${fmtTarget(t.kind, cur, 1)}` : "pas encore pratiqué"}</div><div class="xpbar tg-bar"><span style="width:${Math.round(pct*100)}%"></span></div>`}</div>
+    <span class="chev">${icon("chev")}</span></button>`;
+}
+function targetsHTML(){
+  const active = S.targets.filter(t=>!t.doneAt), done = S.targets.filter(t=>t.doneAt).slice(-3).reverse();
+  const add = active.length<TARGET_MAX ? `<button class="row tap tg-add" style="width:100%" data-a="newTarget">${sfIcon("target","red")}<div class="grow"><div class="t">${S.targets.length ? "Ajouter un objectif" : "Te fixer un objectif"}</div>${S.targets.length ? "" : `<div class="s">Ex. 10 tractions, 24 kg au développé, 90 s de gainage</div>`}</div><span class="chev">${icon("chev")}</span></button>` : "";
+  return `<h2 class="sh">Mes objectifs</h2><div class="group tg-group stagger" style="--i:1">${active.map(targetRowHTML).join("")}${add}${done.map(targetRowHTML).join("")}</div>`;
+}
+let targetDraft = null;
+function targetSheetHTML(){
+  const t = targetDraft, def = EXO_MAP[t.exoId], kinds = targetKindsFor(def);
+  const cur = bestOf(t.exoId, t.kind);
+  const step = t.kind==="kg" ? (DEFAULT_INCREMENT[kgType(def)]||2) : t.kind==="sec" ? 5 : 1;
+  return `<div class="sheet-hd te-hd"><button class="te-cancel" data-a="${t.id?"closesheet":"newTarget"}">${t.id?"Fermer":"Retour"}</button><span class="t">${t.id?"Objectif":"Nouvel objectif"}</span><span class="te-spacer"></span></div>
+    <div class="sheet-body" id="tgBody">
+      <div class="group"><div class="row">${exoIcon(def)}<div class="grow"><div class="t">${esc(def.n)}</div><div class="s">${cur ? `Ton record : ${fmtTarget(t.kind, cur)}` : "Pas encore pratiqué"}</div></div></div></div>
+      ${kinds.length>1 && !t.id ? `<div class="tg-seg">${segHTML("tgKind", [["kg","Charge"],["reps","Répétitions"]], t.kind, "tgKind")}</div>` : ""}
+      <div class="te-sec">${t.kind==="kg" ? "Charge à atteindre (sur une série)" : t.kind==="sec" ? "Durée à tenir (sur une série)" : "Répétitions en une série"}</div>
+      <div class="tg-step"><button data-a="tgStep" data-d="-${step}" aria-label="Moins">−</button><div class="tg-val" id="tgVal">${fmtTarget(t.kind, t.value)}</div><button data-a="tgStep" data-d="${step}" aria-label="Plus">+</button></div>
+      <p class="hr-note tg-hint">${t.value<=cur ? "Déjà atteint : vise un peu plus haut." : "Un objectif atteignable en quelques semaines motive le plus : ni trop facile, ni hors de portée."}</p>
+      ${t.id ? `<button class="btn ghost te-del" data-a="delTarget" data-id="${t.id}">Supprimer l'objectif</button>` : ""}
+    </div>`;
+}
+function openTargetSheet(){
+  const t = targetDraft;
+  openSheet(targetSheetHTML(), { footer: t.id ? null : `<button class="btn" id="tgSave" data-a="saveTarget" ${t.value>bestOf(t.exoId,t.kind)?"":"disabled"}>Enregistrer l'objectif</button>` });
+  settleSegs(qs("#tgBody"));
+}
+function suggestTarget(exoId, kind){
+  const def = EXO_MAP[exoId], cur = bestOf(exoId, kind);
+  if(kind==="kg"){
+    if(!cur) return 10;
+    const v = nextWeight(def, nextWeight(def, cur)) || 0;
+    return v>cur ? v : round1(cur + 2*(DEFAULT_INCREMENT[kgType(def)]||2)); // au-delà des charges possédées
+  }
+  if(kind==="sec") return Math.max(30, Math.ceil(cur*1.25/5)*5);
+  return Math.max(def.repsMin||5, Math.ceil(cur*1.3) || def.repsMax || 10);
+}
+Object.assign(ACT, {
+  newTarget(){
+    openPicker({ title:"Objectif sur quel exercice ?", exclude:new Set(S.targets.filter(t=>!t.doneAt).map(t=>t.exoId)),
+      onDone:ids=>{ const def = EXO_MAP[ids[0]]; if(!def) return; const kind = targetKindsFor(def)[0];
+        targetDraft = { exoId:def.id, kind, value:suggestTarget(def.id, kind) }; openTargetSheet(); } });
+  },
+  tgKind(d, el){
+    if(!targetDraft || targetDraft.kind===d.v) return;
+    targetDraft.kind = d.v; targetDraft.value = suggestTarget(targetDraft.exoId, d.v); openTargetSheet();
+  },
+  tgStep(d){
+    const t = targetDraft; if(!t) return;
+    t.value = Math.max(t.kind==="kg" ? 0.5 : 1, round1(t.value + parseFloat(d.d)));
+    const v = qs("#tgVal"); if(v){ v.textContent = fmtTarget(t.kind, t.value); v.classList.remove("bump"); void v.offsetWidth; v.classList.add("bump"); }
+    const cur = bestOf(t.exoId, t.kind), b = qs("#tgSave"); if(b) b.disabled = t.value<=cur;
+    const h = qs(".tg-hint"); if(h) h.textContent = t.value<=cur ? "Déjà atteint : vise un peu plus haut." : "Un objectif atteignable en quelques semaines motive le plus : ni trop facile, ni hors de portée.";
+    if(t.id){ const real = S.targets.find(x=>x.id===t.id); if(real && t.value>cur){ real.value = t.value; delete real.doneAt; changed(); } }
+    sfx("seg");
+  },
+  saveTarget(){
+    const t = targetDraft; if(!t || t.value<=bestOf(t.exoId, t.kind)) return;
+    S.targets.push({ id:uid(), exoId:t.exoId, kind:t.kind, value:t.value, start:bestOf(t.exoId, t.kind), createdAt:todayISO() });
+    targetDraft = null; closeSheet(); changed(); toast("Objectif enregistré 🎯");
+  },
+  openTarget(d){
+    const t = S.targets.find(x=>x.id===d.id); if(!t) return;
+    targetDraft = Object.assign({}, t); openTargetSheet();
+  },
+  delTarget(d){ S.targets = S.targets.filter(x=>x.id!==d.id); targetDraft = null; closeSheet(); changed(); },
 });
 VIEWS.progress = renderProgress;

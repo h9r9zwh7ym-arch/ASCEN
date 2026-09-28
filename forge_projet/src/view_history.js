@@ -89,6 +89,7 @@ function renderHistory(){
       ${segHTML("histMetric", HIST_METRICS, histMetric, "histMetric")}
       <div id="histChart">${histChartHTML()}</div>
     </div>
+    <div class="group rc-entry stagger" style="--i:1"><button class="row tap" style="width:100%" data-a="openRecap">${sfIcon("sparkles","orange")}<div class="grow"><div class="t">Ton bilan en image</div><div class="s">Du mois ou de l'année, à garder ou partager</div></div><span class="chev">${icon("chev")}</span></button></div>
     ${html}
     ${more>0?`<div class="btnrow"><button class="btn secondary" data-a="histMore">Afficher ${Math.min(more,25)} séance${Math.min(more,25)>1?"s":""} de plus <span class="muted-n">· ${more} restante${more>1?"s":""}</span></button></div>`:""}
   </div>`;
@@ -129,7 +130,7 @@ function sessionDetailHTML(s){
     <div class="group" style="margin-top:14px">${rows||'<div style="padding:16px" class="s">Aucune série complétée.</div>'}</div>
     <div class="te-sec">Note</div>
     <textarea class="note-in" rows="3" maxlength="280" data-c="saveNote" data-id="${esc(s.id)}" placeholder="Sensations, douleur, contexte… (facultatif)" aria-label="Note sur la séance">${esc(s.note||"")}</textarea>
-    <div class="btnrow"><button class="btn secondary" data-a="redoSession" data-id="${s.id}">${icon("repeat")} Refaire cette séance</button></div>
+    <div class="btnrow two"><button class="btn secondary" data-a="histEdit" data-id="${s.id}">${icon("edit")} Modifier</button><button class="btn secondary" data-a="redoSession" data-id="${s.id}">${icon("repeat")} Refaire</button></div>
     <div class="btnrow"><button class="btn ghost" style="color:var(--red)" data-a="deleteSession" data-id="${s.id}">Supprimer de l'historique</button></div>
     </div>`;
 }
@@ -161,3 +162,115 @@ Object.assign(ACT, {
   },
 });
 VIEWS.history = renderHistory;
+
+// ---------- modifier une séance enregistrée ----------
+// On travaille sur une copie : rien n'est touché tant qu'on n'a pas appuyé sur « Enregistrer ».
+let histEdit = null;
+function heTime(s){ return s.startedAt ? new Date(s.startedAt).toTimeString().slice(0,5) : ""; }
+function heSetRow(def, i, j, st){
+  const lt = loadableTypeOf(def), timed = isTimed(def);
+  const load = lt==="bands"
+    ? `<select class="he-sel" data-c="heVal" data-i="${i}" data-j="${j}" data-k="weight" aria-label="Résistance de l'élastique">${[1,2,3,4,5].map(v=>`<option value="${v}" ${Math.round(st.weight||0)===v?"selected":""}>${bandLabel(v)}</option>`).join("")}</select>`
+    : lt ? `<span class="he-x">×</span><input class="he-in" type="text" inputmode="decimal" maxlength="5" value="${st.weight!=null?fmtDec(st.weight):""}" placeholder="0" data-c="heVal" data-i="${i}" data-j="${j}" data-k="weight" aria-label="Charge en kg"><span class="he-u">kg</span>` : "";
+  return `<div class="he-set"><span class="he-n">${j+1}</span>
+    <input class="he-in" type="text" inputmode="numeric" maxlength="4" value="${st.reps||""}" placeholder="0" data-c="heVal" data-i="${i}" data-j="${j}" data-k="reps" aria-label="${timed?"Secondes":"Répétitions"}"><span class="he-u">${timed?"s":"reps"}</span>
+    ${load}<span class="grow"></span>
+    <button class="icon-btn he-del" aria-label="Retirer la série ${j+1}" data-a="heDelSet" data-i="${i}" data-j="${j}">${icon("close")}</button></div>`;
+}
+function histEditBodyHTML(){
+  const e = histEdit;
+  const exos = e.exos.map((ex,i)=>{
+    const def = EXO_MAP[ex.exoId]; if(!def) return "";
+    return `<div class="group he-exo">
+      <div class="row">${exoIcon(def)}<div class="grow"><div class="t">${esc(def.n)}</div></div>
+        <button class="icon-btn" aria-label="Retirer ${esc(def.n)}" data-a="heDelExo" data-i="${i}">${icon("trash")}</button></div>
+      ${ex.sets.map((st,j)=>heSetRow(def, i, j, st)).join("")}
+      <button class="he-add" data-a="heAddSet" data-i="${i}">${icon("plus")} Ajouter une série</button>
+    </div>`;
+  }).join("");
+  return `<div class="te-sec">Date et durée</div>
+    <div class="group"><div class="row he-meta">
+      <input type="date" class="he-date" max="${todayISO()}" value="${e.date}" data-c="heMeta" data-k="date" aria-label="Date">
+      <input class="he-in" type="text" inputmode="numeric" maxlength="3" value="${e.min||""}" placeholder="–" data-c="heMeta" data-k="min" aria-label="Durée en minutes"><span class="he-u">min</span>
+    </div></div>
+    <div class="te-sec">Exercices</div>
+    ${exos || `<div class="te-empty">Aucun exercice.</div>`}
+    <div class="te-actions"><button class="btn secondary sm" data-a="heAddExo">${icon("plus")} Ajouter un exercice</button></div>`;
+}
+function renderHistEdit(){
+  openSheet(`<div class="sheet-hd te-hd">
+      <button class="te-cancel" data-a="heCancel">Annuler</button>
+      <span class="t">Modifier la séance</span>
+      <span class="te-spacer"></span>
+    </div>
+    <div class="sheet-body" id="heBody">${histEditBodyHTML()}</div>`,
+    { tall:true, footer:`<button class="btn" data-a="heSave">Enregistrer les modifications</button>` });
+}
+function refreshHistEdit(){
+  const b = qs("#heBody"); if(!b) return renderHistEdit();
+  const st = b.scrollTop; b.innerHTML = histEditBodyHTML(); b.scrollTop = st;
+}
+function heNum(v){ return parseFloat(String(v).replace(",", ".")); }
+Object.assign(ACT, {
+  histEdit(d){
+    const s = S.sessions.find(x=>x.id===d.id); if(!s) return;
+    histEdit = { id:s.id, date:s.date, min: s.durationSec ? Math.round(s.durationSec/60) : 0,
+      exos: clone(s.exos).map(ex=>({ exoId:ex.exoId, targetReps:ex.targetReps, sets:ex.sets.filter(st=>st.done) })) };
+    renderHistEdit();
+  },
+  heCancel(){ const s = histEdit && S.sessions.find(x=>x.id===histEdit.id); histEdit = null; if(s) openSheet(sessionDetailHTML(s)); else closeSheet(); },
+  heVal(d, el){
+    const st = histEdit && histEdit.exos[+d.i] && histEdit.exos[+d.i].sets[+d.j]; if(!st) return;
+    const v = heNum(el.value);
+    if(d.k==="reps") st.reps = v>0 ? Math.min(9999, Math.round(v)) : 0;
+    else if(isNaN(v) || v<=0) delete st.weight; else st.weight = Math.min(500, round1(v));
+  },
+  heMeta(d, el){
+    if(!histEdit) return;
+    if(d.k==="date"){ if(/^\d{4}-\d{2}-\d{2}$/.test(el.value) && el.value<=todayISO()) histEdit.date = el.value; else el.value = histEdit.date; }
+    else { const v = heNum(el.value); histEdit.min = v>0 ? Math.min(600, Math.round(v)) : 0; }
+  },
+  heAddSet(d){
+    const ex = histEdit.exos[+d.i]; if(!ex) return;
+    const last = ex.sets[ex.sets.length-1], def = EXO_MAP[ex.exoId];
+    ex.sets.push(last ? Object.assign({}, last, { pr:undefined, effort:undefined }) : { reps: def ? def.repsMin : 10, done:true });
+    refreshHistEdit();
+  },
+  heDelSet(d){ const ex = histEdit.exos[+d.i]; if(!ex) return; ex.sets.splice(+d.j,1); if(!ex.sets.length) histEdit.exos.splice(+d.i,1); refreshHistEdit(); },
+  heDelExo(d){ histEdit.exos.splice(+d.i,1); refreshHistEdit(); },
+  heAddExo(){
+    openPicker({ title:"Ajouter un exercice", multi:true, exclude:new Set(histEdit.exos.map(x=>x.exoId)),
+      onCancel:()=>renderHistEdit(),
+      onDone:ids=>{
+        ids.forEach(id=>{ const def = EXO_MAP[id]; if(!def) return;
+          const lt = loadableTypeOf(def), sug = suggestForExo(def, def.sets);
+          const w = lt ? (lt==="bands" ? ((S.equipment.weights.bands||[])[0]||2) : sug.weight) : null;
+          histEdit.exos.push({ exoId:id, sets:Array.from({ length:def.sets }, ()=>{ const o = { reps: sug.reps || def.repsMin, done:true }; if(w) o.weight = w; return o; }) });
+        });
+        renderHistEdit();
+      } });
+  },
+  heSave(){
+    // un champ encore en cours de saisie n'a pas forcément déclenché « change »
+    const a = document.activeElement; if(a && a.dataset && a.dataset.c && ACT[a.dataset.c]) ACT[a.dataset.c](a.dataset, a);
+    const e = histEdit, s = e && S.sessions.find(x=>x.id===e.id); if(!s) return closeSheet();
+    const exos = e.exos.map(ex=>Object.assign({}, ex, { sets: ex.sets.filter(st=>st.reps>0).map(st=>{ const o = Object.assign({}, st, { done:true }); if(o.pr===undefined) delete o.pr; if(o.effort===undefined) delete o.effort; return o; }) })).filter(ex=>ex.sets.length && EXO_MAP[ex.exoId]);
+    if(!exos.length){ toast("Garde au moins une série, ou supprime la séance"); return; }
+    if(e.date!==s.date && s.startedAt){
+      // même heure, nouveau jour
+      const t = new Date(s.startedAt), n = parseISO(e.date); n.setHours(t.getHours(), t.getMinutes(), 0, 0);
+      s.startedAt = n.toISOString();
+    }
+    s.date = e.date; s.exos = exos;
+    if(e.min){ s.durationSec = e.min*60; if(s.startedAt) s.completedAt = new Date(Date.parse(s.startedAt)+s.durationSec*1000).toISOString(); }
+    else delete s.durationSec;
+    S.sessions.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
+    recomputePRFlags();
+    checkMedals(true); // un palier atteint grâce à la correction est noté sans fête
+    const hits = checkTargets();
+    histEdit = null;
+    changed();
+    openSheet(sessionDetailHTML(s));
+    sfx("seg"); toast(hits.length ? `Séance modifiée · 🎯 objectif atteint` : "Séance modifiée");
+  },
+});
