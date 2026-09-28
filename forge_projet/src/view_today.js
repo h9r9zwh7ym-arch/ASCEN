@@ -378,10 +378,34 @@ function renderPickerSheet(){
       <div class="chip-scroll" id="pickerChips" style="margin-top:8px">${chips}</div>
     </div>
     <div class="sheet-body" id="pickerList">${pickerListHTML()}</div>`,
-    { tall:true, footer: picker.multi ? `<button class="btn" id="pickerDone" data-a="pickerDone" disabled>Ajouter</button>` : null });
+    { tall:true, footer: picker.multi ? `<button class="btn" id="pickerDone" data-a="pickerDone" disabled>Ajouter</button>` : null,
+      restore:renderPickerSheet, onBack:picker.onCancel || null });
   const inp = qs("#pickerSearch");
   if(inp){ inp.value = picker.q; inp.addEventListener("input", ()=>{ picker.q = inp.value; qs("#pickerList").innerHTML = pickerListHTML(); }); }
+  // retour depuis une fiche : on retrouve la liste là où on l'avait laissée
+  const list = qs("#pickerList"); if(list && picker.scroll) list.scrollTop = picker.scroll;
   refreshPickerFooter();
+}
+renderPickerSheet.isPicker = true;
+// d'où la fiche d'un exercice a été ouverte : c'est là que « Ajouter » doit agir
+function infoContext(){
+  if(picker && sheetStack.some(f=>f && f.isPicker)) return "picker";
+  if(S.draft && S.draft.startedAt) return "live";
+  if(S.settings.todayTab==="proposal" && S.draft && currentTab==="today") return "proposal";
+  return "custom";
+}
+function infoAddButton(id, small){
+  const ctx = infoContext(), cls = small ? "chip" : "btn";
+  if(ctx==="picker"){
+    if(picker.exclude && picker.exclude.has(id)) return small ? "" : `<button class="btn tertiary" disabled>Déjà dans la séance</button>`;
+    if(!picker.multi) return `<button class="${cls}" data-a="infoAdd" data-id="${id}">${small?"Choisir":"Choisir cet exercice"}</button>`;
+    const on = picker.selected.includes(id);
+    return `<button class="${cls} ${on&&!small?"tertiary":""}" data-a="infoAdd" data-id="${id}">${on?(small?"Retirer":"Retirer de la sélection"):(small?"+ Ajouter":"Ajouter à la sélection")}</button>`;
+  }
+  const list = ctx==="custom" ? S.custom.exos : S.draft.exos;
+  if(list.some(x=>x.exoId===id)) return small ? "" : `<button class="btn tertiary" disabled>${ctx==="custom"?"Déjà dans Ma séance":"Déjà dans la séance"}</button>`;
+  const lbl = ctx==="live" ? "Ajouter à la séance en cours" : ctx==="proposal" ? "Ajouter à la séance proposée" : "Ajouter à Ma séance";
+  return `<button class="${cls}" data-a="infoAdd" data-id="${id}">${small?"+ Ajouter":lbl}</button>`;
 }
 // dose conseillée selon l'objectif : « 3 × 8–12 » ou « 3 × 20–45 s »
 function exoDose(e){ const [a,b] = repRangeForGoal(e); return `${e.sets} × ${a}–${b}${isTimed(e) ? " s" : " reps"}`; }
@@ -391,7 +415,7 @@ function pickerListHTML(){
   const pool = availableExos().filter(e=>!picker.exclude.has(e.id)
     && (!picker.muscle || e.muscles.includes(picker.muscle))
     && (!picker.cat || exoCategory(e)===picker.cat)
-    && (!q || normName(e.n).includes(q) || e.muscles.some(m=>normName(MUSCLE_MAP[m].n).includes(q))));
+    && (!q || normName(e.n+" "+(EXO_ALIAS[e.id]||"")).includes(q) || e.muscles.some(m=>normName(MUSCLE_MAP[m].n).includes(q))));
   if(!pool.length) return `<div class="empty-state"><span class="em">${sfIcon("search","gray","lg")}</span>Aucun exercice ne correspond.</div>`;
   return EXO_CATS.map(c=>{
     const list = pool.filter(e=>exoCategory(e)===c.id).sort((a,b)=>muscleOrder[a.muscles[0]]-muscleOrder[b.muscles[0]] || a.n.localeCompare(b.n,"fr"));
@@ -966,8 +990,8 @@ Object.assign(ACT, {
     closeSheet(); save(); changed(); toast("Séance dupliquée");
   },
   planNew(d){ openTplEditor(null, { days:[+d.d] }); },
-  pickerInfo(d){ ACT.showExoInfo({ id:d.id, back:"1" }); },
-  backToPicker(){ if(picker) renderPickerSheet(); },
+  pickerInfo(d){ const l = qs("#pickerList"); if(picker && l) picker.scroll = l.scrollTop; ACT.showExoInfo({ id:d.id }); },
+  backToPicker(){ if(!sheetBack() && picker) renderPickerSheet(); },
   swapFromInfo(d){
     const idx = +d.idx;
     S.draft.exos[idx] = sessionEntryFor(EXO_MAP[d.id]);
@@ -1241,10 +1265,17 @@ Object.assign(ACT, {
   },
 
   showExoInfo(d){
-    const e = EXO_MAP[d.id], region = regionOf(e);
+    const e = EXO_MAP[d.id];
+    if(!e) return;
+    const region = regionOf(e);
+    const opener = ()=>ACT.showExoInfo({ id:e.id });
+    // le contexte se lit après l'empilement : on ouvre d'abord, puis on dessine le contenu
+    openSheet(`<div class="sheet-hd"><span class="t">Fiche exercice</span></div><div class="sheet-body"></div>`, { child:true, restore:opener });
+    const ctx = infoContext(), canBack = sheetCanGoBack();
+    const hd = canBack ? `<button class="te-cancel" data-a="sheetBack">${icon("chev")}<span>Retour</span></button><span class="t">Fiche exercice</span><span class="te-spacer"></span>`
+      : `<span class="t">Fiche exercice</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button>`;
     const pr = exoPRs(e.id), last = lastPerformance(e.id);
     const live = S.draft && S.draft.startedAt;
-    const inCustom = S.custom.exos.some(x=>x.exoId===e.id);
     const cat = EXO_CATS.find(c=>c.id===exoCategory(e));
     const stats = pr.count ? `<div class="stat-strip" style="margin-top:14px">
         <div class="stat-box"><div class="num">${pr.count}</div><div class="lbl">séance${pr.count>1?"s":""}</div></div>
@@ -1255,10 +1286,10 @@ Object.assign(ACT, {
     const liveIdx = live ? S.draft.exos.findIndex(x=>x.exoId===e.id) : -1;
     const simHTML = similar.length ? `<h2 class="sh">Même muscle principal</h2><div class="group">${similar.map(x=>`<div class="row">
         <button class="row-main" data-a="showExoInfo" data-id="${x.id}">${exoIcon(x)}<div class="grow"><div class="t">${esc(x.n)}</div><div class="s">${catLabel(x)}</div></div><span class="info-dot">i</span></button>
-        ${liveIdx>=0 ? `<button class="chip" data-a="swapFromInfo" data-idx="${liveIdx}" data-id="${x.id}">Remplacer</button>` : !live && !S.custom.exos.some(c=>c.exoId===x.id) ? `<button class="chip" data-a="addToCustom" data-id="${x.id}">+ Ajouter</button>` : ""}
+        ${liveIdx>=0 && ctx!=="picker" ? `<button class="chip" data-a="swapFromInfo" data-idx="${liveIdx}" data-id="${x.id}">Remplacer</button>` : infoAddButton(x.id, true)}
       </div>`).join("")}</div>` : "";
-    const back = picker && d.back ? `<button class="btn secondary" data-a="backToPicker">${icon("chev")} Retour à la liste</button>` : "";
-    openSheet(`<div class="sheet-hd"><span class="t">Fiche exercice</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
+    const sheetEl = qs("#overlay .sheet");
+    sheetEl.innerHTML = `<div class="sheet-grab"></div><div class="sheet-hd">${hd}</div>
       <div class="sheet-body">
       <div class="exo-hero r-${region}">
         <div class="exo-stage r-${region}">${exoAnimSVG(e)}</div>
@@ -1277,11 +1308,34 @@ Object.assign(ACT, {
       <div class="safety-box"><div class="lbl">Sécurité</div><div class="txt">${esc(e.safety)}</div></div>
       ${simHTML}
       <div class="btnrow col">
-        ${back}
+        ${infoAddButton(e.id)}
         ${pr.count ? `<button class="btn secondary" data-a="openExoChart" data-id="${e.id}">Voir ma progression</button>` : ""}
-        ${!live ? `<button class="btn ${inCustom?"secondary":""}" data-a="addToCustom" data-id="${e.id}" ${inCustom?"disabled":""}>${inCustom?"Déjà dans Ma séance":"Ajouter à Ma séance"}</button>` : ""}
       </div>
-      </div>`);
+      </div>`;
+  },
+  // « Ajouter » depuis une fiche : agit sur la séance d'où l'on vient (sélection de la liste,
+  // séance en cours, séance proposée ou Ma séance), puis ramène à cette séance
+  infoAdd(d){
+    const id = d.id, def = EXO_MAP[id]; if(!def) return;
+    const ctx = infoContext();
+    if(ctx==="picker"){
+      if(!picker.multi){ picker.onDone([id]); return; }
+      const i = picker.selected.indexOf(id);
+      if(i>=0) picker.selected.splice(i,1); else picker.selected.push(id);
+      // retour à la liste, sélection visible et bouton « Ajouter n » à jour
+      while(sheetStack.length && !sheetStack[sheetStack.length-1].isPicker) sheetStack.pop();
+      sheetBack();
+      toast(i>=0 ? "Retiré de la sélection" : "Ajouté à la sélection", "check");
+      return;
+    }
+    if(ctx==="live" || ctx==="proposal"){
+      if(S.draft.exos.some(x=>x.exoId===id)) return;
+      S.draft.exos.push(sessionEntryFor(def));
+      save(); closeSheet(); changed();
+      toast(ctx==="live" ? "Ajouté à la séance en cours" : "Ajouté à la séance proposée", "check");
+      return;
+    }
+    ACT.addToCustom({ id });
   },
   addToCustom(d){
     if(S.custom.exos.some(x=>x.exoId===d.id)) return;

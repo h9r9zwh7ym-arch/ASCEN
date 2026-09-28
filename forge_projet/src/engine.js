@@ -91,6 +91,7 @@ const HARDER = {
   squat_pdc:["squat_bulgare_pdc","squat_saute"], fentes_avant:["fentes_sautees"], fentes_arriere:["squat_bulgare_pdc","fentes_sautees"],
   pont_fessier:["pont_fessier_uni"], tractions_negatives:["tractions"], releve_genoux_suspendu:["releve_jambes_suspendu"],
   mollets_pdc:["mollets_uni_pdc"], crunch:["releve_jambes"], planche:["planche_commando"],
+  dips_chaise:["dips_banc","dips_barres"], extension_triceps_sol:["pompes_diamant"], montees_chaise:["squat_bulgare_pdc"], pont_fessier_uni:["nordic_curl"],
 };
 function harderVariant(exo){
   const list = HARDER[exo.id]; if(!list) return null;

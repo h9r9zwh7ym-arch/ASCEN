@@ -305,17 +305,45 @@ function showOverlay(inner, kind){
   ov.dataset.kind = kind;
   requestAnimationFrame(()=>requestAnimationFrame(()=>{ if(gen===overlayGen) ov.classList.add("show"); }));
 }
+// ---------- pile de feuilles ----------
+// Une feuille ouverte DEPUIS une autre (fiche d'un exercice depuis la liste, liste depuis
+// l'éditeur de séance) garde le chemin du retour : glisser vers le bas, toucher le fond ou ✕
+// reviennent à la feuille précédente au lieu de tout fermer (et de perdre l'édition en cours).
+// opts.restore : comment redessiner CETTE feuille si on y revient ; opts.child : empiler la
+// feuille courante ; opts.onBack : quoi faire au lieu de fermer (ex. liste → éditeur).
+let sheetStack = [], sheetRestore = null, sheetOnBack = null, sheetRestoring = false;
+function sheetShown(){ const ov = qs("#overlay"); return ov.classList.contains("show") && ov.dataset.kind==="sheet"; }
+function sheetCanGoBack(){ return sheetStack.length>0 || !!sheetOnBack; }
+function sheetBack(){
+  if(sheetStack.length){
+    const r = sheetStack.pop();
+    sheetRestoring = true;
+    try{ r(); } catch(e){ sheetStack = []; closeSheet(); } finally{ sheetRestoring = false; }
+    return true;
+  }
+  if(sheetOnBack){ const f = sheetOnBack; sheetOnBack = null; f(); return true; }
+  return false;
+}
 function openSheet(html, opts){
   opts = opts||{};
+  if(!sheetRestoring){
+    if(!sheetShown()) sheetStack = [];
+    else if(opts.child && sheetRestore) sheetStack.push(sheetRestore);
+  }
+  sheetRestore = opts.restore || null;
+  sheetOnBack = opts.onBack || null;
   showOverlay(`<div class="sheet ${opts.tall?"tall":""}" role="dialog">${opts.noGrab?"":'<div class="sheet-grab"></div>'}${html}${opts.footer?`<div class="sheet-ft">${opts.footer}</div>`:""}</div>`, "sheet");
 }
 function openModal(html){
+  // une confirmation remplace la feuille : « Annuler » ferme tout, comme avant
+  sheetStack = []; sheetRestore = null; sheetOnBack = null;
   showOverlay(`<div class="center-modal" role="dialog">${html}</div>`, "modal");
 }
 function closeSheet(){
   const ov = qs("#overlay");
   if(!ov.classList.contains("open")) return;
   ov.classList.remove("show");
+  sheetStack = []; sheetRestore = null; sheetOnBack = null;
   const gen = overlayGen;
   setTimeout(()=>{
     if(gen!==overlayGen) return;
@@ -330,7 +358,7 @@ function sheetDismissGuard(){
   if(typeof tplEdit!=="undefined" && tplEdit && tplEdit.dirty && qs("#tplEdBody")){ ACT.tplEdCancel(); return true; }
   return false;
 }
-function dismissSheet(){ if(!sheetDismissGuard()) closeSheet(); }
+function dismissSheet(){ if(sheetBack()) return; if(!sheetDismissGuard()) closeSheet(); }
 (function(){
   let drag = null;
   function scrollerOf(el, sheet){
@@ -370,7 +398,13 @@ function dismissSheet(){ if(!sheetDismissGuard()) closeSheet(); }
     const sc = qs("#overlay .scrim");
     const far = g.dy > Math.min(140, g.sheet.offsetHeight*0.28) || (g.v>0.45 && g.dy>30);
     g.sheet.style.transition = "transform .26s cubic-bezier(.32,.72,0,1)";
-    if(far && !sheetDismissGuard()){
+    if(far && sheetCanGoBack()){
+      // feuille empilée : elle s'en va, la précédente revient à sa place
+      g.sheet.style.transform = "translateY(100%)";
+      if(sc) sc.style.opacity = "";
+      suppressSheetClick = Date.now()+350;
+      setTimeout(()=>{ if(g.sheet.isConnected) sheetBack(); }, 200);
+    } else if(far && !sheetDismissGuard()){
       g.sheet.style.transform = "translateY(100%)";
       if(sc) sc.style.opacity = "";
       suppressSheetClick = Date.now()+350;
@@ -413,7 +447,8 @@ function toast(msg, ic){
 // ---------- délégation d'actions ----------
 const ACT = {
   tab(d){ switchTab(d.id); },
-  closesheet(){ closeSheet(); },
+  closesheet(){ if(!sheetBack()) closeSheet(); },
+  sheetBack(){ if(!sheetBack()) closeSheet(); },
   dismisssheet(){ if(Date.now()>suppressSheetClick) dismissSheet(); },
   confirmYes(){ const fn = qs("#overlay")._onYes; closeSheet(); if(fn) fn(); },
   numOk(){

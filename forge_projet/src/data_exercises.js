@@ -437,6 +437,25 @@ const EXO_RAW = [
 ["corde_a_sauter","Corde à sauter",["cardio","mollets"],["jump_rope"],"core",false,{sets:3,repsMin:30,repsMax:60,restSec:45},
   ["Coudes près du corps, la rotation vient des poignets.","Petits sauts sur l'avant des pieds.","Garde un rythme régulier pendant la durée (en secondes)."],
   "Sur un sol souple de préférence ; réduis la durée si les mollets ou les tibias sont sensibles."],
+// v3.0 : exercices « maison » sans matériel (une chaise, une table ou un rebord suffisent)
+["dips_chaise","Dips sur chaise (pompes inversées)",["triceps","epaules","pect"],["bodyweight"],"push",false,{sets:3,repsMin:8,repsMax:15,restSec:60},
+  ["Mains sur le rebord d'une chaise stable (ou d'un canapé, d'une marche), doigts vers l'avant, jambes devant toi.","Descends en pliant les coudes vers l'arrière jusqu'à ~90°, dos proche du rebord.","Remonte en poussant sur les paumes jusqu'à tendre les bras, sans verrouiller brutalement."],
+  "Chaise calée contre un mur. Ne descends pas plus bas que 90° au coude si l'avant de l'épaule tire ; genoux pliés = plus facile, jambes tendues = plus dur."],
+["extension_triceps_sol","Extension triceps au sol (sphinx)",["triceps"],["bodyweight"],"push",false,{sets:3,repsMin:8,repsMax:12,restSec:60},
+  ["En appui sur les avant-bras, comme en planche, mains sous les épaules.","Pousse dans les paumes pour décoller les coudes du sol jusqu'à tendre les bras.","Redescends lentement sur les avant-bras en gardant le corps gainé."],
+  "Commence sur les genoux si le mouvement est trop dur ; garde les coudes serrés et le bassin aligné."],
+["pompes_hindoues","Pompes hindoues",["pect","epaules","triceps"],["bodyweight"],"push",false,{sets:3,repsMin:6,repsMax:12,restSec:75},
+  ["Départ en V inversé, bassin haut, bras tendus.","Plonge vers l'avant en frôlant le sol avec la poitrine, comme pour passer sous une barrière.","Termine buste relevé, bras tendus, bassin bas, puis reviens en V inversé."],
+  "Mouvement fluide et contrôlé ; en cas de gêne dans le bas du dos, limite l'extension en fin de mouvement."],
+["rowing_table","Rowing inversé sous une table",["dos","biceps"],["bodyweight"],"pull",false,{sets:3,repsMin:6,repsMax:12,restSec:75},
+  ["Allongé sous une table solide, mains au bord, bras tendus.","Corps gainé, tire la poitrine vers le bord en serrant les omoplates.","Redescends lentement jusqu'à bras tendus."],
+  "Vérifie que la table ne bascule pas (lourde, pieds stables) avant la première répétition. Genoux pliés = plus facile."],
+["montees_chaise","Montées sur chaise (step-up)",["quadriceps","fessiers"],["bodyweight"],"lunge",true,{sets:3,repsMin:8,repsMax:12,restSec:60},
+  ["Pied entier sur une chaise stable ou une marche.","Monte en poussant sur le talon de la jambe du dessus, sans t'élancer avec l'autre.","Redescends contrôlé, puis enchaîne du même côté avant de changer."],
+  "Chaise calée contre un mur, jamais sur roulettes. Une marche d'escalier est plus sûre pour commencer."],
+["nordic_curl","Nordic curl assisté",["ischios","fessiers"],["bodyweight"],"hinge",false,{sets:3,repsMin:4,repsMax:8,restSec:90},
+  ["À genoux sur un coussin, chevilles bloquées sous un canapé ou tenues.","Corps droit des genoux à la tête, bascule lentement vers l'avant en freinant avec les ischios.","Amortis avec les mains au sol, puis repousse pour revenir."],
+  "Exercice exigeant : descends seulement jusqu'où tu contrôles, et augmente l'amplitude progressivement."],
 ];
 
 const EXOS = EXO_RAW.map(([id,n,muscles,equip,pattern,uni,def,cues,safety])=>({
@@ -446,9 +465,16 @@ const EXOS = EXO_RAW.map(([id,n,muscles,equip,pattern,uni,def,cues,safety])=>({
 }));
 // Niveau technique / de force requis : 1 = accessible aux débutants, 2 = standard, 3 = avancé.
 // Le moteur évite le niveau 3 pour les débutants et privilégie le niveau 1.
-const EXO_LEVEL1 = ["pompes_genoux","pompes_surelevees","squat_pdc","pont_fessier","planche","bird_dog","dead_bug","crunch","superman","jumping_jacks","chaise_murale","mollets_pdc","squat_gobelet","goblet_squat_kb","marche_fermier","kb_fermier","montees_genoux","corde_a_sauter","tractions_scapulaires","rowing_sangles","curl_sangles","rowing_inverse_barre","tirage_elastique","curl_biceps_elastique","squat_elastique","pont_fessier_elastique","suspension_barre","roue_abdo_genoux","planche_laterale","curl_biceps","elevations_laterales","rowing_uni_haltere","dc_haltere","floor_press_haltere","step_up","shrugs_halteres","mollets_halteres"];
-const EXO_LEVEL3 = ["pompes_archer","roue_abdo_debout","l_sit","releve_jambes_suspendu","tractions","tractions_suppination","renegade_row","front_squat_barre","good_morning_barre","fentes_sautees","swing_kb_uni","pompes_declinees","dips_barres","squat_sangles"];
+const EXO_LEVEL1 = ["dips_chaise","montees_chaise","pompes_genoux","pompes_surelevees","squat_pdc","pont_fessier","planche","bird_dog","dead_bug","crunch","superman","jumping_jacks","chaise_murale","mollets_pdc","squat_gobelet","goblet_squat_kb","marche_fermier","kb_fermier","montees_genoux","corde_a_sauter","tractions_scapulaires","rowing_sangles","curl_sangles","rowing_inverse_barre","tirage_elastique","curl_biceps_elastique","squat_elastique","pont_fessier_elastique","suspension_barre","roue_abdo_genoux","planche_laterale","curl_biceps","elevations_laterales","rowing_uni_haltere","dc_haltere","floor_press_haltere","step_up","shrugs_halteres","mollets_halteres"];
+const EXO_LEVEL3 = ["nordic_curl","pompes_archer","roue_abdo_debout","l_sit","releve_jambes_suspendu","tractions","tractions_suppination","renegade_row","front_squat_barre","good_morning_barre","fentes_sautees","swing_kb_uni","pompes_declinees","dips_barres","squat_sangles"];
 EXOS.forEach(e=>{ e.level = EXO_LEVEL3.includes(e.id) ? 3 : EXO_LEVEL1.includes(e.id) ? 1 : 2; });
 const EXO_MAP = {}; EXOS.forEach(e=>EXO_MAP[e.id]=e);
+// autres noms courants, pour la recherche (on tape souvent le nom anglais ou un nom approximatif)
+const EXO_ALIAS = {
+  dips_banc:"pompes inversees bench dips rebord", dips_chaise:"bench dips rebord canape", extension_triceps_sol:"sphinx push-up",
+  rowing_table:"australian row tirage australien inverted row", montees_chaise:"step up marche", nordic_curl:"nordique ischio",
+  pompes_hindoues:"hindu push-up dive bomber", pompe_pike:"pike push-up", pompes_diamant:"diamond push-up", pont_fessier:"glute bridge",
+  hip_thrust_haltere:"hip thrust", squat_bulgare_pdc:"bulgarian split squat", mountain_climbers:"grimpeur", gainage_creux:"hollow",
+};
 // exercices mesurés en secondes plutôt qu'en répétitions (planche, chaise, marche du fermier…)
 function isTimed(def){ return def._timed!==undefined ? def._timed : (def._timed = def.cues.some(c=>/en secondes/.test(c))); }

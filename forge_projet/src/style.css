@@ -1918,3 +1918,6 @@ h2.sh .more{font-family:var(--sans);font-size:var(--fs-sub);font-weight:500;lett
 .pick-row .info-btn{box-shadow:none;color:var(--label3)!important;width:40px;height:40px;font-size:17px}
 .chip-scroll .chip.cat{font-weight:500}.chip-scroll .chip.cat.on{font-weight:600}
 .stat-box .num{font-size:var(--fs-t2);line-height:1.1;overflow-wrap:anywhere}
+/* animation d'exercice : le muscle principal ressort (segment plus épais, plus foncé) */
+.exo-anim .ea-focus{fill:none;stroke:color-mix(in srgb,var(--rc,var(--tint)) 55%,var(--label));stroke-width:3;stroke-linecap:round;opacity:.9}
+.rw-stage .exo-anim .ea-focus{stroke:#FFD2BF}
