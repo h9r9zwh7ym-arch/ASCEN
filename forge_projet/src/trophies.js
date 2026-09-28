@@ -332,6 +332,8 @@ function showMedalModal2D(id){
   bindMedalTilt();
 }
 // la grande médaille se penche sous le doigt, avec un reflet qui suit
+let tiltLeave = null;
+document.addEventListener("ascen:suspend", ()=>{ if(tiltLeave) tiltLeave(); });
 function bindMedalTilt(){
   const el = qs(".medal-modal .medal.big"); if(!el) return;
   const glare = qs(".m-glare", el);
@@ -345,6 +347,8 @@ function bindMedalTilt(){
   const leave = ()=>{ el.classList.remove("tilting"); el.style.transform = ""; if(glare){ glare.setAttribute("cx","30"); glare.setAttribute("cy","24"); } };
   el.addEventListener("pointermove", move); el.addEventListener("pointerleave", leave); el.addEventListener("pointerup", leave);
   el.addEventListener("touchmove", e=>{ e.preventDefault(); move(e); }, { passive:false }); el.addEventListener("touchend", leave);
+  el.addEventListener("touchcancel", leave); el.addEventListener("pointercancel", leave);
+  tiltLeave = leave;
 }
 
 // ---------- confettis (canvas, sans dépendance) ----------

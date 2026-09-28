@@ -31,9 +31,12 @@ function playSilent(){ try{ const b = AC.createBuffer(1,1,22050), src = AC.creat
 // Le contexte audio se met en pause (écran verrouillé, appli en arrière-plan, appel,
 // autre appli qui joue du son) et iOS le laisse parfois bloqué en « interrupted » :
 // à chaque geste on le relance, et s'il ne repart pas on en crée un neuf.
-let reviveTimer = null;
+let reviveTimer = null, audioStale = false, audioHiddenAt = 0;
 ["pointerdown","touchend","keydown"].forEach(ev=>document.addEventListener(ev, ()=>{
   if(!soundOn()) return;
+  // après une longue absence, iOS peut rendre un contexte « en marche » mais muet :
+  // on repart d'un contexte neuf au premier geste (coût négligeable)
+  if(audioStale){ audioStale = false; if(AC) buildAudio(); }
   if(!audioReady()) return;
   playSilent();
   if(AC.state!=="running" && !reviveTimer){
@@ -44,7 +47,16 @@ let reviveTimer = null;
   }
 }, { passive:true, capture:true }));
 function wakeAudio(){ if(AC && AC.state!=="running" && AC.state!=="closed") AC.resume().catch(()=>{}); }
-document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) wakeAudio(); });
+document.addEventListener("visibilitychange", ()=>{
+  if(document.hidden){
+    // en arrière-plan : on suspend proprement (sinon iOS l'interrompt à sa façon, parfois sans retour)
+    audioHiddenAt = Date.now();
+    if(AC && AC.state==="running") AC.suspend().catch(()=>{});
+  } else {
+    if(audioHiddenAt && Date.now()-audioHiddenAt > 20000) audioStale = true;
+    audioHiddenAt = 0; wakeAudio();
+  }
+});
 window.addEventListener("pageshow", wakeAudio);
 window.addEventListener("focus", wakeAudio);
 
@@ -131,7 +143,8 @@ const SFX = {
 };
 const UI_SOUNDS = new Set(["tick","step","open","close","seg","swipe","remove"]);
 function sfx(name, arg){
-  if(!soundOn() || !SFX[name]) return;
+  // app en arrière-plan : aucun son (il sortirait en retard, en rafale, au retour)
+  if(!soundOn() || !SFX[name] || document.hidden) return;
   if(UI_SOUNDS.has(name)){
     if(S.settings.uiSound===false) return;              // clics de l'interface coupés à part
     const now = performance.now(); if(now-lastTok<60) return; lastTok = now; // jamais en rafale

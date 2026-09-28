@@ -94,7 +94,9 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await wait(400);
   await tap('.wp-day >> nth=5'); await wait(400);
   await tap('[data-a="planNew"]'); await wait(700);
-  log('Editor opened for new day:', !!(await page.$('#tplEdBody')), 'pre-checked day:', await page.$$eval('[data-a="tplEdDay"].on', e => e.map(x => x.dataset.d)));
+  await page.evaluate(() => { S.custom.exos = [{ exoId: 'pompes', sets: 3 }]; save(); renderView('today'); }); await wait(300);
+  await tap('.save-row'); await wait(600);
+  log('Save sheet for new day:', !!(await page.$('#tplEdBody')), 'pre-checked day:', await page.$$eval('[data-a="tplEdDay"].on', e => e.map(x => x.dataset.d)));
   await shot('09_save_prechecked');
   await tap('[data-a="tplEdCancel"]'); await wait(350);
 

@@ -292,7 +292,23 @@ function t3dScene(T, renderer){
 function t3dRenderer(T, canvas, keep){
   const r = new T.WebGLRenderer({ canvas, antialias:true, alpha:true, powerPreference:"low-power", preserveDrawingBuffer:!!keep });
   r.outputColorSpace = T.SRGBColorSpace; r.toneMapping = T.ACESFilmicToneMapping; r.toneMappingExposure = 1.05;
+  // iOS reprend souvent la mémoire graphique quand l'app passe en arrière-plan : le contexte est
+  // « perdu » et le canevas resterait vide au retour. On le note ; t3dRevive() reconstruit.
+  canvas.addEventListener("webglcontextlost", e=>{ e.preventDefault(); canvas._lost = true; });
+  canvas.addEventListener("webglcontextrestored", ()=>{ canvas._lost = false; t3dStart(); });
   return r;
+}
+// au retour dans l'app : un contexte perdu (et pas rendu) est remplacé par un neuf
+function t3dRevive(){
+  if(T3D.snap && T3D.snap.canvas._lost){ try{ T3D.snap.renderer.dispose(); }catch(e){} T3D.snap = null; }
+  const c = T3D.ctx; if(!c || !c.canvas._lost) return;
+  try{ if(c.medal) t3dDispose(c.medal); c.renderer.dispose(); }catch(e){}
+  T3D.ctx = null;
+  c.canvas.remove();
+  const stage = qs("#t3dStage"), full = qs(".t3d-full");
+  if(stage){ stage.classList.remove("live"); delete stage.dataset.mounted; }   // la médaille dessinée reprend sa place
+  if(full && c.detail){ full.remove(); const card = qs(".t3d-card"); if(card) card.classList.remove("lifted"); showMedalModal(c.detail); }
+  else if(stage) mountTrophy3D(stage.parentNode);
 }
 
 // ---------- vignettes (grille, listes, célébration) ----------
@@ -409,7 +425,7 @@ function t3dBurst(ctx){
 }
 function t3dFrame(now){
   const ctx = T3D.ctx; if(!ctx) return;
-  if(!ctx.canvas.isConnected || !ctx.visible || document.hidden || !ctx.medal){ ctx.running = false; return; }
+  if(!ctx.canvas.isConnected || !ctx.visible || document.hidden || !ctx.medal || ctx.canvas._lost){ ctx.running = false; return; }
   const lively = ctx.dragging || ctx.unlock || ctx.flip || ctx.burst || Math.abs(ctx.vel)>.02;
   if(!lively && ctx.last && now-ctx.last < 30){ requestAnimationFrame(t3dFrame); return; }
   const dt = Math.min(.05, ctx.last ? (now-ctx.last)/1000 : 0); ctx.last = now;
@@ -489,7 +505,7 @@ function t3dWatch(el){
   t3dIO = new IntersectionObserver(es=>{ const c = T3D.ctx; if(!c || qs(".t3d-full")) return; c.visible = es[0].isIntersecting; if(c.visible) t3dStart(); });
   t3dIO.observe(el);
 }
-document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) t3dStart(); });
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden){ t3dRevive(); t3dStart(); } });
 
 // ---------- fiche détaillée (tous les trophées) ----------
 function t3dDetailHTML(id){
@@ -560,7 +576,7 @@ function t3dClose(){
       ctx.detail = null;
       const st = qs("#t3dStage");
       if(st && st.isConnected){
-        const f = t3dFeatured(); t3dSetMedal(ctx, f.id, f.tier); st.appendChild(ctx.canvas); ctx.w = 0; t3dResize(ctx);
+        const f = t3dFeatured(); t3dSetMedal(ctx, f.id, f.tier); st.appendChild(ctx.canvas); st.classList.add("live"); st.dataset.mounted = "1"; ctx.w = 0; t3dResize(ctx);
         // la carte peut être hors de l'écran (fiche ouverte depuis le bas de la liste)
         const r = st.getBoundingClientRect(); ctx.visible = r.bottom>0 && r.top<innerHeight;
         if(ctx.visible) t3dStart(); else ctx.renderer.render(ctx.scene, ctx.camera);

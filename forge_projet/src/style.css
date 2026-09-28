@@ -1278,12 +1278,7 @@ h2.sh .more.strong{font-weight:700}
 @supports (font: -apple-system-body){
   html{font:-apple-system-body;font-family:var(--sans)}
 }
-.wp-cal{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:44px;margin-top:8px;border-radius:12px;background:var(--fill2);color:var(--tint-ink);font-weight:600;font-size:var(--fs-sub)}
-.wp-cal svg{width:16px;height:16px}
 .cal-alarm{display:flex;flex-wrap:wrap;gap:8px}
-#calBody{padding-left:16px;padding-right:16px}
-#calBody .group{margin-left:0;margin-right:0}
-#calBody .row{gap:12px}
 .wp-miss{background:var(--orange)}
 .warmup{font-size:var(--fs-foot);color:var(--label2);background:var(--fill2);border-radius:12px;padding:8px 12px;margin:-6px 0 14px;line-height:1.35}
 .effort{margin:18px 0 2px;padding-top:14px;border-top:.5px solid var(--sep)}
@@ -1928,3 +1923,20 @@ h2.sh .more{font-family:var(--sans);font-size:var(--fs-sub);font-weight:500;lett
 .cool-h{display:flex;align-items:center;gap:6px;margin:22px 20px 8px;font-size:var(--fs-cap);font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--label2)}
 .cool-h svg{width:15px;height:15px;color:var(--green)}
 .cool-group{margin-top:0}
+/* v3.2 : enregistrer ou non la séance composée (seul chemin de création) */
+.save-row{display:flex;align-items:center;gap:12px;width:calc(100% - 2*var(--gutter,16px));margin:10px var(--gutter,16px) 0;padding:12px 14px;border-radius:var(--r-card);background:var(--bg2);text-align:left;transition:transform .15s,background .15s}
+.save-row:active{transform:scale(.985);background:var(--fill2)}
+.save-row .grow{display:flex;flex-direction:column;gap:2px;min-width:0}
+.save-row .t{font-weight:600;font-size:var(--fs-body);color:var(--tint-ink)}
+.save-row.saved .t{color:var(--label)}
+.save-row .s{font-size:var(--fs-foot);color:var(--label2);line-height:1.3}
+.save-row .chev{color:var(--label3);flex:none}
+.save-row .chev svg{width:15px;height:15px}
+.tpl-add-row.one{grid-template-columns:1fr}
+.te-lite{display:flex;flex-wrap:wrap;gap:6px;margin:10px 4px 4px}
+.te-lite span{padding:6px 10px;border-radius:var(--r-pill);background:var(--fill2);font-size:var(--fs-foot);color:var(--label)}
+.te-lite b{color:var(--label2);font-weight:600}
+/* pas de zoom au double appui (boutons, pas +/−, listes) : le pincement reste possible.
+   :where() = spécificité nulle, les gestes dédiés (pan-y, none) gardent la main */
+:where(*){touch-action:manipulation}
+:where(button){-webkit-user-select:none;user-select:none}

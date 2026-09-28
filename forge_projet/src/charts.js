@@ -163,4 +163,5 @@ function dataTable(headers, rows){
   document.addEventListener("pointermove", e=>{ if(scrub && e.pointerId===scrub.id) at(e.clientX); }, { passive:true });
   const end = e=>{ if(scrub && (!e || e.pointerId===scrub.id)) scrub = null; };
   document.addEventListener("pointerup", end); document.addEventListener("pointercancel", end);
+  document.addEventListener("ascen:suspend", ()=>{ scrub = null; hideTip(); });
 })();

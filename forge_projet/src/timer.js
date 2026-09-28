@@ -32,17 +32,18 @@ function tickRest(){
   if(!restState) return;
   const remain = Math.round((restState.endAt-Date.now())/1000);
   if(remain<=0){
-    if(navigator.vibrate) try{ navigator.vibrate([120,60,120]); }catch(e){}
-    toast("C'est reparti : série suivante", "bolt");
+    // fini pendant que l'app était en arrière-plan : pas de sonnerie ni de vibration en retard
+    const late = document.hidden || Date.now()-restState.endAt > 3000;
+    if(!late){ if(navigator.vibrate) try{ navigator.vibrate([120,60,120]); }catch(e){} sfx("restEnd"); }
+    toast(late ? "Repos terminé : série suivante" : "C'est reparti : série suivante", "bolt");
     if(typeof restReady!=="undefined") restReady = true;
-    sfx("restEnd");
     endRest();
     return;
   }
   // 3 dernières secondes : l'anneau bat et le téléphone vibre à chaque seconde
   const wrap = document.querySelector(".ring-wrap");
   if(wrap) wrap.classList.toggle("ending", remain<=3);
-  if(remain<=3 && remain!==restState.lastTick){ restState.lastTick = remain; if(navigator.vibrate) try{ navigator.vibrate(10); }catch(e){} sfx("restTick"); }
+  if(remain<=3 && remain!==restState.lastTick && !document.hidden){ restState.lastTick = remain; if(navigator.vibrate) try{ navigator.vibrate(10); }catch(e){} sfx("restTick"); }
   renderRestBar(remain);
   if(typeof updateFocusRing==="function") updateFocusRing(remain, restState.totalSec);
 }

@@ -152,7 +152,7 @@ Demande de YaYa : trier les exercices par matériel, en ajouter (pectoraux aux h
 
 ## 9 sexies. Plusieurs séances perso et programme de la semaine (v1.9)
 
-- **Éditeur de séances enregistrées** (`tpl_editor.js`, après `view_today.js`) : une feuille dédiée « Nouvelle séance / Modifier la séance » (Annuler · titre · « Enregistrer la séance » en pied) avec nom, jours de la semaine (les jours déjà pris affichent le nom de la séance qui les occupe et un avertissement de remplacement), exercices (séries +/−, retirer, « Ordre » ↑/↓), « Ajouter » (sélecteur avec bouton « Retour » vers l'éditeur : option `onCancel` de `openPicker`) et « ✨ Compléter ». État `tplEdit` ; « Annuler » avec des changements propose « Abandonner / Continuer l'édition ». Indépendant de « Ma séance » : on crée autant de séances qu'on veut sans toucher au constructeur. Points d'entrée : bouton **+** dans l'en-tête « Mes séances », rangée « Nouvelle séance / Programme de la semaine » sous la liste, état vide dédié, « Modifier » des cartes et du menu •••, jour vide du planning (« Nouvelle séance pour le … », jour pré-coché), feuille d'un jour planifié (carte « Prévu le … » + Modifier), et « Enregistrer » de Ma séance (éditeur pré-rempli, `fromCustom`). L'ancien `openTemplateModal`/`saveTemplateOk` est supprimé.
+- **Éditeur de séances enregistrées** (`tpl_editor.js`, après `view_today.js`) : une feuille dédiée « Nouvelle séance / Modifier la séance » (Annuler · titre · « Enregistrer la séance » en pied) avec nom, jours de la semaine (les jours déjà pris affichent le nom de la séance qui les occupe et un avertissement de remplacement), exercices (séries +/−, retirer, « Ordre » ↑/↓), « Ajouter » (sélecteur avec bouton « Retour » vers l'éditeur : option `onCancel` de `openPicker`) et « ✨ Compléter ». État `tplEdit` ; « Annuler » avec des changements propose « Abandonner / Continuer l'édition ». Indépendant de « Ma séance » : on crée autant de séances qu'on veut sans toucher au constructeur. *(v3.2 : la création passe désormais uniquement par Ma séance, voir § 9 novodecies.)* Points d'entrée d'origine : bouton **+** dans l'en-tête « Mes séances », rangée « Nouvelle séance / Programme de la semaine » sous la liste, état vide dédié, « Modifier » des cartes et du menu •••, jour vide du planning (« Nouvelle séance pour le … », jour pré-coché), feuille d'un jour planifié (carte « Prévu le … » + Modifier), et « Enregistrer » de Ma séance (éditeur pré-rempli, `fromCustom`). L'ancien `openTemplateModal`/`saveTemplateOk` est supprimé.
 - **Programme de la semaine** (`openWeekWizard`, `WEEK_SPLITS`) : choisir 2 à 6 jours → répartition (2-3 : corps complet A/B/C ; 4 : haut/bas ×2 ; 5 : poussée, tirage, jambes, haut, bas ; 6 : PPL ×2), aperçu jour par jour, puis création des séances par le moteur (`generateEngineSession(type, déjà_utilisés)` pour varier A/B) et placement dans la semaine ; les séances qui occupaient ces jours sont gardées mais libérées. Met aussi à jour l'objectif de jours par semaine.
 - **Planning** : `since` (date de planification) sur chaque séance ; un jour passé n'est marqué « manqué » que si la séance y était déjà prévue (un programme créé en milieu de semaine ne produit plus de fausses pastilles rouges). Carte du jour : ligne « Ensuite le lundi · Haut du corps A » (`nextPlannedLine`).
 - **Tests** : `v19.js` (création de plusieurs séances, jours en conflit, annulation, retour du sélecteur, modification, programme 4 jours, jour planifié, enregistrement de Ma séance) ; `v12`/`v13`/`v14` adaptés au nouvel éditeur.
@@ -190,7 +190,7 @@ Changements :
 - **Écran allumé** pendant la séance (`keepAwake`/`syncWakeLock`, fx.js).
 - **Premier lancement** (`onboarding.js`) : prénom, matériel (avec saisie des haltères, virgule décimale gérée par `parseWeightList`), objectif, séances par semaine, durée, puis création du programme de la semaine. Montré une seule fois, « Passer » à tout moment.
 - **Volume par muscle** (Progrès › Résumé, `weekVolume`) : séries des 7 derniers jours (principal = 1, secondaires = ½), repère ≈ 10 (6 en force), fréquence « × ».
-- **Planning → Calendrier** (`buildICS`) : évènements récurrents avec rappel, depuis « Mon planning ».
+- ~~**Planning → Calendrier** (`buildICS`)~~ : retiré en v3.2.
 - **Échauffement** conseillé avant la première série chargée ; message « Bon retour ! » après ≥ 10 jours ; point « séance manquée » en orange (informatif, pas culpabilisant).
 - **Accessibilité** : Dynamic Type (`font: -apple-system-body`), textes secondaires plus contrastés, onglets inactifs en gris système, boutons qui passent à la ligne quand le texte est grand.
 - **Tests** : `v21.js` (11 scénarios du moteur, ressenti, variante, écran allumé simulé, volume, sauvegarde/restauration, calendrier, grand texte), `v22.js` (premier lancement) ; les autres tests passent l'accueil via `ACT.obSkip()`.
@@ -442,6 +442,29 @@ Note tests : `v14` peut dépasser son délai quand d'autres scripts Playwright t
 - **Enregistrement** : à la fin de la séance, les étirements faits vont dans `session.stretches = [{exoId, sec}]`, hors séries, volume, records et trophées. Format compact : champ `s`. Le détail de la séance (Historique) les affiche avec leur durée. Une séance faite uniquement d'étirements s'appelle « Étirements ».
 - **Vignettes 3D** : une vignette qui ne se charge pas (page quittée pendant le rendu) est oubliée et le dessin SVG reste affiché.
 - **Test** : `v30` (réglage, bloc en fin de proposition, compteur, enregistrement à part, rechargement, historique, sélecteur, désactivation).
+
+## 9 novodecies. Version 3.2 : une seule façon de créer une séance, reprise de l'app
+
+- **Créer une séance** : un seul chemin, la carte « Compose ta séance » de Ma séance (Choisir · L'app choisit · Partir de la séance proposée).
+  - Le « + » de « Mes séances », « Nouvelle séance » et `ACT.tplNew` sont supprimés. Il reste « Programme de la semaine » (création automatique de plusieurs séances).
+  - Sous une séance composée, la ligne « Enregistrer cette séance » (facultatif, `saveRowHTML`) ouvre une feuille légère `tplEdit.lite` : nom et jours seulement. Choisir des jours l'ajoute au planning. « Annuler » ne perd rien.
+  - Une fois enregistrée, la ligne indique « Enregistrée dans Mes séances · Planifiée : … », ou « Modifiée : touche pour mettre à jour ».
+  - Le planning (« Composer une séance pour le … ») passe aussi par Ma séance, avec le jour retenu (`S.custom.pendingDays`) et pré-coché à l'enregistrement.
+  - L'éditeur complet sert uniquement à modifier une séance déjà enregistrée.
+- **Export Calendrier (.ics) retiré** : `openCalendarExport`, `buildICS` et le bouton de « Mon planning ».
+- **Bulle des graphiques** (`showTip`) : elle se pose en haut du graphique, au-dessus de la colonne ou du point touché (avant, elle montait au-dessus de toute la colonne et recouvrait le titre et les onglets). Elle se décale sur le côté si la barre monte jusque-là.
+- **Arrière-plan et retour** (fin d'`init.js`) :
+  - `appSuspend` diffuse `ascen:suspend` (sortie, `pagehide`, perte de focus). Les gestes en cours reviennent en place : feuille glissée (jamais fermée par une interruption), carte d'exercice (même exercice), bulle et parcours des graphiques, inclinaison de la médaille. `touchcancel` et `pointercancel` sont traités comme une annulation.
+  - `appResume` : si le jour a changé pendant l'absence, la séance prévue du jour se charge et l'onglet affiché se redessine (une séance commencée reste intacte).
+- **Son** (`sfx.js`) :
+  - Contexte audio suspendu en arrière-plan.
+  - Après plus de 20 s d'absence, un contexte neuf est créé au premier geste : iOS rend parfois un contexte « en marche » mais muet.
+  - Aucun son n'est joué tant que l'app est cachée.
+- **Repos terminé pendant l'absence** : on passe à la suite sans sonnerie ni vibration en retard (« Repos terminé : série suivante »).
+- **Exercices tenus** : le chronomètre suit l'horloge murale (`Date.now()`), il reste juste après un verrouillage de l'écran.
+- **Trophées 3D** : un contexte WebGL perdu en arrière-plan (fréquent sur iOS) est reconstruit au retour (`t3dRevive`). La carte mise en avant et la fiche détaillée se remontent.
+- **Pas de zoom au double appui** : `:where(*){touch-action:manipulation}` (spécificité nulle, les gestes dédiés gardent `pan-y` ou `none`) et `maximum-scale=1` (pas de zoom au focus d'un champ). Le pincement reste possible pour l'accessibilité.
+- **Test** : `v31`.
 
 ## 10. Cahier des charges d'origine (résumé)
 

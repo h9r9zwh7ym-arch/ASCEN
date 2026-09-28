@@ -72,16 +72,10 @@ fs.mkdirSync(OUT, { recursive: true });
   log('Restored sessions:', await page.evaluate(() => S.sessions.length), '| safety copy:', await page.evaluate(() => !!localStorage.getItem('forge.v1.avant-restauration')));
   await shot('04_profil_data');
   await page.click('[data-a="openInstall"]'); await wait(400); await shot('05_install'); await page.evaluate(() => closeSheet()); await wait(350);
-  // ---- calendrier
+  // ---- plus d'export Calendrier (retiré en v3.2)
   await page.evaluate(() => { S.templates = [{ id: 't1', n: 'Haut, du corps', days: [0, 3], exos: [{ exoId: 'pompes', sets: 3 }], since: todayISO() }]; save(); });
   await page.click('.tabbtn[data-id="today"]'); await wait(500);
-  await page.$eval('[data-a="openCalendarExport"]', e => e.scrollIntoView({ block: 'center' }));
-  await page.click('[data-a="openCalendarExport"]'); await wait(400);
-  await shot('06_calendar');
-  await page.click('[data-a="calAlarm"][data-v="15"]');
-  const [ics] = await Promise.all([page.waitForEvent('download'), page.click('[data-a="calExport"]')]);
-  const icsPath = OUT + '/p.ics'; await ics.saveAs(icsPath); const txt = fs.readFileSync(icsPath, 'utf8');
-  log('ICS:', txt.includes('RRULE:FREQ=WEEKLY;BYDAY=MO,TH'), txt.includes('TRIGGER:-PT15M'), txt.includes('SUMMARY:ASCEN · Haut\\, du corps'), txt.includes('\r\n'));
+  log('Calendar export gone:', !(await page.$('[data-a="openCalendarExport"]')) && await page.evaluate(() => typeof openCalendarExport === 'undefined'));
   // ---- texte agrandi (Dynamic Type simulé)
   await page.addStyleTag({ content: 'html{font-size:23px!important}' }); await wait(300);
   const over = await page.evaluate(() => document.documentElement.scrollWidth);

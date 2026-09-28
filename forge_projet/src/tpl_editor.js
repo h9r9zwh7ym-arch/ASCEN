@@ -1,9 +1,10 @@
 // ================= ÉDITEUR DE SÉANCES ENREGISTRÉES & PROGRAMME DE LA SEMAINE =================
-// Une séance enregistrée se crée et se modifie ici, indépendamment de « Ma séance » :
+// Une séance se compose dans « Ma séance » (seul point de création) ; l'enregistrer ouvre ici une
+// feuille légère (nom + jours : `lite`). Une séance déjà enregistrée se modifie ici en entier :
 // nom, jours de la semaine, exercices et séries. Le programme de la semaine génère
 // plusieurs séances d'un coup (répartition selon le nombre de jours) et les place.
 
-let tplEdit = null; // { id, n, days, exos:[{exoId,sets}], fromCustom, dirty, order }
+let tplEdit = null; // { id, n, days, exos:[{exoId,sets}], fromCustom, lite, dirty, order }
 
 function openTplEditor(id, preset){
   const t = id && S.templates.find(x=>x.id===id);
@@ -41,7 +42,10 @@ function tplEdBodyHTML(){
       const on = e.days.includes(i);
       return `<button class="${on?"on":""} ${taken[i]?"taken":""}" data-a="tplEdDay" data-d="${i}" aria-pressed="${on}"><b>${j}</b><small>${on?ii("check"):taken[i]?esc(taken[i]):""}</small></button>`;
     }).join("")}</div>
-    <div class="te-hint">${stolen.length ? `${ii("warn","warn")} ${stolen.map(d=>JOURS[(d+1)%7]).join(", ")} : remplacera « ${esc(taken[stolen[0]])} ».` : e.days.length ? `Elle s'affichera directement ${e.days.length>1?"ces jours-là":"ce jour-là"} à l'ouverture de l'app.` : "Aucun jour : elle restera disponible dans tes séances enregistrées."}</div>
+    <div class="te-hint">${stolen.length ? `${ii("warn","warn")} ${stolen.map(d=>JOURS[(d+1)%7]).join(", ")} : remplacera « ${esc(taken[stolen[0]])} ».` : e.days.length ? `Ajoutée à ton planning : elle s'affichera directement ${e.days.length>1?"ces jours-là":"ce jour-là"} à l'ouverture de l'app.` : "Aucun jour : elle restera disponible dans Mes séances, hors planning."}</div>
+    ${e.lite ? `<div class="te-sec te-sec-row"><span>Exercices</span><span class="te-sum">${e.exos.length} · ${sets} séries · ≈ ${tplMinutes(e)} min</span></div>
+      <div class="region-bar te-bar" aria-hidden="true">${balance}</div>
+      <div class="te-lite">${e.exos.map(x=>EXO_MAP[x.exoId]?`<span>${esc(EXO_MAP[x.exoId].n)} <b>${x.sets}×</b></span>`:"").join("")}</div>` : `
     <div class="te-sec te-sec-row"><span>Exercices</span>${e.exos.length?`<span class="te-sum">${e.exos.length} · ${sets} séries · ≈ ${tplMinutes(e)} min</span>`:""}</div>
     ${e.exos.length ? `<div class="region-bar te-bar" aria-hidden="true">${balance}</div>
       <div class="group builder te-list ${e.order?"reorder":""}">${rows}</div>` : `<div class="te-empty">Ajoute des exercices, ou laisse l'app en proposer.</div>`}
@@ -50,16 +54,16 @@ function tplEdBodyHTML(){
       <button class="btn secondary sm" data-a="tplEdFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Compléter</button>
       ${e.exos.length>1?`<button class="btn secondary sm" data-a="tplEdOrder">${e.order?"OK":"Ordre"}</button>`:""}
     </div>
-    ${e.id?`<button class="btn ghost te-del" data-a="tplEdDelete">Supprimer cette séance</button>`:""}`;
+    ${e.id?`<button class="btn ghost te-del" data-a="tplEdDelete">Supprimer cette séance</button>`:""}`}`;
 }
 function renderTplEditor(){
   openSheet(`<div class="sheet-hd te-hd">
       <button class="te-cancel" data-a="tplEdCancel">Annuler</button>
-      <span class="t">${tplEdit.id?"Modifier la séance":"Nouvelle séance"}</span>
+      <span class="t">${tplEdit.lite ? (tplEdit.id?"Mettre à jour":"Enregistrer la séance") : "Modifier la séance"}</span>
       <span class="te-spacer"></span>
     </div>
     <div class="sheet-body" id="tplEdBody">${tplEdBodyHTML()}</div>`,
-    { tall:true, footer:`<button class="btn" id="tplEdSaveBtn" data-a="tplEdSave" ${tplEdit.exos.length?"":"disabled"}>Enregistrer la séance</button>` });
+    { tall:!tplEdit.lite, footer:`<button class="btn" id="tplEdSaveBtn" data-a="tplEdSave" ${tplEdit.exos.length?"":"disabled"}>${tplEdit.lite&&tplEdit.id?"Mettre à jour":"Enregistrer"}</button>` });
   bindTplEdName();
 }
 function refreshTplEditor(){
@@ -110,9 +114,8 @@ function renderWeekWizard(){
 Object.assign(ACT, {
   saveDoneSession(){
     const p = lastDoneForSave; lastDoneForSave = null; if(!p) return;
-    openTplEditor(null, { n:p.n, exos:p.exos });
+    openTplEditor(null, { n:p.n, exos:p.exos, lite:true });
   },
-  tplNew(){ openTplEditor(null); },
   tplOpenEditor(d){ openTplEditor(d.id); },
   tplEdDay(d){
     const k = +d.d, i = tplEdit.days.indexOf(k);
@@ -154,7 +157,8 @@ Object.assign(ACT, {
     tplEdit.dirty = true; sfx("open"); refreshTplEditor();
   },
   tplEdCancel(){
-    if(!tplEdit || !tplEdit.dirty){ tplEdit = null; closeSheet(); return; }
+    // la feuille d'enregistrement ne perd rien : les exercices restent dans Ma séance
+    if(!tplEdit || !tplEdit.dirty || tplEdit.lite){ tplEdit = null; closeSheet(); return; }
     openModal(`<div style="font-weight:700;font-size:calc(17rem/17);margin-bottom:6px">Abandonner les modifications ?</div>
       <div style="color:var(--label2);font-size:var(--fs-sub);margin-bottom:18px">Ce que tu as changé dans cette séance ne sera pas enregistré.</div>
       <div style="display:flex;flex-direction:column;gap:8px">
@@ -206,55 +210,4 @@ Object.assign(ACT, {
     setTimeout(()=>{ const w = qs("#v-today .week-plan"); if(w) w.scrollIntoView({ behavior:"smooth", block:"center" }); }, 420);
   },
   pickerCancel(){ const p = picker; if(p && p.onCancel) p.onCancel(); else closeSheet(); },
-});
-
-// ---------- planning → Calendrier de l'iPhone (.ics) ----------
-// Fixer jour + heure (« intention de mise en œuvre ») aide à tenir une habitude, et les
-// rappels du Calendrier fonctionnent sans serveur ni notification web.
-let calTime = "18:00", calAlarm = 30;
-function openCalendarExport(){
-  const planned = S.templates.filter(t=>(t.days||[]).length);
-  openSheet(`<div class="sheet-hd"><span class="t">Ajouter au Calendrier</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
-    <div class="sheet-body" id="calBody">
-      <p class="body" style="margin:0 4px 14px">Tes séances planifiées deviennent des évènements récurrents dans le Calendrier, avec un rappel. Tu pourras les modifier ou les supprimer depuis l'app Calendrier.</p>
-      <div class="te-sec">Heure des séances</div>
-      <div class="num-field"><input id="calTime" type="time" value="${calTime}"></div>
-      <div class="te-sec">Rappel</div>
-      <div class="cal-alarm">${[[0,"Aucun"],[15,"15 min avant"],[30,"30 min avant"],[60,"1 h avant"]].map(([v,l])=>`<button class="chip ${calAlarm===v?"on":""}" data-a="calAlarm" data-v="${v}">${l}</button>`).join("")}</div>
-      <div class="te-sec">Séances</div>
-      <div class="group">${planned.map(t=>`<div class="row"><span class="tc-bar-s r-${tplRegion(t)}"></span><div class="grow"><div class="t">${esc(t.n)}</div><div class="s">${daysLabel(t.days)} · ≈ ${tplMinutes(t)} min</div></div></div>`).join("")}</div>
-    </div>`, { tall:true, footer:`<button class="btn" data-a="calExport">${icon("clock")} Créer les évènements</button>` });
-}
-function icsText(s){ return String(s).replace(/\\/g,"\\\\").replace(/[,;]/g,m=>"\\"+m).replace(/\n/g,"\\n"); }
-function buildICS(){
-  const [hh,mm] = calTime.split(":").map(Number), pad = n => String(n).padStart(2,"0");
-  const stamp = new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+/,"");
-  const BYDAY = ["MO","TU","WE","TH","FR","SA","SU"];
-  const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//ASCEN//Planning//FR","CALSCALE:GREGORIAN","METHOD:PUBLISH"];
-  S.templates.filter(t=>(t.days||[]).length).forEach(t=>{
-    const days = t.days.slice().sort();
-    // première occurrence : le prochain jour planifié à partir d'aujourd'hui
-    let k = 0; while(!days.includes(weekdayIdx(addDaysISO(todayISO(), k)))) k++;
-    const d = addDaysISO(todayISO(), k).replace(/-/g,"");
-    const mins = tplMinutes(t);
-    lines.push("BEGIN:VEVENT", `UID:forge-${t.id}@forge.app`, `DTSTAMP:${stamp}`, `DTSTART:${d}T${pad(hh)}${pad(mm)}00`,
-      `DURATION:PT${mins}M`, `RRULE:FREQ=WEEKLY;BYDAY=${days.map(x=>BYDAY[x]).join(",")}`,
-      `SUMMARY:${icsText("ASCEN · "+t.n)}`, `DESCRIPTION:${icsText(`${t.exos.length} exercices · ${t.exos.reduce((a,e)=>a+e.sets,0)} séries · ≈ ${mins} min`)}`);
-    if(calAlarm) lines.push("BEGIN:VALARM","ACTION:DISPLAY",`DESCRIPTION:${icsText("Séance ASCEN : "+t.n)}`,`TRIGGER:-PT${calAlarm}M`,"END:VALARM");
-    lines.push("END:VEVENT");
-  });
-  lines.push("END:VCALENDAR");
-  return lines.join("\r\n")+"\r\n";
-}
-Object.assign(ACT, {
-  openCalendarExport(){ openCalendarExport(); },
-  calAlarm(d, el){ calAlarm = +d.v; qsa(".cal-alarm .chip").forEach(c=>c.classList.toggle("on", +c.dataset.v===calAlarm)); },
-  calExport(){
-    const inp = qs("#calTime"); if(inp && /^\d\d:\d\d$/.test(inp.value)) calTime = inp.value;
-    const url = URL.createObjectURL(new Blob([buildICS()], { type:"text/calendar;charset=utf-8" }));
-    const a = document.createElement("a"); a.href = url; a.download = "ascen-planning.ics";
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url), 8000);
-    closeSheet(); sfx("set"); toast("Ouvre le fichier pour ajouter tes séances au Calendrier");
-  },
 });

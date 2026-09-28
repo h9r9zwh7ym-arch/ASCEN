@@ -255,11 +255,23 @@ function showTip(target){
   tipOn = target; target.classList.add("tip-on");
   tip.textContent = target.dataset.tip;
   tip.classList.add("show");
-  const r = target.getBoundingClientRect(), tw = tip.offsetWidth, th = tip.offsetHeight;
+  // graphiques : la bulle se pose en haut du graphique, au-dessus de la colonne ou du point touché
+  // (avant, elle montait au-dessus de toute la colonne et recouvrait le titre et les onglets) ;
+  // si la barre ou le point monte jusque-là, elle se décale à côté
+  const bar = target.classList.contains("cc-col") && qs(".cc-bar", target);
+  const r = (bar || target).getBoundingClientRect(), tw = tip.offsetWidth, th = tip.offsetHeight;
+  const plot = target.closest(".cc-plot, .linechart");
   let x = r.left + r.width/2 - tw/2; x = Math.max(8, Math.min(innerWidth-tw-8, x));
-  let y = r.top - th - 8; if(y<8) y = r.bottom + 8;
+  let y = r.top - th - 8;
+  if(plot){
+    y = Math.max(8, plot.getBoundingClientRect().top - 4);
+    const cy = lineHitCenter(target, r);
+    if(cy < y + th + 6 && r.left < x + tw && r.right > x) x = r.right + 8 + tw <= innerWidth - 8 ? r.right + 8 : Math.max(8, r.left - 8 - tw);
+  } else if(y<8) y = r.bottom + 8;
   tip.style.transform = `translate(${Math.round(x)}px,${Math.round(y)}px)`;
 }
+// haut de ce qui est montré : sommet de la barre, ou centre du point d'une courbe (zone de toucher plus large)
+function lineHitCenter(target, r){ return target.classList.contains("lc-hit") ? r.top + r.height/2 - 5 : r.top; }
 function hideTip(){
   const tip = qs("#charttip");
   if(tip) tip.classList.remove("show");
@@ -392,12 +404,14 @@ function dismissSheet(){ if(sheetBack()) return; if(!sheetDismissGuard()) closeS
     drag.sheet.style.transform = `translateY(${d}px)`;
     const sc = qs("#overlay .scrim"); if(sc) sc.style.opacity = String(Math.max(0, 1-d/(drag.sheet.offsetHeight*0.9)));
   }
-  function end(){
+  // cancel : geste interrompu par iOS (centre de contrôle, sélecteur d'apps, appel) : la feuille
+  // revient toujours à sa place, jamais fermée par erreur
+  function end(cancel){
     if(!drag) return;
     const g = drag; drag = null;
     if(!g.active) return;
     const sc = qs("#overlay .scrim");
-    const far = g.dy > Math.min(140, g.sheet.offsetHeight*0.28) || (g.v>0.45 && g.dy>30);
+    const far = cancel!==true && (g.dy > Math.min(140, g.sheet.offsetHeight*0.28) || (g.v>0.45 && g.dy>30));
     g.sheet.style.transition = "transform .26s cubic-bezier(.32,.72,0,1)";
     if(far && sheetCanGoBack()){
       // feuille empilée : elle s'en va, la précédente revient à sa place
@@ -417,12 +431,13 @@ function dismissSheet(){ if(sheetBack()) return; if(!sheetDismissGuard()) closeS
   }
   document.addEventListener("touchstart", e=>{ if(e.touches.length===1) start(e.touches[0].clientX, e.touches[0].clientY, e.target); else drag = null; }, { passive:true });
   document.addEventListener("touchmove", e=>{ if(drag) move(e.touches[0].clientX, e.touches[0].clientY, e); }, { passive:false });
-  document.addEventListener("touchend", end, { passive:true });
-  document.addEventListener("touchcancel", end, { passive:true });
+  document.addEventListener("touchend", ()=>end(), { passive:true });
+  document.addEventListener("touchcancel", ()=>end(true), { passive:true });
+  document.addEventListener("ascen:suspend", ()=>end(true));
   // à la souris : uniquement depuis la poignée ou l'en-tête
   document.addEventListener("mousedown", e=>{ if(e.button===0 && e.target.closest && e.target.closest(".sheet-grab,.sheet-hd") && !e.target.closest("button")) start(e.clientX, e.clientY, e.target); });
   document.addEventListener("mousemove", e=>{ if(drag) move(e.clientX, e.clientY, e); });
-  document.addEventListener("mouseup", end);
+  document.addEventListener("mouseup", ()=>end());
 })();
 let suppressSheetClick = 0;
 function confirmSheet({title,html,ok,onOk,danger}){

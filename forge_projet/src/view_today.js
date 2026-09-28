@@ -247,8 +247,7 @@ function weekPlanBodyHTML(){
         ${done?`<span class="wp-check">${icon("check")}</span>`:missed?`<span class="wp-miss" title="Séance prévue non faite"></span>`:""}
       </button>`;
     }).join("")}</div>
-    <div class="wp-foot">${S.templates.length ? "Touche un jour pour y placer une séance enregistrée." : "Enregistre une séance, puis place-la sur un ou plusieurs jours."}</div>
-    ${S.templates.some(t=>(t.days||[]).length) ? `<button class="wp-cal" data-a="openCalendarExport">${icon("clock")} Ajouter mon planning au Calendrier</button>` : ""}`;
+    <div class="wp-foot">${S.templates.length ? "Touche un jour pour y placer une séance enregistrée." : "Enregistre une séance, puis place-la sur un ou plusieurs jours."}</div>`;
 }
 function weekPlanHTML(){
   const nxt = nextPlanned();
@@ -297,8 +296,8 @@ function tplListHTML(){
       ${tplAddRowHTML()}`;
 }
 function tplAddRowHTML(){
-  return `<div class="tpl-add-row">
-    <button class="tpl-add" data-a="tplNew">${icon("plus")}<span>Nouvelle séance</span></button>
+  // une seule façon de créer une séance : « Compose ta séance », puis « Enregistrer »
+  return `<div class="tpl-add-row one">
     <button class="tpl-add" data-a="weekWizard"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg><span>Programme de la semaine</span></button>
   </div>`;
 }
@@ -308,9 +307,8 @@ function templatesHTML(){
       <div class="tpl-empty">
         <div class="te-ico">${sfIcon("calPlan","red","lg")}</div>
         <div class="te-t">Tes séances de la semaine</div>
-        <div class="te-s">Crée plusieurs séances (haut, bas, jambes…), puis place chacune sur ses jours : elle s'affichera toute seule le jour venu.</div>
-        <button class="btn secondary sm" data-a="tplNew">${icon("plus")} Nouvelle séance</button>
-        <button class="btn ghost sm" data-a="weekWizard"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Programme de la semaine</button>
+        <div class="te-s">Compose une séance ci-dessus, puis enregistre-la et choisis ses jours : elle s'affichera toute seule le jour venu.</div>
+        <button class="btn secondary sm" data-a="weekWizard"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Programme de la semaine</button>
       </div>
     </div>`;
   }
@@ -318,12 +316,24 @@ function templatesHTML(){
   return `<div class="tpl-section stagger" style="--i:5">
     <div class="sec-row">
       ${sectionHead(`${icon("bookmark")}<span>Mes séances</span><span class="sec-count">${S.templates.length}</span>`, "tplOpen")}
-      <button class="sec-add" aria-label="Nouvelle séance" data-a="tplNew">${icon("plus")}</button>
     </div>
     <div class="clp">${open ? tplListHTML() : ""}</div>
   </div>`;
 }
 
+// Enregistrer ou non la séance composée : enregistrée, elle rejoint « Mes séances » et, avec des jours, le planning
+function pendingDaysLabel(){ return (S.custom.pendingDays||[]).slice().sort().map(d=>JOURS[(d+1)%7]).join(", "); }
+function saveRowHTML(){
+  const t = S.custom.tplId && S.templates.find(x=>x.id===S.custom.tplId);
+  if(t){
+    const same = JSON.stringify(t.exos.map(e=>[e.exoId,e.sets]))===JSON.stringify(S.custom.exos.map(e=>[e.exoId,e.sets]));
+    return `<button class="save-row saved" data-a="saveTemplateOpen">${sfIcon("bookmarkG","indigo")}<span class="grow"><span class="t">Enregistrée dans Mes séances</span>
+      <span class="s">${same ? ((t.days||[]).length ? "Planifiée : "+daysLabel(t.days) : "Aucun jour planifié") : "Modifiée : touche pour mettre à jour"}</span></span><span class="chev">${icon("chev")}</span></button>`;
+  }
+  const pend = S.custom.pendingDays && S.custom.pendingDays.length;
+  return `<button class="save-row" data-a="saveTemplateOpen">${sfIcon("bookmarkG","indigo")}<span class="grow"><span class="t">${pend?`Enregistrer pour le ${pendingDaysLabel()}`:"Enregistrer cette séance"}</span>
+    <span class="s">Facultatif : pour la retrouver et la placer dans ton planning</span></span><span class="chev">${icon("chev")}</span></button>`;
+}
 function customPaneHTML(){
   const c = S.custom.exos;
   const tail = templatesHTML() + weekPlanHTML();
@@ -331,7 +341,7 @@ function customPaneHTML(){
     return `<div class="builder-empty stagger" style="--i:4">
       <div class="be-row"><div class="be-ico">${sfIcon("pencil","orange","lg")}</div>
       <div><div class="be-t">Compose ta séance</div>
-      <div class="be-s">Choisis tes exercices ou laisse l'app te proposer une base.</div></div></div>
+      <div class="be-s">${S.custom.pendingDays && S.custom.pendingDays.length ? `Pour le ${pendingDaysLabel()} : choisis tes exercices, puis enregistre-la.` : "Choisis tes exercices ou laisse l'app te proposer une base."}</div></div></div>
       <div class="be-actions">
         <button class="btn secondary sm" data-a="customAddOpen">${icon("plus")} Choisir</button>
         <button class="btn tertiary sm" data-a="customFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> L'app choisit</button>
@@ -362,8 +372,8 @@ function customPaneHTML(){
     <div class="btnrow">
       <button class="btn tertiary sm" data-a="customAddOpen">${icon("plus")} Ajouter</button>
       <button class="btn tertiary sm" data-a="customFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Compléter</button>
-      <button class="btn tertiary sm" data-a="saveTemplateOpen">${icon("bookmark")} ${S.custom.tplId?"Sauver":"Enregistrer"}</button>
     </div>
+    ${saveRowHTML()}
     <div class="btnrow"><button class="btn ${sessionsToday().length||plannedTemplate()?"big":"secondary"}" data-a="startCustom">${icon("play")} Commencer ma séance</button></div>
     ${tail}`;
 }
@@ -608,7 +618,7 @@ let hold = null, holdTimer = null;
 const HOLD_R = 76, HOLD_C = 2*Math.PI*HOLD_R;
 function holdCardHTML(idx, ex, def, si, header, animClass, setDots){
   const prep = hold.phase==="prep";
-  const left = prep ? 3 : Math.max(0, Math.ceil(hold.target - (performance.now()-hold.t0)/1000));
+  const left = prep ? 3 : Math.max(0, Math.ceil(hold.target - (Date.now()-hold.t0)/1000));
   return `<div class="focus-card holding r-${regionOf(def)} ${animClass}">${header}
     <div class="fc-phase">${prep?"Mets-toi en position":"Tiens bon !"} · série ${si+1} / ${ex.sets.length}</div>
     ${setDots(si)}
@@ -623,7 +633,7 @@ function holdCardHTML(idx, ex, def, si, header, animClass, setDots){
 }
 function holdTick(){
   if(!hold || !S.draft || !S.draft.startedAt || !S.draft.exos[hold.exi]){ clearInterval(holdTimer); hold = null; return; }
-  const now = performance.now();
+  const now = Date.now();   // horloge murale : juste même après un verrouillage de l'écran
   if(hold.phase==="prep"){
     const left = 3 - Math.floor((now-hold.t0)/1000);
     if(left<=0){ hold.phase = "hold"; hold.t0 = now; sfx("count"); haptic(35); refreshFocusRegion(); return; }
@@ -851,7 +861,7 @@ function openPlanDaySheet(day){
       ${S.templates.length ? `<p class="body" style="margin-bottom:12px">${cur?"Changer pour une autre séance :":`Quelle séance enregistrée veux-tu faire chaque ${label} ?`}</p><div class="group">${rows}</div>
         ${cur?`<div class="btnrow"><button class="btn ghost" data-a="planSet" data-d="${day}">Ne rien prévoir le ${label}</button></div>`:""}`
       : `<div class="empty-state" style="padding:24px 20px"><span class="em">${sfIcon("bookmarkG","indigo","lg")}</span>Tu n'as pas encore de séance enregistrée.</div>`}
-      <div class="btnrow"><button class="btn ${S.templates.length?"secondary":""}" data-a="planNew" data-d="${day}">${icon("plus")} Nouvelle séance pour le ${label}</button></div>
+      <div class="btnrow"><button class="btn ${S.templates.length?"secondary":""}" data-a="planNew" data-d="${day}">${icon("plus")} Composer une séance pour le ${label}</button></div>
     </div>`);
 }
 // À l'ouverture (et quand on planifie le jour même) : charge la séance prévue aujourd'hui dans « Ma séance »
@@ -888,12 +898,14 @@ document.addEventListener("pointermove", e=>{
   swipe.card.style.transform = `translateX(${swipe.dx}px) rotate(${swipe.dx/45}deg)`;
 });
 function endSwipe(e){
-  if(!swipe || e.pointerId!==swipe.id) return;
+  if(!swipe || (e.pointerId!=null && e.pointerId!==swipe.id)) return;
   const s = swipe; swipe = null;
   if(!s.active) return;
   suppressClicksUntil = Date.now()+350;
+  // geste interrompu (pointercancel, app mise en arrière-plan) : la carte revient, sans changer d'exercice
+  const cancel = e.type!=="pointerup";
   const v = s.dx/Math.max(1, performance.now()-s.t), n = S.draft.exos.length;
-  const go = n<2 ? 0 : (s.dx<-70 || v<-0.6) ? 1 : (s.dx>70 || v>0.6) ? -1 : 0;
+  const go = cancel || n<2 ? 0 : (s.dx<-70 || v<-0.6) ? 1 : (s.dx>70 || v>0.6) ? -1 : 0;
   s.card.classList.remove("dragging");
   if(go){
     s.card.classList.add(go>0?"fly-l":"fly-r");
@@ -908,6 +920,7 @@ function endSwipe(e){
 }
 document.addEventListener("pointerup", endSwipe);
 document.addEventListener("pointercancel", endSwipe);
+document.addEventListener("ascen:suspend", endSwipe);
 
 Object.assign(ACT, {
   todayMode(d){
@@ -1003,7 +1016,15 @@ Object.assign(ACT, {
     openTpls.add(copy.id);
     closeSheet(); save(); changed(); toast("Séance dupliquée");
   },
-  planNew(d){ openTplEditor(null, { days:[+d.d] }); },
+  planNew(d){
+    // même chemin que partout : on compose dans « Ma séance », puis on l'enregistre pour ce jour
+    const day = +d.d;
+    if(S.custom.tplId || !S.custom.exos.length) S.custom = { exos:[], pendingDays:[day] };
+    else S.custom.pendingDays = [day];
+    S.settings.todayTab = "custom"; reorderMode = false;
+    closeSheet(); save(); scrollTodayTop(); renderViewAnimated("today");
+    toast(`Compose ta séance, puis enregistre-la pour le ${JOURS[(day+1)%7]}`);
+  },
   pickerInfo(d){ const l = qs("#pickerList"); if(picker && l) picker.scroll = l.scrollTop; ACT.showExoInfo({ id:d.id }); },
   backToPicker(){ if(!sheetBack() && picker) renderPickerSheet(); },
   swapFromInfo(d){
@@ -1118,9 +1139,8 @@ Object.assign(ACT, {
   },
   saveTemplateOpen(){
     // « Ma séance » s'enregistre via l'éditeur, pré-rempli (et relié à sa séance si elle en vient)
-    openTplEditor(S.custom.tplId || null, { n:S.custom.name||"", exos:S.custom.exos.map(e=>({ exoId:e.exoId, sets:e.sets })), fromCustom:true,
+    openTplEditor(S.custom.tplId || null, { n:S.custom.name||"", exos:S.custom.exos.map(e=>({ exoId:e.exoId, sets:e.sets })), fromCustom:true, lite:true,
       ...(S.custom.tplId ? {} : { days:(S.custom.pendingDays||[]).slice() }) });
-    tplEdit.dirty = true;
   },
 
   loadTemplate(d){
@@ -1149,14 +1169,14 @@ Object.assign(ACT, {
   holdStart(d){
     const exi = +d.exi, ex = S.draft.exos[exi], st = ex.sets.find(s=>!s.done); if(!st) return;
     if(restState) stopRestTimer();
-    hold = { exi, target: Math.max(5, st.reps||30), phase:"prep", t0: performance.now(), lastTick:3 };
+    hold = { exi, target: Math.max(5, st.reps||30), phase:"prep", t0: Date.now(), lastTick:3 };
     clearInterval(holdTimer); holdTimer = setInterval(holdTick, 100);
     sfx("restTick"); haptic(12); refreshFocusRegion();
   },
   holdStop(){
     if(!hold) return;
     if(hold.phase==="prep"){ clearInterval(holdTimer); hold = null; refreshFocusRegion(); return; }
-    holdFinish((performance.now()-hold.t0)/1000);
+    holdFinish((Date.now()-hold.t0)/1000);
   },
   setEffort(d, el){
     const src = restState && restState.src; if(!src) return;

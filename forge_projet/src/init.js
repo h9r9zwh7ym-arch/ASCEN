@@ -1,5 +1,5 @@
 // ================= INITIALISATION =================
-const APP_VERSION = "3.1";
+const APP_VERSION = "3.2";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 function applyTheme(){
@@ -87,3 +87,31 @@ function init(){
 }
 
 init();
+
+// ---------- mise en arrière-plan et retour dans l'app ----------
+// iOS garde l'app en mémoire : on la retrouve telle qu'on l'a laissée, parfois le lendemain.
+// À la sortie, les gestes en cours sont annulés (feuille, carte, graphique, médaille) ; au
+// retour, si le jour a changé, l'écran du jour, le planning et la séance proposée se remettent
+// à jour (une séance commencée reste intacte). Son et trophées 3D ont leur propre reprise
+// (sfx.js, trophy3d.js).
+let appDay = todayISO(), appAway = false;
+function appSuspend(){
+  document.dispatchEvent(new Event("ascen:suspend"));
+  if(document.hidden || !document.hasFocus()) appAway = true;
+}
+function appResume(){
+  if(!appAway) return;
+  appAway = false;
+  const day = todayISO();
+  if(day===appDay) return;
+  appDay = day;
+  const live = S.draft && S.draft.startedAt;
+  if(!live) applyPlannedSession();
+  // l'onglet affiché se redessine (les autres le seront en y allant : voir switchTab)
+  if(!(live && currentTab==="today")) renderView(currentTab);
+}
+document.addEventListener("visibilitychange", ()=>{ if(document.hidden) appSuspend(); else appResume(); });
+window.addEventListener("pagehide", appSuspend);
+window.addEventListener("blur", appSuspend);
+window.addEventListener("pageshow", e=>{ if(e.persisted){ appAway = true; appResume(); } });
+window.addEventListener("focus", appResume);

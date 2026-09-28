@@ -25,7 +25,7 @@ Variables utiles :
 | `test2.js` | Import de programme, thèmes clair et sombre |
 | `focus.js` | Séance en cours : mode focus, navigation, repos |
 | `v12.js` à `v20.js` | Fonctions ajoutées de version en version : trophées, planning, chrono, enchaînement… |
-| `v21.js` | Moteur de progression, sauvegarde et restauration, calendrier, grand texte |
+| `v21.js` | Moteur de progression, sauvegarde et restauration, grand texte |
 | `v22.js` | Premier lancement |
 | `v23.js` | Migration v2.2, note de séance, poids du corps, niveau, nombre d'exercices |
 | `v24.js` | Modifier une séance, objectifs chiffrés, bilan en image |
@@ -39,6 +39,7 @@ Variables utiles :
 | `v28.js` | Pile de feuilles (retour au lieu de tout fermer) et « Ajouter » selon le contexte de la fiche |
 | `v29.js` | Robustesse : données abîmées au démarrage, action en échec, double appui |
 | `v30.js` | Étirements : réglage, bloc « retour au calme » en fin de proposition, enregistrement à part, historique |
+| `v31.js` | Création unique (Ma séance → Enregistrer, facultatif), plus de Calendrier, bulle des graphiques, reprise après arrière-plan (gestes, son, repos, jour suivant), pas de zoom au double appui |
 | `anim_sheet.js` | Planche de contrôle des animations d'exercices (départ/fin), par famille (`FAMILIES=pushup,plank`) |
 | `t3d_perf.js` | Trophées 3D : vignettes, cadence, construction, vue Diamant (`TAG=nom`) |
 | `ui_audit.js` | Audit visuel : chaque onglet en pleine hauteur et en bas de défilement, feuilles principales, encoche iPhone simulée (`DARK=1`, `ENGINE=webkit`, `NO_NOTCH=1`, `AUDIT_DIR=nom`) |

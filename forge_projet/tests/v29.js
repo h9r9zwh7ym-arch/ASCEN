@@ -18,7 +18,7 @@ const OUT = path.join(OUT_ROOT, 'v29'); fs.mkdirSync(OUT, { recursive: true });
         { id: 'ok1', date: '2026-09-02', durationSec: 1800, exos: [{ exoId: 'pompes', sets: [{ reps: 12, done: true }, null] }, { exoId: 'exercice_disparu', sets: [{ reps: 8, done: true }] }, 7] },
         { id: 'ok2', date: '2026-09-05T08:00:00Z', exos: [{ exoId: 'squat_pdc', sets: [{ reps: 15, done: true }] }] }],
       custom: { exos: [{ exoId: 'exercice_disparu', sets: 3 }, { exoId: 'pompes', sets: 3 }, null] },
-      templates: [{ id: 't1', n: 'Haut', days: [1, 9, -2], exos: [{ exoId: 'exercice_disparu', sets: 3 }, { exoId: 'dc_haltere', sets: 3 }] }, { n: 'sans id' }, 'x'],
+      templates: [{ id: 't1', n: 'Haut', days: [(new Date().getDay() + 9) % 7, 9, -2], exos: [{ exoId: 'exercice_disparu', sets: 3 }, { exoId: 'dc_haltere', sets: 3 }] }, { n: 'sans id' }, 'x'],
       draft: { exos: [{ exoId: 'exercice_disparu', sets: [] }] },
       targets: [{ id: 'g1', exoId: 'exercice_disparu', kind: 'reps', value: 10 }, { id: 'g2', exoId: 'pompes', kind: 'reps', value: 30 }],
       medals: [1, 2], prefs: { excluded: 'pompes', included: null } })); });
@@ -28,7 +28,7 @@ const OUT = path.join(OUT_ROOT, 'v29'); fs.mkdirSync(OUT, { recursive: true });
     tpl: S.templates.map(t => t.n + ':' + t.exos.length + ':' + t.days.join('')).join('|'), draft: !!(S.draft && S.draft.exos.some(e => !EXO_MAP[e.exoId])), targets: S.targets.length, medals: Array.isArray(S.medals), excl: Array.isArray(S.prefs.excluded) }));
   log('Sanitized:', JSON.stringify(st));
   if (st.sessions !== 2 || !st.unknownKept) fail('séances lisibles gardées (historique intact)');
-  if (st.custom !== 'pompes' || st.tpl !== 'Haut:1:1' || st.draft || st.targets !== 1 || st.medals || !st.excl) fail('nettoyage de l\'état');
+  if (st.custom !== 'pompes' || !/^Haut:1:\d$/.test(st.tpl) || st.draft || st.targets !== 1 || st.medals || !st.excl) fail('nettoyage de l\'état');
   for (const t of ['history', 'progress', 'profil', 'today']) { await page.evaluate(t => switchTab(t), t); await wait(500); }
   await page.evaluate(() => { const s = S.sessions.find(x => x.id === 'ok1'); ACT.openSessionDetail({ id: s.id }); }); await wait(700); await shot('01_detail_unknown_exo');
   await page.evaluate(() => closeSheet()); await wait(400);

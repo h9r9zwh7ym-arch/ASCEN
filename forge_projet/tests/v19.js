@@ -19,10 +19,15 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await wait(500);
   await page.$eval('.tpl-empty', e => e.scrollIntoView({ block: 'center' })); await wait(300);
   await shot('01_empty');
-  // --- séance 1 : manuelle
-  await page.click('.tpl-empty [data-a="tplNew"]'); await wait(450);
-  log('Editor open:', await page.textContent('.te-hd .t'), '| save disabled:', await page.$eval('#tplEdSaveBtn', b => b.disabled));
-  await page.fill('#tplEdName', 'Haut A');
+  // --- séance 1 : composée dans Ma séance, puis enregistrée ; l'éditeur complet la modifie
+  log('No create button in Mes séances:', !(await page.$('[data-a="tplNew"], .sec-add')));
+  await page.evaluate(() => { S.custom = { exos: [{ exoId: 'pompes', sets: 3 }] }; save(); renderView('today'); });
+  await page.click('.save-row'); await wait(450);
+  log('Save sheet:', await page.textContent('.te-hd .t'), '| no exercise editing:', !(await page.$('[data-a="tplEdAdd"]')));
+  await page.fill('#tplEdName', 'Haut A'); await page.click('#tplEdSaveBtn'); await wait(700);
+  await page.evaluate(() => { const t = S.templates[0]; openTpls.add(t.id); ACT.tplOpenEditor({ id: t.id }); }); await wait(450);
+  log('Editor open:', await page.textContent('.te-hd .t'));
+  await page.evaluate(() => { tplEdit.exos = []; refreshTplEditor(); }); await wait(100);
   await page.click('[data-a="tplEdDay"][data-d="0"]'); await page.click('[data-a="tplEdDay"][data-d="3"]'); await wait(150);
   await page.click('[data-a="tplEdAdd"]'); await wait(400);
   await page.fill('#pickerSearch', 'développé'); await wait(200);
@@ -34,16 +39,16 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await shot('02_editor');
   await page.click('#tplEdSaveBtn'); await wait(700);
   log('Templates:', await page.evaluate(() => S.templates.map(t => t.n + ' [' + t.days + '] ' + t.exos.length + ' exos')));
-  // --- séance 2 : via le bouton +, prend le lundi
-  await page.click('.sec-add'); await wait(450);
+  // --- séance 2 : prend le lundi
+  await page.evaluate(() => { S.custom = { exos: [{ exoId: 'squat_pdc', sets: 3 }] }; save(); renderView('today'); });
+  await page.click('.save-row'); await wait(450);
   await page.fill('#tplEdName', 'Jambes');
   await page.click('[data-a="tplEdDay"][data-d="0"]'); await wait(150);
   log('Clash hint:', await page.textContent('.te-hint'));
-  await page.click('[data-a="tplEdFill"]'); await wait(200);
   await page.click('#tplEdSaveBtn'); await wait(700);
   log('After 2nd:', await page.evaluate(() => S.templates.map(t => t.n + ' [' + t.days + ']')));
-  // --- annuler avec modifications
-  await page.click('.tpl-add[data-a="tplNew"]'); await wait(400);
+  // --- annuler avec modifications (éditeur complet)
+  await page.evaluate(() => ACT.tplOpenEditor({ id: S.templates[0].id })); await wait(400);
   await page.fill('#tplEdName', 'Brouillon');
   await page.click('[data-a="tplEdCancel"]'); await wait(350);
   log('Discard modal:', !!(await page.$('[data-a="tplEdDiscard"]')));
@@ -51,10 +56,11 @@ require('fs').mkdirSync(OUT, { recursive: true });
   log('Resumed name:', await page.$eval('#tplEdName', i => i.value));
   await page.click('[data-a="tplEdCancel"]'); await wait(300); await page.click('[data-a="tplEdDiscard"]'); await wait(400);
   // --- picker : retour sans ajout
-  await page.click('.sec-add'); await wait(400); await page.click('[data-a="tplEdAdd"]'); await wait(400);
+  await page.evaluate(() => ACT.tplOpenEditor({ id: S.templates[0].id })); await wait(400); await page.click('[data-a="tplEdAdd"]'); await wait(400);
   await page.click('[data-a="pickerCancel"]'); await wait(400);
   log('Back from picker -> editor:', !!(await page.$('#tplEdBody')));
   await page.click('[data-a="tplEdCancel"]'); await wait(400);
+  if (await page.$('[data-a="tplEdDiscard"]')) { await page.click('[data-a="tplEdDiscard"]'); await wait(400); }
   // --- modifier depuis la carte
   await page.$eval('.tpl-card2 .tc-head', e => e.scrollIntoView({ block: 'center' }));
   await page.click('.tpl-card2 .tc-head'); await wait(500);
@@ -82,7 +88,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.click('[data-a="tplEdCancel"]'); await wait(400);
   // enregistrer Ma séance via l'éditeur
   await page.evaluate(() => { S.custom = { exos: [{ exoId: 'pompes', sets: 3 }], name: 'Rapide' }; save(); renderView('today'); });
-  await page.click('[data-a="saveTemplateOpen"]'); await wait(400);
+  await page.click('.save-row[data-a="saveTemplateOpen"]'); await wait(400);
   await page.click('#tplEdSaveBtn'); await wait(600);
   log('Custom linked:', await page.evaluate(() => !!S.custom.tplId && S.templates.some(t => t.id === S.custom.tplId && t.n === 'Rapide')));
   await browser.close();
