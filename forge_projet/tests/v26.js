@@ -52,6 +52,9 @@ const OUT = path.join(OUT_ROOT, 'v26'); fs.mkdirSync(OUT, { recursive: true });
   await page.click('[data-a="openStorage"]'); await wait(700); await shot('01_storage');
   const sto = await page.$eval('#stoBody', e => e.textContent.replace(/\s+/g, ' ').slice(0, 200)); log('Storage sheet:', sto);
   if (!/ans d'entraînement/.test(sto)) fail('estimation de durée');
+  const idbSize = await page.evaluate(async () => { const r = await idbGet(); return { compressed: typeof r.data !== 'string', bytes: typeof r.data === 'string' ? r.data.length * 2 : r.data.size, ls: (localStorage.getItem('forge.v1') || '').length * 2 }; });
+  log('Backup copy:', JSON.stringify(idbSize)); if (typeof CompressionStream !== 'undefined' && false) {}
+  if (idbSize.bytes > idbSize.ls * 0.5) fail('copie de secours non compressée');
   await page.evaluate(() => closeSheet()); await wait(400);
 
   // ---- 2. graphiques au doigt

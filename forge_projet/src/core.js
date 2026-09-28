@@ -91,14 +91,37 @@ function idbGet(){
     r.onsuccess = ()=>{ db.close(); ok(r.result||null); }; r.onerror = ()=>{ db.close(); ko(r.error); };
   }));
 }
-function idbMirror(str, savedAt){ idbPut(str, savedAt).catch(()=>{}); }
+// la copie de secours est compressée (gzip natif du navigateur) : ~6 à 8 fois plus petite
+async function gz(str){
+  if(typeof CompressionStream==="undefined") return str;
+  const s = new Blob([str]).stream().pipeThrough(new CompressionStream("gzip"));
+  return await new Response(s).blob();
+}
+async function gunz(data){
+  if(typeof data==="string") return data;
+  const s = data.stream().pipeThrough(new DecompressionStream("gzip"));
+  return await new Response(s).text();
+}
+let idbPending = null, idbWriting = false;
+function idbMirror(str, savedAt){
+  // une seule écriture à la fois ; la dernière version gagne
+  idbPending = { str, savedAt };
+  if(idbWriting) return;
+  idbWriting = true;
+  (async ()=>{
+    while(idbPending){ const j = idbPending; idbPending = null; try{ await idbPut(await gz(j.str), j.savedAt); }catch(e){} }
+    idbWriting = false;
+  })();
+}
 function idbClear(){ return idbOpen().then(db=>new Promise(ok=>{ const tx = db.transaction(IDB_STORE, "readwrite"); tx.objectStore(IDB_STORE).clear(); tx.oncomplete = tx.onerror = ()=>{ db.close(); ok(); }; })).catch(()=>{}); }
 var loadedFromLS; // var : affecté pendant load(), qui s'exécute avant cette ligne
 // au lancement : si la copie IndexedDB est plus récente (localStorage plein, vidé ou
 // illisible), on la reprend
 function idbRecover(){
-  idbGet().then(rec=>{
+  idbGet().then(async rec=>{
     if(!rec || !rec.data) return;
+    // copies non compressées (avant v2.7) et compressées
+    rec = Object.assign({}, rec, { data: await gunz(rec.data) });
     // localStorage absent, ou plus ancien que la copie (écriture refusée faute de place)
     if(loadedFromLS && !(S.meta.savedAt && rec.savedAt > S.meta.savedAt)) return;
     const st = normalizeState(JSON.parse(rec.data));
@@ -107,6 +130,12 @@ function idbRecover(){
     if(typeof renderView==="function") renderView(currentTab);
     if(typeof toast==="function") toast("Données reprises depuis la copie de secours");
   }).catch(()=>{});
+}
+function cleanupStorage(){
+  try{
+    const bad = []; for(let i=0;i<localStorage.length;i++){ const k = localStorage.key(i); if(k && k.startsWith(STORAGE_KEY+".illisible.")) bad.push(k); }
+    bad.sort().slice(0, -1).forEach(k=>localStorage.removeItem(k));
+  }catch(e){}
 }
 function storageUsage(){
   let n = 0;

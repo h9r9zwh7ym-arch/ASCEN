@@ -510,12 +510,15 @@ Object.assign(ACT, {
         </div>
         <div class="group" style="margin-top:14px">
           <div class="row">${sfIcon("storage","green")}<div class="grow"><div class="t">Format compact</div><div class="s wrap">L'historique est enregistré sous une forme condensée, environ 2,5 fois plus légère.</div></div></div>
-          <div class="row">${sfIcon("shield","blue")}<div class="grow"><div class="t">Copie de secours</div><div class="s wrap">Chaque enregistrement est aussi copié dans une seconde base (IndexedDB). Si l'espace principal est plein ou effacé, l'app repart de cette copie.</div></div></div>
+          <div class="row">${sfIcon("shield","blue")}<div class="grow"><div class="t">Copie de secours compressée</div><div class="s wrap">Chaque enregistrement est aussi copié, compressé, dans une seconde base (IndexedDB). Si l'espace principal est plein ou effacé, l'app repart de cette copie.</div></div><div class="val" id="stoIdb"></div></div>
+          <div class="row">${sfIcon("phone","gray")}<div class="grow"><div class="t">Total sur l'appareil</div><div class="s wrap">Données, copie de secours et fichiers de l'app gardés pour le hors ligne. Les trophées 3D sont dessinés à la volée : aucune image n'est stockée.</div></div><div class="val" id="stoTotal"></div></div>
           <div class="row">${sfIcon("lock","indigo")}<div class="grow"><div class="t">Protection</div><div class="s wrap" id="stoPersist">Vérification…</div></div></div>
         </div>
         <p class="hr-note" style="margin:12px 20px 0">Rien ne quitte ton téléphone. Pour ne rien perdre en changeant d'appareil, garde une sauvegarde dans Fichiers ou iCloud.</p>
         <div class="btnrow"><button class="btn secondary" data-a="backupData">${icon("bookmark")} Faire une sauvegarde</button></div>
       </div>`, { tall:true });
+    idbGet().then(r=>{ const e = qs("#stoIdb"); if(e && r && r.data) e.textContent = fmtBytes(typeof r.data==="string" ? r.data.length*2 : r.data.size); }).catch(()=>{});
+    try{ if(navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(x=>{ const e = qs("#stoTotal"); if(e && x.usage) e.textContent = fmtBytes(x.usage + u); }); }catch(e){}
     const el = qs("#stoPersist");
     const setTxt = t=>{ if(el) el.textContent = t; };
     try{

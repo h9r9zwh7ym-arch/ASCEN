@@ -4,7 +4,7 @@ const TIERS = [
   { n:"Bronze",  pts:10 },
   { n:"Argent",  pts:25 },
   { n:"Or",      pts:50 },
-  { n:"Platine", pts:100 },
+  { n:"Diamant", pts:100 },
 ];
 
 function masteredExosCount(){
@@ -62,7 +62,7 @@ function heaviestSet(){
 }
 // Progression de force sur un exercice chargé : meilleur 1RM estimé comparé à la
 // meilleure des 3 premières séances, pour un exercice pratiqué depuis au moins 90 jours
-// (évite qu'une progression de débutant de quelques semaines donne le platine).
+// (évite qu'une progression de débutant de quelques semaines donne le diamant).
 function bestStrengthRatio(){
   const hist = {};
   // les séances sont déjà enregistrées dans l'ordre chronologique
@@ -102,20 +102,20 @@ function equipCatsTrained(){
 const MEDAL_CATS = [
   ["regular", "Régularité"], ["force", "Force"], ["volume", "Volume"], ["explore", "Découverte"], ["style", "Style"],
 ];
-// t : seuils bronze / argent / or / platine. Le platine vise le très long terme :
+// t : seuils bronze / argent / or / diamant. Le diamant vise le très long terme :
 // plusieurs années d'entraînement régulier pour la plupart des familles.
 const MEDALS = [
-  { id:"sessions", g:"dumbbell", c:"orange", cat:"regular", n:"Assiduité", unit:"séances terminées", one:"séance terminée",     t:[1,25,150,500],   val:()=>S.sessions.length, desc:"Le platine représente environ trois ans à trois séances par semaine." },
-  { id:"streak", g:"flame", c:"red",   cat:"regular", n:"Régularité", unit:"semaines d'affilée",                          t:[2,8,26,104],     val:maxStreakWeeksEver, desc:"Semaines consécutives avec au moins une séance. Le platine demande deux ans sans interruption." },
+  { id:"sessions", g:"dumbbell", c:"orange", cat:"regular", n:"Assiduité", unit:"séances terminées", one:"séance terminée",     t:[1,25,150,500],   val:()=>S.sessions.length, desc:"Le diamant représente environ trois ans à trois séances par semaine." },
+  { id:"streak", g:"flame", c:"red",   cat:"regular", n:"Régularité", unit:"semaines d'affilée",                          t:[2,8,26,104],     val:maxStreakWeeksEver, desc:"Semaines consécutives avec au moins une séance. Le diamant demande deux ans sans interruption." },
   { id:"perfect", g:"target", c:"pink",  cat:"regular", n:"Semaine parfaite", unit:"semaines à l'objectif", one:"semaine à l'objectif", t:[1,8,40,150],   val:perfectWeeksCount, desc:"Semaines où tu atteins ton objectif de séances hebdomadaires." },
   { id:"fullmonth", g:"calendar", c:"blue",cat:"regular", n:"Mois complet", unit:"mois à 12 séances ou plus", one:"mois à 12 séances ou plus", t:[1,3,6,12], val:fullMonths },
-  { id:"ironyear", g:"anvil", c:"indigo", cat:"regular", n:"Année de fer", unit:"années à 48 semaines actives", one:"année à 48 semaines actives", t:[1,2,3,5], val:ironYears, desc:"Une année civile où tu t'entraînes au moins 48 semaines sur 52. Le platine demande cinq années de ce niveau." },
-  { id:"fidelity", g:"heart", c:"pink", cat:"regular", n:"Fidélité", unit:"jours entre ta première et ta dernière séance", one:"jour entre ta première et ta dernière séance", t:[30,180,365,1095], val:spanDays, desc:"L'ancienneté de ta pratique. Le platine correspond à trois ans." },
+  { id:"ironyear", g:"anvil", c:"indigo", cat:"regular", n:"Année de fer", unit:"années à 48 semaines actives", one:"année à 48 semaines actives", t:[1,2,3,5], val:ironYears, desc:"Une année civile où tu t'entraînes au moins 48 semaines sur 52. Le diamant demande cinq années de ce niveau." },
+  { id:"fidelity", g:"heart", c:"pink", cat:"regular", n:"Fidélité", unit:"jours entre ta première et ta dernière séance", one:"jour entre ta première et ta dernière séance", t:[30,180,365,1095], val:spanDays, desc:"L'ancienneté de ta pratique. Le diamant correspond à trois ans." },
   { id:"planned", g:"calPlan", c:"teal",  cat:"regular", n:"Planificateur", unit:"séances prévues faites le bon jour", one:"séance prévue faite le bon jour", t:[1,10,50,200], val:countSessions(s=>s.planned), desc:"Séances de ton planning hebdomadaire faites le jour prévu." },
 
   { id:"prs", g:"bolt", c:"orange",      cat:"force", n:"Records", unit:"records personnels battus", one:"record personnel battu", t:[1,15,75,300], val:()=>S.meta.prCount||0 },
   { id:"heavy", g:"barbell", c:"indigo",    cat:"force", n:"Poids lourd", unit:"kg sur une seule série",                       t:[20,60,100,150],  val:heaviestSet, desc:"La charge la plus lourde que tu as déplacée sur une série." },
-  { id:"doubled", g:"trendUp", c:"green",  cat:"force", n:"Deux fois plus fort", unit:"ta force de départ",     t:[1.2,1.5,2,2.5], base:1, val:bestStrengthRatio, fmt:v=>v?"×"+round1(v).toLocaleString("fr-CH",{minimumFractionDigits:1}):"–", desc:"Ton meilleur 1RM estimé sur un exercice chargé, comparé à tes 3 premières séances de cet exercice (pratiqué depuis au moins 90 jours). Le platine demande ×2,5." },
+  { id:"doubled", g:"trendUp", c:"green",  cat:"force", n:"Deux fois plus fort", unit:"ta force de départ",     t:[1.2,1.5,2,2.5], base:1, val:bestStrengthRatio, fmt:v=>v?"×"+round1(v).toLocaleString("fr-CH",{minimumFractionDigits:1}):"–", desc:"Ton meilleur 1RM estimé sur un exercice chargé, comparé à tes 3 premières séances de cet exercice (pratiqué depuis au moins 90 jours). Le diamant demande ×2,5." },
   { id:"mastery", g:"cap", c:"purple",  cat:"force", n:"Maîtrise", unit:"exercices maîtrisés", one:"exercice maîtrisé", t:[1,5,15,30],       val:masteredExosCount, desc:"Un exercice est maîtrisé quand tu l'as pratiqué dans 8 séances." },
 
   { id:"volume", g:"mountain", c:"brown",   cat:"volume", n:"Tonnage", unit:"kg soulevés au total",                         t:[1000,25000,250000,1500000], val:totalVolumeAllTime },
@@ -128,14 +128,14 @@ const MEDALS = [
   { id:"variety", g:"compass", c:"teal",  cat:"explore", n:"Polyvalence", unit:"exercices différents",                         t:[5,20,45,80],     val:distinctExosCount },
   { id:"muscles", g:"person", c:"mint",  cat:"explore", n:"Corps complet", unit:"semaines équilibrées", one:"semaine équilibrée", t:[1,10,40,100], val:balancedWeeks, desc:"Semaines où tu travailles au moins 8 groupes musculaires différents." },
   { id:"equipcats", g:"toolbox", c:"brown",cat:"explore", n:"Touche-à-tout", unit:"types de matériel utilisés", one:"type de matériel utilisé", t:[2,3,4,6], val:equipCatsTrained, desc:"Poids du corps, haltères, barre, kettlebell, élastiques, barre de traction." },
-  { id:"intense", g:"gauge", c:"orange",  cat:"regular", n:"Semaine intense", unit:"semaines à 5 séances ou plus", one:"semaine à 5 séances ou plus", t:[1,5,20,52], val:intenseWeeks, desc:"Semaines d'au moins 5 séances. Le platine en demande 52." },
+  { id:"intense", g:"gauge", c:"orange",  cat:"regular", n:"Semaine intense", unit:"semaines à 5 séances ou plus", one:"semaine à 5 séances ou plus", t:[1,5,20,52], val:intenseWeeks, desc:"Semaines d'au moins 5 séances. Le diamant en demande 52." },
 
   { id:"early", g:"sunrise", c:"orange",    cat:"style", n:"Lève-tôt", unit:"séances commencées avant 8 h", one:"séance commencée avant 8 h", t:[1,10,50,150], val:countSessions(s=>{ const h=startHour(s); return h!==null && h<8; }) },
   { id:"night", g:"moon", c:"indigo",    cat:"style", n:"Oiseau de nuit", unit:"séances commencées après 21 h", one:"séance commencée après 21 h", t:[1,10,50,150], val:countSessions(s=>startHour(s)>=21) },
   { id:"weekend", g:"sun", c:"yellow",  cat:"style", n:"Guerrier du week-end", unit:"séances le week-end", one:"séance le week-end", t:[1,10,50,150], val:countSessions(s=>{ const g = parseISO(s.date).getDay(); return g===0 || g===6; }) },
   { id:"lunch", g:"history", c:"green",    cat:"style", n:"Pause de midi", unit:"séances commencées entre 11 h et 14 h", one:"séance commencée entre 11 h et 14 h", t:[1,10,40,120], val:countSessions(s=>{ const h=startHour(s); return h!==null && h>=11 && h<14; }) },
   { id:"comeback", g:"restore", c:"blue", cat:"regular", n:"Retour gagnant", unit:"reprises après 2 semaines de pause", one:"reprise après 2 semaines de pause", t:[1,3,6,12], val:comebacks, desc:"Chaque fois que tu reprends après au moins 14 jours sans séance. Revenir, c'est déjà gagner." },
-  { id:"hold", g:"shield", c:"gray",     cat:"volume", n:"Gainage d'acier", unit:"minutes de maintien", one:"minute de maintien", t:[5,60,300,1200], val:holdMinutes, fmt:v=>v<10?round1(v).toLocaleString("fr-CH"):fmtNum(v), desc:"Temps total passé sur les exercices chronométrés (planche, chaise, suspension…). Le platine représente 20 heures." },
+  { id:"hold", g:"shield", c:"gray",     cat:"volume", n:"Gainage d'acier", unit:"minutes de maintien", one:"minute de maintien", t:[5,60,300,1200], val:holdMinutes, fmt:v=>v<10?round1(v).toLocaleString("fr-CH"):fmtNum(v), desc:"Temps total passé sur les exercices chronométrés (planche, chaise, suspension…). Le diamant représente 20 heures." },
   { id:"bodyweight", g:"person", c:"green",cat:"volume", n:"Poids du corps", unit:"répétitions au poids du corps", one:"répétition au poids du corps", t:[500,5000,25000,100000], val:bodyweightReps },
   { id:"legs", g:"leg", c:"green",     cat:"explore", n:"Jamais sans les jambes", unit:"séances avec 3 séries de jambes ou plus", one:"séance avec 3 séries de jambes ou plus", t:[1,20,100,300], val:legDays },
   { id:"architect", g:"ruler", c:"purple",cat:"explore", n:"Architecte", unit:"séances enregistrées", one:"séance enregistrée", t:[1,3,6,10], val:()=>S.templates.length, desc:"Construis ta bibliothèque de séances et place-les dans ta semaine." },
@@ -193,9 +193,9 @@ function tierLabel(m, k){ return m.secret ? "Secret" : TIERS[k].n; }
 const SECRETS = MEDALS.filter(m=>m.secret);
 
 // ---------- rendu des médailles (v2.4) ----------
-// Médaille en SVG : couronne de métal (bronze, argent, or, platine ; irisé pour les
+// Médaille en SVG : couronne de métal (bronze, argent, or, diamant ; irisé pour les
 // secrets), biseau éclairé à l'inverse pour le relief, émail coloré propre à chaque
-// trophée, icône gravée, reflet brillant et éclat animé pour l'or et le platine.
+// trophée, icône gravée, reflet brillant et éclat animé pour l'or et le diamant.
 // La forme dépend de la famille : rond (régularité), écu (force), hexagone (volume),
 // octogone (découverte), rosace (style), pierre taillée (secrets).
 function polyPath(n, r1, r2, rot){
@@ -229,8 +229,11 @@ function ensureMedalDefs(){
   const metal = (id, [l,m,d], rev)=>`<linearGradient id="${id}" x1="${rev?1:0}" y1="${rev?1:0}" x2="${rev?0:1}" y2="${rev?0:1}">${stops([[0,l],[.32,m],[.55,d],[.78,m],[1,l]])}</linearGradient>`;
   const iris = (id, rev)=>`<linearGradient id="${id}" x1="${rev?1:0}" y1="${rev?1:0}" x2="${rev?0:1}" y2="${rev?0:1}">${stops([[0,"#FFE0F7"],[.25,"#B7CCFF"],[.5,"#6C4DDB"],[.72,"#5FE3D2"],[1,"#FFEBB0"]])}</linearGradient>`;
   let d = "";
-  Object.keys(MEDAL_METALS).forEach(k=>{ d += metal("mA-"+k, MEDAL_METALS[k]) + metal("mB-"+k, MEDAL_METALS[k], true); });
+  Object.keys(MEDAL_METALS).forEach(k=>{ if(k!=="4") d += metal("mA-"+k, MEDAL_METALS[k]) + metal("mB-"+k, MEDAL_METALS[k], true); });
   d += iris("mA-s") + iris("mB-s", true);
+  // diamant : cristal prismatique (reflets arc-en-ciel très clairs)
+  const prism = (id, rev)=>`<linearGradient id="${id}" x1="${rev?1:0}" y1="${rev?1:0}" x2="${rev?0:1}" y2="${rev?0:1}">${stops([[0,"#FFFFFF"],[.18,"#C9F4FF"],[.34,"#8FB6FF"],[.5,"#F2E3FF"],[.64,"#7FE6FF"],[.8,"#FFD9F1"],[1,"#FFFFFF"]])}</linearGradient>`;
+  d += prism("mA-4") + prism("mB-4", true);
   const faces = Object.assign({ locked:"#9AA0A8" }, IOS_COL);
   Object.keys(faces).forEach(k=>{ const c = faces[k]; d += `<radialGradient id="mF-${k}" cx=".34" cy=".28" r=".9">${stops([[0,hexMix(c,"#ffffff",.42)],[.5,c],[1,hexMix(c,"#000000",.38)]])}</radialGradient>`; });
   d += `<linearGradient id="mG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".75"/><stop offset=".55" stop-color="#fff" stop-opacity=".1"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>`;
@@ -266,12 +269,14 @@ function medalSVG(m, tier, big){
     <g transform="translate(32 ${32+gy}) scale(1.5)"><g transform="translate(0 .8)" opacity=".32">${dark}</g><g opacity="${tier?1:.8}">${glyph}</g></g>
     <g clip-path="url(#mC-${shape})"><ellipse cx="40" cy="18" rx="48" ry="30" fill="url(#mG)"/></g>
     ${shine ? `<g clip-path="url(#mO-${shape})"><g transform="rotate(22 50 50)"><rect class="m-shine" x="-70" y="-20" width="34" height="140" fill="url(#mS)"/></g></g>` : ""}
+    ${tier===4 && !m.secret ? `<g class="m-sparks" fill="#fff">${[[20,26,5.5,0],[80,34,4.2,.7],[70,80,5,1.4],[27,74,3.4,2.1]].map(([x,y,r,dl])=>`<path class="m-spark" style="animation-delay:${dl}s;transform-origin:${x}px ${y}px" d="M${x} ${y-r}Q${x} ${y} ${x+r} ${y}Q${x} ${y} ${x} ${y+r}Q${x} ${y} ${x-r} ${y}Q${x} ${y} ${x} ${y-r}Z"/>`).join("")}</g>` : ""}
     ${big ? `<circle class="m-glare" cx="30" cy="24" r="42" fill="url(#mR)" clip-path="url(#mO-${shape})"/>` : ""}
     <path d="${P}" transform="${sc(.985)}" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="1.1"/>
   </svg>`;
 }
 function medalHTML(m, tier, size){
-  return `<div class="medal t${tier} ${m.secret?"secret":""} ${size||""}">${medalSVG(m, tier, size==="big")}</div>`;
+  // data-mid / data-tier : la vignette 3D remplace le dessin SVG dès qu'elle est prête (trophy3d.js)
+  return `<div class="medal t${tier} ${m.secret?"secret":""} ${size||""}" ${m.id?`data-mid="${m.id}" data-tier="${tier}"`:""}>${medalSVG(m, tier, size==="big")}</div>`;
 }
 function pipsHTML(tier){
   return `<div class="pips">${[1,2,3,4].map(k=>`<span class="pip ${k<=tier?"t"+k:""}"></span>`).join("")}</div>`;
@@ -292,7 +297,7 @@ function medalCardHTML(m, i){
   </button>`;
 }
 
-function showMedalModal(id){
+function showMedalModal2D(id){
   const m = MEDAL_MAP[id], p = medalProgress(m), st = S.medals[m.id]||{d:{}};
   if(m.secret){
     openModal(`<div class="medal-modal">
@@ -320,7 +325,7 @@ function showMedalModal(id){
     <div class="mm-tier">${p.t ? "Palier "+TIERS[p.t].n.toLowerCase() : "Pas encore débloquée"}</div>
     <div class="mm-desc">${esc(m.desc || ("Nombre de "+m.unit+"."))}</div>
     ${p.next!=null ? `<div class="mm-prog"><div class="mc-bar big"><span style="width:${Math.round(p.pct*100)}%"></span></div>
-      <div class="mm-prog-txt">${fmtMedalVal(m,p.v)} / ${fmtMedalVal(m,p.next)} ${esc(medalUnit(m,p.next))} pour le palier ${TIERS[p.t+1].n.toLowerCase()}</div></div>` : `<div class="mm-prog-txt">Palier platine atteint : bravo !</div>`}
+      <div class="mm-prog-txt">${fmtMedalVal(m,p.v)} / ${fmtMedalVal(m,p.next)} ${esc(medalUnit(m,p.next))} pour le palier ${TIERS[p.t+1].n.toLowerCase()}</div></div>` : `<div class="mm-prog-txt">Palier diamant atteint : bravo !</div>`}
     <div class="tier-list">${rows}</div>
     <button class="btn secondary" style="margin-top:16px" data-a="closesheet">Fermer</button>
   </div>`);
@@ -418,7 +423,7 @@ function showCelebration(session, ups, xpBefore, xpAfter, hits){
 }
 
 Object.assign(ACT, {
-  showMedal(d){ showMedalModal(d.id); },
+  showMedal(d, el){ showMedalModal(d.id, el); },
   // la note reste repliée : un appui l'ouvre, pour ne pas alourdir l'écran de fin
   celNote(d, el){
     const t = document.createElement("textarea");

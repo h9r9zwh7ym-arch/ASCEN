@@ -21,44 +21,60 @@ const OUT = path.join(OUT_ROOT, 'v27'); fs.mkdirSync(OUT, { recursive: true });
   page.on('request', r => { if (/three-forge\.js/.test(r.url())) threeReq++; });
   await page.goto(file); await page.waitForSelector('#splash', { state: 'detached', timeout: 6000 }); await wait(400);
   log('Three.js loaded at startup:', threeReq > 0); if (threeReq) fail('Three.js chargé au démarrage');
-  // palier or pour la démonstration
-  await page.evaluate(() => { S.medals.sessions = { t: 2, d: { 1: '2026-07-10T08:00:00Z', 2: '2026-08-01T08:00:00Z' } }; S.meta.t3dSeen = 0; save(); progressTab = 'medals'; switchTab('progress'); });
-  await page.waitForFunction(() => document.querySelector('#t3dStage.live'), null, { timeout: 15000 }).catch(() => {});
-  const live = await page.evaluate(() => ({ live: !!document.querySelector('#t3dStage.live'), three: !!window.FORGE_THREE, rev: window.FORGE_THREE && FORGE_THREE.REVISION, unlock: !!(T3D.ctx && T3D.ctx.unlock), tier: T3D.ctx && T3D.ctx.tier }));
-  log('3D card:', JSON.stringify(live), '| loaded once:', threeReq);
+  // paliers variés, dernier gagné : Assiduité argent
+  await page.evaluate(() => { S.medals = { streak: { t: 1, d: { 1: '2026-07-05T08:00:00Z' } }, prs: { t: 3, d: { 1: '2026-07-01T08:00:00Z', 2: '2026-07-10T08:00:00Z', 3: '2026-07-20T08:00:00Z' } },
+      sessions: { t: 2, d: { 1: '2026-07-10T08:00:00Z', 2: '2026-08-01T08:00:00Z' } }, s_week7: { t: 1, d: { 1: '2026-07-15T08:00:00Z' } } }; S.meta.t3dSeen = ''; save(); progressTab = 'medals'; switchTab('progress'); });
+  await page.waitForFunction(() => document.querySelector('#t3dStage.live'), null, { timeout: 20000 }).catch(() => {});
+  const live = await page.evaluate(() => ({ live: !!document.querySelector('#t3dStage.live'), three: !!window.FORGE_THREE, rev: window.FORGE_THREE && FORGE_THREE.REVISION, unlock: !!(T3D.ctx && T3D.ctx.unlock), id: T3D.ctx && T3D.ctx.id, tier: T3D.ctx && T3D.ctx.tier }));
+  log('Featured card:', JSON.stringify(live), '| loaded once:', threeReq);
   if (!live.live || !live.three) fail('carte 3D non montée');
+  if (live.id !== 'sessions' || live.tier !== 2) fail('trophée mis en avant = dernier palier gagné');
   if (!live.unlock) fail('animation de déblocage non lancée');
   await wait(450); await shot('01_unlock_mid');
   await wait(2400); await shot('02_card_idle');
-  // pixels réellement dessinés dans le canvas (pas une zone vide)
-  const drawn = await page.evaluate(() => { const c = T3D.ctx.canvas; T3D.ctx.renderer.render(T3D.ctx.scene, T3D.ctx.camera); const g = T3D.ctx.renderer.getContext(); const w = g.drawingBufferWidth, h = g.drawingBufferHeight; const px = new Uint8Array(4); g.readPixels(w >> 1, h >> 1, 1, 1, g.RGBA, g.UNSIGNED_BYTE, px); return { w, h, px: Array.from(px) }; });
-  log('Canvas center pixel:', JSON.stringify(drawn)); if (!drawn.px[3]) fail('rien de dessiné au centre du trophée');
-  // vue détaillée
-  await page.click('.t3d-card'); await wait(900); await shot('03_detail');
-  const det = await page.evaluate(() => ({ open: !!document.querySelector('.t3d-full.show'), inBig: !!document.querySelector('#t3dBig canvas'), name: document.querySelector('.t3d-name').textContent }));
-  log('Detail:', JSON.stringify(det)); if (!det.open || !det.inBig) fail('vue détaillée');
+  // opacité : vue de dos, le centre est plein (pas de transparence)
+  const backPx = await page.evaluate(() => { const c = T3D.ctx; c.running = false; c.medal.rotation.set(0, Math.PI, 0); c.renderer.render(c.scene, c.camera); const g = c.renderer.getContext(); const px = new Uint8Array(4); g.readPixels(g.drawingBufferWidth >> 1, g.drawingBufferHeight >> 1, 1, 1, g.RGBA, g.UNSIGNED_BYTE, px); t3dStart(); return Array.from(px); });
+  log('Back center pixel:', JSON.stringify(backPx)); if (backPx[3] < 250) fail('dos transparent');
+  // vignettes 3D de la grille
+  await page.waitForFunction(() => document.querySelectorAll('.medal.m3d-on img.medal-3d').length >= 5, null, { timeout: 60000 }).catch(() => {});
+  const thumbs = await page.evaluate(() => document.querySelectorAll('.medal.m3d-on img.medal-3d').length); log('3D thumbnails shown:', thumbs);
+  if (thumbs < 5) fail('vignettes 3D');
+  await page.evaluate(() => document.querySelectorAll('.medal-grid')[0].scrollIntoView({ block: 'start' })); await wait(2500); await shot('03_grid_3d');
+  // fiche détaillée depuis la grille (Records, or)
+  await page.click('.medal-card[data-id="prs"]'); await page.waitForSelector('.t3d-full.show', { timeout: 15000 }); await wait(700); await shot('04_detail_prs');
+  const det = await page.evaluate(() => ({ name: document.querySelector('.t3d-name').textContent, id: T3D.ctx.id, tier: T3D.ctx.tier, rows: document.querySelectorAll('.t3d-row').length, inBig: !!document.querySelector('#t3dBig canvas') }));
+  log('Detail:', JSON.stringify(det)); if (det.id !== 'prs' || det.tier !== 3 || det.rows !== 4 || !det.inBig) fail('fiche 3D du trophée');
   // rotation au doigt
   const b = await page.evaluate(() => { const r = document.querySelector('#t3dBig').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
   const d0 = await page.evaluate(() => T3D.ctx.drag);
   await page.mouse.move(b.x - 60, b.y); await page.mouse.down(); await page.mouse.move(b.x + 20, b.y, { steps: 6 }); await page.mouse.move(b.x + 90, b.y, { steps: 6 }); await page.mouse.up();
   const d1 = await page.evaluate(() => T3D.ctx.drag); log('Drag rotation:', d0.toFixed(2), '→', d1.toFixed(2)); if (!(d1 > d0 + 0.5)) fail('rotation au doigt');
-  // métal or
-  await page.click('[data-a="t3dMetal"][data-v="3"]'); await wait(1500); await shot('04_detail_gold');
-  const gold = await page.evaluate(() => '#' + T3D.ctx.mats.body.color.getHexString()); log('Gold body color:', gold);
-  await page.click('[data-a="t3dReplay"]'); await wait(500); await shot('05_replay_burst');
+  // aperçu diamant : couronne facettée et scintillements
+  await page.click('[data-a="t3dMetal"][data-v="4"]'); await wait(1400); await shot('05_detail_diamond');
+  const dia = await page.evaluate(() => ({ tier: T3D.ctx.tier, sparks: T3D.ctx.sparks.length, flat: T3D.ctx.medal.userData.mats.frame.flatShading || T3D.ctx.medal.userData.mats.body.flatShading }));
+  log('Diamond preview:', JSON.stringify(dia)); if (dia.tier !== 4 || dia.sparks < 4 || !dia.flat) fail('palier diamant');
+  await page.click('[data-a="t3dReplay"]'); await wait(500); await shot('06_replay_burst');
   const burst = await page.evaluate(() => !!T3D.ctx.burst); log('Particles during replay:', burst); if (!burst) fail('particules');
   await wait(2200);
   await page.click('.t3d-x'); await wait(700);
-  const back = await page.evaluate(() => ({ closed: !document.querySelector('.t3d-full'), inCard: !!document.querySelector('#t3dStage canvas') }));
-  log('Closed & canvas back:', JSON.stringify(back)); if (!back.closed || !back.inCard) fail('fermeture');
+  const back = await page.evaluate(() => ({ closed: !document.querySelector('.t3d-full'), inCard: !!document.querySelector('#t3dStage canvas'), id: T3D.ctx.id }));
+  log('Closed & canvas back on featured:', JSON.stringify(back)); if (!back.closed || !back.inCard || back.id !== 'sessions') fail('fermeture');
+  // secret non découvert : indice
+  await page.evaluate(() => document.querySelector('.secret-card:not(.found)').scrollIntoView({ block: 'center' })); await wait(600);
+  await page.click('.secret-card:not(.found)'); await page.waitForSelector('.t3d-full.show', { timeout: 15000 }); await wait(700); await shot('07_secret_locked');
+  const hint = await page.$eval('.t3d-desc', e => e.textContent); log('Secret hint:', hint); if (!/^Indice/.test(hint)) fail('indice du secret');
+  await page.keyboard.press('Escape'); await wait(700);
   // hors écran : la boucle s'arrête
   await page.evaluate(() => { document.querySelector('#v-progress').scrollTop = 99999; }); await wait(800);
   const idle = await page.evaluate(() => T3D.ctx.running); log('Render loop running when scrolled away:', idle);
   if (idle) fail('boucle de rendu active hors écran');
-  // changement d'onglet et retour : même contexte WebGL réutilisé
+  // changement d'onglet et retour : un seul canvas vivant
   await page.evaluate(() => switchTab('today')); await wait(500); await page.evaluate(() => { progressTab = 'medals'; switchTab('progress'); }); await wait(900);
   const reuse = await page.evaluate(() => ({ canvases: document.querySelectorAll('canvas.t3d-canvas').length, live: !!document.querySelector('#t3dStage.live') }));
   log('After tab round-trip:', JSON.stringify(reuse)); if (reuse.canvases !== 1 || !reuse.live) fail('réutilisation du contexte');
+  // rien de stocké : vignettes en mémoire seulement
+  const stored = await page.evaluate(() => { persistNow(); return { ls: localStorage.length, big: Object.keys(localStorage).filter(k => (localStorage.getItem(k) || '').length > 300000) }; });
+  log('localStorage keys:', stored.ls, '| oversized:', stored.big.length); if (stored.big.length) fail('images stockées');
   await browser.close();
 
   // ---- repli sans WebGL : médaille SVG
@@ -68,9 +84,9 @@ const OUT = path.join(OUT_ROOT, 'v27'); fs.mkdirSync(OUT, { recursive: true });
   if (wk) await p2.addInitScript(() => { const g = HTMLCanvasElement.prototype.getContext; HTMLCanvasElement.prototype.getContext = function (t, ...a) { return /webgl/.test(t) ? null : g.call(this, t, ...a); }; });
   await p2.goto(file); await p2.waitForSelector('#splash', { state: 'detached', timeout: 6000 });
   await p2.evaluate(() => { if (document.querySelector('.ob-body')) ACT.obSkip(); progressTab = 'medals'; switchTab('progress'); }); await p2.waitForTimeout(1200);
-  const fb = await p2.evaluate(() => ({ svg: !!document.querySelector('#t3dStage .medal-svg'), live: !!document.querySelector('#t3dStage.live'), three: !!window.FORGE_THREE }));
-  console.log('Fallback without WebGL:', JSON.stringify(fb)); if (!fb.svg || fb.live || fb.three) fail('repli sans WebGL');
-  await p2.click('.t3d-card'); await p2.waitForTimeout(700);
+  const fb = await p2.evaluate(() => ({ svg: !!document.querySelector('#t3dStage .medal-svg'), live: !!document.querySelector('#t3dStage.live'), three: !!window.FORGE_THREE, imgs: document.querySelectorAll('img.medal-3d').length }));
+  console.log('Fallback without WebGL:', JSON.stringify(fb)); if (!fb.svg || fb.live || fb.three || fb.imgs) fail('repli sans WebGL');
+  await p2.click('.t3d-card'); await p2.waitForTimeout(900);
   if (!(await p2.$('.medal-modal'))) fail('fiche du trophée sans WebGL');
   await b2.close();
   if (errors.length) { console.log('=== ERRORS ==='); errors.forEach(e => console.log(e)); process.exit(1); }

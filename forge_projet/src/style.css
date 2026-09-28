@@ -7,7 +7,7 @@
   --bar:rgba(248,248,250,.82); --shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.06);
   --r-push:#eb6834; --r-push-ink:#fff; --r-pull:#2a78d6; --r-pull-ink:#fff; --r-legs:#1baf7a; --r-legs-ink:#06291c; --r-core:#8a8a92; --r-core-ink:#fff;
   --grad:linear-gradient(135deg,#FF8A2B 0%,#F2601A 45%,#D8400C 100%); --glow:rgba(242,96,26,.45);
-  --bronze:#A8672F; --bronze2:#E7B07A; --silver:#868C95; --silver2:#E4E7EB; --gold:#BF8A0F; --gold2:#F6D56A; --plat:#4E9DB4; --plat2:#D3F1F8;
+  --bronze:#A8672F; --bronze2:#E7B07A; --silver:#868C95; --silver2:#E4E7EB; --gold:#BF8A0F; --gold2:#F6D56A; --plat:#3E9FD0; --plat2:#E6F9FF; --diam:linear-gradient(135deg,#A8F0FF 0%,#8FA8FF 35%,#E7C9FF 60%,#7FE6FF 85%,#FFFFFF 100%);
   --serif:ui-serif,"New York","Iowan Old Style","Palatino",Georgia,serif;
   --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif;
   --rounded:ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,sans-serif;
@@ -472,7 +472,7 @@ h2.sh button.more{font-size:calc(15rem/17);font-weight:500;color:var(--tint)}
 .pips{display:flex;justify-content:center;gap:4px;margin-top:6px}
 .pip{width:8px;height:8px;border-radius:4px;background:var(--fill);display:inline-block}
 .pip.big{width:14px;height:14px;border-radius:7px}
-.pip.t1{background:var(--bronze)} .pip.t2{background:var(--silver)} .pip.t3{background:var(--gold)} .pip.t4{background:var(--plat)}
+.pip.t1{background:var(--bronze)} .pip.t2{background:var(--silver)} .pip.t3{background:var(--gold)} .pip.t4{background:var(--diam);box-shadow:0 0 6px rgba(143,168,255,.7)}
 .medal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 16px}
 .medal-card{background:var(--bg2);border-radius:18px;padding:14px 8px 12px;text-align:center;transition:transform .15s}
 .medal-card:active{transform:scale(.95)}
@@ -1651,3 +1651,22 @@ html[data-vt="fade"]::view-transition-new(root){animation-name:vtFadeIn}
 .t3d-actions{margin-top:18px}
 .t3d-actions .btn.secondary{background:rgba(255,255,255,.12);color:#fff}
 @media (prefers-reduced-motion:reduce){.t3d-big{transition:none}}
+
+/* v2.7 : palier Diamant (remplace Platine) */
+.tier-tag.t4{background:var(--diam)!important;color:#1B2A4A}
+.m-spark{animation:mSpark 2.8s ease-in-out infinite;filter:drop-shadow(0 0 1.5px #fff)}
+@keyframes mSpark{0%,100%{opacity:0;transform:scale(.2) rotate(0)}45%{opacity:1;transform:scale(1) rotate(45deg)}60%{opacity:.9;transform:scale(.8) rotate(60deg)}}
+@media (prefers-reduced-motion:reduce){.m-spark{animation:none;opacity:.8}}
+/* v2.7 : vignettes 3D des trophées */
+.medal .medal-3d{position:absolute;left:-14%;top:-14%;width:128%;height:128%;max-width:none;opacity:0;transition:opacity .35s ease;pointer-events:none}
+.medal.m3d-on{filter:drop-shadow(0 4px 6px rgba(0,0,0,.18))}
+.medal.m3d-on .medal-3d{opacity:1}
+.medal.m3d-on .medal-svg{opacity:0;transition:opacity .35s ease}
+.t3d-fallback svg{width:104px;height:104px}
+.t3d-rows{margin:16px 0 0;text-align:left;border-radius:16px;background:rgba(255,255,255,.06);padding:4px 14px}
+.t3d-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid rgba(255,255,255,.1);font-size:calc(14rem/17);color:rgba(255,255,255,.55)}
+.t3d-row:last-child{border-bottom:0}
+.t3d-row.got{color:#fff}
+.t3d-row b{width:64px}
+.t3d-row em{margin-left:auto;font-style:normal;font-size:calc(12rem/17);opacity:.8}
+.t3d-row .ii{color:#34C759}

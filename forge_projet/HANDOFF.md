@@ -329,6 +329,35 @@ Changements :
 - **Repli** : sans WebGL ou si le fichier ne se charge pas, la médaille SVG existante s'affiche et le toucher ouvre la fiche habituelle.
 - **Tests** : `v27.js`.
 
+## 9 quaterdecies. Version 2.7 : tous les trophées en 3D, palier Diamant, volume réduit
+
+- **Transparence corrigée.** Les profils de révolution étaient parcourus dans le mauvais sens : les faces avant étaient éliminées et l'on voyait l'intérieur de la pièce, d'où l'impression de transparence de dos.
+  - Règle : parcourir le profil dans le sens trigonométrique (le dessus de l'extérieur vers le centre).
+  - Le test `v27` vérifie qu'un pixel vu de dos est opaque.
+- **Tous les trophées en 3D** (`src/trophy3d.js`).
+  - `t3dBuildMedal(T, m, tier)` construit n'importe quel trophée :
+    - révolution pour les ronds (dos, couronne cannelée, filet poli, émail bombé guilloché) ;
+    - extrusion pour les autres formes (dos plein, cadre évidé biseauté satiné, filet poli, émail guilloché en soleil en creux).
+  - Le symbole vient du glyphe de l'app (`GLYPHS`) via `SVGLoader` : pleins extrudés et biseautés ; traits en tubes arrondis avec rotules et bouts ronds.
+    - Les textes courts (« 100 », « 7/7 ») sont en relief par carte de bosses.
+    - « dumbbell » garde son modèle dédié.
+    - Attributs SVG en double nettoyés avant lecture.
+  - **Contraste des matières** : symbole en métal poli plus clair, avec une ombre de contact ; émail profond et peu réfléchissant sous vernis ; couronne cannelée ou satinée.
+  - **Vignettes** de la grille, des listes et de la célébration : rendu hors écran (second contexte), une par une pendant les temps morts, seulement pour les médailles visibles.
+    - Gardées en mémoire (URL d'objet), jamais stockées sur l'appareil.
+    - Le dessin SVG reste en dessous jusqu'à l'arrivée de l'image.
+  - **Fiche 3D pour chaque trophée** (`showMedalModal`, qui passe par `showMedalModal2D` sans WebGL) : paliers avec dates, aperçu de chaque palier (rotation de transition), rotation au doigt, « Revoir le déblocage ». Secrets non découverts : cadenas et indice.
+  - La carte en tête de Progrès › Trophées montre le dernier palier gagné, avec l'animation de déblocage au premier affichage (`S.meta.t3dSeen = "id:palier"`).
+- **Palier Diamant** (remplace Platine).
+  - 2D : dégradé prismatique et étoiles scintillantes (`.m-spark`). Pastilles et étiquettes en dégradé.
+  - 3D : métal glacé irisé (`iridescence`), couronne taillée en facettes (`flatShading`) et étoiles qui scintillent.
+- **Volume réduit** :
+  - le build minifie JS et CSS si esbuild est installé dans `vendor/` : 606 → 511 Ko ;
+  - la copie de secours IndexedDB est compressée en gzip (`CompressionStream`) : 190 → 11 Ko pour 230 séances ;
+  - le service worker (`forge-v4`) ne garde d'office que la page et les petites icônes ; Three.js et les grandes icônes sont mis en cache à la première utilisation ;
+  - les copies « illisibles » en trop sont supprimées (on garde la plus récente) ;
+  - Profil › Espace de stockage détaille les données, la copie compressée et le total sur l'appareil.
+
 ## 10. Cahier des charges d'origine (résumé)
 
 Voir le fichier `4a3df5ee-cahier-des-charges-forge.md` fourni au lancement du projet pour le texte complet. Points clés déjà couverts en v1.0 : matériel personnalisable et extensible, bibliothèque d'exercices filtrée, inclusion/exclusion d'exercices, objectifs personnalisés, suivi détaillé de séance (éditable, timer de repos, coche rapide), moteur de suggestion 100% local avec export/import IA, graphiques de progression, PR, streaks/régularité, trophées, écran d'accueil = séance du jour, thème clair/sombre automatique, page À propos avec copyright.

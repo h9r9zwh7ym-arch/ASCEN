@@ -2,11 +2,15 @@
 # Assemble Forge en un seul fichier HTML autonome. À lancer depuis la racine du projet (forge_projet/).
 cd "$(dirname "$0")"
 mkdir -p dist
+# Minification (esbuild, installé par vendor/) : ~16 % de moins à télécharger et à garder en
+# cache sur l'appareil. Sans esbuild, le fichier est assemblé tel quel.
+ESB="$(pwd)/vendor/node_modules/.bin/esbuild"
+if [ -x "$ESB" ] && [ -z "$NO_MINIFY" ]; then JS="$ESB --minify --loader=js --target=es2019 --log-level=error"; CSS="$ESB --minify --loader=css --log-level=error"; else JS="cat"; CSS="cat"; fi
 {
 echo '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)"><meta name="apple-mobile-web-app-title" content="Forge"><meta name="description" content="Séances de musculation à domicile, progression et suivi, 100 % sur l’appareil."><link rel="apple-touch-icon" href="icon-180.png"><link rel="icon" href="icon-192.png"><title>Forge</title><style>'
-cat src/style.css
+$CSS < src/style.css
 echo '</style></head><body><div id="app"></div><nav class="tabbar" aria-label="Onglets"></nav><div id="restbar"></div><div id="overlay" role="dialog"></div><div id="toast" role="status" aria-live="polite"></div><input type="file" id="fileImport" accept="application/json,.json" style="display:none"><script>'
-cd src; cat data_equipment.js data_exercises.js data_pictos.js core.js engine.js ui_shell.js sfx.js fx.js timer.js charts.js trophies.js view_today.js tpl_editor.js onboarding.js view_history.js recap.js rewind.js view_progress.js trophy3d.js view_profil.js init.js; cd ..
+cd src; cat data_equipment.js data_exercises.js data_pictos.js core.js engine.js ui_shell.js sfx.js fx.js timer.js charts.js trophies.js view_today.js tpl_editor.js onboarding.js view_history.js recap.js rewind.js view_progress.js trophy3d.js view_profil.js init.js | $JS; cd ..
 echo '</script></body></html>'
 } > dist/forge.html
 cp dist/forge.html ../index.html

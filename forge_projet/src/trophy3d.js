@@ -1,25 +1,33 @@
-// ================= TROPHÉE 3D (démonstration) =================
-// Médaille « Assiduité » rendue en temps réel avec Three.js : métal (couleur du palier),
-// émail orange Forge, haltère en relief au centre, reflets issus d'un environnement
-// studio généré (aucune image à télécharger). Three.js n'est chargé qu'à l'affichage du
-// trophée (vendor/three-forge.js, sous-ensemble construit par esbuild), puis mis en cache
-// par le service worker : l'app reste légère au démarrage et fonctionne hors ligne.
-// Un seul contexte WebGL : le même canvas passe de la carte à la vue détaillée.
+// ================= TROPHÉES 3D =================
+// Chaque trophée est construit en temps réel avec Three.js :
+// - forme selon la famille (rond, écu, hexagone, octogone, rosace, pierre taillée) ;
+// - couronne de métal au palier (étain, bronze, argent, or, diamant irisé) à tranche cannelée ;
+// - champ en émail coloré posé sur une gravure guillochée, sous un vernis brillant ;
+// - symbole (glyphe de l'app) en métal poli miroir, plus clair, avec ombre de contact,
+//   pour qu'il ressorte nettement ;
+// - reflets d'un studio généré (aucune image téléchargée).
+// Three.js (vendor/three-forge.js) n'est chargé qu'à l'affichage des trophées.
+// Un contexte WebGL « vivant » (carte mise en avant + fiche détaillée, même canvas) et un
+// contexte hors écran qui dessine les vignettes de la grille, gardées en mémoire seulement
+// (rien n'est stocké sur l'appareil).
 
-const T3D_ID = "sessions";            // trophée de démonstration
-const T3D_METALS = {                  // couleur de base (sRGB), rugosité du champ
-  0: { c:"#8C929B", r:.48, name:"Verrouillé" },
-  1: { c:"#D08A55", r:.3,  name:"Bronze" },
-  2: { c:"#DCE1E7", r:.26, name:"Argent" },
-  3: { c:"#F5C451", r:.24, name:"Or" },
-  4: { c:"#E3EEF3", r:.2,  name:"Platine" },
+const T3D_METALS = {        // couleur sRGB, rugosité de la couronne
+  0: { c:"#8E949D", r:.55 },
+  1: { c:"#CF8752", r:.34 },
+  2: { c:"#D5D7DB", r:.3 },
+  3: { c:"#F2C04E", r:.28 },
+  4: { c:"#B9E6FF", r:.05, diamond:true },
+  s: { c:"#EDE6FF", r:.14, iris:true },   // secrets découverts
 };
-const T3D = { loading:null, ctx:null, failed:false };
+const T3D = { loading:null, ctx:null, snap:null, failed:false, cache:new Map(), queue:[], busy:false };
 
 function t3dReduced(){ return !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches); }
 function t3dWebGL(){
-  try{ const c = document.createElement("canvas"); return !!(c.getContext("webgl2") || c.getContext("webgl")); }catch(e){ return false; }
+  if(T3D.gl!=null) return T3D.gl;
+  try{ const c = document.createElement("canvas"); T3D.gl = !!(c.getContext("webgl2") || c.getContext("webgl")); }catch(e){ T3D.gl = false; }
+  return T3D.gl;
 }
+function t3dUsable(){ return !T3D.failed && t3dWebGL(); }
 function loadThree(){
   if(window.FORGE_THREE) return Promise.resolve(window.FORGE_THREE);
   if(T3D.loading) return T3D.loading;
@@ -33,100 +41,308 @@ function loadThree(){
   return T3D.loading;
 }
 
-// ---------- construction de la médaille ----------
-// Profil de révolution (rayon, hauteur) : champ légèrement creusé, perle, gorge d'émail,
-// couronne biseautée, dos plat. Tourné autour de l'axe Y puis couché face caméra.
-function t3dProfile(T, pts){ return pts.map(([x,y])=>new T.Vector2(x, y)); }
-function t3dBrushed(T){
-  // brossage concentrique très fin (carte de rugosité) : lignes le long du profil
-  const c = document.createElement("canvas"); c.width = 4; c.height = 512;
-  const g = c.getContext("2d");
-  for(let y=0; y<512; y++){ const v = 150 + Math.round(40*Math.sin(y*1.7) + 30*Math.random()); g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(0, y, 4, 1); }
-  const t = new T.CanvasTexture(c); t.wrapT = 1000; // RepeatWrapping
+// ---------- textures générées (une fois) ----------
+function t3dCanvasTex(T, w, h, draw, repeat){
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  draw(c.getContext("2d"), w, h);
+  const t = new T.CanvasTexture(c); t.wrapS = t.wrapT = 1000; // RepeatWrapping
+  if(repeat) t.repeat.set(repeat[0], repeat[1]);
   return t;
+}
+function t3dTextures(T){
+  if(T3D.tex) return T3D.tex;
+  const noise = (g, w, h, base, amp)=>{ const d = g.createImageData(w, h); for(let i=0;i<d.data.length;i+=4){ const v = base + (Math.random()-.5)*amp; d.data[i] = d.data[i+1] = d.data[i+2] = v; d.data[i+3] = 255; } g.putImageData(d, 0, 0); };
+  T3D.tex = {
+    // tranche cannelée (autour de l'axe de révolution) et fin brossage
+    reed: t3dCanvasTex(T, 512, 8, (g, w, h)=>{ for(let x=0;x<w;x++){ const v = 128 + 110*Math.sin(x/w*Math.PI*2*180); g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(x, 0, 1, h); } }),
+    // satiné / sablé pour les couronnes des formes extrudées
+    frost: t3dCanvasTex(T, 256, 256, (g, w, h)=>noise(g, w, h, 150, 90), [3,3]),
+    // guilloché en rayons (émail sur face de révolution : u = angle, v = rayon)
+    rays: t3dCanvasTex(T, 1024, 64, (g, w, h)=>{ for(let x=0;x<w;x++) for(let y=0;y<h;y+=2){ const v = 128 + 70*Math.sin(x/w*Math.PI*2*72 + Math.sin(y/h*Math.PI*6)*1.6); g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(x, y, 1, 2); } }),
+    // guilloché en soleil (émail des formes extrudées, coordonnées planes)
+    sun: t3dCanvasTex(T, 512, 512, (g, w, h)=>{
+      const cx = w/2, cy = h/2, id = g.createImageData(w, h);
+      for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const dx = x-cx, dy = y-cy, a = Math.atan2(dy, dx), r = Math.hypot(dx, dy);
+        const v = 128 + 60*Math.sin(a*64 + Math.sin(r*.09)*1.4) + 30*Math.sin(r*.35); const i = (y*w+x)*4; id.data[i] = id.data[i+1] = id.data[i+2] = v; id.data[i+3] = 255; }
+      g.putImageData(id, 0, 0); }, [.62,.62]),
+    spark: t3dCanvasTex(T, 64, 64, (g)=>{ const r = g.createRadialGradient(32,32,0,32,32,32); r.addColorStop(0,"rgba(255,255,255,1)"); r.addColorStop(.25,"rgba(255,228,160,.9)"); r.addColorStop(1,"rgba(255,180,60,0)"); g.fillStyle = r; g.fillRect(0,0,64,64); }),
+    star: t3dCanvasTex(T, 64, 64, (g)=>{ g.translate(32,32); const grd = g.createRadialGradient(0,0,0,0,0,30); grd.addColorStop(0,"rgba(255,255,255,1)"); grd.addColorStop(.4,"rgba(215,240,255,.8)"); grd.addColorStop(1,"rgba(160,200,255,0)"); g.fillStyle = grd;
+      g.beginPath(); for(let i=0;i<8;i++){ const a = i*Math.PI/4, rr = i%2 ? 5 : 30; g.lineTo(Math.cos(a)*rr, Math.sin(a)*rr); } g.closePath(); g.fill(); }),
+  };
+  T3D.tex.sun.offset.set(.5, .5); T3D.tex.frost.offset.set(.5, .5);
+  return T3D.tex;
+}
+
+// ---------- matériaux ----------
+function t3dMats(T, m, tier){
+  const X = t3dTextures(T), key = !tier ? 0 : m.secret ? "s" : tier, M = T3D_METALS[key];
+  const special = M.diamond || M.iris ? { iridescence:1, iridescenceIOR:M.diamond ? 2.33 : 1.6, iridescenceThicknessRange:M.diamond ? [120, 980] : [250, 900], envMapIntensity:M.diamond ? 1.5 : 1.2 } : {};
+  const enamelBase = tier ? (IOS_COL[m.c] || IOS_COL.orange) : "#7A8089";
+  return {
+    key,
+    // diamant : couronne taillée en facettes (ombrage plat), sans cannelure ni sablage
+    body: new T.MeshPhysicalMaterial(Object.assign({ color:M.c, metalness:1, roughness:M.r, clearcoat:.3, clearcoatRoughness:.25 }, M.diamond ? { flatShading:true, clearcoat:1, clearcoatRoughness:.02 } : { bumpMap:X.reed, bumpScale:.6 }, special)),
+    frame: new T.MeshPhysicalMaterial(Object.assign({ color:M.c, metalness:1, roughness:M.r+.08, clearcoat:.3, clearcoatRoughness:.3 }, M.diamond ? { flatShading:true, roughness:M.r, clearcoat:1, clearcoatRoughness:.02 } : { roughnessMap:X.frost }, special)),
+    // symbole : poli miroir, un peu plus clair que la couronne pour se détacher
+    // symbole : métal poli, plus clair que la couronne, qui capte la lumière (pas un miroir sombre)
+    polish: new T.MeshPhysicalMaterial(Object.assign({ color:hexMix(M.c, "#ffffff", tier ? .25 : .1), metalness:1, roughness:tier ? .16 : .32, clearcoat:1, clearcoatRoughness:.05, envMapIntensity:1.45 }, special)),
+    // émail : couleur profonde et saturée (moins de reflets) pour que le symbole ressorte
+    enamelRays: new T.MeshPhysicalMaterial({ color:hexMix(enamelBase, "#000000", .38), metalness:0, roughness:.55, bumpMap:X.rays, bumpScale:1.4, clearcoat:.9, clearcoatRoughness:.06, envMapIntensity:.55 }),
+    enamelSun: new T.MeshPhysicalMaterial({ color:hexMix(enamelBase, "#000000", .38), metalness:0, roughness:.55, bumpMap:X.sun, bumpScale:1.4, clearcoat:.9, clearcoatRoughness:.06, envMapIntensity:.55 }),
+    shadow: new T.MeshStandardMaterial({ color:"#000000", transparent:true, opacity:.38, depthWrite:false, roughness:1, metalness:0 }),
+  };
+}
+
+// ---------- symbole ----------
+// Glyphe SVG de l'app (24 × 24) → géométrie : pleins extrudés et biseautés, traits en tubes
+// arrondis (avec rotules aux angles et bouts ronds). « dumbbell » a son modèle dédié.
+function t3dPolyCurve(T, pts, closed){
+  if(!T3D.PolyCurve){
+    T3D.PolyCurve = class extends T.Curve {
+      constructor(p, c){ super(); this.p = c ? p.concat([p[0]]) : p; this.L = [0]; for(let i=1;i<this.p.length;i++) this.L.push(this.L[i-1] + this.p[i].distanceTo(this.p[i-1])); }
+      getPoint(t, out){ out = out || new T.Vector3(); const L = this.L, d = t*L[L.length-1]; let i = 1; while(i<L.length-1 && L[i]<d) i++;
+        const a = this.p[i-1], b = this.p[i], k = (d-L[i-1])/Math.max(1e-6, L[i]-L[i-1]); return out.set(a.x+(b.x-a.x)*k, a.y+(b.y-a.y)*k, 0); }
+    };
+  }
+  return new T3D.PolyCurve(pts, closed);
+}
+function t3dGlyph(T, name, mats){
+  const g = new T.Group();
+  if(name==="dumbbell") return t3dDumbbell(T, mats.polish);
+  // un attribut répété (ex. stroke-width) rend le SVG invalide pour le lecteur XML : on garde le dernier
+  const src = (GLYPHS[name] || GLYPHS.medal).replace(/<(\w+)([^>]*?)(\/?)>/g, (all, tag, attrs, end)=>{
+    const seen = {}; (attrs.match(/\s[\w-]+="[^"]*"/g)||[]).forEach(a=>{ seen[a.trim().split("=")[0]] = a; });
+    return `<${tag}${Object.values(seen).join("")}${end}>`;
+  });
+  const data = new T.SVGLoader().parse(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${src}</svg>`);
+  const joint = new T.SphereGeometry(1, 14, 10);
+  data.paths.forEach(p=>{
+    const st = p.userData.style || {};
+    if(st.fill && st.fill!=="none"){
+      T.SVGLoader.createShapes(p).forEach(sh=>{
+        const geo = new T.ExtrudeGeometry(sh, { depth:.5, bevelEnabled:true, bevelThickness:.45, bevelSize:.32, bevelSegments:3, curveSegments:10 });
+        g.add(new T.Mesh(geo, mats.polish));
+      });
+    }
+    if(st.stroke && st.stroke!=="none"){
+      const r = (parseFloat(st.strokeWidth)||2)/2;
+      p.subPaths.forEach(sp=>{
+        const raw = sp.getPoints(10); if(raw.length<2) return;
+        const pts = raw.filter((v,i)=>!i || v.distanceTo(raw[i-1])>1e-3).map(v=>new T.Vector3(v.x, v.y, 0));
+        if(pts.length<2) return;
+        const closed = sp.autoClose || pts[0].distanceTo(pts[pts.length-1])<1e-3;
+        const curve = t3dPolyCurve(T, closed && pts[0].distanceTo(pts[pts.length-1])<1e-3 ? pts.slice(0,-1) : pts, closed);
+        g.add(new T.Mesh(new T.TubeGeometry(curve, Math.min(96, Math.max(2, pts.length*3)), r, 12, closed), mats.polish));
+        // rotules aux angles marqués et bouts arrondis
+        pts.forEach((v,i)=>{
+          let put = !closed && (i===0 || i===pts.length-1);
+          if(!put && i>0 && i<pts.length-1){ const a = pts[i].clone().sub(pts[i-1]).normalize(), b = pts[i+1].clone().sub(pts[i]).normalize(); put = a.dot(b) < .9; }
+          if(put){ const s = new T.Mesh(joint, mats.polish); s.position.copy(v); s.scale.setScalar(r); g.add(s); }
+        });
+      });
+    }
+  });
+  // repère SVG (y vers le bas, 0–24) → repère médaille (centré, y vers le haut)
+  const wrap = new T.Group(); wrap.add(g);
+  g.position.set(-12, 12, 0); g.scale.set(1, -1, 1);
+  return wrap;
+}
+function t3dTextGlyph(T, text, mats){
+  // texte court (« 100 », « 7/7 ») : plaque découpée par le texte, en relief par carte de bosses
+  const c = document.createElement("canvas"); c.width = 512; c.height = 256;
+  const x = c.getContext("2d"); x.fillStyle = "#000"; x.fillRect(0,0,512,256);
+  x.font = `800 ${text.length>2 ? 150 : 190}px -apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif`; x.textAlign = "center"; x.textBaseline = "middle";
+  x.filter = "blur(3px)"; x.fillStyle = "#fff"; x.fillText(text, 256, 136);
+  const tex = new T.CanvasTexture(c);
+  const mat = mats.polish.clone(); mat.alphaMap = tex; mat.bumpMap = tex; mat.bumpScale = 3; mat.alphaTest = .45; mat.transparent = false;
+  const mesh = new T.Mesh(new T.PlaneGeometry(22, 11), mat);
+  const g = new T.Group(); g.add(mesh); g.userData.flat = true;
+  return g;
 }
 function t3dDumbbell(T, mat){
   const g = new T.Group();
+  const prof = pts=>pts.map(([x,y])=>new T.Vector2(x, y));
   const plate = (r, w)=>{
-    const p = new T.LatheGeometry(t3dProfile(T, [[0.05,-w],[r-0.03,-w],[r,-w+0.03],[r,w-0.03],[r-0.03,w],[0.05,w]]), 64);
+    // profil parcouru dans le sens trigonométrique : faces orientées vers l'extérieur
+    const p = new T.LatheGeometry(prof([[0.05,-w],[r-0.03,-w],[r,-w+0.03],[r,w-0.03],[r-0.03,w],[0.05,w]]), 64);
     const m = new T.Mesh(p, mat); m.rotation.z = Math.PI/2; return m;
   };
   const handle = new T.Mesh(new T.CylinderGeometry(0.05, 0.05, 0.66, 32), mat); handle.rotation.z = Math.PI/2; g.add(handle);
   [[-0.24, 0.23, 0.045],[-0.33, 0.17, 0.038],[0.24, 0.23, 0.045],[0.33, 0.17, 0.038]].forEach(([x, r, w])=>{ const m = plate(r, w); m.position.x = x; g.add(m); });
   [-0.395, 0.395].forEach(x=>{ const cap = new T.Mesh(new T.CylinderGeometry(0.06, 0.06, 0.03, 32), mat); cap.rotation.z = Math.PI/2; cap.position.x = x; g.add(cap); });
-  return g;
+  const wrap = new T.Group(); wrap.add(g); g.rotation.z = -.32; g.scale.setScalar(1.25/.056); // mis à l'échelle des glyphes (unités 24)
+  return wrap;
 }
-function t3dBuild(T, tier){
-  const metal = T3D_METALS[tier]||T3D_METALS[3];
-  const brushed = t3dBrushed(T);
-  const body = new T.MeshPhysicalMaterial({ color:metal.c, metalness:1, roughness:metal.r, roughnessMap:brushed, clearcoat:.35, clearcoatRoughness:.2 });
-  const polish = new T.MeshPhysicalMaterial({ color:metal.c, metalness:1, roughness:.12, clearcoat:.6, clearcoatRoughness:.08 });
-  const enamel = new T.MeshPhysicalMaterial({ color:tier ? "#C93A0A" : "#5B6068", metalness:0, roughness:.3, clearcoat:1, clearcoatRoughness:.06 });
-  const medal = new T.Group();
-  const disc = new T.Mesh(new T.LatheGeometry(t3dProfile(T, [
-    [0,.1],[.6,.1],[.63,.125],[.67,.15],[.71,.125],[.73,.11],[.75,.11],[.75,.12],   // champ, perle
-    [.86,.12],[.86,.13],[.9,.2],[.95,.215],[.99,.18],[1,.1],[1,-.1],[.97,-.15],[.9,-.17],[0,-.17]   // gorge, couronne, dos
-  ]), 128), body);
-  // profil de l'émail parcouru de l'extérieur vers l'intérieur : face bombée vers le haut
-  const ring = new T.Mesh(new T.LatheGeometry(t3dProfile(T, [[.86,.118],[.83,.136],[.805,.142],[.78,.136],[.75,.118]]), 128), enamel);
-  const face = new T.Group(); face.add(disc, ring); face.rotation.x = Math.PI/2; // face vers la caméra (+Z)
-  const sym = t3dDumbbell(T, polish); sym.position.z = .15; sym.rotation.z = -.32; sym.scale.setScalar(1.3);
-  medal.add(face, sym);
-  // anneau de suspension discret en haut
-  const loop = new T.Mesh(new T.TorusGeometry(.1, .028, 16, 48), polish); loop.position.set(0, 1.07, 0); medal.add(loop);
-  return { medal, mats:{ body, polish, enamel }, tex:[brushed] };
-}
-function t3dSetTier(ctx, tier){
-  const m = T3D_METALS[tier]||T3D_METALS[3];
-  ctx.target = { color:new ctx.T.Color(m.c), r:m.r, enamel:new ctx.T.Color(tier ? "#C93A0A" : "#5B6068") };
-  ctx.tier = tier;
-}
-// ---------- particules ----------
-function t3dSparkTex(T){
-  const c = document.createElement("canvas"); c.width = c.height = 64;
-  const g = c.getContext("2d"), r = g.createRadialGradient(32,32,0,32,32,32);
-  r.addColorStop(0,"rgba(255,255,255,1)"); r.addColorStop(.25,"rgba(255,228,160,.9)"); r.addColorStop(1,"rgba(255,180,60,0)");
-  g.fillStyle = r; g.fillRect(0,0,64,64);
-  return new T.CanvasTexture(c);
-}
-function t3dBurst(ctx){
-  const T = ctx.T, n = 90, pos = new Float32Array(n*3), vel = [];
-  for(let i=0;i<n;i++){
-    const a = Math.random()*Math.PI*2, r = .9+Math.random()*.15, sp = .9+Math.random()*1.6;
-    pos[i*3] = Math.cos(a)*r; pos[i*3+1] = Math.sin(a)*r; pos[i*3+2] = (Math.random()-.5)*.3;
-    vel.push([Math.cos(a)*sp, Math.sin(a)*sp+.25, (Math.random()-.2)*.8]);
-  }
-  const geo = new T.BufferGeometry(); geo.setAttribute("position", new T.BufferAttribute(pos, 3));
-  const mat = new T.PointsMaterial({ size:.11, map:ctx.spark, transparent:true, depthWrite:false, blending:T.AdditiveBlending, color:"#FFD27A" });
-  const pts = new T.Points(geo, mat); ctx.scene.add(pts);
-  ctx.burst = { pts, vel, t:0 };
+function t3dSymbol(T, m, tier, mats){
+  const locked = !tier;
+  if(locked && m.secret) return t3dGlyph(T, "lock", mats);
+  if(m.g && typeof m.g==="object") return t3dTextGlyph(T, m.g.t, mats);
+  return t3dGlyph(T, m.g || "medal", mats);
 }
 
-// ---------- contexte de rendu ----------
+// ---------- médaille ----------
+function t3dShapePoints(T, key){
+  // contour de la forme (repère SVG 100 × 100) → rayon ≈ 1, y vers le haut
+  if(!T3D.shapes) T3D.shapes = {};
+  if(T3D.shapes[key]) return T3D.shapes[key];
+  const data = new T.SVGLoader().parse(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="${MEDAL_SHAPES[key]}"/></svg>`);
+  const sh = T.SVGLoader.createShapes(data.paths[0])[0];
+  return (T3D.shapes[key] = sh.extractPoints(32).shape.map(p=>new T.Vector2((p.x-50)/48, (50-p.y)/48)));
+}
+function t3dShape(T, pts, k){ return new T.Shape(pts.map(p=>new T.Vector2(p.x*k, p.y*k))); }
+function t3dBuildMedal(T, m, tier){
+  const mats = t3dMats(T, m, tier), medal = new T.Group();
+  const shape = m.secret ? "secret" : (MEDAL_SHAPES[m.cat] ? m.cat : "regular");
+  let faceZ;
+  if(shape==="regular"){
+    // révolution : dos et couronne (cannelée), perle polie, émail bombé guilloché
+    const prof = pts=>pts.map(([x,y])=>new T.Vector2(x, y));
+    const dia = T3D_METALS[mats.key].diamond;
+    const body = new T.Mesh(new T.LatheGeometry(prof(dia ? [[0,-.17],[.92,-.17],[1,-.06],[1,.06],[.95,.2],[.87,.15],[.86,.1],[0,.1]] : [[0,-.17],[.9,-.17],[.97,-.15],[1,-.1],[1,.1],[.99,.18],[.95,.215],[.9,.2],[.87,.14],[.86,.1],[0,.1]]), dia ? 24 : 144), mats.body);
+    const bead = new T.Mesh(new T.LatheGeometry(prof([[.875,.13],[.862,.152],[.848,.155],[.835,.14]]), 144), mats.polish);
+    const enamel = new T.Mesh(new T.LatheGeometry(prof([[.84,.11],[.83,.14],[.7,.148],[.4,.152],[0,.155]]), 144), mats.enamelRays);
+    const face = new T.Group(); face.add(body, bead, enamel); face.rotation.x = Math.PI/2;
+    medal.add(face); faceZ = .155;
+  } else {
+    // formes extrudées : dos plein, cadre évidé biseauté (satiné) plus haut que l'émail,
+    // filet poli au bord intérieur, émail guilloché en soleil posé en creux
+    const pts = t3dShapePoints(T, shape);
+    const back = new T.Mesh(new T.ExtrudeGeometry(t3dShape(T, pts, .97), { depth:.1, bevelEnabled:true, bevelThickness:.04, bevelSize:.03, bevelSegments:3, curveSegments:24 }), mats.frame);
+    back.position.z = -.16;
+    const ring = t3dShape(T, pts, 1); ring.holes.push(new T.Path(pts.map(p=>new T.Vector2(p.x*.84, p.y*.84)).reverse()));
+    const dia = T3D_METALS[mats.key].diamond;
+    const frame = new T.Mesh(new T.ExtrudeGeometry(ring, { depth:.22, bevelEnabled:true, bevelThickness:dia ? .08 : .05, bevelSize:dia ? .07 : .045, bevelSegments:dia ? 1 : 5, curveSegments:24 }), mats.frame);
+    frame.position.z = -.1;
+    const enamel = new T.Mesh(new T.ExtrudeGeometry(t3dShape(T, pts, .86), { depth:.02, bevelEnabled:true, bevelThickness:.02, bevelSize:.015, bevelSegments:2, curveSegments:24 }), mats.enamelSun);
+    enamel.position.z = .06;
+    const inner = pts.map(p=>new T.Vector3(p.x*.83, p.y*.83, 0));
+    const bead = new T.Mesh(new T.TubeGeometry(t3dPolyCurve(T, inner, true), 160, .02, 10, true), mats.polish);
+    bead.position.z = .12;
+    medal.add(back, frame, enamel, bead); faceZ = .1;
+  }
+  // symbole + ombre de contact (décalée vers le bas, sous le relief)
+  const k = .056, yOff = shape==="force" ? .04 : shape==="secret" ? .1 : 0;
+  const sym = t3dSymbol(T, m, tier, mats);
+  sym.scale.set(k, k, sym.userData.flat ? k : k*.9); sym.position.set(0, yOff, faceZ + .02);
+  medal.add(sym);
+  if(!sym.userData.flat){
+    const sh = sym.clone(true); sh.traverse(o=>{ if(o.isMesh) o.material = mats.shadow; });
+    sh.position.set(.018, yOff-.03, faceZ+.004); sh.scale.set(k*1.02, k*1.02, k*.05);
+    medal.add(sh);
+  }
+  if(shape==="regular"){ const loop = new T.Mesh(new T.TorusGeometry(.1, .028, 16, 48), mats.polish); loop.position.set(0, 1.07, 0); medal.add(loop); }
+  medal.userData = { mats, diamond:T3D_METALS[mats.key].diamond };
+  if(medal.userData.diamond) t3dSparkles(T, medal);
+  return medal;
+}
+function t3dDispose(obj){
+  const seen = new Set();
+  obj.traverse(o=>{ if(o.geometry && !seen.has(o.geometry)){ seen.add(o.geometry); o.geometry.dispose(); } if(o.isPoints && o.material) o.material.dispose(); });
+  const mats = obj.userData && obj.userData.mats; if(mats) Object.values(mats).forEach(x=>x && x.dispose && x.dispose());
+}
+
+// ---------- scène (commune au rendu vivant et aux vignettes) ----------
+function t3dScene(T, renderer){
+  const scene = new T.Scene();
+  const pmrem = new T.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new T.RoomEnvironment(), .035).texture; pmrem.dispose();
+  const key = new T.DirectionalLight("#fff4e0", 2.3); key.position.set(-2.5, 3, 4); scene.add(key);
+  const rim = new T.DirectionalLight("#ffd9a8", 1.5); rim.position.set(3, -1.5, -2); scene.add(rim);
+  const fill = new T.DirectionalLight("#dfe9ff", .6); fill.position.set(2.5, 1, 3); scene.add(fill);
+  scene.add(new T.AmbientLight("#ffffff", .12));
+  return scene;
+}
+function t3dRenderer(T, canvas, keep){
+  const r = new T.WebGLRenderer({ canvas, antialias:true, alpha:true, powerPreference:"low-power", preserveDrawingBuffer:!!keep });
+  r.outputColorSpace = T.SRGBColorSpace; r.toneMapping = T.ACESFilmicToneMapping; r.toneMappingExposure = 1.05;
+  return r;
+}
+
+// ---------- vignettes (grille, listes, célébration) ----------
+// Rendu hors écran, une médaille par image, file d'attente sans à-coups ; images gardées
+// en mémoire (URL d'objet) pendant la session uniquement.
+async function t3dSnapCtx(){
+  if(T3D.snap) return T3D.snap;
+  const T = await loadThree(), S_ = 256;
+  const canvas = document.createElement("canvas"); canvas.width = canvas.height = S_;
+  const renderer = t3dRenderer(T, canvas, true); renderer.setPixelRatio(1); renderer.setSize(S_, S_, false);
+  const scene = t3dScene(T, renderer);
+  const camera = new T.PerspectiveCamera(26, 1, .1, 50); camera.position.set(0, 0, 5.4);
+  return (T3D.snap = { T, renderer, scene, camera, canvas });
+}
+function t3dSnapshot(id, tier){
+  const k = id+":"+tier;
+  if(T3D.cache.has(k)) return T3D.cache.get(k);
+  const p = new Promise((ok, ko)=>{ T3D.queue.push({ id, tier, ok, ko }); t3dPump(); });
+  T3D.cache.set(k, p);
+  return p;
+}
+function t3dPump(){
+  if(T3D.busy || !T3D.queue.length) return;
+  T3D.busy = true;
+  const job = T3D.queue.shift();
+  const idle = window.requestIdleCallback || (f=>setTimeout(f, 16));
+  idle(async ()=>{
+    try{
+      const s = await t3dSnapCtx(), m = MEDAL_MAP[job.id];
+      const medal = t3dBuildMedal(s.T, m, job.tier);
+      medal.rotation.set(-.12, .42, 0);
+      s.scene.add(medal); s.renderer.render(s.scene, s.camera); s.scene.remove(medal);
+      t3dDispose(medal);
+      s.canvas.toBlob(b=>{ b ? job.ok(URL.createObjectURL(b)) : job.ko(new Error("blob")); T3D.busy = false; t3dPump(); }, "image/png");
+    }catch(e){ T3D.failed = true; job.ko(e); T3D.busy = false; T3D.queue.splice(0).forEach(j=>j.ko(e)); }
+  }, { timeout:400 });
+}
+// remplace le dessin SVG par la vignette 3D quand l'élément devient visible
+let t3dSnapIO = null;
+function upgradeMedals(root){
+  if(!t3dUsable()) return;
+  const els = qsa(".medal[data-mid]:not(.m3d):not(.big)", root||document);
+  if(!els.length) return;
+  if(!t3dSnapIO) t3dSnapIO = "IntersectionObserver" in window ? new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){ t3dSnapIO.unobserve(e.target); t3dFill(e.target); } }), { rootMargin:"200px" }) : null;
+  els.forEach(el=>{ el.classList.add("m3d"); t3dSnapIO ? t3dSnapIO.observe(el) : t3dFill(el); });
+}
+function t3dFill(el){
+  const id = el.dataset.mid, tier = +el.dataset.tier; if(!MEDAL_MAP[id]) return;
+  t3dSnapshot(id, tier).then(url=>{
+    if(!el.isConnected) return;
+    const img = new Image(); img.className = "medal-3d"; img.alt = ""; img.decoding = "async"; img.src = url;
+    img.onload = ()=>{ el.appendChild(img); requestAnimationFrame(()=>el.classList.add("m3d-on")); };
+  }).catch(()=>{});
+}
+// toute médaille ajoutée au document (onglets, célébration, fiches) est améliorée
+new MutationObserver(ms=>{ if(!t3dUsable()) return; for(const m of ms) for(const n of m.addedNodes){ if(n.nodeType===1 && (n.matches && n.matches(".medal[data-mid]") || n.querySelector && n.querySelector(".medal[data-mid]"))){ upgradeMedals(n.parentNode||n); } } })
+  .observe(document.documentElement, { childList:true, subtree:true });
+
+// ---------- rendu vivant (carte mise en avant + fiche détaillée) ----------
 async function t3dContext(){
   if(T3D.ctx) return T3D.ctx;
   const T = await loadThree();
   const canvas = document.createElement("canvas"); canvas.className = "t3d-canvas";
-  const renderer = new T.WebGLRenderer({ canvas, antialias:true, alpha:true, powerPreference:"low-power" });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
-  renderer.outputColorSpace = T.SRGBColorSpace;
-  renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
-  const scene = new T.Scene();
-  const pmrem = new T.PMREMGenerator(renderer);
-  scene.environment = pmrem.fromScene(new T.RoomEnvironment(), .035).texture; pmrem.dispose();
-  const key = new T.DirectionalLight("#fff4e0", 2.2); key.position.set(-2.5, 3, 4); scene.add(key);
-  const rim = new T.DirectionalLight("#ffd9a8", 1.6); rim.position.set(3, -1.5, -2); scene.add(rim);
-  scene.add(new T.AmbientLight("#ffffff", .15));
+  const renderer = t3dRenderer(T, canvas); renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+  const scene = t3dScene(T, renderer);
   const glow = new T.PointLight("#ffcc66", 0, 6); glow.position.set(0, 0, 2.2); scene.add(glow);
   const camera = new T.PerspectiveCamera(28, 1, .1, 50); camera.position.set(0, 0, 5.2);
-  const tier = medalTier(MEDAL_MAP[T3D_ID]);
-  const built = t3dBuild(T, tier);
-  scene.add(built.medal);
-  const ctx = T3D.ctx = { T, renderer, scene, camera, glow, canvas, medal:built.medal, mats:built.mats, tex:built.tex, tier,
-    spark:t3dSparkTex(T), spin:0, drag:0, vel:0, unlock:null, burst:null, running:false, visible:true, t0:performance.now(), last:0 };
-  t3dSetTier(ctx, tier);
-  const m = T3D_METALS[tier]; ctx.mats.body.color.set(m.c); ctx.mats.polish.color.set(m.c);
-  return ctx;
+  return (T3D.ctx = { T, renderer, scene, camera, glow, canvas, medal:null, id:null, tier:0, drag:0, vel:0, unlock:null, burst:null, sparks:[], flip:0, running:false, visible:true, t0:performance.now(), last:0 });
+}
+function t3dSetMedal(ctx, id, tier, animate){
+  if(ctx.medal && ctx.id===id && ctx.tier===tier) return;
+  if(ctx.medal){ ctx.scene.remove(ctx.medal); t3dDispose(ctx.medal); }
+  ctx.id = id; ctx.tier = tier;
+  ctx.medal = t3dBuildMedal(ctx.T, MEDAL_MAP[id], tier);
+  ctx.scene.add(ctx.medal);
+  ctx.sparks = ctx.medal.userData.sparks || [];
+  if(animate && !t3dReduced()) ctx.flip = performance.now();
+}
+// scintillements du palier diamant : étoiles posées sur la médaille, animées en direct
+function t3dSparkles(T, medal){
+  const X = t3dTextures(T), list = [];
+  [[-.62,.58,.3,.24],[.7,.35,.28,.16],[.45,-.66,.3,.22],[-.5,-.52,.26,.12],[.05,.86,.28,.1],[-.86,.02,.27,.18]].forEach(([x,y,z,sz],i)=>{
+    const geo = new T.BufferGeometry(); geo.setAttribute("position", new T.Float32BufferAttribute([x,y,z], 3));
+    const mat = new T.PointsMaterial({ size:sz, map:X.star, transparent:true, depthWrite:false, blending:T.AdditiveBlending, color:"#EAF6FF" });
+    const pt = new T.Points(geo, mat); pt.userData.phase = i*1.13; medal.add(pt); list.push(pt);
+  });
+  medal.userData.sparks = list;
 }
 function t3dResize(ctx){
   const host = ctx.canvas.parentElement; if(!host) return;
@@ -135,26 +351,31 @@ function t3dResize(ctx){
   ctx.w = w; ctx.h = h;
   ctx.renderer.setSize(w, h, false);
   ctx.camera.aspect = w/h;
-  // la médaille garde la même taille apparente quelle que soit la forme du cadre
   ctx.camera.position.z = w/h < 1 ? 5.2/(w/h)*.9 : 5.2;
   ctx.camera.updateProjectionMatrix();
 }
 const easeOutBack = x=>{ const c1 = 1.5, c3 = c1+1; return 1 + c3*Math.pow(x-1,3) + c1*Math.pow(x-1,2); };
 const easeOutCubic = x=>1-Math.pow(1-x, 3);
+function t3dBurst(ctx){
+  const T = ctx.T, n = 90, pos = new Float32Array(n*3), vel = [];
+  for(let i=0;i<n;i++){
+    const a = Math.random()*Math.PI*2, r = .9+Math.random()*.15, sp = .9+Math.random()*1.6;
+    pos[i*3] = Math.cos(a)*r; pos[i*3+1] = Math.sin(a)*r; pos[i*3+2] = (Math.random()-.5)*.3;
+    vel.push([Math.cos(a)*sp, Math.sin(a)*sp+.25, (Math.random()-.2)*.8]);
+  }
+  const geo = new T.BufferGeometry(); geo.setAttribute("position", new T.BufferAttribute(pos, 3));
+  const mat = new T.PointsMaterial({ size:.11, map:t3dTextures(T).spark, transparent:true, depthWrite:false, blending:T.AdditiveBlending, color:ctx.tier===4 ? "#DDF3FF" : "#FFD27A" });
+  const pts = new T.Points(geo, mat); ctx.scene.add(pts);
+  ctx.burst = { pts, vel, t:0 };
+}
 function t3dFrame(now){
   const ctx = T3D.ctx; if(!ctx) return;
-  if(!ctx.canvas.isConnected || !ctx.visible || document.hidden){ ctx.running = false; return; }
+  if(!ctx.canvas.isConnected || !ctx.visible || document.hidden || !ctx.medal){ ctx.running = false; return; }
   const dt = Math.min(.05, ctx.last ? (now-ctx.last)/1000 : 0); ctx.last = now;
   const t = (now-ctx.t0)/1000, reduce = t3dReduced(), M = ctx.medal;
-  // transition douce de palier (couleur du métal et de l'émail)
-  if(ctx.target){
-    const k = 1-Math.pow(.001, dt);
-    ctx.mats.body.color.lerp(ctx.target.color, k); ctx.mats.polish.color.lerp(ctx.target.color, k); ctx.mats.enamel.color.lerp(ctx.target.enamel, k);
-    ctx.mats.body.roughness += (ctx.target.r-ctx.mats.body.roughness)*k;
-  }
-  // inertie du glisser
   if(!ctx.dragging){ ctx.drag += ctx.vel*dt; ctx.vel *= Math.pow(.04, dt); ctx.drag *= Math.pow(.35, dt); }
   let ry = reduce ? .28 : Math.sin(t*.55)*.38, rx = reduce ? -.06 : Math.sin(t*.42)*.07 - .04, s = 1, lift = reduce ? 0 : Math.sin(t*1.1)*.03;
+  if(ctx.flip){ const u = Math.min(1, (now-ctx.flip)/700); ry += (1-easeOutCubic(u))*Math.PI*2; if(u>=1) ctx.flip = 0; }
   if(ctx.unlock){
     const u = (now-ctx.unlock)/1000;
     if(reduce){ s = Math.min(1, u/.4); }
@@ -167,6 +388,7 @@ function t3dFrame(now){
     if(u>2.4){ ctx.unlock = null; ctx.glow.intensity = 0; }
   }
   M.rotation.set(rx, ry + ctx.drag, 0); M.scale.setScalar(s); M.position.y = lift;
+  ctx.sparks.forEach(p=>{ const v = Math.max(0, Math.sin(t*2.2 + p.userData.phase*2.4)); p.material.size = reduce ? .12 : .02 + .26*Math.pow(v, 6); });
   if(ctx.burst){
     const b = ctx.burst; b.t += dt;
     const p = b.pts.geometry.attributes.position;
@@ -187,94 +409,124 @@ function t3dPlayUnlock(){
   t3dStart();
 }
 
-// ---------- carte dans Progrès › Trophées ----------
+// ---------- carte « trophée mis en avant » (Progrès › Trophées) ----------
+// le dernier palier gagné (sinon Assiduité)
+function t3dFeatured(){
+  let best = null;
+  Object.keys(S.medals||{}).forEach(id=>{ const m = MEDAL_MAP[id], st = S.medals[id]; if(!m || !st.t) return; const d = (st.d||{})[st.t] || "";
+    if(!best || d>best.d) best = { id, tier:st.t, d }; });
+  return best || { id:"sessions", tier:medalTier(MEDAL_MAP.sessions), d:"" };
+}
 function trophy3dCardHTML(){
-  const m = MEDAL_MAP[T3D_ID]; if(!m) return "";
-  const p = medalProgress(m);
-  return `<button class="t3d-card stagger" style="--i:0" data-a="t3dOpen" aria-label="${esc(m.n)} en 3D : voir le détail">
-    <div class="t3d-stage" id="t3dStage"><div class="t3d-fallback">${medalHTML(m, p.t, "big")}</div></div>
-    <div class="t3d-info"><span class="t3d-k">Trophée 3D · aperçu</span><b>${esc(m.n)}</b><span>${p.t ? TIERS[p.t].n : "Pas encore débloqué"}</span></div>
+  const f = t3dFeatured(), m = MEDAL_MAP[f.id]; if(!m) return "";
+  return `<button class="t3d-card stagger" style="--i:0" data-a="t3dOpen" data-id="${f.id}" aria-label="${esc(m.n)} : voir le détail">
+    <div class="t3d-stage" id="t3dStage"><div class="t3d-fallback">${medalSVG(m, f.tier, true)}</div></div>
+    <div class="t3d-info"><span class="t3d-k">${f.d ? "Dernier trophée" : "Ton premier trophée"}</span><b>${esc(m.n)}</b><span>${f.tier ? tierLabel(m, f.tier) : "Pas encore débloqué"}</span></div>
   </button>`;
 }
-// monte le canvas WebGL dans la carte (appelé après chaque rendu de l'onglet Progrès)
 async function mountTrophy3D(root){
   const stage = qs("#t3dStage", root); if(!stage || stage.dataset.mounted) return;
   stage.dataset.mounted = "1";
-  if(T3D.failed || !t3dWebGL()) return;         // repli : médaille SVG déjà affichée
+  if(!t3dUsable()) return;         // repli : médaille SVG déjà affichée
   let ctx;
   try{ ctx = await t3dContext(); }catch(e){ T3D.failed = true; return; }
   if(!stage.isConnected || qs(".t3d-full")) return;
+  const f = t3dFeatured();
+  t3dSetMedal(ctx, f.id, f.tier);
   stage.appendChild(ctx.canvas); stage.classList.add("live");
   ctx.w = 0; t3dResize(ctx);
   t3dWatch(stage);
-  const tier = medalTier(MEDAL_MAP[T3D_ID]);
-  if(tier!==ctx.tier) t3dSetTier(ctx, tier);
-  // premier affichage depuis le déblocage d'un palier : animation de déblocage
-  const seen = S.meta.t3dSeen||0;
-  if(tier>seen){ S.meta.t3dSeen = tier; save(); t3dPlayUnlock(); }
+  // premier affichage depuis ce palier : animation de déblocage
+  const key = f.id+":"+f.tier;
+  if(f.tier && S.meta.t3dSeen!==key){ S.meta.t3dSeen = key; save(); t3dPlayUnlock(); }
   else t3dStart();
 }
 let t3dIO = null;
 function t3dWatch(el){
   if(!("IntersectionObserver" in window)) return;
   if(t3dIO) t3dIO.disconnect();
-  t3dIO = new IntersectionObserver(es=>{ const c = T3D.ctx; if(!c) return; c.visible = es[0].isIntersecting; if(c.visible) t3dStart(); });
+  t3dIO = new IntersectionObserver(es=>{ const c = T3D.ctx; if(!c || qs(".t3d-full")) return; c.visible = es[0].isIntersecting; if(c.visible) t3dStart(); });
   t3dIO.observe(el);
 }
 document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) t3dStart(); });
 
-// ---------- vue détaillée ----------
-function t3dDetailHTML(){
-  const m = MEDAL_MAP[T3D_ID], p = medalProgress(m), st = S.medals[m.id]||{ d:{} }, cur = T3D.ctx ? T3D.ctx.tier : p.t;
+// ---------- fiche détaillée (tous les trophées) ----------
+function t3dDetailHTML(id){
+  const m = MEDAL_MAP[id], p = medalProgress(m), st = S.medals[m.id]||{ d:{} }, cur = T3D.ctx ? T3D.ctx.tier : p.t;
+  if(m.secret){
+    return `<div class="t3d-name">${p.t ? esc(m.n) : "Trophée secret"}</div>
+      <div class="t3d-tier">${p.t ? `Découvert le ${fmtDate(localISO(new Date(st.d[1]||Date.now())))}` : "Pas encore découvert"}</div>
+      <p class="t3d-desc">${esc(p.t ? m.desc : "Indice : "+m.hint)}</p>
+      ${p.t ? `<div class="t3d-actions"><button class="btn secondary" data-a="t3dReplay">${icon("repeat")} Revoir le déblocage</button></div>` : ""}`;
+  }
+  const rows = m.t.map((th,i)=>{ const k = i+1, got = p.t>=k;
+    return `<div class="t3d-row ${got?"got":""}"><span class="pip t${k}"></span><b>${TIERS[k].n}</b><span>${fmtMedalVal(m, th)} ${esc(medalUnit(m, th))}</span><em>${got && st.d[k] ? fmtDate(localISO(new Date(st.d[k]))) : got ? ii("check") : ""}</em></div>`; }).join("");
   return `<div class="t3d-name">${esc(m.n)}</div>
     <div class="t3d-tier">${p.t ? `Palier ${TIERS[p.t].n.toLowerCase()}${st.d[p.t] ? " · "+fmtDate(localISO(new Date(st.d[p.t]))) : ""}` : "Pas encore débloqué"}</div>
-    <p class="t3d-desc">${esc(m.desc||"")}</p>
+    <p class="t3d-desc">${esc(m.desc || ("Nombre de "+m.unit+"."))}</p>
     ${p.next!=null ? `<div class="mc-bar big"><span style="width:${Math.round(p.pct*100)}%"></span></div>
-      <div class="t3d-prog">${fmtMedalVal(m,p.v)} / ${fmtMedalVal(m,p.next)} ${esc(medalUnit(m,p.next))} pour le palier ${TIERS[p.t+1].n.toLowerCase()}</div>` : `<div class="t3d-prog">Palier platine atteint</div>`}
-    <div class="t3d-sec">Aperçu des métaux</div>
+      <div class="t3d-prog">${fmtMedalVal(m,p.v)} / ${fmtMedalVal(m,p.next)} ${esc(medalUnit(m,p.next))} pour le palier ${TIERS[p.t+1].n.toLowerCase()}</div>` : `<div class="t3d-prog">Palier diamant atteint</div>`}
+    <div class="t3d-rows">${rows}</div>
+    <div class="t3d-sec">Aperçu des paliers</div>
     <div class="t3d-metals">${[1,2,3,4].map(k=>`<button class="chip ${cur===k?"on":""}" data-a="t3dMetal" data-v="${k}">${TIERS[k].n}${p.t>=k?"":` ${ii("lock")}`}</button>`).join("")}</div>
-    <div class="t3d-actions"><button class="btn secondary" data-a="t3dReplay">${icon("repeat")} Revoir le déblocage</button></div>`;
+    ${p.t ? `<div class="t3d-actions"><button class="btn secondary" data-a="t3dReplay">${icon("repeat")} Revoir le déblocage</button></div>` : ""}`;
 }
-function t3dOpen(){
-  const ctx = T3D.ctx, card = qs(".t3d-card"), stage = qs("#t3dStage");
-  if(!ctx || !stage || !stage.contains(ctx.canvas)){ if(typeof showMedalModal==="function") showMedalModal(T3D_ID); return; }
-  const from = stage.getBoundingClientRect();
+async function showMedalModal(id, fromEl){
+  if(!t3dUsable()) return showMedalModal2D(id);
+  let ctx;
+  try{ ctx = await t3dContext(); }catch(e){ T3D.failed = true; return showMedalModal2D(id); }
+  const m = MEDAL_MAP[id]; if(!m) return;
+  const stage = qs("#t3dStage");
+  const src = (fromEl && (fromEl.querySelector(".medal") || fromEl)) || (stage && stage.contains(ctx.canvas) ? stage : null);
+  const from = src ? src.getBoundingClientRect() : null;
+  if(qs(".t3d-full")) qs(".t3d-full").remove();
+  t3dSetMedal(ctx, id, medalTier(m));
+  ctx.detail = id;
   const full = document.createElement("div"); full.className = "t3d-full";
   full.innerHTML = `<div class="t3d-scrim" data-a="t3dClose"></div>
     <div class="t3d-panel" role="dialog" aria-label="Détail du trophée">
       <button class="t3d-x" data-a="t3dClose" aria-label="Fermer">${icon("close")}</button>
       <div class="t3d-big" id="t3dBig"></div>
-      <div class="t3d-body">${t3dDetailHTML()}</div>
+      <div class="t3d-body">${t3dDetailHTML(id)}</div>
     </div>`;
   document.body.appendChild(full);
   const big = qs("#t3dBig", full);
   big.appendChild(ctx.canvas); ctx.w = 0; t3dResize(ctx);
-  // FLIP : le médaillon part de la carte et grandit jusqu'à sa place
-  const to = big.getBoundingClientRect();
-  const sx = from.width/to.width, sy = from.height/to.height;
-  big.style.transform = `translate(${from.left-to.left + (from.width-to.width)/2}px, ${from.top-to.top + (from.height-to.height)/2}px) scale(${Math.min(sx, sy)})`;
-  big.style.transition = "none";
+  // FLIP : la médaille part de là où on l'a touchée et grandit jusqu'à sa place
+  if(from){
+    const to = big.getBoundingClientRect();
+    big.style.transition = "none";
+    big.style.transform = `translate(${from.left-to.left + (from.width-to.width)/2}px, ${from.top-to.top + (from.height-to.height)/2}px) scale(${Math.max(.15, Math.min(from.width/to.width, from.height/to.height))})`;
+    T3D.from = src;
+  } else T3D.from = null;
   requestAnimationFrame(()=>requestAnimationFrame(()=>{ full.classList.add("show"); big.style.transition = ""; big.style.transform = ""; }));
-  if(card) card.classList.add("lifted");
+  const card = qs(".t3d-card"); if(card) card.classList.add("lifted");
   t3dBindDrag(big);
-  ctx.visible = true; t3dStart();
+  ctx.visible = true; ctx.t0 = performance.now(); t3dStart();
   sfx("seg");
 }
 function t3dClose(){
   const full = qs(".t3d-full"), ctx = T3D.ctx; if(!full) return;
-  const big = qs("#t3dBig", full), stage = qs("#t3dStage");
-  if(stage && big){
-    const to = stage.getBoundingClientRect(), from = big.getBoundingClientRect();
-    big.style.transform = `translate(${to.left-from.left + (to.width-from.width)/2}px, ${to.top-from.top + (to.height-from.height)/2}px) scale(${Math.min(to.width/from.width, to.height/from.height)})`;
+  const big = qs("#t3dBig", full), stage = qs("#t3dStage"), back = T3D.from && T3D.from.isConnected ? T3D.from : stage;
+  if(back && big){
+    const to = back.getBoundingClientRect(), from = big.getBoundingClientRect();
+    big.style.transform = `translate(${to.left-from.left + (to.width-from.width)/2}px, ${to.top-from.top + (to.height-from.height)/2}px) scale(${Math.max(.15, Math.min(to.width/from.width, to.height/from.height))})`;
   }
   full.classList.remove("show"); full.classList.add("closing");
   setTimeout(()=>{
-    if(ctx && stage && stage.isConnected){ stage.appendChild(ctx.canvas); ctx.w = 0; t3dResize(ctx); t3dSetTier(ctx, medalTier(MEDAL_MAP[T3D_ID])); }
     full.remove(); const card = qs(".t3d-card"); if(card) card.classList.remove("lifted");
-    if(ctx){ ctx.visible = true; t3dStart(); }
+    if(ctx){
+      ctx.detail = null;
+      const st = qs("#t3dStage");
+      if(st && st.isConnected){
+        const f = t3dFeatured(); t3dSetMedal(ctx, f.id, f.tier); st.appendChild(ctx.canvas); ctx.w = 0; t3dResize(ctx);
+        // la carte peut être hors de l'écran (fiche ouverte depuis le bas de la liste)
+        const r = st.getBoundingClientRect(); ctx.visible = r.bottom>0 && r.top<innerHeight;
+        if(ctx.visible) t3dStart(); else ctx.renderer.render(ctx.scene, ctx.camera);
+      }
+    }
   }, 380);
 }
-// faire tourner la médaille au doigt, avec inertie ; glisser vers le bas pour fermer
 function t3dBindDrag(el){
   let d = null;
   el.addEventListener("pointerdown", e=>{ const c = T3D.ctx; if(!c) return; d = { x:e.clientX, y:e.clientY, lx:e.clientX, lt:performance.now() }; c.dragging = true; c.vel = 0; el.setPointerCapture && el.setPointerCapture(e.pointerId); });
@@ -288,17 +540,17 @@ function t3dBindDrag(el){
   el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up);
 }
 Object.assign(ACT, {
-  t3dOpen(){ t3dOpen(); },
+  t3dOpen(d, el){ showMedalModal(d.id || t3dFeatured().id, el); },
   t3dClose(){ t3dClose(); },
   t3dReplay(){ t3dPlayUnlock(); },
   t3dMetal(d, el){
-    const c = T3D.ctx; if(!c) return;
-    t3dSetTier(c, +d.v);
+    const c = T3D.ctx; if(!c || !c.detail) return;
+    t3dSetMedal(c, c.detail, +d.v, true); t3dStart();
     qsa('.t3d-metals .chip').forEach(b=>b.classList.toggle("on", b===el));
     sfx("seg");
   },
 });
 document.addEventListener("keydown", e=>{ if(e.key==="Escape" && qs(".t3d-full")) t3dClose(); });
 
-// après chaque rendu d'onglet : la carte 3D de Progrès › Trophées reçoit son canvas
-function afterRenderView(id, el){ if(id==="progress") mountTrophy3D(el); }
+// après chaque rendu d'onglet : carte mise en avant + vignettes 3D
+function afterRenderView(id, el){ if(id==="progress") mountTrophy3D(el); upgradeMedals(el); }
