@@ -26,7 +26,10 @@ function rewindData(kind, key){
   const bestDay = wd.indexOf(Math.max(...wd));
   const medals = [];
   Object.keys(S.medals||{}).forEach(id=>{ const m = MEDAL_MAP[id]; if(!m) return; Object.entries(S.medals[id].d||{}).forEach(([k, iso])=>{ if(iso && localISO(new Date(iso)).startsWith(key)) medals.push({ m, tier:+k }); }); });
-  medals.sort((a,b)=>b.tier-a.tier);
+  // un trophée n'apparaît qu'une fois, à son meilleur palier de la période
+  const bestOf_ = {}; medals.forEach(x=>{ if(!bestOf_[x.m.id] || x.tier>bestOf_[x.m.id].tier) bestOf_[x.m.id] = x; });
+  medals.length = 0; Object.values(bestOf_).forEach(x=>medals.push(x));
+  medals.sort((a,b)=>(b.m.secret?9:b.tier)-(a.m.secret?9:a.tier));
   // jours actifs (mois) ou séances par mois (année) pour la frise
   let days = null;
   if(kind==="month"){ const d0 = parseISO(key+"-01"), n = new Date(d0.getFullYear(), d0.getMonth()+1, 0).getDate(), set = new Set(list.map(s=>+s.date.slice(8)));

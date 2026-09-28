@@ -265,6 +265,44 @@ Changements :
 - **Sélecteur d'exercices** : chaque ligne affiche la dose conseillée selon l'objectif (« 3 × 8–12 reps » ou « 3 × 20–45 s », `exoDose`).
 - **Tests** : `v25.js`.
 
+## 9 duodecies. Version 2.5 : Rewind animé, stockage, démarrage hors ligne, interactions
+
+- **Démarrage hors ligne fiable** (`sw.js`, cache `forge-v2`).
+  - La page s'ouvre depuis la copie locale, sans attendre le réseau, et la nouvelle version se télécharge en arrière-plan.
+  - Un message discret (`forge-updated`) annonce qu'elle s'appliquera au prochain lancement.
+  - Avant, le réseau passait d'abord : un signal faible pouvait bloquer l'ouverture.
+- **Stockage** (`core.js`).
+  - L'historique est enregistré sous une forme compacte (`packSession`/`unpackSession`, `fmt:2`, clé `zs`) : environ 2,5 fois plus léger, par exemple 244 Ko → 95 Ko pour 230 séances.
+  - En mémoire et dans les sauvegardes .json, les séances restent lisibles. Une liste `sessions` non vide (import externe) reste prioritaire.
+  - Chaque enregistrement est aussi copié dans IndexedDB (`idbMirror`, `S.meta.savedAt`). Au lancement, `idbRecover()` reprend cette copie si localStorage est vide ou plus ancien, par exemple après un refus faute de place.
+  - « Tout effacer » vide aussi IndexedDB.
+  - Profil › Espace de stockage : place utilisée, estimation des années restantes, état de la protection.
+- **Emojis** : il n'en reste plus nulle part.
+  - Icônes de trait en ligne (`ii()`), avec un paramètre icône pour `toast(msg, ic)` et `floatText(..., ic)`.
+  - Dans l'image du bilan, les glyphes sont dessinés au canvas (`drawGlyph`, Path2D).
+  - Les champs `em` inutilisés ont été supprimés.
+- **Graphiques parcourables au doigt** (`charts.js`).
+  - Glisser horizontalement sur une courbe ou des colonnes fait suivre la bulle, avec un curseur et un point sur les courbes et un léger retour haptique.
+  - `touch-action: pan-y` laisse le défilement vertical libre.
+- **Transitions** : View Transitions API quand disponible (`withTransition`). Les onglets glissent selon leur ordre et la barre d'onglets reste fixe ; les sous-onglets de Progrès passent en fondu. Sinon, les animations CSS habituelles s'appliquent.
+- **Exercices animés** (`exoAnimSVG`, `ANIM_POSES` dans `data_pictos.js`).
+  - Chaque famille de mouvement (19) est décrite par deux poses d'une silhouette articulée, animées en SVG natif (SMIL), avec un disque aux mains si l'exercice est chargé.
+  - Visible dans la fiche technique et dans le Rewind. Image fixe si « réduire les animations » est activé.
+- **Rewind** (`rewind.js`).
+  - Diaporama plein écran façon « story » : barre de progression, toucher à droite ou à gauche, maintenir pour la pause, glisser vers le bas pour fermer, flèches et Échap au clavier.
+  - Les écrans :
+    - rembobinage (la date recule jusqu'au début de la période, effet bande vidéo) ;
+    - séances, avec le calendrier du mois ou les barres de l'année ;
+    - temps en anneau, avec une équivalence en matchs de foot ;
+    - tonnage, avec une équivalence en objets ;
+    - exercice favori animé et top 3 ;
+    - records et objectifs ;
+    - habitudes : série, jour préféré, matin ou soir ;
+    - trophées ;
+    - image finale à partager.
+  - Accessible par la carte Rewind (Historique) et suggéré sur l'accueil en début de mois.
+- **Tests** : `v26.js`.
+
 ## 10. Cahier des charges d'origine (résumé)
 
 Voir le fichier `4a3df5ee-cahier-des-charges-forge.md` fourni au lancement du projet pour le texte complet. Points clés déjà couverts en v1.0 : matériel personnalisable et extensible, bibliothèque d'exercices filtrée, inclusion/exclusion d'exercices, objectifs personnalisés, suivi détaillé de séance (éditable, timer de repos, coche rapide), moteur de suggestion 100% local avec export/import IA, graphiques de progression, PR, streaks/régularité, trophées, écran d'accueil = séance du jour, thème clair/sombre automatique, page À propos avec copyright.

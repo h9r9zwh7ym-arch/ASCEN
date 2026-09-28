@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.." || exit 1
 ENGINES="${1:-all}"; [ "$ENGINES" = "all" ] && ENGINES="chromium webkit"
 sh build.sh >/dev/null || { echo "Échec de la construction"; exit 1; }
 APP="$(pwd)/dist/forge.html"
-SUITES="smoke test2 focus v12 v13 v14 v15 v16 v17 v19 v20 v21 v22 v23 v24 v25"
+SUITES="smoke test2 focus v12 v13 v14 v15 v16 v17 v19 v20 v21 v22 v23 v24 v25 v26"
 FAIL=0
 run(){ # $1 = libellé, reste = commande
   label="$1"; shift

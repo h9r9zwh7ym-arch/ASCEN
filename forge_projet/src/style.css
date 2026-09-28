@@ -1573,7 +1573,7 @@ html[data-vt="fade"]::view-transition-new(root){animation-name:vtFadeIn}
 @keyframes rwBar{from{transform:scaleY(0)}}
 /* anneau du temps */
 .rw-ring{position:relative;width:220px;height:220px;display:grid;place-items:center;margin:8px 0 4px}
-.rw-ring svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.rw-ring svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
 .rw-ring circle{fill:none;stroke:rgba(255,255,255,.2);stroke-width:10}
 .rw-ring circle.p{stroke:#fff;stroke-linecap:round;stroke-dasharray:327;stroke-dashoffset:327;animation:rwRing 1.6s .4s forwards cubic-bezier(.2,.8,.2,1)}
 @keyframes rwRing{to{stroke-dashoffset:calc(327 - 327*var(--p))}}
@@ -1610,3 +1610,6 @@ html[data-vt="fade"]::view-transition-new(root){animation-name:vtFadeIn}
 .rw-actions .btn.secondary{background:rgba(255,255,255,.18);color:#fff}
 #rewind.paused .rw-prog i{opacity:.6}
 @media (prefers-reduced-motion:reduce){.rw-bgs i,.rwc-bg{animation:none}.rw-in>*{animation-duration:.01s}}
+
+.rw-in>.rw-card,.rw-in>.rw-bolt{opacity:1;transform:none}
+.rw-ring>div{position:relative;display:flex;flex-direction:column;align-items:center}
