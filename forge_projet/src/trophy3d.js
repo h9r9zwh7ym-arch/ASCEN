@@ -16,10 +16,15 @@ const T3D_METALS = {        // couleur sRGB, rugosité de la couronne
   1: { c:"#CF8752", r:.34 },
   2: { c:"#D5D7DB", r:.3 },
   3: { c:"#F2C04E", r:.28 },
-  4: { c:"#B9E6FF", r:.05, diamond:true },
+  4: { c:"#F6FBFF", r:.02, diamond:true },   // cristal taillé sur fond platine (voir t3dMats)
   s: { c:"#EDE6FF", r:.14, iris:true },   // secrets découverts
 };
-const T3D = { loading:null, ctx:null, snap:null, failed:false, cache:new Map(), queue:[], busy:false };
+const T3D = { loading:null, ctx:null, snap:null, failed:false, cache:new Map(), queue:[], busy:false, geo:new Map(), mats:new Map(), syms:new Map() };
+// Géométries, matériaux et symboles partagés entre toutes les médailles (vignettes et rendu vivant) :
+// construits une fois par session et jamais libérés. Avant, chaque vignette reconstruisait tout
+// puis le détruisait (programmes de rendu recompilés, mémoire qui fait le yo-yo) : c'était le
+// coût principal de la grille des trophées.
+function t3dGeo(key, make){ if(!T3D.geo.has(key)){ const g = make(); g.userData.keep = true; T3D.geo.set(key, g); } return T3D.geo.get(key); }
 
 function t3dReduced(){ return !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches); }
 function t3dWebGL(){
@@ -58,12 +63,14 @@ function t3dTextures(T){
     // satiné / sablé pour les couronnes des formes extrudées
     frost: t3dCanvasTex(T, 256, 256, (g, w, h)=>noise(g, w, h, 150, 90), [3,3]),
     // guilloché en rayons (émail sur face de révolution : u = angle, v = rayon)
-    rays: t3dCanvasTex(T, 1024, 64, (g, w, h)=>{ for(let x=0;x<w;x++) for(let y=0;y<h;y+=2){ const v = 128 + 70*Math.sin(x/w*Math.PI*2*72 + Math.sin(y/h*Math.PI*6)*1.6); g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(x, y, 1, 2); } }),
+    rays: t3dCanvasTex(T, 1024, 32, (g, w, h)=>{ const id = g.createImageData(w, h);
+      for(let y=0;y<h;y++){ const ph = Math.sin(y/h*Math.PI*6)*1.6; for(let x=0;x<w;x++){ const v = 128 + 70*Math.sin(x/w*Math.PI*2*72 + ph), i = (y*w+x)*4; id.data[i] = id.data[i+1] = id.data[i+2] = v; id.data[i+3] = 255; } }
+      g.putImageData(id, 0, 0); }),
     // guilloché en soleil (émail des formes extrudées, coordonnées planes)
-    sun: t3dCanvasTex(T, 512, 512, (g, w, h)=>{
+    sun: t3dCanvasTex(T, 256, 256, (g, w, h)=>{
       const cx = w/2, cy = h/2, id = g.createImageData(w, h);
       for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const dx = x-cx, dy = y-cy, a = Math.atan2(dy, dx), r = Math.hypot(dx, dy);
-        const v = 128 + 60*Math.sin(a*64 + Math.sin(r*.09)*1.4) + 30*Math.sin(r*.35); const i = (y*w+x)*4; id.data[i] = id.data[i+1] = id.data[i+2] = v; id.data[i+3] = 255; }
+        const v = 128 + 60*Math.sin(a*64 + Math.sin(r*.18)*1.4) + 30*Math.sin(r*.7); const i = (y*w+x)*4; id.data[i] = id.data[i+1] = id.data[i+2] = v; id.data[i+3] = 255; }
       g.putImageData(id, 0, 0); }, [.62,.62]),
     spark: t3dCanvasTex(T, 64, 64, (g)=>{ const r = g.createRadialGradient(32,32,0,32,32,32); r.addColorStop(0,"rgba(255,255,255,1)"); r.addColorStop(.25,"rgba(255,228,160,.9)"); r.addColorStop(1,"rgba(255,180,60,0)"); g.fillStyle = r; g.fillRect(0,0,64,64); }),
     star: t3dCanvasTex(T, 64, 64, (g)=>{ g.translate(32,32); const grd = g.createRadialGradient(0,0,0,0,0,30); grd.addColorStop(0,"rgba(255,255,255,1)"); grd.addColorStop(.4,"rgba(215,240,255,.8)"); grd.addColorStop(1,"rgba(160,200,255,0)"); g.fillStyle = grd;
@@ -75,22 +82,43 @@ function t3dTextures(T){
 
 // ---------- matériaux ----------
 function t3dMats(T, m, tier){
-  const X = t3dTextures(T), key = !tier ? 0 : m.secret ? "s" : tier, M = T3D_METALS[key];
-  const special = M.diamond || M.iris ? { iridescence:1, iridescenceIOR:M.diamond ? 2.33 : 1.6, iridescenceThicknessRange:M.diamond ? [120, 980] : [250, 900], envMapIntensity:M.diamond ? 1.5 : 1.2 } : {};
-  const enamelBase = tier ? (IOS_COL[m.c] || IOS_COL.orange) : "#7A8089";
-  return {
-    key,
-    // diamant : couronne taillée en facettes (ombrage plat), sans cannelure ni sablage
-    body: new T.MeshPhysicalMaterial(Object.assign({ color:M.c, metalness:1, roughness:M.r, clearcoat:.3, clearcoatRoughness:.25 }, M.diamond ? { flatShading:true, clearcoat:1, clearcoatRoughness:.02 } : { bumpMap:X.reed, bumpScale:.6 }, special)),
-    frame: new T.MeshPhysicalMaterial(Object.assign({ color:M.c, metalness:1, roughness:M.r+.08, clearcoat:.3, clearcoatRoughness:.3 }, M.diamond ? { flatShading:true, roughness:M.r, clearcoat:1, clearcoatRoughness:.02 } : { roughnessMap:X.frost }, special)),
-    // symbole : poli miroir, un peu plus clair que la couronne pour se détacher
-    // symbole : métal poli, plus clair que la couronne, qui capte la lumière (pas un miroir sombre)
-    polish: new T.MeshPhysicalMaterial(Object.assign({ color:hexMix(M.c, "#ffffff", tier ? .25 : .1), metalness:1, roughness:tier ? .16 : .32, clearcoat:1, clearcoatRoughness:.05, envMapIntensity:1.45 }, special)),
-    // émail : couleur profonde et saturée (moins de reflets) pour que le symbole ressorte
-    enamelRays: new T.MeshPhysicalMaterial({ color:hexMix(enamelBase, "#000000", .38), metalness:0, roughness:.55, bumpMap:X.rays, bumpScale:1.4, clearcoat:.9, clearcoatRoughness:.06, envMapIntensity:.55 }),
-    enamelSun: new T.MeshPhysicalMaterial({ color:hexMix(enamelBase, "#000000", .38), metalness:0, roughness:.55, bumpMap:X.sun, bumpScale:1.4, clearcoat:.9, clearcoatRoughness:.06, envMapIntensity:.55 }),
-    shadow: new T.MeshStandardMaterial({ color:"#000000", transparent:true, opacity:.38, depthWrite:false, roughness:1, metalness:0 }),
-  };
+  const key = !tier ? 0 : m.secret ? "s" : tier, enamelBase = tier ? (IOS_COL[m.c] || IOS_COL.orange) : "#7A8089";
+  const ck = key+"|"+enamelBase;
+  if(T3D.mats.has(ck)) return T3D.mats.get(ck);
+  const X = t3dTextures(T), M = T3D_METALS[key];
+  let mats;
+  if(M.diamond){
+    // Diamant : un vrai cristal plutôt qu'un métal teinté. Transmission (on voit au travers),
+    // indice de réfraction du diamant (2,42) et dispersion : la lumière se décompose en « feu »
+    // coloré sur les arêtes des facettes. Posé sur un fond platine miroir, facetté lui aussi,
+    // pour que la réfraction ait quelque chose à renvoyer, et un émail nuit qui le fait ressortir.
+    const crystal = new T.MeshPhysicalMaterial({ color:"#ffffff", metalness:0, roughness:.02, transmission:1, thickness:.5, ior:2.42, dispersion:6,
+      specularIntensity:1, specularColor:"#ffffff", envMapIntensity:2.4, clearcoat:1, clearcoatRoughness:0, attenuationColor:"#d4ecff", attenuationDistance:2.2,
+      iridescence:.3, iridescenceIOR:1.9, iridescenceThicknessRange:[180, 520], flatShading:true });
+    mats = {
+      key, crystal, body:crystal, frame:crystal,
+      setting: new T.MeshPhysicalMaterial({ color:"#E6ECF2", metalness:1, roughness:.1, clearcoat:1, clearcoatRoughness:.03, envMapIntensity:1.6, flatShading:true }),
+      polish: new T.MeshPhysicalMaterial({ color:"#F5F8FB", metalness:1, roughness:.08, clearcoat:1, clearcoatRoughness:.03, envMapIntensity:1.7 }),
+      enamelRays: new T.MeshPhysicalMaterial({ color:hexMix(enamelBase, "#0A1628", .95), metalness:.1, roughness:.35, bumpMap:X.rays, bumpScale:1.4, clearcoat:1, clearcoatRoughness:.04, envMapIntensity:.8 }),
+      enamelSun: new T.MeshPhysicalMaterial({ color:hexMix(enamelBase, "#0A1628", .95), metalness:.1, roughness:.35, bumpMap:X.sun, bumpScale:1.4, clearcoat:1, clearcoatRoughness:.04, envMapIntensity:.8 }),
+    };
+  } else {
+    const special = M.iris ? { iridescence:1, iridescenceIOR:1.6, iridescenceThicknessRange:[250, 900], envMapIntensity:1.2 } : {};
+    mats = {
+      key,
+      body: new T.MeshPhysicalMaterial(Object.assign({ color:M.c, metalness:1, roughness:M.r, clearcoat:.3, clearcoatRoughness:.25, bumpMap:X.reed, bumpScale:.6 }, special)),
+      frame: new T.MeshPhysicalMaterial(Object.assign({ color:M.c, metalness:1, roughness:M.r+.08, clearcoat:.3, clearcoatRoughness:.3, roughnessMap:X.frost }, special)),
+      // symbole : métal poli, plus clair que la couronne, qui capte la lumière (pas un miroir sombre)
+      polish: new T.MeshPhysicalMaterial(Object.assign({ color:hexMix(M.c, "#ffffff", tier ? .25 : .1), metalness:1, roughness:tier ? .16 : .32, clearcoat:1, clearcoatRoughness:.05, envMapIntensity:1.45 }, special)),
+      // émail : couleur profonde et saturée (moins de reflets) pour que le symbole ressorte
+      enamelRays: new T.MeshPhysicalMaterial({ color:hexMix(enamelBase, "#000000", .38), metalness:0, roughness:.55, bumpMap:X.rays, bumpScale:1.4, clearcoat:.9, clearcoatRoughness:.06, envMapIntensity:.55 }),
+      enamelSun: new T.MeshPhysicalMaterial({ color:hexMix(enamelBase, "#000000", .38), metalness:0, roughness:.55, bumpMap:X.sun, bumpScale:1.4, clearcoat:.9, clearcoatRoughness:.06, envMapIntensity:.55 }),
+    };
+  }
+  mats.shadow = new T.MeshStandardMaterial({ color:"#000000", transparent:true, opacity:.38, depthWrite:false, roughness:1, metalness:0 });
+  mats.ck = ck;
+  T3D.mats.set(ck, mats);
+  return mats;
 }
 
 // ---------- symbole ----------
@@ -115,7 +143,7 @@ function t3dGlyph(T, name, mats){
     return `<${tag}${Object.values(seen).join("")}${end}>`;
   });
   const data = new T.SVGLoader().parse(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${src}</svg>`);
-  const joint = new T.SphereGeometry(1, 14, 10);
+  const joint = t3dGeo("joint", ()=>new T.SphereGeometry(1, 14, 10));
   data.paths.forEach(p=>{
     const st = p.userData.style || {};
     if(st.fill && st.fill!=="none"){
@@ -154,7 +182,7 @@ function t3dTextGlyph(T, text, mats){
   x.font = `800 ${text.length>2 ? 150 : 190}px -apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif`; x.textAlign = "center"; x.textBaseline = "middle";
   x.filter = "blur(3px)"; x.fillStyle = "#fff"; x.fillText(text, 256, 136);
   const tex = new T.CanvasTexture(c);
-  const mat = mats.polish.clone(); mat.alphaMap = tex; mat.bumpMap = tex; mat.bumpScale = 3; mat.alphaTest = .45; mat.transparent = false;
+  const mat = mats.polish.clone(); mat.alphaMap = tex; mat.bumpMap = tex; mat.bumpScale = 3; mat.alphaTest = .45; mat.transparent = false; mat.userData.own = true;
   const mesh = new T.Mesh(new T.PlaneGeometry(22, 11), mat);
   const g = new T.Group(); g.add(mesh); g.userData.flat = true;
   return g;
@@ -175,9 +203,11 @@ function t3dDumbbell(T, mat){
 }
 function t3dSymbol(T, m, tier, mats){
   const locked = !tier;
-  if(locked && m.secret) return t3dGlyph(T, "lock", mats);
-  if(m.g && typeof m.g==="object") return t3dTextGlyph(T, m.g.t, mats);
-  return t3dGlyph(T, m.g || "medal", mats);
+  if(m.g && typeof m.g==="object" && !(locked && m.secret)) return t3dTextGlyph(T, m.g.t, mats);
+  // glyphe : construit une fois par (glyphe, matériau), puis cloné (géométries partagées)
+  const name = locked && m.secret ? "lock" : (m.g || "medal"), k = name+"|"+mats.ck;
+  if(!T3D.syms.has(k)){ const tpl = t3dGlyph(T, name, mats); tpl.traverse(o=>{ if(o.geometry) o.geometry.userData.keep = true; }); T3D.syms.set(k, tpl); }
+  return T3D.syms.get(k).clone(true);
 }
 
 // ---------- médaille ----------
@@ -198,25 +228,29 @@ function t3dBuildMedal(T, m, tier){
     // révolution : dos et couronne (cannelée), perle polie, émail bombé guilloché
     const prof = pts=>pts.map(([x,y])=>new T.Vector2(x, y));
     const dia = T3D_METALS[mats.key].diamond;
-    const body = new T.Mesh(new T.LatheGeometry(prof(dia ? [[0,-.17],[.92,-.17],[1,-.06],[1,.06],[.95,.2],[.87,.15],[.86,.1],[0,.1]] : [[0,-.17],[.9,-.17],[.97,-.15],[1,-.1],[1,.1],[.99,.18],[.95,.215],[.9,.2],[.87,.14],[.86,.1],[0,.1]]), dia ? 24 : 144), mats.body);
-    const bead = new T.Mesh(new T.LatheGeometry(prof([[.875,.13],[.862,.152],[.848,.155],[.835,.14]]), 144), mats.polish);
-    const enamel = new T.Mesh(new T.LatheGeometry(prof([[.84,.11],[.83,.14],[.7,.148],[.4,.152],[0,.155]]), 144), mats.enamelRays);
-    const face = new T.Group(); face.add(body, bead, enamel); face.rotation.x = Math.PI/2;
+    const face = new T.Group();
+    if(dia){
+      // monture platine facettée (16 pans), puis anneau de cristal taillé : table, couronne, rondiste, culasse
+      face.add(new T.Mesh(t3dGeo("dia-setting", ()=>new T.LatheGeometry(prof([[0,-.22],[.96,-.22],[1.04,-.18],[1,-.13],[.84,-.11],[.8,.06],[0,.08]]), 16)), mats.setting));
+      face.add(new T.Mesh(t3dGeo("dia-ring", ()=>new T.LatheGeometry(prof([[.8,-.1],[.93,-.14],[1.03,-.05],[1.03,.03],[.98,.14],[.91,.21],[.84,.17],[.8,.1],[.8,-.1]]), 16)), mats.crystal));
+    } else face.add(new T.Mesh(t3dGeo("body", ()=>new T.LatheGeometry(prof([[0,-.17],[.9,-.17],[.97,-.15],[1,-.1],[1,.1],[.99,.18],[.95,.215],[.9,.2],[.87,.14],[.86,.1],[0,.1]]), 144)), mats.body));
+    face.add(new T.Mesh(t3dGeo("bead", ()=>new T.LatheGeometry(prof([[.875,.13],[.862,.152],[.848,.155],[.835,.14]]), 144)), mats.polish));
+    face.add(new T.Mesh(t3dGeo("enamel", ()=>new T.LatheGeometry(prof([[.84,.11],[.83,.14],[.7,.148],[.4,.152],[0,.155]]), 144)), mats.enamelRays));
+    face.rotation.x = Math.PI/2;
     medal.add(face); faceZ = .155;
   } else {
     // formes extrudées : dos plein, cadre évidé biseauté (satiné) plus haut que l'émail,
     // filet poli au bord intérieur, émail guilloché en soleil posé en creux
     const pts = t3dShapePoints(T, shape);
-    const back = new T.Mesh(new T.ExtrudeGeometry(t3dShape(T, pts, .97), { depth:.1, bevelEnabled:true, bevelThickness:.04, bevelSize:.03, bevelSegments:3, curveSegments:24 }), mats.frame);
-    back.position.z = -.16;
-    const ring = t3dShape(T, pts, 1); ring.holes.push(new T.Path(pts.map(p=>new T.Vector2(p.x*.84, p.y*.84)).reverse()));
     const dia = T3D_METALS[mats.key].diamond;
-    const frame = new T.Mesh(new T.ExtrudeGeometry(ring, { depth:.22, bevelEnabled:true, bevelThickness:dia ? .08 : .05, bevelSize:dia ? .07 : .045, bevelSegments:dia ? 1 : 5, curveSegments:24 }), mats.frame);
+    const back = new T.Mesh(t3dGeo("back:"+shape, ()=>new T.ExtrudeGeometry(t3dShape(T, pts, .97), { depth:.1, bevelEnabled:true, bevelThickness:.04, bevelSize:.03, bevelSegments:3, curveSegments:24 })), dia ? mats.setting : mats.frame);
+    back.position.z = -.16;
+    const frame = new T.Mesh(t3dGeo("frame:"+shape+(dia?":d":""), ()=>{ const ring = t3dShape(T, pts, 1); ring.holes.push(new T.Path(pts.map(p=>new T.Vector2(p.x*.84, p.y*.84)).reverse()));
+      return new T.ExtrudeGeometry(ring, { depth:.22, bevelEnabled:true, bevelThickness:dia ? .08 : .05, bevelSize:dia ? .07 : .045, bevelSegments:dia ? 1 : 5, curveSegments:24 }); }), mats.frame);
     frame.position.z = -.1;
-    const enamel = new T.Mesh(new T.ExtrudeGeometry(t3dShape(T, pts, .86), { depth:.02, bevelEnabled:true, bevelThickness:.02, bevelSize:.015, bevelSegments:2, curveSegments:24 }), mats.enamelSun);
+    const enamel = new T.Mesh(t3dGeo("enamel:"+shape, ()=>new T.ExtrudeGeometry(t3dShape(T, pts, .86), { depth:.02, bevelEnabled:true, bevelThickness:.02, bevelSize:.015, bevelSegments:2, curveSegments:24 })), mats.enamelSun);
     enamel.position.z = .06;
-    const inner = pts.map(p=>new T.Vector3(p.x*.83, p.y*.83, 0));
-    const bead = new T.Mesh(new T.TubeGeometry(t3dPolyCurve(T, inner, true), 160, .02, 10, true), mats.polish);
+    const bead = new T.Mesh(t3dGeo("bead:"+shape, ()=>new T.TubeGeometry(t3dPolyCurve(T, pts.map(p=>new T.Vector3(p.x*.83, p.y*.83, 0)), true), 160, .02, 10, true)), mats.polish);
     bead.position.z = .12;
     medal.add(back, frame, enamel, bead); faceZ = .1;
   }
@@ -230,15 +264,18 @@ function t3dBuildMedal(T, m, tier){
     sh.position.set(.018, yOff-.03, faceZ+.004); sh.scale.set(k*1.02, k*1.02, k*.05);
     medal.add(sh);
   }
-  if(shape==="regular"){ const loop = new T.Mesh(new T.TorusGeometry(.1, .028, 16, 48), mats.polish); loop.position.set(0, 1.07, 0); medal.add(loop); }
+  if(shape==="regular"){ const loop = new T.Mesh(t3dGeo("loop", ()=>new T.TorusGeometry(.1, .028, 16, 48)), mats.polish); loop.position.set(0, 1.07, 0); medal.add(loop); }
   medal.userData = { mats, diamond:T3D_METALS[mats.key].diamond };
   if(medal.userData.diamond) t3dSparkles(T, medal);
   return medal;
 }
 function t3dDispose(obj){
+  // géométries et matériaux partagés (cache) : conservés ; le reste (texte, étincelles) est libéré
   const seen = new Set();
-  obj.traverse(o=>{ if(o.geometry && !seen.has(o.geometry)){ seen.add(o.geometry); o.geometry.dispose(); } if(o.isPoints && o.material) o.material.dispose(); });
-  const mats = obj.userData && obj.userData.mats; if(mats) Object.values(mats).forEach(x=>x && x.dispose && x.dispose());
+  obj.traverse(o=>{
+    if(o.geometry && !o.geometry.userData.keep && !seen.has(o.geometry)){ seen.add(o.geometry); o.geometry.dispose(); }
+    if(o.material && (o.isPoints || o.material.userData.own)){ if(o.material.alphaMap && o.material.userData.own) o.material.alphaMap.dispose(); o.material.dispose(); }
+  });
 }
 
 // ---------- scène (commune au rendu vivant et aux vignettes) ----------
@@ -289,7 +326,7 @@ function t3dPump(){
       medal.rotation.set(-.12, .42, 0);
       s.scene.add(medal); s.renderer.render(s.scene, s.camera); s.scene.remove(medal);
       t3dDispose(medal);
-      s.canvas.toBlob(b=>{ b ? job.ok(URL.createObjectURL(b)) : job.ko(new Error("blob")); T3D.busy = false; t3dPump(); }, "image/png");
+      s.canvas.toBlob(b=>{ b ? job.ok(URL.createObjectURL(b)) : job.ko(new Error("blob")); T3D.busy = false; t3dPump(); }, "image/webp", .92);
     }catch(e){ T3D.failed = true; job.ko(e); T3D.busy = false; T3D.queue.splice(0).forEach(j=>j.ko(e)); }
   }, { timeout:400 });
 }
@@ -371,6 +408,8 @@ function t3dBurst(ctx){
 function t3dFrame(now){
   const ctx = T3D.ctx; if(!ctx) return;
   if(!ctx.canvas.isConnected || !ctx.visible || document.hidden || !ctx.medal){ ctx.running = false; return; }
+  const lively = ctx.dragging || ctx.unlock || ctx.flip || ctx.burst || Math.abs(ctx.vel)>.02;
+  if(!lively && ctx.last && now-ctx.last < 30){ requestAnimationFrame(t3dFrame); return; }
   const dt = Math.min(.05, ctx.last ? (now-ctx.last)/1000 : 0); ctx.last = now;
   const t = (now-ctx.t0)/1000, reduce = t3dReduced(), M = ctx.medal;
   if(!ctx.dragging){ ctx.drag += ctx.vel*dt; ctx.vel *= Math.pow(.04, dt); ctx.drag *= Math.pow(.35, dt); }
@@ -484,7 +523,7 @@ async function showMedalModal(id, fromEl){
   ctx.detail = id;
   const full = document.createElement("div"); full.className = "t3d-full";
   full.innerHTML = `<div class="t3d-scrim" data-a="t3dClose"></div>
-    <div class="t3d-panel" role="dialog" aria-label="Détail du trophée">
+    <div class="t3d-panel" role="dialog" aria-label="Détail du trophée" data-tier="${medalTier(m)}">
       <button class="t3d-x" data-a="t3dClose" aria-label="Fermer">${icon("close")}</button>
       <div class="t3d-big" id="t3dBig"></div>
       <div class="t3d-body">${t3dDetailHTML(id)}</div>

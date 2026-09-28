@@ -176,11 +176,29 @@ function normalizeState(parsed){
     // format compact (v2.5) ; une liste « sessions » non vide (import externe) reste prioritaire
     if(Array.isArray(parsed.zs) && !(parsed.sessions && parsed.sessions.length)) parsed.sessions = parsed.zs.map(unpackSession);
     delete merged.zs; delete merged.fmt;
-    merged.sessions = (parsed.sessions||[]).map(compactSession).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0); // ordre chronologique garanti (les statistiques s'appuient dessus)
-    merged.templates = parsed.templates||[];
-    merged.medals = parsed.medals||{};
+    // robustesse : une donnée abîmée (import externe, ancienne version, écriture interrompue) ne
+    // doit jamais empêcher l'app de démarrer. Les entrées illisibles sont écartées ; l'historique
+    // garde ses exercices même inconnus (renommés depuis), il n'est jamais supprimé.
+    const okSet = st=>st && typeof st==="object";
+    const okExo = ex=>ex && typeof ex==="object" && typeof ex.exoId==="string" && Array.isArray(ex.sets);
+    parsed.sessions = (Array.isArray(parsed.sessions)?parsed.sessions:[]).filter(ss=>ss && typeof ss.date==="string" && /^\d{4}-\d{2}-\d{2}/.test(ss.date) && Array.isArray(ss.exos))
+      .map(ss=>Object.assign({}, ss, { date:ss.date.slice(0,10), exos:ss.exos.filter(okExo).map(ex=>Object.assign({}, ex, { sets:ex.sets.filter(okSet) })) }));
+    const known = ex=>ex && EXO_MAP[ex.exoId];
+    merged.sessions = parsed.sessions.map(compactSession).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0); // ordre chronologique garanti (les statistiques s'appuient dessus)
+    // séances enregistrées, Ma séance, séance en cours : seulement des exercices connus
+    merged.templates = (Array.isArray(parsed.templates)?parsed.templates:[]).filter(t=>t && t.id && Array.isArray(t.exos))
+      .map(t=>Object.assign({}, t, { n:String(t.n||"Séance"), days:Array.isArray(t.days)?t.days.filter(x=>x>=0 && x<=6):[], exos:t.exos.filter(known) }));
+    merged.custom.exos = (Array.isArray(merged.custom.exos)?merged.custom.exos:[]).filter(known);
+    if(merged.draft){
+      const dr = merged.draft;
+      merged.draft = dr && typeof dr==="object" && Array.isArray(dr.exos) ? Object.assign({}, dr, { exos:dr.exos.filter(ex=>okExo(ex) && known(ex)).map(ex=>Object.assign({}, ex, { sets:ex.sets.filter(okSet) })) }) : null;
+      if(merged.draft && !merged.draft.exos.length) merged.draft = null;
+    }
+    merged.medals = parsed.medals && typeof parsed.medals==="object" && !Array.isArray(parsed.medals) ? parsed.medals : {};
+    merged.prefs.excluded = Array.isArray(merged.prefs.excluded) ? merged.prefs.excluded.filter(id=>EXO_MAP[id]) : [];
+    merged.prefs.included = Array.isArray(merged.prefs.included) ? merged.prefs.included.filter(id=>EXO_MAP[id]) : [];
     merged.importedProgram = parsed.importedProgram||[];
-    merged.targets = (Array.isArray(parsed.targets)?parsed.targets:[]).filter(t=>t && t.id && t.exoId && ["reps","kg","sec"].includes(t.kind) && t.value>0);
+    merged.targets = (Array.isArray(parsed.targets)?parsed.targets:[]).filter(t=>t && t.id && EXO_MAP[t.exoId] && ["reps","kg","sec"].includes(t.kind) && t.value>0);
     merged.body = (Array.isArray(parsed.body)?parsed.body:[]).filter(e=>e && /^\d{4}-\d{2}-\d{2}$/.test(e.d) && e.kg>=20 && e.kg<=400).sort((a,b)=>a.d<b.d?-1:1);
     delete merged.settings.todayMode; // v1.2 : remplacé par todayTab (« Ma séance » en premier)
     // v2.2 : nouveaux équipements. On garde le comportement précédent : un banc servait aussi

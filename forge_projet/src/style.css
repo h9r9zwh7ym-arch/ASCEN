@@ -1921,3 +1921,6 @@ h2.sh .more{font-family:var(--sans);font-size:var(--fs-sub);font-weight:500;lett
 /* animation d'exercice : le muscle principal ressort (segment plus épais, plus foncé) */
 .exo-anim .ea-focus{fill:none;stroke:color-mix(in srgb,var(--rc,var(--tint)) 55%,var(--label));stroke-width:3;stroke-linecap:round;opacity:.9}
 .rw-stage .exo-anim .ea-focus{stroke:#FFD2BF}
+/* fiche 3D d'un trophée : encre ASCEN, lumière neutre (plus de halo brun « forge ») */
+.t3d-panel{background:radial-gradient(110% 55% at 50% 0%,rgba(255,255,255,.1),transparent 62%),linear-gradient(180deg,#1F1D1B,#0B0B0A 58%)}
+.t3d-panel[data-tier="4"]{background:radial-gradient(110% 55% at 50% 0%,rgba(190,225,255,.2),transparent 62%),linear-gradient(180deg,#1A1E24,#0A0B0D 58%)}

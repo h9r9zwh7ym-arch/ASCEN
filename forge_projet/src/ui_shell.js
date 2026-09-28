@@ -459,13 +459,41 @@ const ACT = {
   noop(){},
 };
 
+// ---------- exécution des actions ----------
+// Une action qui échoue (donnée inattendue, cas non prévu) ne doit ni figer l'écran ni perdre de
+// données : l'erreur est notée (dernières 20, en mémoire), l'utilisateur est prévenu sobrement et
+// la vue est redessinée depuis l'état enregistré. Les actions qui enregistrent quelque chose sont
+// protégées contre le double appui (une série validée deux fois, une séance terminée deux fois).
+const ERR_LOG = [];
+let errToastAt = 0;
+function reportError(where, err){
+  ERR_LOG.push({ at:new Date().toISOString(), where, msg:String(err && err.message || err).slice(0,200) });
+  if(ERR_LOG.length>20) ERR_LOG.shift();
+  if(typeof console!=="undefined") console.warn("[ASCEN]", where, err);
+  if(Date.now()-errToastAt>5000){ errToastAt = Date.now(); try{ toast("Petit souci, l'écran a été rechargé — rien n'est perdu", "warn"); }catch(e){} }
+}
+const ONCE_ACTS = new Set(["validateSet","finishSession","startSession","startCustom","startTemplate","pickerDone","infoAdd","addToCustom","tplEdSave","saveTemplate","saveTemplateNew","backupData","obFinish","confirmYes","holdStop","histEditSave"]);
+let lastAct = { name:"", el:null, t:0 };
+function runAction(name, el, e){
+  const fn = ACT[name]; if(!fn) return;
+  const now = Date.now();
+  if(ONCE_ACTS.has(name) && lastAct.name===name && lastAct.el===el && now-lastAct.t<450){ if(e) e.preventDefault(); return; }
+  lastAct = { name, el, t:now };
+  try{
+    const r = fn.call(ACT, el.dataset, el);
+    if(r && typeof r.catch==="function") r.catch(err=>{ reportError(name, err); recoverView(); });
+  }catch(err){ reportError(name, err); recoverView(); }
+}
+function recoverView(){ try{ if(typeof renderView==="function") renderView(currentTab); }catch(e){} }
+window.addEventListener("error", e=>{ if(e && e.message && !/ResizeObserver|Script error/.test(e.message)) reportError("window", e.error || e.message); });
+window.addEventListener("unhandledrejection", e=>{ const r = e && e.reason; if(r && !/AbortError|NotAllowedError/.test(String(r.name||r))) reportError("promise", r); });
+
 document.addEventListener("click", e=>{
   // un glissement de carte ne doit pas déclencher le bouton sous le doigt
   if(typeof suppressClicksUntil!=="undefined" && Date.now()<suppressClicksUntil){ e.preventDefault(); return; }
   const el = e.target.closest("[data-a]");
   if(!el) return;
-  const name = el.dataset.a;
-  if(ACT[name]) ACT[name](el.dataset, el);
+  runAction(el.dataset.a, el, e);
 });
 document.addEventListener("keydown", e=>{
   if(e.key==="Enter" && e.target && e.target.id==="numInput"){ e.preventDefault(); ACT.numOk(); }
@@ -479,6 +507,5 @@ document.addEventListener("keydown", e=>{
 document.addEventListener("change", e=>{
   const el = e.target.closest("[data-c]");
   if(!el) return;
-  const name = el.dataset.c;
-  if(ACT[name]) ACT[name](el.dataset, el);
+  runAction(el.dataset.c, el, e);
 });

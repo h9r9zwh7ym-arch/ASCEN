@@ -405,6 +405,32 @@ YaYa trouvait l'interface moins aboutie que Zeste sans savoir pourquoi. Diagnost
 
 Note tests : `v14` peut dépasser son délai quand d'autres scripts Playwright tournent en parallèle. Seul, il passe.
 
+## 9 septdecies. Version 3.0 : ergonomie, animations, exercices maison, trophées, robustesse
+
+- **Pile de feuilles** (`ui_shell.js` : `sheetStack`, `sheetBack`, options `restore` / `child` / `onBack` d'`openSheet`).
+  - Une fiche d'exercice ouverte depuis la liste (elle-même ouverte depuis l'éditeur de séance) revient à la feuille précédente quand on glisse vers le bas, touche le fond ou ✕.
+  - Avant, tout se fermait et l'édition était perdue.
+  - La liste retrouve sa position de défilement.
+  - Les confirmations (`openModal`) vident la pile : « Annuler » ferme tout, comme avant.
+- **« Ajouter » selon le contexte** (`infoContext`, `infoAddButton`, `ACT.infoAdd` dans `view_today.js`). Depuis la liste, l'exercice rejoint la sélection et on revient à la liste. Sinon, il va à :
+  - la séance en cours ;
+  - ou la séance proposée ;
+  - ou Ma séance.
+- **Animations distinctes** (`data_pictos.js` : `ANIM_VARIANT`, `animPose`, `FOCUS_SEG`).
+  - 84 variantes partent des ~20 poses de base et remplacent les articulations qui changent vraiment : genoux au sol, pieds ou mains surélevés, bras tendu (archer), mains jointes (diamant), sauts, appui sur chaise, mur, table ou banc incliné.
+  - Chacune a son décor et son tempo.
+  - Le muscle principal est surligné sur le segment qui travaille.
+  - `tests/anim_sheet.js` dessine départ et fin de chaque exercice par famille : à regarder après toute retouche.
+- **Exercices maison** (sans matériel) : dips sur chaise (« pompes inversées »), extension triceps au sol (sphinx), pompes hindoues, rowing sous une table, montées sur chaise, nordic curl. Noms alternatifs pour la recherche : `EXO_ALIAS`. Progressions ajoutées dans `HARDER`.
+- **Trophées 3D** : géométries, matériaux et symboles mis en cache pour la session (`t3dGeo`, `T3D.mats`, `T3D.syms`, jamais libérés). Textures calculées plus légèrement. Boucle de rendu à ~30 images/s au repos, 60 pendant un geste ou un déblocage. Vignettes en WebP quand c'est possible. Mesures en rendu logiciel (`tests/t3d_perf.js`) : construction CPU de 24 médailles 122 → 60 ms, grille 15,8 → 11,9 s.
+- **Diamant** : cristal taillé (16 pans) en transmission, indice 2,42, dispersion (le « feu »), posé sur une monture platine facettée, émail nuit, symbole platine. Fiche 3D sur fond encre (plus de halo brun), teinte froide pour le diamant.
+- **Robustesse** :
+  - `normalizeState` écarte au démarrage les entrées illisibles et retire les exercices inconnus de Ma séance, des séances enregistrées, de la séance en cours, des objectifs et des préférences. L'historique garde tout.
+  - Toutes les actions passent par `runAction` : une erreur est notée (`ERR_LOG`, 20 dernières), un message sobre s'affiche et la vue est redessinée.
+  - Les actions qui enregistrent sont protégées du double appui (`ONCE_ACTS`).
+  - Les erreurs globales et les promesses rejetées sont captées.
+- **Tests** : `v28` (pile de feuilles, ajout selon le contexte), `v29` (données abîmées, action en échec, double appui).
+
 ## 10. Cahier des charges d'origine (résumé)
 
 Voir le fichier `4a3df5ee-cahier-des-charges-forge.md` fourni au lancement du projet pour le texte complet. Points clés déjà couverts en v1.0 : matériel personnalisable et extensible, bibliothèque d'exercices filtrée, inclusion/exclusion d'exercices, objectifs personnalisés, suivi détaillé de séance (éditable, timer de repos, coche rapide), moteur de suggestion 100% local avec export/import IA, graphiques de progression, PR, streaks/régularité, trophées, écran d'accueil = séance du jour, thème clair/sombre automatique, page À propos avec copyright.
