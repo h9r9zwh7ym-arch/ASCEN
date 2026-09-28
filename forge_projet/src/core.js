@@ -1,5 +1,8 @@
 // ================= ÉTAT & STOCKAGE =================
 const STORAGE_KEY = "forge.v1";
+// sources de séance abrégées dans le format compact (déclarées avant le chargement)
+const SRC_CODE = { engine:"e", custom:"c", imported:"i", template:"t" };
+const SRC_NAME = { e:"engine", c:"custom", i:"imported", t:"template" };
 
 function defaultState(){
   return {
@@ -22,12 +25,104 @@ function defaultState(){
 
 let S = load();
 
+// ---------- stockage compact (v2.5) ----------
+// L'historique représente l'essentiel des données. Il est enregistré sous une forme
+// condensée (tableaux, dates en millisecondes) : environ trois fois moins de place,
+// soit plusieurs décennies d'entraînement dans les ~5 Mo de localStorage. En mémoire et
+// dans les sauvegardes .json, les séances gardent leur forme lisible.
+function packSession(s){
+  const o = { i:s.id, d:s.date };
+  if(s.source) o.o = SRC_CODE[s.source] || s.source;
+  if(s.type) o.t = s.type; if(s.resolvedType && s.resolvedType!==s.type) o.r = s.resolvedType;
+  if(s.name) o.n = s.name; if(s.tplId) o.p = s.tplId; if(s.planned) o.l = 1; if(s.note) o.m = s.note;
+  const a = s.startedAt ? Date.parse(s.startedAt) : NaN; if(!isNaN(a)) o.a = a;
+  const c = s.completedAt ? Date.parse(s.completedAt) : NaN; if(!isNaN(c)) o.c = c;
+  if(s.durationSec) o.u = s.durationSec;
+  o.x = (s.exos||[]).map(ex=>{
+    const sets = ex.sets.filter(st=>st.done).map(st=>{
+      const f = (st.pr?1:0) | ((st.effort||0)<<1);
+      return f ? [st.reps||0, st.weight==null?null:st.weight, f] : st.weight!=null ? [st.reps||0, st.weight] : [st.reps||0];
+    });
+    return ex.targetReps ? [ex.exoId, sets, ex.targetReps] : [ex.exoId, sets];
+  });
+  return o;
+}
+function unpackSession(o){
+  const s = { id:o.i, date:o.d };
+  if(o.o) s.source = SRC_NAME[o.o] || o.o;
+  if(o.t) s.type = o.t; if(o.r || o.t) s.resolvedType = o.r || o.t;
+  if(o.n) s.name = o.n; if(o.p) s.tplId = o.p; if(o.l) s.planned = true; if(o.m) s.note = o.m;
+  if(o.a) s.startedAt = new Date(o.a).toISOString(); if(o.c) s.completedAt = new Date(o.c).toISOString();
+  if(o.u) s.durationSec = o.u;
+  s.exos = (o.x||[]).map(([exoId, sets, targetReps])=>{
+    const ex = { exoId, sets: sets.map(([reps, weight, f])=>{ const st = { reps, done:true }; if(weight!=null) st.weight = weight; if(f&1) st.pr = true; if(f>>1) st.effort = f>>1; return st; }) };
+    if(targetReps) ex.targetReps = targetReps;
+    return ex;
+  });
+  return s;
+}
+function serializeState(savedAt){
+  const o = Object.assign({}, S, { sessions:[], zs:S.sessions.map(packSession), fmt:2 });
+  o.meta = Object.assign({}, S.meta, { savedAt });
+  return JSON.stringify(o);
+}
+// ---------- copie de secours IndexedDB ----------
+// Chaque enregistrement est aussi copié dans IndexedDB (quota bien plus large). Si
+// localStorage est plein ou vidé, l'app repart de cette copie au lancement suivant.
+const IDB_NAME = "forge", IDB_STORE = "state";
+function idbOpen(){
+  return new Promise((ok, ko)=>{
+    if(!("indexedDB" in window)) return ko(new Error("indisponible"));
+    const r = indexedDB.open(IDB_NAME, 1);
+    r.onupgradeneeded = ()=>r.result.createObjectStore(IDB_STORE);
+    r.onsuccess = ()=>ok(r.result); r.onerror = ()=>ko(r.error);
+  });
+}
+function idbPut(data, savedAt){
+  return idbOpen().then(db=>new Promise((ok, ko)=>{
+    const tx = db.transaction(IDB_STORE, "readwrite");
+    tx.objectStore(IDB_STORE).put({ data, savedAt }, "main");
+    tx.oncomplete = ()=>{ db.close(); ok(); }; tx.onerror = ()=>{ db.close(); ko(tx.error); };
+  }));
+}
+function idbGet(){
+  return idbOpen().then(db=>new Promise((ok, ko)=>{
+    const r = db.transaction(IDB_STORE).objectStore(IDB_STORE).get("main");
+    r.onsuccess = ()=>{ db.close(); ok(r.result||null); }; r.onerror = ()=>{ db.close(); ko(r.error); };
+  }));
+}
+function idbMirror(str, savedAt){ idbPut(str, savedAt).catch(()=>{}); }
+function idbClear(){ return idbOpen().then(db=>new Promise(ok=>{ const tx = db.transaction(IDB_STORE, "readwrite"); tx.objectStore(IDB_STORE).clear(); tx.oncomplete = tx.onerror = ()=>{ db.close(); ok(); }; })).catch(()=>{}); }
+var loadedFromLS; // var : affecté pendant load(), qui s'exécute avant cette ligne
+// au lancement : si la copie IndexedDB est plus récente (localStorage plein, vidé ou
+// illisible), on la reprend
+function idbRecover(){
+  idbGet().then(rec=>{
+    if(!rec || !rec.data) return;
+    // localStorage absent, ou plus ancien que la copie (écriture refusée faute de place)
+    if(loadedFromLS && !(S.meta.savedAt && rec.savedAt > S.meta.savedAt)) return;
+    const st = normalizeState(JSON.parse(rec.data));
+    if(!st.sessions.length && S.sessions.length) return;
+    S = st; save(); persistNow();
+    if(typeof renderView==="function") renderView(currentTab);
+    if(typeof toast==="function") toast("Données reprises depuis la copie de secours");
+  }).catch(()=>{});
+}
+function storageUsage(){
+  let n = 0;
+  try{ for(let i=0;i<localStorage.length;i++){ const k = localStorage.key(i); n += (k.length + (localStorage.getItem(k)||"").length)*2; } }catch(e){}
+  return n; // octets (UTF-16)
+}
+const STORAGE_QUOTA = 5*1024*1024;
+
 function load(){
   let raw = null;
   try{
     raw = localStorage.getItem(STORAGE_KEY);
     if(!raw) return defaultState();
-    return normalizeState(JSON.parse(raw));
+    const st = normalizeState(JSON.parse(raw));
+    loadedFromLS = true;
+    return st;
   }catch(e){
     // données illisibles : on les met de côté au lieu de les écraser à la prochaine sauvegarde
     try{ if(raw) localStorage.setItem(STORAGE_KEY+".illisible."+Date.now(), raw); }catch(err){}
@@ -48,6 +143,9 @@ function normalizeState(parsed){
     merged.settings = Object.assign({}, d.settings, parsed.settings||{});
     merged.meta = Object.assign({}, d.meta, parsed.meta||{});
     merged.custom = Object.assign({}, d.custom, parsed.custom||{});
+    // format compact (v2.5) ; une liste « sessions » non vide (import externe) reste prioritaire
+    if(Array.isArray(parsed.zs) && !(parsed.sessions && parsed.sessions.length)) parsed.sessions = parsed.zs.map(unpackSession);
+    delete merged.zs; delete merged.fmt;
     merged.sessions = (parsed.sessions||[]).map(compactSession).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0); // ordre chronologique garanti (les statistiques s'appuient dessus)
     merged.templates = parsed.templates||[];
     merged.medals = parsed.medals||{};
@@ -120,10 +218,13 @@ function save(){
 function persistNow(){
   clearTimeout(persistTimer); persistTimer = null;
   if(persistBlocked) return;
-  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(S)); persistFailed = false; }
+  const savedAt = Date.now(), str = serializeState(savedAt);
+  S.meta.savedAt = savedAt;
+  idbMirror(str, savedAt);
+  try{ localStorage.setItem(STORAGE_KEY, str); persistFailed = false; }
   catch(e){
-    // stockage plein ou refusé : on prévient une fois, sans bloquer l'utilisation
-    if(!persistFailed && typeof toast==="function") toast("⚠︎ Enregistrement impossible sur cet appareil : fais une sauvegarde dans Profil");
+    // localStorage plein ou refusé : la copie IndexedDB prend le relais, on prévient une fois
+    if(!persistFailed && typeof toast==="function") toast("Stockage principal plein : tes données sont gardées dans la copie de secours. Pense à faire une sauvegarde.");
     persistFailed = true;
   }
 }

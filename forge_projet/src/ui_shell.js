@@ -7,6 +7,10 @@ const TABS = [
 ];
 
 const ICONS = {
+  bolt:'<path d="M13.2 2.8 5.5 13.3h5.6l-.9 7.9 7.9-10.8h-5.7Z" fill="currentColor"/>',
+  target:'<circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.9" fill="none"/><circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="1.9" fill="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>',
+  warn:'<path d="M12 4 21 19.5H3Z" stroke="currentColor" stroke-width="1.9" fill="none" stroke-linejoin="round"/><path d="M12 10v4.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16.9" r="1.1" fill="currentColor"/>',
+  star:'<path d="m12 3.6 2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8Z" fill="currentColor"/>',
   sparkle:'<path d="m10 3.5 1.7 4.6 4.6 1.7-4.6 1.7L10 16.1l-1.7-4.6-4.6-1.7 4.6-1.7Z" fill="currentColor"/><path d="m17.5 13 .8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8Z" fill="currentColor"/>',
   home:'<path d="M3 11.5 12 4l9 7.5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v9a1 1 0 0 0 1 1H10v-6h4v6h3.5a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round"/>',
   clock:'<circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M12 7.5V12l3.2 2" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
@@ -56,6 +60,7 @@ const GLYPHS = {
   lock:`<rect x="6" y="10.5" width="12" height="9.5" rx="2.2" fill="#fff"/><path d="M8.6 10.5V8a3.4 3.4 0 0 1 6.8 0v2.5" ${S_} stroke-width="2.2"/>`,
   cup:`<path d="M7.5 4h9v5.6a4.5 4.5 0 0 1-9 0Z" fill="#fff"/><path d="M7.5 6H4.8c0 2.6 1.3 4.2 3.2 4.6M16.5 6h2.7c0 2.6-1.3 4.2-3.2 4.6M12 14.2v3.3M8.5 20h7M9.8 17.5h4.4" ${S_}/>`,
   phoenix:'<path d="M12 21c-3 0-5.2-2.2-5.2-5.1 0-2.2 1.3-3.6 2.6-5 .2 1.4 1 2.2 1.9 2.5-.4-2.6.6-5.2 3.2-7.4-.4 2.6 3.3 4.4 3.3 8.6 0 3.8-2.4 6.4-5.8 6.4Z" fill="#fff"/><path d="M4 9.5c1.5.3 2.6 1 3.3 2M20 9.5c-1.5.3-2.6 1-3.3 2M6 5.5c1.2.6 2 1.4 2.4 2.5M18 5.5c-1.2.6-2 1.4-2.4 2.5" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round"/>',
+  storage:`<ellipse cx="12" cy="6.5" rx="7" ry="2.8" ${S_}/><path d="M5 6.5v11c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8v-11M5 12c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8" ${S_}/>`,
   bookmarkG:'<path d="M7 3.8h10a1 1 0 0 1 1 1V20l-6-4-6 4V4.8a1 1 0 0 1 1-1Z" fill="#fff"/>',
   search:`<circle cx="10.5" cy="10.5" r="5.5" ${S_}/><path d="m15 15 4.5 4.5" ${S_}/>`,
   chart:`<path d="M5 19V11M10 19V6M15 19v-5M20 19V9" ${S_} stroke-width="2.6"/>`,
@@ -103,6 +108,8 @@ function sfIcon(name, color, extra){
 }
 
 function icon(name){ return `<svg viewBox="0 0 24 24">${ICONS[name]||""}</svg>`; }
+// petite icône alignée sur le texte (remplace les emojis dans les libellés)
+function ii(name, cls){ return `<svg class="ii ${cls||""}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]||""}</svg>`; }
 
 function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function qs(sel,root){ return (root||document).querySelector(sel); }
@@ -132,9 +139,25 @@ function buildShell(){
 
 let currentTab = "today";
 const TAB_ORDER = ["today","history","progress","profil"];
+// transitions entre écrans : View Transitions (Safari 18+, Chrome) quand disponible,
+// sinon l'animation d'entrée CSS habituelle
+const canVT = ()=>!!document.startViewTransition && !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+function withTransition(kind, fn){
+  if(!canVT()) return fn();
+  document.documentElement.dataset.vt = kind;
+  const t = document.startViewTransition(fn);
+  t.finished.finally(()=>{ delete document.documentElement.dataset.vt; });
+}
 function switchTab(id){
+  if(canVT() && currentTab && currentTab!==id){
+    const from = TAB_ORDER.indexOf(currentTab), to = TAB_ORDER.indexOf(id);
+    return withTransition(to>from ? "tab-r" : "tab-l", ()=>switchTabNow(id, true));
+  }
+  switchTabNow(id);
+}
+function switchTabNow(id, vt){
   const from = TAB_ORDER.indexOf(currentTab), to = TAB_ORDER.indexOf(id);
-  const v = qs("#v-"+id); if(v) v.dataset.dir = from<0||from===to ? "" : to>from ? "r" : "l";
+  const v = qs("#v-"+id); if(v) v.dataset.dir = vt || from<0||from===to ? "" : to>from ? "r" : "l";
   currentTab = id;
   qsa(".tabbtn").forEach(b=>b.classList.toggle("on", b.dataset.id===id));
   qsa(".view").forEach(v=>v.classList.toggle("active", v.id==="v-"+id));
@@ -228,6 +251,7 @@ function showTip(target){
 function hideTip(){
   const tip = qs("#charttip");
   if(tip) tip.classList.remove("show");
+  qsa(".lc-cursor.on,.lc-cdot.on").forEach(x=>x.classList.remove("on"));
   if(tipOn){ tipOn.classList.remove("tip-on"); tipOn = null; }
 }
 document.addEventListener("click", e=>{
@@ -367,9 +391,9 @@ function confirmSheet({title,html,ok,onOk,danger}){
 
 // ---------- toast ----------
 let toastTimer=null;
-function toast(msg){
+function toast(msg, ic){
   const t = qs("#toast");
-  t.textContent = msg;
+  if(ic) t.innerHTML = ii(ic, "t-ic")+esc(msg); else t.textContent = msg;
   t.classList.add("show");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>t.classList.remove("show"), 2200);

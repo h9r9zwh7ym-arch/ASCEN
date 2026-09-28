@@ -39,9 +39,9 @@ function tplEdBodyHTML(){
     <div class="te-sec">Jours dans la semaine</div>
     <div class="tpl-daypick te-days">${JOURS_COURTS.map((j,i)=>{
       const on = e.days.includes(i);
-      return `<button class="${on?"on":""} ${taken[i]?"taken":""}" data-a="tplEdDay" data-d="${i}" aria-pressed="${on}"><b>${j}</b><small>${on?"✓":taken[i]?esc(taken[i]):""}</small></button>`;
+      return `<button class="${on?"on":""} ${taken[i]?"taken":""}" data-a="tplEdDay" data-d="${i}" aria-pressed="${on}"><b>${j}</b><small>${on?ii("check"):taken[i]?esc(taken[i]):""}</small></button>`;
     }).join("")}</div>
-    <div class="te-hint">${stolen.length ? `⚠︎ ${stolen.map(d=>JOURS[(d+1)%7]).join(", ")} : remplacera « ${esc(taken[stolen[0]])} ».` : e.days.length ? `Elle s'affichera directement ${e.days.length>1?"ces jours-là":"ce jour-là"} à l'ouverture de l'app.` : "Aucun jour : elle restera disponible dans tes séances enregistrées."}</div>
+    <div class="te-hint">${stolen.length ? `${ii("warn","warn")} ${stolen.map(d=>JOURS[(d+1)%7]).join(", ")} : remplacera « ${esc(taken[stolen[0]])} ».` : e.days.length ? `Elle s'affichera directement ${e.days.length>1?"ces jours-là":"ce jour-là"} à l'ouverture de l'app.` : "Aucun jour : elle restera disponible dans tes séances enregistrées."}</div>
     <div class="te-sec te-sec-row"><span>Exercices</span>${e.exos.length?`<span class="te-sum">${e.exos.length} · ${sets} séries · ≈ ${tplMinutes(e)} min</span>`:""}</div>
     ${e.exos.length ? `<div class="region-bar te-bar" aria-hidden="true">${balance}</div>
       <div class="group builder te-list ${e.order?"reorder":""}">${rows}</div>` : `<div class="te-empty">Ajoute des exercices, ou laisse l'app en proposer.</div>`}
@@ -99,7 +99,7 @@ function weekWizardBody(){
       const region = type==="bas" ? "legs" : type==="pull" ? "pull" : type==="push" || type==="haut" ? "push" : "core";
       return `<div class="row wz-row" style="--k:${i}"><span class="wz-day">${JOURS_COURTS[day]}</span><span class="tc-bar-s r-${region}"></span><div class="grow"><div class="t">${esc(name)}</div><div class="s">${esc(t.n)}</div></div></div>`;
     }).join("")}</div>
-    ${clash.length?`<div class="te-hint">⚠︎ Ces jours sont déjà pris par ${clash.map(t=>`« ${esc(t.n)} »`).join(", ")} : ces séances seront gardées mais retirées de ces jours.</div>`:""}`;
+    ${clash.length?`<div class="te-hint">${ii("warn","warn")} Ces jours sont déjà pris par ${clash.map(t=>`« ${esc(t.n)} »`).join(", ")} : ces séances seront gardées mais retirées de ces jours.</div>`:""}`;
 }
 function renderWeekWizard(){
   openSheet(`<div class="sheet-hd"><span class="t">Programme de la semaine</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
@@ -202,7 +202,7 @@ Object.assign(ACT, {
     uiState().tplOpen = true; uiState().planOpen = true; showAllTpls = true;
     if(!(S.draft && S.draft.startedAt)) applyPlannedSession(true);
     closeSheet(); save(); renderViewAnimated("today"); sfx("exo");
-    toast(`✨ ${made} séances créées et placées dans ta semaine`);
+    toast(`${made} séances créées et placées dans ta semaine`, "sparkle");
     setTimeout(()=>{ const w = qs("#v-today .week-plan"); if(w) w.scrollIntoView({ behavior:"smooth", block:"center" }); }, 420);
   },
   pickerCancel(){ const p = picker; if(p && p.onCancel) p.onCancel(); else closeSheet(); },

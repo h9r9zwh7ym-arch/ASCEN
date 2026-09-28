@@ -33,7 +33,7 @@ function tickRest(){
   const remain = Math.round((restState.endAt-Date.now())/1000);
   if(remain<=0){
     if(navigator.vibrate) try{ navigator.vibrate([120,60,120]); }catch(e){}
-    toast("⚡ C'est reparti — série suivante");
+    toast("C'est reparti : série suivante", "bolt");
     if(typeof restReady!=="undefined") restReady = true;
     sfx("restEnd");
     endRest();

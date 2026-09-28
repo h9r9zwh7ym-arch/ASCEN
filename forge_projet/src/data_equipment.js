@@ -5,21 +5,21 @@
 // progression de charge). `always` signifie que l'équipement est toujours disponible
 // (poids du corps) et n'a donc pas de case à cocher.
 const EQUIP_TYPES = [
-  { id:"bodyweight", n:"Poids du corps", em:"🤸", always:true },
-  { id:"dumbbells",  n:"Haltères",        em:"🏋️", loadable:true, unit:"kg", hint:"Renseigne les paires que tu possèdes (ex. 8 kg, 12 kg)." },
-  { id:"barbell",    n:"Barre + disques", em:"🏋️‍♂️", loadable:true, unit:"kg", hint:"Poids total que tu peux charger (barre comprise)." },
-  { id:"kettlebell", n:"Kettlebell",      em:"🔔", loadable:true, unit:"kg", hint:"Renseigne les kettlebells que tu possèdes." },
-  { id:"bench",      n:"Banc plat",       em:"🛋️", hint:"Banc de musculation à plat (ou banc solide)." },
-  { id:"bench_incline", n:"Banc inclinable", em:"📐", hint:"Dossier réglable : développé et curl inclinés." },
-  { id:"bench_press",n:"Banc de développé couché", em:"🏋️", hint:"Banc avec supports de barre : développé couché à la barre." },
-  { id:"rack",       n:"Rack / supports de squat", em:"🏗️", hint:"Indispensable pour le squat à la barre en sécurité." },
-  { id:"pullup_bar", n:"Barre de traction", em:"🚪" },
-  { id:"dip_bars",   n:"Barres parallèles (dips)", em:"🤸" },
-  { id:"suspension", n:"Sangles de suspension", em:"🪢", hint:"Type TRX, fixées à une porte ou une barre." },
-  { id:"ab_roller",  n:"Roue abdominale", em:"🛞" },
-  { id:"bands",      n:"Élastiques",      em:"➰", loadable:true, unit:"niveau", hint:"Coche les résistances que tu possèdes." },
-  { id:"jump_rope",  n:"Corde à sauter",  em:"🪢" },
-  { id:"mat",        n:"Tapis de sol",    em:"🧘" },
+  { id:"bodyweight", n:"Poids du corps", always:true },
+  { id:"dumbbells",  n:"Haltères", loadable:true, unit:"kg", hint:"Renseigne les paires que tu possèdes (ex. 8 kg, 12 kg)." },
+  { id:"barbell",    n:"Barre + disques", loadable:true, unit:"kg", hint:"Poids total que tu peux charger (barre comprise)." },
+  { id:"kettlebell", n:"Kettlebell", loadable:true, unit:"kg", hint:"Renseigne les kettlebells que tu possèdes." },
+  { id:"bench",      n:"Banc plat", hint:"Banc de musculation à plat (ou banc solide)." },
+  { id:"bench_incline", n:"Banc inclinable", hint:"Dossier réglable : développé et curl inclinés." },
+  { id:"bench_press",n:"Banc de développé couché", hint:"Banc avec supports de barre : développé couché à la barre." },
+  { id:"rack",       n:"Rack / supports de squat", hint:"Indispensable pour le squat à la barre en sécurité." },
+  { id:"pullup_bar", n:"Barre de traction" },
+  { id:"dip_bars",   n:"Barres parallèles (dips)" },
+  { id:"suspension", n:"Sangles de suspension", hint:"Type TRX, fixées à une porte ou une barre." },
+  { id:"ab_roller",  n:"Roue abdominale" },
+  { id:"bands",      n:"Élastiques", loadable:true, unit:"niveau", hint:"Coche les résistances que tu possèdes." },
+  { id:"jump_rope",  n:"Corde à sauter" },
+  { id:"mat",        n:"Tapis de sol" },
 ];
 // un équipement en implique d'autres (un banc de développé ou inclinable s'utilise aussi à plat)
 const EQUIP_IMPLIES = { bench_press:["bench"], bench_incline:["bench"] };
@@ -54,16 +54,16 @@ function hasEquip(eq, list){
 // Catégories d'affichage des exercices : l'équipement principal qui les caractérise
 // (le banc est un accessoire, il ne crée pas de catégorie).
 const EXO_CATS = [
-  { id:"bodyweight", n:"Poids du corps",   em:"🤸" },
-  { id:"dumbbells",  n:"Haltères",         em:"🏋️" },
-  { id:"barbell",    n:"Barre & disques",  em:"🏋️‍♂️" },
-  { id:"kettlebell", n:"Kettlebell",       em:"🔔" },
-  { id:"bands",      n:"Élastiques",       em:"➰" },
-  { id:"pullup_bar", n:"Barre de traction", em:"🚪" },
-  { id:"dip_bars",   n:"Barres parallèles", em:"🤸" },
-  { id:"suspension", n:"Sangles de suspension", em:"🪢" },
-  { id:"ab_roller",  n:"Roue abdominale",  em:"🛞" },
-  { id:"jump_rope",  n:"Corde à sauter",   em:"🪢" },
+  { id:"bodyweight", n:"Poids du corps" },
+  { id:"dumbbells",  n:"Haltères" },
+  { id:"barbell",    n:"Barre & disques" },
+  { id:"kettlebell", n:"Kettlebell" },
+  { id:"bands",      n:"Élastiques" },
+  { id:"pullup_bar", n:"Barre de traction" },
+  { id:"dip_bars",   n:"Barres parallèles" },
+  { id:"suspension", n:"Sangles de suspension" },
+  { id:"ab_roller",  n:"Roue abdominale" },
+  { id:"jump_rope",  n:"Corde à sauter" },
 ];
 function exoCategory(e){
   for(const c of ["dumbbells","barbell","kettlebell","bands","pullup_bar","dip_bars","suspension","ab_roller","jump_rope"]) if(e.equip.includes(c)) return c;

@@ -170,7 +170,7 @@ function exoChartSheet(id){
   const cols = columnChart(last12.map(p=>({ label:lbl(p), v: loaded?Math.round(p.vol):p.reps, tip:`${fmtDate(p.s.date,"long")} : ${loaded?fmtKg(p.vol):p.reps+" reps"}` })), { fmt: v=> loaded?fmtKg(v):v+" reps" });
   const hist = pts.slice(-8).reverse().map(p=>`<div class="row" style="align-items:flex-start">
       <div class="grow"><div class="t" style="font-size:calc(15rem/17)">${esc(fmtDate(p.s.date,"long"))}</div>
-      <div class="set-chips">${p.done.map(st=>`<span class="chip ${st.pr?"pr":""}">${st.pr?"💥 ":""}${st.reps}${loadSuffix(def, st.weight)}</span>`).join("")}</div></div>
+      <div class="set-chips">${p.done.map(st=>`<span class="chip ${st.pr?"pr":""}">${st.pr?ii("bolt"):""}${st.reps}${loadSuffix(def, st.weight)}</span>`).join("")}</div></div>
     </div>`).join("");
   openSheet(`<div class="sheet-hd"><span class="t">${esc(def.n)}</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
     <div class="sheet-body">
@@ -220,7 +220,12 @@ function medalsPaneHTML(){
 }
 
 Object.assign(ACT, {
-  progressTab(d){ progressTab = d.v; renderViewAnimated("progress"); qs("#v-progress").scrollTop = 0; },
+  progressTab(d, el){
+    if(progressTab===d.v) return;
+    // l'indicateur du sélecteur glisse tout de suite, le contenu change en fondu
+    const seg = el && el.closest(".seg"); if(seg){ seg.dataset.cur = ["overview","exos","medals"].indexOf(d.v); settleSegs(seg.parentElement); }
+    withTransition("fade", ()=>{ progressTab = d.v; renderViewAnimated("progress"); qs("#v-progress").scrollTop = 0; });
+  },
   openExoChart(d){ exoChartSheet(d.id); },
 });
 // ---------- objectifs personnels chiffrés ----------
@@ -251,7 +256,7 @@ function targetRowHTML(t){
   return `<button class="row tap tg-row ${t.doneAt?"done":""}" style="width:100%" data-a="openTarget" data-id="${t.id}">
     ${exoIcon(def)}
     <div class="grow"><div class="t">${esc(def.n)}</div>
-      ${t.doneAt ? `<div class="s">🎯 <b class="tg-v">${fmtTarget(t.kind, t.value)}</b> · atteint ${esc(fmtRelative(t.doneAt))}</div>`
+      ${t.doneAt ? `<div class="s">${ii("target","tgt")} <b class="tg-v">${fmtTarget(t.kind, t.value)}</b> · atteint ${esc(fmtRelative(t.doneAt))}</div>`
         : `<div class="s">Objectif <b class="tg-v">${fmtTarget(t.kind, t.value, 1)}</b> · ${cur ? `record ${fmtTarget(t.kind, cur, 1)}` : "pas encore pratiqué"}</div><div class="xpbar tg-bar"><span style="width:${Math.round(pct*100)}%"></span></div>`}</div>
     <span class="chev">${icon("chev")}</span></button>`;
 }
@@ -312,7 +317,7 @@ Object.assign(ACT, {
   saveTarget(){
     const t = targetDraft; if(!t || t.value<=bestOf(t.exoId, t.kind)) return;
     S.targets.push({ id:uid(), exoId:t.exoId, kind:t.kind, value:t.value, start:bestOf(t.exoId, t.kind), createdAt:todayISO() });
-    targetDraft = null; closeSheet(); changed(); toast("Objectif enregistré 🎯");
+    targetDraft = null; closeSheet(); changed(); toast("Objectif enregistré", "target");
   },
   openTarget(d){
     const t = S.targets.find(x=>x.id===d.id); if(!t) return;

@@ -214,14 +214,14 @@ function stepWeightValue(exo, current, dir){
 const UPPER = ["pect","dos","epaules","biceps","triceps","avantbras"];
 const LOWER = ["quadriceps","ischios","fessiers","mollets"];
 const SESSION_TYPES = [
-  { id:"auto", n:"Auto",           em:"✨", muscles:null },
-  { id:"full", n:"Corps complet",  em:"🧍", muscles:null },
-  { id:"haut", n:"Haut du corps",  em:"💪", muscles:UPPER },
-  { id:"bas",  n:"Bas du corps",   em:"🦵", muscles:LOWER },
-  { id:"push", n:"Poussée",        em:"⬆️", muscles:["pect","epaules","triceps"] },
-  { id:"pull", n:"Tirage",         em:"⬇️", muscles:["dos","biceps","avantbras"] },
-  { id:"bras", n:"Bras",           em:"🦾", muscles:["biceps","triceps","avantbras"] },
-  { id:"core", n:"Gainage & cardio", em:"🔥", muscles:["abdos","cardio"] },
+  { id:"auto", n:"Auto", muscles:null },
+  { id:"full", n:"Corps complet", muscles:null },
+  { id:"haut", n:"Haut du corps", muscles:UPPER },
+  { id:"bas",  n:"Bas du corps", muscles:LOWER },
+  { id:"push", n:"Poussée", muscles:["pect","epaules","triceps"] },
+  { id:"pull", n:"Tirage", muscles:["dos","biceps","avantbras"] },
+  { id:"bras", n:"Bras", muscles:["biceps","triceps","avantbras"] },
+  { id:"core", n:"Gainage & cardio", muscles:["abdos","cardio"] },
 ];
 const SESSION_TYPE_MAP = {}; SESSION_TYPES.forEach(t=>SESSION_TYPE_MAP[t.id]=t);
 

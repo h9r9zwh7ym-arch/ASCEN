@@ -55,6 +55,29 @@ function recapStats(kind, key){
 }
 
 // ---------- dessin ----------
+// Dessine un glyphe (mêmes tracés que les icônes de l'app) dans le canvas, sans image
+// intermédiaire : chemins, cercles, rectangles et ellipses, en trait ou en plein.
+function drawGlyph(ctx, name, x, y, size, color){
+  const src = GLYPHS[name] || "";
+  ctx.save(); ctx.translate(x, y); ctx.scale(size/24, size/24);
+  ctx.strokeStyle = ctx.fillStyle = color || "#fff"; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  const attr = (tag, k)=>{ const m = tag.match(new RegExp("\\s"+k+"=\"([^\"]*)\"")); return m ? m[1] : null; };
+  (src.match(/<(path|circle|rect|ellipse)\b[^>]*>/g)||[]).forEach(tag=>{
+    const kind = tag.match(/^<(\w+)/)[1], p = new Path2D();
+    if(kind==="path") p.addPath(new Path2D(attr(tag,"d")));
+    else if(kind==="circle") p.arc(+attr(tag,"cx"), +attr(tag,"cy"), +attr(tag,"r"), 0, Math.PI*2);
+    else if(kind==="ellipse") p.ellipse(+attr(tag,"cx"), +attr(tag,"cy"), +attr(tag,"rx"), +attr(tag,"ry"), 0, 0, Math.PI*2);
+    else { const rx = +(attr(tag,"rx")||0); if(p.roundRect) p.roundRect(+attr(tag,"x"), +attr(tag,"y"), +attr(tag,"width"), +attr(tag,"height"), rx); else p.rect(+attr(tag,"x"), +attr(tag,"y"), +attr(tag,"width"), +attr(tag,"height")); }
+    const stroke = attr(tag,"stroke"), fill = attr(tag,"fill");
+    if(stroke && stroke!=="none"){ ctx.lineWidth = +(attr(tag,"stroke-width")||2); ctx.stroke(p); }
+    if(fill && fill!=="none") ctx.fill(p);
+  });
+  ctx.restore();
+}
+function iconTile(ctx, name, x, y, size, color){
+  ctx.fillStyle = color; rrect(ctx, x, y, size, size, size*0.26); ctx.fill();
+  drawGlyph(ctx, name, x+size*0.17, y+size*0.17, size*0.66, "#fff");
+}
 function recapFont(w, px, serif){ return `${w} ${px}px ${serif ? 'ui-serif,"New York","Iowan Old Style",Georgia,serif' : '-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif'}`; }
 function recapFit(ctx, txt, max){
   if(ctx.measureText(txt).width<=max) return txt;
@@ -116,13 +139,13 @@ function drawRecap(kind, key){
   // points forts
   const hl = [];
   const short = id=>EXO_MAP[id].n.replace(/\s*\([^)]*\)/g, "");
-  if(st.fav) hl.push(`💪  Favori : ${short(st.fav)} · ${nb(st.favSets,"série")}`);
-  if(st.targets.length) hl.push(`🎯  ${st.targets.length>1 ? `${st.targets.length} objectifs atteints` : `Objectif atteint : ${short(st.targets[0].exoId)}, ${fmtTarget(st.targets[0].kind, st.targets[0].value)}`}`);
-  if(st.streak>=2) hl.push(`🔥  ${st.streak} semaines d'affilée`);
-  if(st.medals) hl.push(`🏅  ${nb(st.medals,"trophée")} débloqué${st.medals>=2?"s":""}`);
-  if(hl.length<3 && st.activeDays) hl.push(`📅  ${nb(st.activeDays,"jour")} d'entraînement`);
+  if(st.fav) hl.push(["dumbbell", IOS_COL.orange, `Favori : ${short(st.fav)} · ${nb(st.favSets,"série")}`]);
+  if(st.targets.length) hl.push(["target", IOS_COL.red, st.targets.length>1 ? `${st.targets.length} objectifs atteints` : `Objectif atteint : ${short(st.targets[0].exoId)}, ${fmtTarget(st.targets[0].kind, st.targets[0].value)}`]);
+  if(st.streak>=2) hl.push(["flame", IOS_COL.red, `${st.streak} semaines d'affilée`]);
+  if(st.medals) hl.push(["medal", IOS_COL.yellow, `${nb(st.medals,"trophée")} débloqué${st.medals>=2?"s":""}`]);
+  if(hl.length<3 && st.activeDays) hl.push(["calendar", IOS_COL.blue, `${nb(st.activeDays,"jour")} d'entraînement`]);
   ctx.font = recapFont(600, 34); ctx.fillStyle = white;
-  hl.slice(0,3).forEach((t,i)=>ctx.fillText(recapFit(ctx, t, W-2*X), X, 1128+i*54));
+  hl.slice(0,3).forEach(([g, c, t],i)=>{ const y = 1128+i*54; iconTile(ctx, g, X, y-32, 40, c); ctx.fillStyle = white; ctx.font = recapFont(600, 34); ctx.fillText(recapFit(ctx, t, W-2*X-58), X+58, y); });
   // pied
   ctx.fillStyle = "rgba(255,255,255,.4)"; ctx.font = recapFont(500, 26);
   ctx.fillText("Forge · musculation à la maison", X, H-50);
@@ -139,7 +162,19 @@ function recapBodyHTML(){
     <div class="rc-nav"><button class="icon-btn" data-a="recapStep" data-d="-1" aria-label="Période précédente" ${canPrev?"":"disabled"}>${icon("chev")}</button>
       <b>${esc(recapTitle(kind, key))}</b>
       <button class="icon-btn" data-a="recapStep" data-d="1" aria-label="Période suivante" ${canNext?"":"disabled"}>${icon("chev")}</button></div>
+    ${rwCoverHTML(kind, key)}
+    <div class="te-sec rc-sec">Image à partager</div>
     <div class="rc-img"><img id="rcImg" alt="Bilan ${esc(recapTitle(kind, key))}"></div>`;
+}
+function rwCoverHTML(kind, key){
+  const st = recapStats(kind, key);
+  return `<button class="rw-cover" data-a="openRewind" data-kind="${kind}" data-key="${key}" ${st.n?"":"disabled"}>
+    <span class="rwc-bg"></span>
+    <span class="rwc-k">Forge Rewind</span>
+    <span class="rwc-t">${esc(recapTitle(kind, key))}</span>
+    <span class="rwc-s">${st.n ? `${nb(st.n,"séance")} · ${fmtHours(st.dur)}` : "Aucune séance sur cette période"}</span>
+    <span class="rwc-play">${icon("play")}</span>
+  </button>`;
 }
 function paintRecap(){
   const img = qs("#rcImg"); if(!img) return;
@@ -151,9 +186,9 @@ function openRecap(kind, key){
   recap = { kind: kind||"month", key: key || recapDefault(kind||"month") };
   if(recap.kind==="month") S.meta.recapSeen = recap.key; // la suggestion de l'accueil disparaît
   save();
-  openSheet(`<div class="sheet-hd"><span class="t">Ton bilan</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
+  openSheet(`<div class="sheet-hd"><span class="t">Rewind</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
     <div class="sheet-body" id="rcBody">${recapBodyHTML()}</div>`,
-    { tall:true, footer:`<button class="btn" data-a="recapShare">Enregistrer ou partager</button>` });
+    { tall:true, footer:`<button class="btn secondary" data-a="recapShare">Enregistrer ou partager l'image</button>` });
   settleSegs(qs("#rcBody"));
   requestAnimationFrame(paintRecap);
 }

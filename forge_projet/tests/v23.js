@@ -31,7 +31,7 @@ const OUT = OUT_ROOT + '/v23'; fs.mkdirSync(OUT, { recursive: true });
   await page.fill('.sheet-body .note-in', 'Épaule un peu raide, rien de grave'); await page.locator('.sheet-body .note-in').blur(); await wait(200);
   await shot('01_detail_note');
   await page.evaluate(() => ACT.closesheet ? ACT.closesheet() : closeSheet()); await wait(600);
-  const note = await page.evaluate(() => { persistNow(); return JSON.parse(localStorage.getItem('forge.v1')).sessions.find(s => s.id === 'c').note; });
+  const note = await page.evaluate(() => { persistNow(); const st = JSON.parse(localStorage.getItem('forge.v1')); return (st.zs ? st.zs.map(unpackSession) : st.sessions).find(s => s.id === 'c').note; });
   log('Note saved:', note); if (!/Épaule/.test(note || '')) fail('note non enregistrée');
   log('Note in list:', await page.$eval('.hn', e => e.textContent).catch(() => null));
   await shot('02_history');

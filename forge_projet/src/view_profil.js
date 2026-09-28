@@ -108,6 +108,11 @@ function renderProfil(){
         <div class="grow"><div class="t">Sauvegarder mes données</div><div class="s">${backupStatusText()}</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
+      <button class="row tap" style="width:100%" data-a="openStorage">
+        ${sfIcon("storage","gray")}
+        <div class="grow"><div class="t">Espace de stockage</div><div class="s">${storageRowText()}</div></div>
+        <span class="chev">${icon("chev")}</span>
+      </button>
       <button class="row tap" style="width:100%" data-a="restoreData">
         ${sfIcon("restore","teal")}
         <div class="grow"><div class="t">Restaurer une sauvegarde</div><div class="s">Fichier .json créé par Forge</div></div>
@@ -184,7 +189,7 @@ async function backupData(){
     setTimeout(()=>URL.revokeObjectURL(url), 5000);
   }
   S.meta.lastBackup = todayISO(); S.meta.backupSessions = S.sessions.length; delete S.meta.backupSnooze;
-  save(); changed(); sfx("set"); toast("Sauvegarde créée ✓ Garde le fichier dans Fichiers ou iCloud");
+  save(); changed(); sfx("set"); toast("Sauvegarde créée. Garde le fichier dans Fichiers ou iCloud", "check");
 }
 function restoreData(){
   const inp = document.createElement("input");
@@ -301,14 +306,14 @@ function refreshGoals(){ const b=qs(".sheet-body"); if(b) b.innerHTML = goalsBod
 // ---------- Exercices inclus / exclus ----------
 function exoPrefsBodyHTML(){
   const muscleOrder = {}; MUSCLES.forEach((m,i)=>muscleOrder[m.id]=i);
-  return `<p class="hr-note" style="margin:0 20px 4px">★ = à privilégier dans les propositions · Exclure = ne jamais le proposer (blessure, goût…). Les exercices grisés demandent du matériel que tu n'as pas renseigné.</p>` +
+  return `<p class="hr-note" style="margin:0 20px 4px">${ii("star","star")} = à privilégier dans les propositions · Exclure = ne jamais le proposer (blessure, goût…). Les exercices grisés demandent du matériel que tu n'as pas renseigné.</p>` +
   EXO_CATS.map(c=>{
     const list = EXOS.filter(e=>exoCategory(e)===c.id).sort((a,b)=>muscleOrder[a.muscles[0]]-muscleOrder[b.muscles[0]] || a.n.localeCompare(b.n,"fr"));
     const rows = list.map(e=>{
       const excl = isExcluded(e.id), incl = isIncluded(e.id), avail = hasEquip(S.equipment, e.equip);
       return `<div class="row ${avail?"":"unavail"}">
         <button class="row-main" data-a="showExoInfo" data-id="${e.id}" style="flex:1">${exoIcon(e)}<div class="grow"><div class="t">${esc(e.n)}</div><div class="s">${e.muscles.map(m=>MUSCLE_MAP[m].n).join(" · ")}${e.equip.includes("bench")?" · banc":""}</div></div></button>
-        <button class="chip ${incl?"on":""}" aria-label="Privilégier" data-a="toggleIncluded" data-id="${e.id}">★</button>
+        <button class="chip ${incl?"on":""}" aria-label="Privilégier" data-a="toggleIncluded" data-id="${e.id}">${ii("star")}</button>
         <button class="chip ${excl?"excl":""}" data-a="toggleExcluded" data-id="${e.id}">Exclure</button>
       </div>`;
     }).join("");
@@ -434,7 +439,7 @@ Object.assign(ACT, {
 
   confirmReset(){
     confirmSheet({ title:"Réinitialiser toutes les données ?", html:"Cette action est irréversible : séances, matériel, objectifs et trophées seront définitivement supprimés.", ok:"Tout supprimer", danger:true,
-      onOk:()=>{ persistBlocked = true; localStorage.removeItem(STORAGE_KEY); location.reload(); } });
+      onOk:()=>{ persistBlocked = true; localStorage.removeItem(STORAGE_KEY); idbClear().then(()=>location.reload()); } });
   },
 });
 VIEWS.profil = renderProfil;
@@ -481,4 +486,41 @@ Object.assign(ACT, {
     changed(); refreshBody(); sfx("seg"); toast("Pesée enregistrée");
   },
   bodyDel(d){ S.body = S.body.filter(e=>e.d!==d.d); changed(); refreshBody(); },
+});
+
+// ---------- espace de stockage ----------
+function fmtBytes(n){ return n<1024*1024 ? `${Math.max(1, Math.round(n/1024))} Ko` : `${fmtDec(n/1024/1024)} Mo`; }
+function storageRowText(){ const u = storageUsage(); return `${fmtBytes(u)} utilisés sur ~5 Mo · ${Math.max(1, Math.round(u/STORAGE_QUOTA*100))} %`; }
+function storageYearsLeft(){
+  // place moyenne d'une séance et rythme des 12 derniers mois
+  const n = S.sessions.length; if(n<5) return null;
+  const per = JSON.stringify(S.sessions.map(packSession)).length*2/n;
+  const since = addDaysISO(todayISO(), -365), perYear = Math.max(52, S.sessions.filter(s=>s.date>=since).length);
+  return Math.floor((STORAGE_QUOTA*0.9 - storageUsage())/(per*perYear));
+}
+Object.assign(ACT, {
+  openStorage(){
+    const u = storageUsage(), pct = Math.min(100, u/STORAGE_QUOTA*100), yrs = storageYearsLeft();
+    openSheet(`<div class="sheet-hd"><span class="t">Espace de stockage</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
+      <div class="sheet-body" id="stoBody">
+        <div class="chart-card" style="margin-top:0">
+          <div class="cc-h"><div class="cc-t">${fmtBytes(u)} sur ~5 Mo</div><div class="cc-s">${S.sessions.length} séance${S.sessions.length>1?"s":""} enregistrée${S.sessions.length>1?"s":""}</div></div>
+          <div class="xpbar sto-bar"><span style="width:${Math.max(1.5, pct).toFixed(1)}%"></span></div>
+          ${yrs!=null ? `<p class="hr-note" style="margin:10px 0 0">Au rythme actuel, il reste de la place pour environ <b>${yrs>99?"plus de 99":yrs} ans</b> d'entraînement.</p>` : ""}
+        </div>
+        <div class="group" style="margin-top:14px">
+          <div class="row">${sfIcon("storage","green")}<div class="grow"><div class="t">Format compact</div><div class="s wrap">L'historique est enregistré sous une forme condensée, environ 2,5 fois plus légère.</div></div></div>
+          <div class="row">${sfIcon("shield","blue")}<div class="grow"><div class="t">Copie de secours</div><div class="s wrap">Chaque enregistrement est aussi copié dans une seconde base (IndexedDB). Si l'espace principal est plein ou effacé, l'app repart de cette copie.</div></div></div>
+          <div class="row">${sfIcon("lock","indigo")}<div class="grow"><div class="t">Protection</div><div class="s wrap" id="stoPersist">Vérification…</div></div></div>
+        </div>
+        <p class="hr-note" style="margin:12px 20px 0">Rien ne quitte ton téléphone. Pour ne rien perdre en changeant d'appareil, garde une sauvegarde dans Fichiers ou iCloud.</p>
+        <div class="btnrow"><button class="btn secondary" data-a="backupData">${icon("bookmark")} Faire une sauvegarde</button></div>
+      </div>`, { tall:true });
+    const el = qs("#stoPersist");
+    const setTxt = t=>{ if(el) el.textContent = t; };
+    try{
+      if(navigator.storage && navigator.storage.persisted) navigator.storage.persisted().then(p=>setTxt(p ? "Stockage protégé : le système ne l'effacera pas pour libérer de la place." : isStandalone() ? "Stockage standard. L'app installée sur l'écran d'accueil garde ses données." : "Installe l'app sur l'écran d'accueil : Safari efface les données des sites non installés après 7 jours sans visite."));
+      else setTxt(isStandalone() ? "App installée : les données sont conservées." : "Installe l'app sur l'écran d'accueil pour protéger tes données.");
+    }catch(e){ setTxt("—"); }
+  },
 });

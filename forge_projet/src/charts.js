@@ -66,11 +66,13 @@ function lineChart(points, opts){
     ${grid.join("")}
     <path d="${area}" class="lc-area"/>
     <path d="${line}" class="lc-line"/>
+    <line class="lc-cursor" x1="0" x2="0" y1="${T}" y2="${H-B}"/>
     <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="4.5" class="lc-dot"/>
     <text x="${Math.min(last[0],W-R).toFixed(1)}" y="${(last[1]-10).toFixed(1)}" text-anchor="end" class="lc-endlbl">${esc(opts.fmt?opts.fmt(points[points.length-1].v):fmtDec(points[points.length-1].v))}</text>
     <text x="${L}" y="${H-6}" class="lc-tick">${esc(points[0].label)}</text>
     <text x="${W-R}" y="${H-6}" text-anchor="end" class="lc-tick">${esc(points[points.length-1].label)}</text>
     ${hits}
+    <circle class="lc-cdot" cx="0" cy="0" r="5"/>
   </svg></div>`;
 }
 
@@ -129,3 +131,36 @@ function dataTable(headers, rows){
     <thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join("")}</tr></thead>
     <tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></details>`;
 }
+
+// ---------- parcourir un graphique au doigt ----------
+// Glisser horizontalement sur une courbe ou des colonnes : la bulle suit le doigt et
+// indique la valeur et la date, comme dans l'app Santé. Le défilement vertical reste libre.
+(function(){
+  let scrub = null;
+  function nearest(root, x){
+    let best = null, bd = Infinity;
+    qsa(".cc-col, .lc-hit", root).forEach(el=>{ const r = el.getBoundingClientRect(), d = Math.abs(r.left+r.width/2-x); if(d<bd){ bd = d; best = el; } });
+    return best;
+  }
+  function at(x){
+    const el = nearest(scrub.root, x);
+    if(!el || el===scrub.cur) return;
+    const first = !scrub.cur; scrub.cur = el;
+    showTip(el);
+    if(el.classList.contains("lc-hit")){
+      const svg = el.ownerSVGElement, c = qs(".lc-cursor", svg), d = qs(".lc-cdot", svg), cx = el.getAttribute("cx"), cy = el.getAttribute("cy");
+      if(c){ c.setAttribute("x1", cx); c.setAttribute("x2", cx); c.classList.add("on"); }
+      if(d){ d.setAttribute("cx", cx); d.setAttribute("cy", cy); d.classList.add("on"); }
+    }
+    if(!first && typeof haptic==="function") haptic(3);
+  }
+  document.addEventListener("pointerdown", e=>{
+    const root = e.target.closest && e.target.closest(".colchart .cc-plot, .linechart");
+    if(!root){ scrub = null; return; }
+    scrub = { root, cur:null, id:e.pointerId };
+    at(e.clientX);
+  });
+  document.addEventListener("pointermove", e=>{ if(scrub && e.pointerId===scrub.id) at(e.clientX); }, { passive:true });
+  const end = e=>{ if(scrub && (!e || e.pointerId===scrub.id)) scrub = null; };
+  document.addEventListener("pointerup", end); document.addEventListener("pointercancel", end);
+})();

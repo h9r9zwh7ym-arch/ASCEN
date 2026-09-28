@@ -23,11 +23,11 @@ document.addEventListener("pointerdown", e=>{
 }, { passive:true });
 
 // ---------- texte flottant (« ✓ Série 2 », « 💥 Record ») ----------
-function floatText(x, y, txt, cls){
+function floatText(x, y, txt, cls, ic){
   if(reducedMotion()) return;
   const f = document.createElement("div");
   f.className = "float-txt " + (cls||"");
-  f.textContent = txt;
+  if(ic) f.innerHTML = ii(ic)+esc(txt); else f.textContent = txt;
   f.style.left = x+"px"; f.style.top = y+"px";
   document.body.appendChild(f);
   setTimeout(()=>f.remove(), 1200);

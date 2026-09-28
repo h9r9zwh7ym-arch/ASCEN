@@ -78,3 +78,70 @@ function exoIcon(def, size){
   const k = size||""; def._ico = def._ico || {};
   return def._ico[k] || (def._ico[k] = `<span class="xico r-${regionOf(def)} ${k}" title="${esc(REGIONS[regionOf(def)].n)}">${pictoSVG(pictoKey(def))}</span>`);
 }
+
+// ================= EXERCICES ANIMÉS (fiche technique) =================
+// Silhouette articulée (tête, cou, bassin, genoux, pieds, coudes, mains) décrite par deux
+// positions : départ (A) et fin du mouvement (B). L'animation SVG native (SMIL) passe de
+// l'une à l'autre en boucle, sans script ni image. Vue de profil sauf mention contraire.
+const FLOOR = "M1.5 21h21";
+const STAND = { H:[12,4.2], N:[12,7], P:[12,12.6], K:[12.2,16.8], F:[12,20.8] };
+const ANIM_POSES = {
+  squat:    { env:FLOOR, A:{ ...STAND, E:[14.4,8.8], W:[17,9.2] },
+                         B:{ H:[13.4,8.8], N:[12.9,11.4], P:[8.8,15.4], K:[13.8,15.9], F:[12,20.8], E:[15.6,12.2], W:[18.3,12.4] } },
+  lunge:    { env:FLOOR, A:{ ...STAND, K:[12.9,16.8], F:[13.2,20.8], K2:[11.4,16.8], F2:[11,20.8], E:[12.4,10], W:[12.5,13] },
+                         B:{ H:[12,7.4], N:[12,10.2], P:[12,15.2], K:[16,15.9], F:[16.4,20.8], K2:[10.6,19.8], F2:[7,20.6], E:[12.4,13.2], W:[12.5,16] } },
+  hinge:    { env:FLOOR, A:{ H:[12,4.2], N:[12,7], P:[11.4,12.6], K:[11.8,16.8], F:[11.8,20.8], E:[12.1,10], W:[12.2,13.2] },
+                         B:{ H:[18.6,9.8], N:[16.2,10.4], P:[10.4,12.6], K:[11.6,16.8], F:[11.8,20.8], E:[16.3,13.4], W:[16.4,16.4] } },
+  bench:    { env:"M4.5 16.2h13.5M6.5 16.2V21M16 16.2V21M1.5 21h21", A:{ H:[5.4,14.2], N:[7.8,14.8], P:[14.4,15], K:[17.6,12.4], F:[19.6,20.8], E:[10.4,17.2], W:[9.4,12.6] },
+                         B:{ H:[5.4,14.2], N:[7.8,14.8], P:[14.4,15], K:[17.6,12.4], F:[19.6,20.8], E:[8.6,10.4], W:[8.4,6.2] } },
+  fly:      { env:FLOOR, A:{ ...STAND, K:[10.9,16.8], F:[10.5,20.8], K2:[13.1,16.8], F2:[13.5,20.8], E:[7.4,8.2], W:[4.2,8.8], E2:[16.6,8.2], W2:[19.8,8.8] },
+                         B:{ ...STAND, K:[10.9,16.8], F:[10.5,20.8], K2:[13.1,16.8], F2:[13.5,20.8], E:[9.8,8.4], W:[11.4,7.2], E2:[14.2,8.4], W2:[12.6,7.2] } },
+  pushup:   { env:FLOOR, A:{ H:[4.8,11.2], N:[6.9,12.5], P:[13.6,15.6], K:[17.1,17.8], F:[20.6,20], E:[7.1,16.4], W:[7.3,20.6] },
+                         B:{ H:[4.8,16.4], N:[6.9,17.3], P:[13.6,18.6], K:[17.1,19.4], F:[20.6,20], E:[10.2,16], W:[7.3,20.6] } },
+  dips:     { env:"M8 11.8h8.5", A:{ H:[12,3.6], N:[12,6.4], P:[12,12.2], K:[13,15.4], F:[11.6,18.2], E:[12.6,9.2], W:[12.9,11.8] },
+                         B:{ H:[12,7.2], N:[12,10], P:[12,15.6], K:[13,18.8], F:[11.6,21.4], E:[9.2,10.8], W:[12.9,11.8] } },
+  overhead: { env:FLOOR, A:{ ...STAND, K:[10.9,16.8], F:[10.5,20.8], K2:[13.1,16.8], F2:[13.5,20.8], E:[8.4,10.4], W:[8.3,7.2], E2:[15.6,10.4], W2:[15.7,7.2] },
+                         B:{ ...STAND, K:[10.9,16.8], F:[10.5,20.8], K2:[13.1,16.8], F2:[13.5,20.8], E:[8.7,4.8], W:[9.3,1.8], E2:[15.3,4.8], W2:[14.7,1.8] } },
+  raise:    { env:FLOOR, A:{ ...STAND, K:[10.9,16.8], F:[10.5,20.8], K2:[13.1,16.8], F2:[13.5,20.8], E:[10.6,10], W:[10.3,13.2], E2:[13.4,10], W2:[13.7,13.2] },
+                         B:{ ...STAND, K:[10.9,16.8], F:[10.5,20.8], K2:[13.1,16.8], F2:[13.5,20.8], E:[8.2,7.4], W:[4.8,7.6], E2:[15.8,7.4], W2:[19.2,7.6] } },
+  row:      { env:FLOOR, A:{ H:[5.8,8.2], N:[8.2,9.8], P:[14.8,11.8], K:[14.4,16.2], F:[15.2,20.8], E:[8.6,13.4], W:[8.8,16.6] },
+                         B:{ H:[5.8,8.2], N:[8.2,9.8], P:[14.8,11.8], K:[14.4,16.2], F:[15.2,20.8], E:[12.6,8.6], W:[10.2,12.4] } },
+  hang:     { env:"M3 2.6h18", A:{ H:[12,7], N:[12,9.6], P:[12,15.2], K:[11.4,18.4], F:[12,21.6], E:[9.4,6.2], W:[8.6,2.6], E2:[14.6,6.2], W2:[15.4,2.6] },
+                         B:{ H:[12,1.6], N:[12,4.4], P:[12,10], K:[11.4,13.2], F:[12,16.4], E:[7.4,5], W:[8.6,2.6], E2:[16.6,5], W2:[15.4,2.6] } },
+  curl:     { env:FLOOR, A:{ ...STAND, E:[12.3,9.9], W:[12.6,13.2] }, B:{ ...STAND, E:[12.3,9.9], W:[15.4,7.6] } },
+  triceps:  { env:FLOOR, A:{ ...STAND, E:[13.4,3.2], W:[10.2,5.4] }, B:{ ...STAND, E:[13.4,3.2], W:[13.8,0.4] } },
+  bridge:   { env:FLOOR, A:{ H:[4.2,18.6], N:[6.5,19], P:[12,20], K:[15.8,15], F:[18.4,20.8], E:[8.4,20.4], W:[10.6,20.6] },
+                         B:{ H:[4.2,18.6], N:[6.5,19], P:[12,13.8], K:[16.4,13.2], F:[18.4,20.8], E:[8.4,20.4], W:[10.6,20.6] } },
+  plank:    { env:FLOOR, A:{ H:[4.8,12.2], N:[6.9,13.4], P:[13.6,15.6], K:[17.1,17.6], F:[20.6,20], E:[7.1,20.6], W:[10.4,20.6] },
+                         B:{ H:[4.8,12.6], N:[6.9,13.7], P:[13.6,14.6], K:[17.1,17.2], F:[20.6,20], E:[7.1,20.6], W:[10.4,20.6] } },
+  crunch:   { env:FLOOR, A:{ H:[4.2,18.2], N:[6.5,19], P:[12.2,20], K:[15.6,15], F:[18.8,20.8], E:[6.6,15.8], W:[4.6,16.8] },
+                         B:{ H:[7.4,13.8], N:[8.8,16.2], P:[12.2,20], K:[15.6,15], F:[18.8,20.8], E:[9.8,13], W:[7.4,12.6] } },
+  calf:     { env:"M7 20.8h10", A:{ ...STAND, E:[12.3,10], W:[12.4,13.2] },
+                         B:{ H:[12,2.8], N:[12,5.6], P:[12,11.2], K:[12.2,15.4], F:[12.6,19.6], E:[12.3,8.6], W:[12.4,11.8] } },
+  cardio:   { env:FLOOR, A:{ ...STAND, K:[11.4,16.8], F:[11.2,20.8], K2:[12.6,16.8], F2:[12.8,20.8], E:[10.6,10], W:[10.4,13], E2:[13.4,10], W2:[13.6,13] },
+                         B:{ H:[12,3.6], N:[12,6.4], P:[12,12], K:[9.6,16.2], F:[7.8,20.2], K2:[14.4,16.2], F2:[16.2,20.2], E:[8.6,4.4], W:[7,1.6], E2:[15.4,4.4], W2:[17,1.6] } },
+  carry:    { env:FLOOR, A:{ ...STAND, K:[13.4,16.6], F:[14.6,20.8], K2:[11,16.8], F2:[9.8,20.8], E:[12.2,10], W:[12.3,13.4] },
+                         B:{ ...STAND, K:[11,16.8], F:[9.8,20.8], K2:[13.4,16.6], F2:[14.6,20.8], E:[12.2,10], W:[12.3,13.4] } },
+};
+function animPath(p){
+  const q = k=>(p[k]||p[k.replace("2","")]).map(v=>v.toFixed(2)).join(" ");
+  return `M${q("N")}L${q("P")}M${q("P")}L${q("K")}L${q("F")}M${q("P")}L${q("K2")}L${q("F2")}M${q("N")}L${q("E")}L${q("W")}M${q("N")}L${q("E2")}L${q("W2")}`;
+}
+// charge tenue : disque aux mains pour les exercices chargés (pas les élastiques)
+function exoAnimSVG(def){
+  const key = pictoKey(def), pose = ANIM_POSES[key] || ANIM_POSES.squat;
+  const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const lt = typeof loadableTypeOf==="function" ? loadableTypeOf(def) : null, w = lt && lt!=="bands" ? (lt==="barbell" ? 1.9 : 1.3) : 0;
+  const A = pose.A, B = pose.B, dur = isTimed(def) ? "3.6s" : "2.4s";
+  const spl = `calcMode="spline" keyTimes="0;.45;1" keySplines=".45 0 .55 1;.45 0 .55 1" dur="${dur}" repeatCount="indefinite"`;
+  const anim = (attr, a, b)=> reduce ? "" : `<animate attributeName="${attr}" values="${a};${b};${a}" ${spl}/>`;
+  const dot = (k, r, cls)=>{ const a = A[k]||A[k.replace("2","")], b = B[k]||B[k.replace("2","")];
+    return `<circle class="${cls}" cx="${a[0]}" cy="${a[1]}" r="${r}">${anim("cx", a[0], b[0])}${anim("cy", a[1], b[1])}</circle>`; };
+  const two = A.W2 || B.W2;
+  return `<svg class="exo-anim" viewBox="0 0 24 24" aria-label="Animation du mouvement">
+    <path class="ea-env" d="${pose.env||FLOOR}"/>
+    <path class="ea-body" d="${animPath(A)}">${anim("d", animPath(A), animPath(B))}</path>
+    ${dot("H", 2.15, "ea-head")}
+    ${w ? dot("W", w, "ea-load") + (two ? dot("W2", w, "ea-load") : "") : ""}
+  </svg>`;
+}

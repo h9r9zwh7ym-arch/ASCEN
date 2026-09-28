@@ -125,7 +125,7 @@ function renderTodayPreview(draft){
     </div>
     ${statPillsHTML()}
     ${heroHTML(draft)}
-    ${recapNudgeKey() ? `<div class="backup-nudge rc-nudge stagger" style="--i:3">${sfIcon("sparkles","orange")}<div class="grow"><div class="t">Ton bilan de ${MOIS_LONG[parseISO(recapNudgeKey()+"-01").getMonth()]} est prêt</div><div class="s">Tes séances du mois dernier, en une image.</div></div><div class="bn-act"><button data-a="openRecap">Voir</button><button class="later" data-a="recapLater">Plus tard</button></div></div>` : ""}
+    ${recapNudgeKey() ? `<div class="backup-nudge rc-nudge stagger" style="--i:3">${sfIcon("sparkles","orange")}<div class="grow"><div class="t">Ton Rewind de ${MOIS_LONG[parseISO(recapNudgeKey()+"-01").getMonth()]} est prêt</div><div class="s">Revis ton mois en une minute.</div></div><div class="bn-act"><button data-a="openRewind" data-kind="month" data-key="${recapNudgeKey()}">Lancer</button><button class="later" data-a="recapLater">Plus tard</button></div></div>` : ""}
     ${backupDue() ? `<div class="backup-nudge stagger" style="--i:3">${sfIcon("download","green")}<div class="grow"><div class="t">Sauvegarde conseillée</div><div class="s">${S.sessions.length} séances sont stockées uniquement sur ce téléphone.</div></div><div class="bn-act"><button data-a="backupData">Sauvegarder</button><button class="later" data-a="backupLater">Plus tard</button></div></div>` : ""}
     <div class="home-sep stagger" style="--i:3"><span>Préparer une séance</span></div>
     ${segHTML("today", [["custom","Ma séance"],["proposal","Proposée par l'app"]], mode, "todayMode")}
@@ -160,7 +160,7 @@ function proposalPaneHTML(draft){
     </div>`;
   } else {
     const t = SESSION_TYPE_MAP[draft.type]||SESSION_TYPES[0], rt = SESSION_TYPE_MAP[draft.resolvedType];
-    const title = draft.type==="auto" && rt ? `${rt.em} ${rt.n}` : `${t.em} ${t.n}`;
+    const title = draft.type==="auto" && rt ? rt.n : t.n;
     const focus = focusMuscles(draft).slice(0,4);
     hero = heroShown ? (draft.reason ? `<div class="pc-inline stagger" style="--i:5">${esc(draft.reason)}</div>` : "") : `<div class="plan-card stagger" style="--i:5">
       <div class="pc-eyebrow">${draft.type==="auto"?"Choisie pour toi":"Séance proposée"}</div>
@@ -662,7 +662,7 @@ function renderFocusCard(idx, ex, def){
   }
 
   if(allDone){
-    const recap = ex.sets.map(s=>`<span class="chip ${s.pr?"pr":""}">${s.pr?"💥 ":""}${s.reps||"?"}${loadSuffix(def, s.weight)}</span>`).join("");
+    const recap = ex.sets.map(s=>`<span class="chip ${s.pr?"pr":""}">${s.pr?ii("bolt"):""}${s.reps||"?"}${loadSuffix(def, s.weight)}</span>`).join("");
     return `<div class="focus-card r-${regionOf(def)} ${animClass}">${header}
       <div class="fc-done-badge">${icon("check")}</div>
       <div class="fc-done-t">Exercice terminé</div>
@@ -698,7 +698,7 @@ function renderFocusCard(idx, ex, def){
       </div></div>`:""}
     </div>
     ${lastTimeHTML(ex.exoId)}
-    ${kgType(def) && (st.weight||0)>=8 && !S.draft.exos.some(e=>e.sets.some(x=>x.done)) ? `<div class="warmup">🔥 Échauffement : 1 série légère (≈ ${fmtDec(Math.max(1, Math.round((st.weight||0)*0.5)))} kg) de 8 à 10 répétitions avant de commencer.</div>` : ""}
+    ${kgType(def) && (st.weight||0)>=8 && !S.draft.exos.some(e=>e.sets.some(x=>x.done)) ? `<div class="warmup">${ii("flame")} Échauffement : 1 série légère (≈ ${fmtDec(Math.max(1, Math.round((st.weight||0)*0.5)))} kg) de 8 à 10 répétitions avant de commencer.</div>` : ""}
     ${ex.note?`<div class="exo-note" style="margin:0 0 14px">${esc(ex.note)}${ex.harder&&EXO_MAP[ex.harder]&&!ex.sets.some(s=>s.done)?`<button class="note-act" data-a="swapHarder" data-idx="${idx}">Essayer maintenant ${icon("chev")}</button>`:""}</div>`:""}
     ${isTimed(def)
       ? `<button class="btn big validate hold-go ${rr?"ready":""}" data-a="holdStart" data-exi="${idx}" data-si="${si}">${icon("timer")} Lancer le chrono · ${st.reps||30} s</button>
@@ -887,7 +887,7 @@ Object.assign(ACT, {
     if(!add.length){ toast("Aucun exercice disponible avec ton matériel"); return; }
     add.forEach(e=>{ S.custom.exos.push({ exoId:e.id, sets:e.sets, app:true }); freshIds.add(e.id); });
     save(); changed();
-    toast(`✨ ${add.length} exercice${add.length>1?"s":""} ajouté${add.length>1?"s":""} par l'app`);
+    toast(`${add.length} exercice${add.length>1?"s":""} ajouté${add.length>1?"s":""} par l'app`, "sparkle");
   },
   planDay(d){ openPlanDaySheet(+d.d); },
   planSet(d){
@@ -1213,7 +1213,7 @@ Object.assign(ACT, {
       st.pr = true;
       S.meta.prCount = (S.meta.prCount||0)+1;
       confettiBurst(bx, by, 60);
-      floatText(fx0, fy0, "💥 Record !", "pr");
+      floatText(fx0, fy0, "Record !", "pr", "bolt");
     }
     st.done = true;
     { const fin = ex.sets.every(s=>s.done), rest = S.draft.exos.some(e=>e.sets.some(s=>!s.done));
@@ -1221,14 +1221,14 @@ Object.assign(ACT, {
     if(navigator.vibrate) try{ navigator.vibrate(18); }catch(e){}
     justDone = { exi, si };
     stripBump = exi;
-    if(!st.pr && !exoFinished0(ex)) floatText(fx0, fy0, `✓ Série ${si+1}`);
+    if(!st.pr && !exoFinished0(ex)) floatText(fx0, fy0, `Série ${si+1}`, "", "check");
     const exoFinished = !ex.sets.some(s=>!s.done);
     const ni = nextUndone(exi);
     if(ni>=0) startRestTimer(def.restSec, def.n, exoFinished ? ni : exi, exoFinished, { exi, si });
     else stopRestTimer();
     if(exoFinished){
       if(!st.pr) confettiBurst(bx, by, 36);
-      if(ni>=0){ const nm = qs(".focus-card .fc-name"), r = nm && nm.getBoundingClientRect(); floatText(r ? r.left+r.width/2 : bx, r ? r.top+r.height/2 : by, "🔥 Exercice terminé !", "big"); }
+      if(ni>=0){ const nm = qs(".focus-card .fc-name"), r = nm && nm.getBoundingClientRect(); floatText(r ? r.left+r.width/2 : bx, r ? r.top+r.height/2 : by, "Exercice terminé !", "big", "flame"); }
       if(ni>=0){ liveFocusIdx = ni; focusAnimDir = ni>exi ? "r" : "l"; }
     }
     save();
@@ -1256,9 +1256,9 @@ Object.assign(ACT, {
     openSheet(`<div class="sheet-hd"><span class="t">Fiche exercice</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
       <div class="sheet-body">
       <div class="exo-hero r-${region}">
-        ${exoIcon(e,"xl")}
+        <div class="exo-stage r-${region}">${exoAnimSVG(e)}</div>
         <div class="nm">${esc(e.n)}</div>
-        <div class="exo-tags"><span class="rtag r-${region}">${REGIONS[region].n}</span><span class="etag">${cat.em} ${esc(cat.n)}</span>${e.equip.includes("bench")?`<span class="etag">+ banc</span>`:""}</div>
+        <div class="exo-tags"><span class="rtag r-${region}">${REGIONS[region].n}</span><span class="etag">${sfIcon(EQUIP_GLYPH[cat.id]||"wrench", EQUIP_COLOR[cat.id]||"gray", "xs")} ${esc(cat.n)}</span>${e.equip.includes("bench")?`<span class="etag">+ banc</span>`:""}</div>
       </div>
       <div class="exo-muscle-chips">${e.muscles.map((m,i)=>`<span class="chip mchip ${i===0?"main":""}">${MUSCLE_MAP[m].n}${i===0?" <small>principal</small>":""}</span>`).join("")}</div>
       ${stats}
