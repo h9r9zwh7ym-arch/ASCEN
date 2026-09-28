@@ -6122,7 +6122,7 @@ function openRecap(kind, key){
   save();
   openSheet(`<div class="sheet-hd"><span class="t">Ton bilan</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
     <div class="sheet-body" id="rcBody">${recapBodyHTML()}</div>`,
-    { tall:true, footer:`<button class="btn" data-a="recapShare">${icon("download")} Enregistrer ou partager</button>` });
+    { tall:true, footer:`<button class="btn" data-a="recapShare">Enregistrer ou partager</button>` });
   settleSegs(qs("#rcBody"));
   requestAnimationFrame(paintRecap);
 }
