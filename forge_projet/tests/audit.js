@@ -63,7 +63,7 @@ const W = +(process.env.W || 375), DARK = process.env.DARK === '1', wk = process
     if (r.length) issues.push(`--- ${label}\n  ` + r.slice(0, 14).join('\n  '));
     await page.screenshot({ path: `${OUT}/${W}${DARK ? 'd' : ''}_${label}.png` });
   };
-  const close = async () => { const c = await page.$('#overlay.open .sheet-hd [data-a="closesheet"]') || await page.$('#overlay.open .center-modal [data-a="closesheet"]'); if (c) await c.click(); else await page.evaluate(() => closeSheet()); await wait(450); };
+  const close = async () => { if (await page.$('.t3d-full')) { await page.evaluate(() => t3dClose()); await wait(600); return; } const c = await page.$('#overlay.open .sheet-hd [data-a="closesheet"]') || await page.$('#overlay.open .center-modal [data-a="closesheet"]'); if (c) await c.click(); else await page.evaluate(() => closeSheet()); await wait(450); };
   const act = (a, d = {}) => page.evaluate(([a, d]) => ACT[a](d, document.querySelector(`[data-a="${a}"]`)), [a, d]);
 
   await audit('today_custom');
@@ -95,7 +95,7 @@ const W = +(process.env.W || 375), DARK = process.env.DARK === '1', wk = process
   await page.click('[data-a="progressTab"][data-v="exos"]'); await audit('progress_exos');
   await page.click('[data-a="openExoChart"]'); await wait(900); await audit('exochart'); await close();
   await page.click('[data-a="progressTab"][data-v="medals"]'); await audit('medals');
-  await page.click('.medal-card'); await audit('medal_modal'); await close();
+  await page.click('.medal-card'); await page.waitForSelector('.center-modal, .t3d-full.show', { timeout: 20000 }); await audit('medal_modal'); await close();
   await page.click('.tabbtn[data-id="profil"]'); await audit('profil');
   await page.evaluate(() => document.querySelector('#v-profil').scrollTo(0, 99999)); await audit('profil_bottom');
   for (const a of ['openEquip', 'openExoPrefs', 'openGoals', 'openExportImport', 'openAppearance', 'openAbout']) { await act(a); await audit(a); await close(); }

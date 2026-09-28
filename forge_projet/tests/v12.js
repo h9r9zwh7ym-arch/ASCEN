@@ -171,9 +171,9 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await shot('17_medals');
   log('Medal cards:', await page.$$eval('.medal-card', e => e.length), 'tiers:', await page.$$eval('.ms-n', e => e.map(x => x.textContent)));
   await page.click('.medal-card >> nth=0');
-  await wait(600);
+  await page.waitForSelector('.center-modal, .t3d-full.show', { timeout: 20000 }); await wait(600);
   await shot('18_medal_modal');
-  await page.click('.center-modal [data-a="closesheet"]');
+  await page.evaluate(() => { if (qs('.t3d-full')) t3dClose(); else closeSheet(); }); await wait(600);
   await wait(350);
 
   await page.emulateMedia({ colorScheme: 'dark' });

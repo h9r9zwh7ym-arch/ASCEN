@@ -143,9 +143,9 @@ require('fs').mkdirSync(OUT, { recursive: true });
   log('Medal families:', await page.$$eval('.medal-card', e => e.length));
   await shot('18_medals');
   await page.click('.medal-card >> nth=4');
-  await wait(500);
+  await page.waitForSelector('.center-modal, .t3d-full.show', { timeout: 20000 }); await wait(500);
   await shot('19_medal_ironyear');
-  await page.click('.center-modal [data-a="closesheet"]');
+  await page.evaluate(() => { if (qs('.t3d-full')) t3dClose(); else closeSheet(); }); await wait(600);
   await wait(350);
 
   await page.emulateMedia({ colorScheme: 'dark' });
