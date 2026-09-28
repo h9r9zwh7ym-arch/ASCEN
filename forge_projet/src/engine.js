@@ -12,7 +12,8 @@ function sessionSize(){ return Math.max(2, Math.min(10, S.goals.exoCount || SESS
 // exercices adaptés au niveau : un débutant ne se voit pas proposer d'exercice avancé
 // (il reste libre de le choisir lui-même dans la liste)
 function levelOK(e){ return S.goals.level!=="debutant" || e.level<3; }
-function engineExos(){ const all = availableExos(), ok = all.filter(levelOK); return ok.length>=4 ? ok : all; }
+// exercices de force proposés par l'app (les étirements ont leur propre bloc, voir stretchBlock)
+function engineExos(){ const all = availableExos().filter(e=>!isStretch(e)), ok = all.filter(levelOK); return ok.length>=4 ? ok : all; }
 
 function normName(s){
   return (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim();
@@ -290,11 +291,36 @@ function generateEngineSession(typeId, avoid){
   if(typeId==="auto"){ const r = resolveAutoType(); resolved = r.type; reason = r.reason; }
   const n = sessionSize();
   const exos = pickExosForSession(resolved==="core" ? Math.min(n,5) : n, poolForType(resolved), avoid);
-  return {
+  const session = {
     id: uid(), date: todayISO(), source:"engine", type:typeId, resolvedType:resolved, reason,
     startedAt:null, completedAt:null,
     exos: exos.map(exo=>sessionEntryFor(exo))
   };
+  if(S.settings.stretching) session.exos.push(...stretchBlock(session));
+  return session;
+}
+
+// ---------- étirements (retour au calme) ----------
+// 2 à 3 étirements en fin de séance proposée, pour les muscles qui viennent de travailler
+// (réglage « Étirements en fin de séance » du Profil). Toujours placés après les exercices.
+function stretchBlock(session){
+  const pool = EXOS.filter(e=>isStretch(e) && !isExcluded(e.id));
+  if(!pool.length) return [];
+  const worked = focusMuscles(session), chosen = [];
+  const take = e=>{ if(e && !chosen.includes(e) && chosen.length<3) chosen.push(e); };
+  worked.forEach(m=>take(pool.find(e=>e.muscles[0]===m && !chosen.includes(e)) || pool.find(e=>e.muscles.includes(m) && !chosen.includes(e))));
+  // séance de gainage ou peu de correspondances : mobilité du dos
+  ["etir_chat_vache","etir_enfant","etir_ischios"].forEach(id=>{ if(chosen.length<2) take(pool.find(e=>e.id===id)); });
+  return chosen.map(e=>sessionEntryFor(e));
+}
+function isStretchEntry(ex){ return isStretch(EXO_MAP[ex.exoId]); }
+function mainExos(session){ return session.exos.filter(ex=>!isStretchEntry(ex)); }
+// réglage modifié : la proposition du jour (pas encore commencée) est mise à jour tout de suite
+function applyStretchSetting(){
+  const d = S.draft;
+  if(!d || d.startedAt || d.source!=="engine") return;
+  d.exos = mainExos(d);
+  if(S.settings.stretching) d.exos.push(...stretchBlock(d));
 }
 
 function buildCustomSession(entries, name){
@@ -314,7 +340,7 @@ function estimateMinutes(session){
 }
 function focusMuscles(session){
   const count = {};
-  session.exos.forEach(ex=>{ const d=EXO_MAP[ex.exoId]; if(d) count[d.muscles[0]]=(count[d.muscles[0]]||0)+ex.sets.length; });
+  session.exos.forEach(ex=>{ const d=EXO_MAP[ex.exoId]; if(d && !isStretch(d)) count[d.muscles[0]]=(count[d.muscles[0]]||0)+ex.sets.length; });
   return Object.keys(count).sort((a,b)=>count[b]-count[a]);
 }
 

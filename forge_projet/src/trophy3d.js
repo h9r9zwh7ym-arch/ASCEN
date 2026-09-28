@@ -345,6 +345,8 @@ function t3dFill(el){
     if(!el.isConnected) return;
     const img = new Image(); img.className = "medal-3d"; img.alt = ""; img.decoding = "async"; img.src = url;
     img.onload = ()=>{ el.appendChild(img); requestAnimationFrame(()=>el.classList.add("m3d-on")); };
+    // vignette illisible (page quittée, mémoire libérée) : on garde le dessin et on la refera
+    img.onerror = ()=>{ T3D.cache.delete(id+":"+tier); el.classList.remove("m3d"); };
   }).catch(()=>{});
 }
 // toute médaille ajoutée au document (onglets, célébration, fiches) est améliorée

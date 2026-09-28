@@ -64,8 +64,10 @@ const EXO_CATS = [
   { id:"suspension", n:"Sangles de suspension" },
   { id:"ab_roller",  n:"Roue abdominale" },
   { id:"jump_rope",  n:"Corde à sauter" },
+  { id:"stretch",    n:"Étirements" },
 ];
 function exoCategory(e){
+  if(e.pattern==="stretch") return "stretch";
   for(const c of ["dumbbells","barbell","kettlebell","bands","pullup_bar","dip_bars","suspension","ab_roller","jump_rope"]) if(e.equip.includes(c)) return c;
   return "bodyweight";
 }

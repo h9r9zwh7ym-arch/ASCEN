@@ -38,6 +38,7 @@ Variables utiles :
 | `perf2.js` | Temps de rendu avec 470 séances (informatif) |
 | `v28.js` | Pile de feuilles (retour au lieu de tout fermer) et « Ajouter » selon le contexte de la fiche |
 | `v29.js` | Robustesse : données abîmées au démarrage, action en échec, double appui |
+| `v30.js` | Étirements : réglage, bloc « retour au calme » en fin de proposition, enregistrement à part, historique |
 | `anim_sheet.js` | Planche de contrôle des animations d'exercices (départ/fin), par famille (`FAMILIES=pushup,plank`) |
 | `t3d_perf.js` | Trophées 3D : vignettes, cadence, construction, vue Diamant (`TAG=nom`) |
 | `ui_audit.js` | Audit visuel : chaque onglet en pleine hauteur et en bas de défilement, feuilles principales, encoche iPhone simulée (`DARK=1`, `ENGINE=webkit`, `NO_NOTCH=1`, `AUDIT_DIR=nom`) |

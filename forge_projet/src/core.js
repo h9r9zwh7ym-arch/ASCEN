@@ -18,7 +18,7 @@ function defaultState(){
     targets: [],            // objectifs chiffrés [{id, exoId, kind:"reps"|"kg"|"sec", value, start, createdAt, doneAt}]
     body: [],               // pesées facultatives [{d:"AAAA-MM-JJ", kg}]
     medals: {},            // {familleId: {t: palier atteint 0-4, d: {1: iso, 2: iso…}}}
-    settings: { theme:"auto", unit:"kg", todayTab:"custom", name:"", sound:true },
+    settings: { theme:"auto", unit:"kg", todayTab:"custom", name:"", sound:true, stretching:false },
     meta: { createdAt: new Date().toISOString(), prCount:0 },
   };
 }
@@ -45,6 +45,7 @@ function packSession(s){
     });
     return ex.targetReps ? [ex.exoId, sets, ex.targetReps] : [ex.exoId, sets];
   });
+  if(s.stretches && s.stretches.length) o.s = s.stretches.map(x=>[x.exoId, x.sec||0]);
   return o;
 }
 function unpackSession(o){
@@ -59,6 +60,7 @@ function unpackSession(o){
     if(targetReps) ex.targetReps = targetReps;
     return ex;
   });
+  if(Array.isArray(o.s) && o.s.length) s.stretches = o.s.map(([exoId, sec])=>({ exoId, sec }));
   return s;
 }
 function serializeState(savedAt){
@@ -255,6 +257,7 @@ function compactSession(s){
       return o;
     })
   })).filter(ex=>ex.sets.length);
+  if(Array.isArray(s.stretches) && s.stretches.length) out.stretches = s.stretches.filter(x=>x && x.exoId).map(x=>({ exoId:x.exoId, sec:Math.max(0, Math.round(x.sec||0)) }));
   return out;
 }
 function save(){

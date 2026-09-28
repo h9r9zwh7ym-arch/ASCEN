@@ -90,6 +90,11 @@ function renderProfil(){
         <div class="grow"><div class="t">Exercices inclus / exclus</div><div class="s">${S.prefs.excluded.length} exclu${S.prefs.excluded.length>1?"s":""} · ${S.prefs.included.length} privilégié${S.prefs.included.length>1?"s":""}</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
+      <div class="row">
+        ${sfIcon("leaf","green")}
+        <div class="grow"><div class="t">Étirements en fin de séance</div><div class="s">Ajoutés aux séances proposées par l'app</div></div>
+        <button class="switch ${S.settings.stretching?"on":""}" aria-label="Étirements en fin de séance" data-a="toggleStretching"></button>
+      </div>
     </div>
 
     <h2 class="sh">Suggestion par IA externe</h2>
@@ -225,8 +230,8 @@ function openInstall(){
 }
 
 // ---------- Matériel ----------
-const EQUIP_GLYPH = { dumbbells:"dumbbell", barbell:"barbell", kettlebell:"kettlebell", bench:"bench", bench_incline:"benchIncline", bench_press:"benchPress", rack:"rack", pullup_bar:"bar", dip_bars:"dips", suspension:"straps", ab_roller:"wheel", bands:"band", jump_rope:"rope", mat:"mat", bodyweight:"person" };
-const EQUIP_COLOR = { dumbbells:"orange", barbell:"indigo", kettlebell:"brown", bench:"teal", bench_incline:"teal", bench_press:"indigo", rack:"gray", pullup_bar:"blue", dip_bars:"blue", suspension:"yellow", ab_roller:"red", bands:"green", jump_rope:"pink", mat:"purple", bodyweight:"mint" };
+const EQUIP_GLYPH = { stretch:"leaf", dumbbells:"dumbbell", barbell:"barbell", kettlebell:"kettlebell", bench:"bench", bench_incline:"benchIncline", bench_press:"benchPress", rack:"rack", pullup_bar:"bar", dip_bars:"dips", suspension:"straps", ab_roller:"wheel", bands:"band", jump_rope:"rope", mat:"mat", bodyweight:"person" };
+const EQUIP_COLOR = { stretch:"mint", dumbbells:"orange", barbell:"indigo", kettlebell:"brown", bench:"teal", bench_incline:"teal", bench_press:"indigo", rack:"gray", pullup_bar:"blue", dip_bars:"blue", suspension:"yellow", ab_roller:"red", bands:"green", jump_rope:"pink", mat:"purple", bodyweight:"mint" };
 function equipBodyHTML(){
   const rows = EQUIP_TYPES.filter(e=>!e.always).map(e=>{
     const on = S.equipment.owned[e.id];
@@ -434,6 +439,11 @@ Object.assign(ACT, {
     S.settings.sound = S.settings.sound===false; save(); el.classList.toggle("on", S.settings.sound);
     const sub = qs(".sub-setting"); if(sub) sub.classList.toggle("off", !S.settings.sound);
     if(S.settings.sound) sfx("set");
+  },
+  toggleStretching(d, el){
+    S.settings.stretching = !S.settings.stretching; el.classList.toggle("on", S.settings.stretching);
+    applyStretchSetting(); save(); renderView("today");
+    toast(S.settings.stretching ? "Étirements ajoutés en fin de séance proposée" : "Plus d'étirements dans les séances proposées", "check");
   },
   toggleUiSound(d, el){ S.settings.uiSound = S.settings.uiSound===false; save(); el.classList.toggle("on", S.settings.uiSound); if(S.settings.uiSound) setTimeout(()=>sfx("tick"), 80); },
   setTheme(d){ S.settings.theme = d.v; save(); applyTheme(); const b=qs(".sheet-body"); if(b) b.innerHTML = appearanceBodyHTML(); changed(); },

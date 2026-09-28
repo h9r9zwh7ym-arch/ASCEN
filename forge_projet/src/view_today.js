@@ -170,7 +170,7 @@ function proposalPaneHTML(draft){
       <div class="pc-eyebrow">${draft.type==="auto"?"Choisie pour toi":"Séance proposée"}</div>
       <div class="pc-title">${title}</div>
       ${draft.reason?`<div class="pc-reason">${esc(draft.reason)}</div>`:""}
-      ${draft.exos.length?`<div class="pc-meta"><span>${draft.exos.length} exercices</span><span>${draft.exos.reduce((t,e)=>t+e.sets.length,0)} séries</span><span>≈ ${estimateMinutes(draft)} min</span></div>
+      ${draft.exos.length?`<div class="pc-meta"><span>${mainExos(draft).length} exercices</span><span>${mainExos(draft).reduce((t,e)=>t+e.sets.length,0)} séries</span><span>≈ ${estimateMinutes(draft)} min</span></div>
       <div class="pc-muscles">${focus.map(m=>`<span>${MUSCLE_MAP[m].n}</span>`).join("")}</div>`:""}
     </div>`;
   }
@@ -178,18 +178,25 @@ function proposalPaneHTML(draft){
     return `<div class="type-scroll">${typeChips}</div>${hero}
       <div class="empty-state"><span class="em">${sfIcon("toolbox","gray","lg")}</span>Pas d'exercice disponible pour ce type de séance avec ton matériel.<br>Essaie un autre type, ou complète ton matériel dans l'onglet Profil.</div>`;
   }
-  const rows = draft.exos.map((ex,i)=>exoRowHTML(EXO_MAP[ex.exoId], `${ex.targetSets} × ${repsLabel(ex.targetReps)}${ex.sets[0]&&ex.sets[0].weight?" · "+fmtLoad(EXO_MAP[ex.exoId], ex.sets[0].weight):""}`, i,
+  // exercices de force, puis (si le réglage est actif) le bloc d'étirements dans sa propre section
+  const doseOf = ex=>{ const def = EXO_MAP[ex.exoId];
+    return isStretch(def) ? `${repsLabel(ex.targetReps)} s${def.uni ? " · chaque côté" : ""}` : `${ex.targetSets} × ${repsLabel(ex.targetReps)}${ex.sets[0]&&ex.sets[0].weight?" · "+fmtLoad(def, ex.sets[0].weight):""}`; };
+  const rowOf = (ex,i)=>exoRowHTML(EXO_MAP[ex.exoId], doseOf(ex), i,
     `<button class="icon-btn" aria-label="Remplacer" data-a="swapExoOpen" data-idx="${i}">${icon("swap")}</button>
-     <button class="icon-btn" aria-label="Retirer" data-a="removeExo" data-idx="${i}">${icon("close")}</button>`)).join("");
+     <button class="icon-btn" aria-label="Retirer" data-a="removeExo" data-idx="${i}">${icon("close")}</button>`);
+  const main = mainExos(draft), mainN = main.length;
+  const rows = draft.exos.map((ex,i)=>isStretchEntry(ex) ? "" : rowOf(ex,i)).join("");
+  const coolRows = draft.exos.map((ex,i)=>isStretchEntry(ex) ? rowOf(ex,i) : "").join("");
   freshIds = new Set();
   return `<div class="type-scroll">${typeChips}</div>
     ${hero}
     <div class="exo-count">
-      <div class="ec-t"><b>${draft.exos.length}</b> exercice${draft.exos.length>1?"s":""} · ${draft.exos.reduce((t,e)=>t+e.sets.length,0)} séries · ≈ ${estimateMinutes(draft)} min</div>
-      <div class="mini-step"><button aria-label="Un exercice de moins" data-a="draftCount" data-d="-1" ${draft.exos.length<=1?"disabled":""}>−</button><span>${draft.exos.length}</span><button aria-label="Un exercice de plus" data-a="draftCount" data-d="1" ${draft.exos.length>=10?"disabled":""}>+</button></div>
+      <div class="ec-t"><b>${mainN}</b> exercice${mainN>1?"s":""} · ${main.reduce((t,e)=>t+e.sets.length,0)} séries · ≈ ${estimateMinutes(draft)} min</div>
+      <div class="mini-step"><button aria-label="Un exercice de moins" data-a="draftCount" data-d="-1" ${mainN<=1?"disabled":""}>−</button><span>${mainN}</span><button aria-label="Un exercice de plus" data-a="draftCount" data-d="1" ${draft.exos.length>=10?"disabled":""}>+</button></div>
     </div>
-    ${!imported && draft.exos.length < Math.min(sessionSize(), draft.resolvedType==="core"?5:10) ? `<div class="ec-limit">Ton matériel limite ce type de séance à ${draft.exos.length} exercice${draft.exos.length>1?"s":""}. Le « + » ajoute un exercice d'un autre groupe.</div>` : ""}
+    ${!imported && mainN < Math.min(sessionSize(), draft.resolvedType==="core"?5:10) ? `<div class="ec-limit">Ton matériel limite ce type de séance à ${mainN} exercice${mainN>1?"s":""}. Le « + » ajoute un exercice d'un autre groupe.</div>` : ""}
     <div class="group" style="margin-top:8px">${rows}</div>
+    ${coolRows ? `<div class="cool-h">${ii("leaf")}<span>Étirements · retour au calme</span></div><div class="group cool-group">${coolRows}</div>` : ""}
     <div class="btnrow">
       <button class="btn tertiary sm" data-a="addExoOpen">${icon("plus")} Ajouter</button>
       ${imported?"":`<button class="btn tertiary sm" data-a="regenSession">${icon("repeat")} Autre proposition</button>`}
@@ -794,6 +801,13 @@ function finalizeSession(){
   draft.completedAt = new Date().toISOString();
   draft.durationSec = Math.round((Date.parse(draft.completedAt)-Date.parse(draft.startedAt))/1000);
   draft.exos = draft.exos.filter(ex=>ex.sets.some(s=>s.done));
+  // étirements : gardés à part (nom et secondes tenues), hors séries, volume et muscles travaillés
+  const cool = draft.exos.filter(isStretchEntry);
+  if(cool.length){
+    draft.stretches = cool.map(ex=>({ exoId:ex.exoId, sec:ex.sets.filter(s=>s.done).reduce((t,s)=>t+(s.reps||0),0) }));
+    draft.exos = draft.exos.filter(ex=>!isStretchEntry(ex));
+    if(!draft.exos.length && !draft.name) draft.name = "Étirements";
+  }
   S.sessions.push(compactSession(clone(draft)));
   if(draft.source==="imported" && S.importedProgram.length) S.importedProgram.shift();
   S.draft = null;
@@ -1002,17 +1016,18 @@ Object.assign(ACT, {
   editTemplateDays(d){ openTplEditor(d.id); },
   tplDayToggle(d, el){ el.classList.toggle("on"); },
   draftCount(d){
-    const dir = parseInt(d.d,10), ex = S.draft.exos;
+    // le nombre d'exercices ne concerne que la force : le bloc d'étirements reste à la fin
+    const dir = parseInt(d.d,10), ex = S.draft.exos, main = mainExos(S.draft), firstCool = ex.findIndex(isStretchEntry);
     if(dir>0){
-      if(ex.length>=10) return;
-      const add = suggestComplement(ex.map(e=>e.exoId), 1)[0];
+      if(main.length>=10) return;
+      const add = suggestComplement(main.map(e=>e.exoId), 1)[0];
       if(!add){ toast("Plus d'exercice disponible avec ton matériel"); return; }
-      ex.push(sessionEntryFor(add)); freshIds.add(add.id);
+      ex.splice(firstCool<0 ? ex.length : firstCool, 0, sessionEntryFor(add)); freshIds.add(add.id);
     } else {
-      if(ex.length<=1) return;
-      ex.pop();
+      if(main.length<=1) return;
+      ex.splice(ex.indexOf(main[main.length-1]), 1);
     }
-    S.goals.exoCount = ex.length; // retenu pour les prochaines propositions
+    S.goals.exoCount = mainExos(S.draft).length; // retenu pour les prochaines propositions
     sfx("step", dir>0); save(); renderView("today");
   },
   setType(d){ regenerateDraft(d.v); renderViewAnimated("today"); },
@@ -1041,7 +1056,8 @@ Object.assign(ACT, {
   swapExoOpen(d){
     const idx = +d.idx;
     const cur = EXO_MAP[S.draft.exos[idx].exoId];
-    openPicker({ title:"Remplacer "+cur.n, muscle:cur.muscles[0], exclude:new Set(S.draft.exos.map(e=>e.exoId)), onDone:ids=>{
+    // un étirement se remplace par un autre étirement (tous muscles), un exercice par un exercice du même muscle
+    openPicker({ title:"Remplacer "+cur.n, muscle:isStretch(cur) ? null : cur.muscles[0], cat:isStretch(cur) ? "stretch" : null, exclude:new Set(S.draft.exos.map(e=>e.exoId)), onDone:ids=>{
       S.draft.exos[idx] = sessionEntryFor(EXO_MAP[ids[0]]);
       closeSheet(); changed();
     }});

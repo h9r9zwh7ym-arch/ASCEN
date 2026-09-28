@@ -127,7 +127,9 @@ function sessionDetailHTML(s){
       ${sessionVolume(s) ? `<div class="stat-box"><div class="num">${fmtKg(sessionVolume(s))}</div><div class="lbl">soulevés</div></div>` : `<div class="stat-box"><div class="num">${sessionReps(s)}</div><div class="lbl">répétitions</div></div>`}
       ${sessionPRCount(s) ? `<div class="stat-box pr"><div class="num">${sessionPRCount(s)}</div><div class="lbl">record${sessionPRCount(s)>1?"s":""}</div></div>` : ""}
     </div>
-    <div class="group" style="margin-top:14px">${rows||'<div style="padding:16px" class="s">Aucune série complétée.</div>'}</div>
+    ${s.exos.length || !(s.stretches||[]).length ? `<div class="group" style="margin-top:14px">${rows||'<div style="padding:16px" class="s">Aucune série complétée.</div>'}</div>` : ""}
+    ${(s.stretches||[]).length ? `<div class="cool-h">${ii("leaf")}<span>Étirements · retour au calme</span></div><div class="group cool-group">${s.stretches.map(x=>{ const def = EXO_MAP[x.exoId]; if(!def) return "";
+      return `<div class="row">${exoIcon(def)}<div class="grow"><div class="t">${esc(def.n)}</div></div><span class="val">${x.sec ? x.sec+" s" : ""}</span></div>`; }).join("")}</div>` : ""}
     <div class="te-sec">Note</div>
     <textarea class="note-in" rows="3" maxlength="280" data-c="saveNote" data-id="${esc(s.id)}" placeholder="Sensations, douleur, contexte… (facultatif)" aria-label="Note sur la séance">${esc(s.note||"")}</textarea>
     <div class="btnrow two"><button class="btn secondary" data-a="histEdit" data-id="${s.id}">${icon("edit")} Modifier</button><button class="btn secondary" data-a="redoSession" data-id="${s.id}">${icon("repeat")} Refaire</button></div>

@@ -431,6 +431,18 @@ Note tests : `v14` peut dépasser son délai quand d'autres scripts Playwright t
   - Les erreurs globales et les promesses rejetées sont captées.
 - **Tests** : `v28` (pile de feuilles, ajout selon le contexte), `v29` (données abîmées, action en échec, double appui).
 
+## 9 octodecies. Version 3.1 : étirements
+
+- **Catalogue** (`data_exercises.js`) : 12 étirements (motif `stretch`, catégorie « Étirements » du sélecteur) couvrant ischios, quadriceps, fessiers, mollets, pectoraux, dos (posture de l'enfant, chat-vache, cobra), épaules, triceps, avant-bras et psoas. Tenus en secondes (30 à 45 s). Deux passages (un par côté) pour les étirements unilatéraux. `isStretch(def)`.
+- **Réglage** (Profil → « Étirements en fin de séance », `S.settings.stretching`, désactivé par défaut).
+  - Activé, le moteur ajoute 2 à 3 étirements à la fin de la séance proposée, choisis selon les muscles travaillés (`stretchBlock`, `engine.js`).
+  - `applyStretchSetting()` met à jour une proposition pas encore commencée.
+  - Le moteur ne propose jamais d'étirement comme exercice de force (`engineExos`).
+- **Aujourd'hui** : bloc « Étirements · retour au calme » sous les exercices. Le compteur « Exercices » et le « + / − » ne portent que sur les exercices de force ; un ajout se place avant le bloc. Un étirement peut être remplacé par un autre étirement.
+- **Enregistrement** : à la fin de la séance, les étirements faits vont dans `session.stretches = [{exoId, sec}]`, hors séries, volume, records et trophées. Format compact : champ `s`. Le détail de la séance (Historique) les affiche avec leur durée. Une séance faite uniquement d'étirements s'appelle « Étirements ».
+- **Vignettes 3D** : une vignette qui ne se charge pas (page quittée pendant le rendu) est oubliée et le dessin SVG reste affiché.
+- **Test** : `v30` (réglage, bloc en fin de proposition, compteur, enregistrement à part, rechargement, historique, sélecteur, désactivation).
+
 ## 10. Cahier des charges d'origine (résumé)
 
 Voir le fichier `4a3df5ee-cahier-des-charges-forge.md` fourni au lancement du projet pour le texte complet. Points clés déjà couverts en v1.0 : matériel personnalisable et extensible, bibliothèque d'exercices filtrée, inclusion/exclusion d'exercices, objectifs personnalisés, suivi détaillé de séance (éditable, timer de repos, coche rapide), moteur de suggestion 100% local avec export/import IA, graphiques de progression, PR, streaks/régularité, trophées, écran d'accueil = séance du jour, thème clair/sombre automatique, page À propos avec copyright.

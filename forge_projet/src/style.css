@@ -1924,3 +1924,7 @@ h2.sh .more{font-family:var(--sans);font-size:var(--fs-sub);font-weight:500;lett
 /* fiche 3D d'un trophée : encre ASCEN, lumière neutre (plus de halo brun « forge ») */
 .t3d-panel{background:radial-gradient(110% 55% at 50% 0%,rgba(255,255,255,.1),transparent 62%),linear-gradient(180deg,#1F1D1B,#0B0B0A 58%)}
 .t3d-panel[data-tier="4"]{background:radial-gradient(110% 55% at 50% 0%,rgba(190,225,255,.2),transparent 62%),linear-gradient(180deg,#1A1E24,#0A0B0D 58%)}
+/* étirements : section « retour au calme » (séance proposée, détail d'une séance) */
+.cool-h{display:flex;align-items:center;gap:6px;margin:22px 20px 8px;font-size:var(--fs-cap);font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--label2)}
+.cool-h svg{width:15px;height:15px;color:var(--green)}
+.cool-group{margin-top:0}

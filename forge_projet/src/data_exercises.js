@@ -456,6 +456,44 @@ const EXO_RAW = [
 ["nordic_curl","Nordic curl assisté",["ischios","fessiers"],["bodyweight"],"hinge",false,{sets:3,repsMin:4,repsMax:8,restSec:90},
   ["À genoux sur un coussin, chevilles bloquées sous un canapé ou tenues.","Corps droit des genoux à la tête, bascule lentement vers l'avant en freinant avec les ischios.","Amortis avec les mains au sol, puis repousse pour revenir."],
   "Exercice exigeant : descends seulement jusqu'où tu contrôles, et augmente l'amplitude progressivement."],
+// v3.1 : étirements (retour au calme). Mesurés en secondes, jamais comptés comme du travail de
+// force (séries, volume, muscles travaillés, récupération) : voir isStretch et finalizeSession.
+["etir_ischios","Étirement des ischio-jambiers",["ischios","mollets"],["bodyweight"],"stretch",false,{sets:1,repsMin:30,repsMax:45,restSec:10},
+  ["Debout, pieds à largeur de hanches, genoux souples.","Bascule le buste vers l'avant dos long, mains qui glissent vers les tibias.","Relâche la nuque et respire lentement pendant le maintien (durée en secondes)."],
+  "Tu dois sentir un étirement sous la cuisse, jamais une douleur dans le bas du dos : plie les genoux au besoin."],
+["etir_quadriceps","Étirement des quadriceps (debout)",["quadriceps"],["bodyweight"],"stretch",true,{sets:2,repsMin:30,repsMax:45,restSec:10},
+  ["Debout, une main contre un mur pour l'équilibre.","Attrape la cheville et rapproche le talon des fessiers, genoux côte à côte.","Bassin légèrement rentré, maintiens puis change de côté (durée en secondes)."],
+  "Ne tire pas sur le genou : s'il gêne, attrape plutôt le bas du pantalon ou utilise une serviette."],
+["etir_fessiers","Étirement des fessiers (en 4)",["fessiers"],["bodyweight"],"stretch",true,{sets:2,repsMin:30,repsMax:45,restSec:10},
+  ["Allongé sur le dos, pose une cheville sur le genou opposé.","Attrape l'arrière de la cuisse d'appui et ramène les jambes vers toi.","Garde la tête et les épaules au sol, puis change de côté (durée en secondes)."],
+  "À éviter en cas de douleur de hanche ou de genou : réduis l'amplitude plutôt que de forcer."],
+["etir_mollets","Étirement des mollets (au mur)",["mollets"],["bodyweight"],"stretch",true,{sets:2,repsMin:30,repsMax:45,restSec:10},
+  ["Face à un mur, mains en appui, un pied reculé.","Talon arrière au sol, jambe arrière tendue, avance le bassin vers le mur.","Maintiens puis change de côté (durée en secondes)."],
+  "Le talon arrière reste au sol et le pied pointe vers le mur ; aucune douleur au tendon d'Achille."],
+["etir_pectoraux","Étirement des pectoraux (encadrement de porte)",["pect","epaules"],["bodyweight"],"stretch",true,{sets:2,repsMin:30,repsMax:45,restSec:10},
+  ["Avant-bras contre le montant d'une porte, coude à hauteur d'épaule.","Avance doucement le buste jusqu'à sentir l'étirement devant l'épaule.","Garde les épaules basses, puis change de côté (durée en secondes)."],
+  "Amplitude modérée si l'épaule est sensible ; arrête à la moindre sensation de pincement."],
+["etir_enfant","Posture de l'enfant (dos)",["dos"],["bodyweight"],"stretch",false,{sets:1,repsMin:30,repsMax:60,restSec:10},
+  ["À genoux, fessiers vers les talons.","Allonge les bras loin devant, front vers le sol.","Respire dans le dos et relâche les épaules (durée en secondes)."],
+  "Glisse un coussin entre fessiers et talons si les genoux tirent."],
+["etir_epaules","Étirement des épaules (bras croisé)",["epaules"],["bodyweight"],"stretch",true,{sets:2,repsMin:30,repsMax:45,restSec:10},
+  ["Debout, passe un bras tendu devant la poitrine.","Avec l'autre main, ramène-le doucement au-dessus du coude.","Épaule basse, maintiens puis change de côté (durée en secondes)."],
+  "Tire au-dessus du coude, jamais sur l'articulation."],
+["etir_triceps","Étirement des triceps (bras derrière la tête)",["triceps"],["bodyweight"],"stretch",true,{sets:2,repsMin:30,repsMax:45,restSec:10},
+  ["Lève un bras, plie le coude et laisse la main descendre entre les omoplates.","Avec l'autre main, pousse doucement le coude vers l'arrière.","Tête droite, maintiens puis change de côté (durée en secondes)."],
+  "Garde le dos droit, sans cambrer ; amplitude modérée si l'épaule est sensible."],
+["etir_avantbras","Étirement des avant-bras (poignets)",["avantbras","biceps"],["bodyweight"],"stretch",true,{sets:2,repsMin:20,repsMax:30,restSec:10},
+  ["Bras tendu devant toi, paume vers le haut.","Avec l'autre main, tire doucement les doigts vers le bas.","Maintiens, puis paume vers le bas, puis change de bras (durée en secondes)."],
+  "Tension légère seulement : le poignet est une articulation fragile."],
+["etir_psoas","Étirement des fléchisseurs de hanche (fente basse)",["quadriceps","fessiers"],["bodyweight"],"stretch",true,{sets:2,repsMin:30,repsMax:45,restSec:10},
+  ["Genou arrière posé sur un coussin, pied avant loin devant.","Rentre le bassin et avance-le doucement jusqu'à sentir l'avant de la hanche.","Buste droit, maintiens puis change de côté (durée en secondes)."],
+  "Le genou avant ne dépasse pas trop la pointe du pied ; coussin sous le genou au sol."],
+["etir_cobra","Cobra (abdominaux)",["abdos"],["bodyweight"],"stretch",false,{sets:1,repsMin:20,repsMax:30,restSec:10},
+  ["Allongé sur le ventre, mains sous les épaules.","Redresse doucement le buste, bassin au sol, épaules loin des oreilles.","Respire lentement pendant le maintien (durée en secondes)."],
+  "Arrête avant toute gêne dans le bas du dos : garde les coudes légèrement pliés si besoin."],
+["etir_chat_vache","Chat-vache (mobilité du dos)",["dos","abdos"],["bodyweight"],"stretch",false,{sets:1,repsMin:30,repsMax:60,restSec:10},
+  ["À quatre pattes, mains sous les épaules, genoux sous les hanches.","Inspire en creusant le dos, regard vers l'avant ; expire en l'arrondissant, menton vers la poitrine.","Enchaîne lentement au rythme de la respiration (durée en secondes)."],
+  "Mouvement doux et sans à-coups, dans une amplitude confortable."],
 ];
 
 const EXOS = EXO_RAW.map(([id,n,muscles,equip,pattern,uni,def,cues,safety])=>({
@@ -465,10 +503,12 @@ const EXOS = EXO_RAW.map(([id,n,muscles,equip,pattern,uni,def,cues,safety])=>({
 }));
 // Niveau technique / de force requis : 1 = accessible aux débutants, 2 = standard, 3 = avancé.
 // Le moteur évite le niveau 3 pour les débutants et privilégie le niveau 1.
-const EXO_LEVEL1 = ["dips_chaise","montees_chaise","pompes_genoux","pompes_surelevees","squat_pdc","pont_fessier","planche","bird_dog","dead_bug","crunch","superman","jumping_jacks","chaise_murale","mollets_pdc","squat_gobelet","goblet_squat_kb","marche_fermier","kb_fermier","montees_genoux","corde_a_sauter","tractions_scapulaires","rowing_sangles","curl_sangles","rowing_inverse_barre","tirage_elastique","curl_biceps_elastique","squat_elastique","pont_fessier_elastique","suspension_barre","roue_abdo_genoux","planche_laterale","curl_biceps","elevations_laterales","rowing_uni_haltere","dc_haltere","floor_press_haltere","step_up","shrugs_halteres","mollets_halteres"];
+const EXO_LEVEL1 = ["etir_ischios","etir_quadriceps","etir_fessiers","etir_mollets","etir_pectoraux","etir_enfant","etir_epaules","etir_triceps","etir_avantbras","etir_psoas","etir_cobra","etir_chat_vache","dips_chaise","montees_chaise","pompes_genoux","pompes_surelevees","squat_pdc","pont_fessier","planche","bird_dog","dead_bug","crunch","superman","jumping_jacks","chaise_murale","mollets_pdc","squat_gobelet","goblet_squat_kb","marche_fermier","kb_fermier","montees_genoux","corde_a_sauter","tractions_scapulaires","rowing_sangles","curl_sangles","rowing_inverse_barre","tirage_elastique","curl_biceps_elastique","squat_elastique","pont_fessier_elastique","suspension_barre","roue_abdo_genoux","planche_laterale","curl_biceps","elevations_laterales","rowing_uni_haltere","dc_haltere","floor_press_haltere","step_up","shrugs_halteres","mollets_halteres"];
 const EXO_LEVEL3 = ["nordic_curl","pompes_archer","roue_abdo_debout","l_sit","releve_jambes_suspendu","tractions","tractions_suppination","renegade_row","front_squat_barre","good_morning_barre","fentes_sautees","swing_kb_uni","pompes_declinees","dips_barres","squat_sangles"];
 EXOS.forEach(e=>{ e.level = EXO_LEVEL3.includes(e.id) ? 3 : EXO_LEVEL1.includes(e.id) ? 1 : 2; });
 const EXO_MAP = {}; EXOS.forEach(e=>EXO_MAP[e.id]=e);
+// étirement (retour au calme) : ne compte jamais comme du travail de force
+function isStretch(def){ return !!def && def.pattern==="stretch"; }
 // autres noms courants, pour la recherche (on tape souvent le nom anglais ou un nom approximatif)
 const EXO_ALIAS = {
   dips_banc:"pompes inversees bench dips rebord", dips_chaise:"bench dips rebord canape", extension_triceps_sol:"sphinx push-up",
