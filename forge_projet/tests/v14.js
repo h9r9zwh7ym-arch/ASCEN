@@ -74,7 +74,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await tap('.pick-row >> nth=0 >> .row-main'); await wait(150);
   await tap('.pick-row >> nth=2 >> .info-btn'); await wait(450);
   await shot('06_picker_info');
-  await tap('[data-a="backToPicker"]'); await wait(450);
+  await tap('.sheet-hd [data-a="sheetBack"]'); await wait(450); // v3.0 : retour dans l'en-tête de la fiche
   log('Selection kept after info:', await page.$$eval('.pick-row.on', e => e.length), 'footer:', await page.textContent('#pickerDone'));
   await tap('.sheet-hd [data-a="closesheet"]'); await wait(350);
 
