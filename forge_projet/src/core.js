@@ -95,11 +95,12 @@ function idbGet(){
 async function gz(str){
   if(typeof CompressionStream==="undefined") return str;
   const s = new Blob([str]).stream().pipeThrough(new CompressionStream("gzip"));
-  return await new Response(s).blob();
+  // octets bruts plutôt qu'un Blob : WebKit refuse les Blob dans IndexedDB en navigation privée
+  return await new Response(s).arrayBuffer();
 }
 async function gunz(data){
   if(typeof data==="string") return data;
-  const s = data.stream().pipeThrough(new DecompressionStream("gzip"));
+  const s = new Blob([data]).stream().pipeThrough(new DecompressionStream("gzip"));
   return await new Response(s).text();
 }
 let idbPending = null, idbWriting = false;
@@ -109,7 +110,7 @@ function idbMirror(str, savedAt){
   if(idbWriting) return;
   idbWriting = true;
   (async ()=>{
-    while(idbPending){ const j = idbPending; idbPending = null; try{ await idbPut(await gz(j.str), j.savedAt); }catch(e){} }
+    while(idbPending){ const j = idbPending; idbPending = null; try{ await idbPut(await gz(j.str), j.savedAt); }catch(e){ try{ await idbPut(j.str, j.savedAt); }catch(e2){} } }
     idbWriting = false;
   })();
 }
