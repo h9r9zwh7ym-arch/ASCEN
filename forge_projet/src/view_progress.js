@@ -77,7 +77,7 @@ function levelCardHTML(){
 
 function overviewPaneHTML(){
   if(!S.sessions.length){
-    return `${levelCardHTML()}${targetsHTML()}<div class="empty-state"><span class="em">📈</span>Tes statistiques apparaîtront ici après ta première séance : régularité, tonnage, répartition musculaire, records…</div>`;
+    return `${levelCardHTML()}${targetsHTML()}<div class="empty-state"><span class="em">${sfIcon("chart","orange","lg")}</span>Tes statistiques apparaîtront ici après ta première séance : régularité, tonnage, répartition musculaire, records…</div>`;
   }
   const vol = totalVolumeAllTime(), hours = totalDurationSec()/3600;
   const kpis = `<div class="kpi-grid">
@@ -120,7 +120,7 @@ function overviewPaneHTML(){
       <div class="hbars">${hbarList(musc)}</div>
     </div>`:""}
     ${prs.length?`<h2 class="sh">Derniers records</h2><div class="group">${prs.map((p,i)=>`<button class="row tap stagger" style="--i:${10+i}" data-a="openExoChart" data-id="${p.def.id}">
-      <div class="ico" style="background:var(--orange)">💥</div>
+      ${sfIcon("bolt","orange")}
       <div class="grow"><div class="t">${esc(p.def.n)}</div><div class="s">${p.st.reps} reps${loadSuffix(p.def, p.st.weight)} · ${fmtRelative(p.s.date)}</div></div>
       <span class="chev">${icon("chev")}</span></button>`).join("")}</div>`:""}`;
 }
@@ -145,7 +145,7 @@ function exoSeries(id){
 
 function exosPaneHTML(){
   const ids = trainedExoIds();
-  if(!ids.length) return `<div class="empty-state"><span class="em">🏋️</span>Termine des séances pour suivre ta progression exercice par exercice.</div>`;
+  if(!ids.length) return `<div class="empty-state"><span class="em">${sfIcon("dumbbell","orange","lg")}</span>Termine des séances pour suivre ta progression exercice par exercice.</div>`;
   return `<div class="sh-sub" style="margin-top:4px">Courbe : ${"1RM estimé"} pour les exercices chargés, meilleure série pour le poids du corps.</div>
     <div class="group">${ids.map((id,i)=>{
     const { def, loaded, pts } = exoSeries(id);
@@ -198,7 +198,7 @@ function exoChartSheet(id){
 
 function medalsPaneHTML(){
   const c = tierCounts();
-  const next = MEDALS.map(m=>({ m, p:medalProgress(m) })).filter(x=>x.p.next!=null).sort((a,b)=>b.p.pct-a.p.pct).slice(0,3);
+  const next = MEDALS.filter(m=>!m.secret).map(m=>({ m, p:medalProgress(m) })).filter(x=>x.p.next!=null).sort((a,b)=>b.p.pct-a.p.pct).slice(0,3);
   return `<div class="medal-summary stagger" style="--i:0">
       ${[1,2,3,4].map(k=>`<div class="ms-cell"><span class="pip big t${k}"></span><div class="ms-n" data-count="${c[k]}">${c[k]}</div><div class="ms-l">${TIERS[k].n}</div></div>`).join("")}
     </div>
@@ -213,7 +213,10 @@ function medalsPaneHTML(){
       const done = list.reduce((t,m)=>t+medalTier(m),0);
       return `<h2 class="sh">${label}<span class="more" style="color:var(--label2)">${done}/${list.length*4}</span></h2>
         <div class="medal-grid">${list.map((m,i)=>medalCardHTML(m,i+4)).join("")}</div>`;
-    }).join("")}`;
+    }).join("")}
+    <h2 class="sh">Trophées secrets<span class="more" style="color:var(--label2)">${SECRETS.filter(m=>medalTier(m)).length}/${SECRETS.length}</span></h2>
+    <p class="hr-note" style="margin:-4px 20px 10px">Ils se dévoilent quand tu les découvres. Touche-en un pour un indice.</p>
+    <div class="medal-grid">${SECRETS.slice().sort((a,b)=>medalTier(b)-medalTier(a)).map((m,i)=>medalCardHTML(m,i+4)).join("")}</div>`;
 }
 
 Object.assign(ACT, {

@@ -140,7 +140,7 @@ function exoRowHTML(def, sub, i, actions, app){
   return `<div class="row stagger ${fresh?"fresh":""}" style="--i:${Math.min(i+2,14)}">
     <button class="row-main" data-a="showExoInfo" data-id="${def.id}" aria-label="${esc(def.n)} : voir la fiche">
       <span class="xwrap">${exoIcon(def)}<span class="info-dot" aria-hidden="true">i</span></span>
-      <div class="grow"><div class="t">${esc(def.n)}${app?' <span class="app-badge" title="Ajouté par l\'app">✨</span>':""}</div><div class="s">${sub}</div></div>
+      <div class="grow"><div class="t">${esc(def.n)}${app?' <span class="app-badge" title="Ajouté par l\'app">'+icon("sparkle")+'</span>':""}</div><div class="s">${sub}</div></div>
     </button>${actions}
   </div>`;
 }
@@ -172,7 +172,7 @@ function proposalPaneHTML(draft){
   }
   if(!draft.exos.length){
     return `<div class="type-scroll">${typeChips}</div>${hero}
-      <div class="empty-state"><span class="em">🧰</span>Pas d'exercice disponible pour ce type de séance avec ton matériel.<br>Essaie un autre type, ou complète ton matériel dans l'onglet Profil.</div>`;
+      <div class="empty-state"><span class="em">${sfIcon("toolbox","gray","lg")}</span>Pas d'exercice disponible pour ce type de séance avec ton matériel.<br>Essaie un autre type, ou complète ton matériel dans l'onglet Profil.</div>`;
   }
   const rows = draft.exos.map((ex,i)=>exoRowHTML(EXO_MAP[ex.exoId], `${ex.targetSets} × ${repsLabel(ex.targetReps)}${ex.sets[0]&&ex.sets[0].weight?" · "+fmtLoad(EXO_MAP[ex.exoId], ex.sets[0].weight):""}`, i,
     `<button class="icon-btn" aria-label="Remplacer" data-a="swapExoOpen" data-idx="${i}">${icon("swap")}</button>
@@ -288,18 +288,18 @@ function tplListHTML(){
 function tplAddRowHTML(){
   return `<div class="tpl-add-row">
     <button class="tpl-add" data-a="tplNew">${icon("plus")}<span>Nouvelle séance</span></button>
-    <button class="tpl-add" data-a="weekWizard">✨<span>Programme de la semaine</span></button>
+    <button class="tpl-add" data-a="weekWizard"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg><span>Programme de la semaine</span></button>
   </div>`;
 }
 function templatesHTML(){
   if(!S.templates.length){
     return `<div class="tpl-section stagger" style="--i:5">
       <div class="tpl-empty">
-        <div class="te-ico">🗓️</div>
+        <div class="te-ico">${sfIcon("calPlan","red","lg")}</div>
         <div class="te-t">Tes séances de la semaine</div>
         <div class="te-s">Crée plusieurs séances (haut, bas, jambes…), puis place chacune sur ses jours : elle s'affichera toute seule le jour venu.</div>
         <button class="btn sm" data-a="tplNew">${icon("plus")} Nouvelle séance</button>
-        <button class="btn secondary sm" style="margin-top:8px" data-a="weekWizard">✨ Programme de la semaine</button>
+        <button class="btn secondary sm" style="margin-top:8px" data-a="weekWizard"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Programme de la semaine</button>
       </div>
     </div>`;
   }
@@ -318,12 +318,12 @@ function customPaneHTML(){
   const tail = templatesHTML() + weekPlanHTML();
   if(!c.length){
     return `<div class="builder-empty stagger" style="--i:4">
-      <div class="be-row"><div class="be-ico">✍️</div>
+      <div class="be-row"><div class="be-ico">${sfIcon("pencil","orange","lg")}</div>
       <div><div class="be-t">Compose ta séance</div>
       <div class="be-s">Choisis tes exercices ou laisse l'app te proposer une base.</div></div></div>
       <div class="be-actions">
         <button class="btn sm" data-a="customAddOpen">${icon("plus")} Choisir</button>
-        <button class="btn secondary sm" data-a="customFill">✨ L'app choisit</button>
+        <button class="btn secondary sm" data-a="customFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> L'app choisit</button>
       </div>
       <button class="btn ghost sm be-link" data-a="customFromProposal">Partir de la séance proposée</button>
     </div>${tail}`;
@@ -350,7 +350,7 @@ function customPaneHTML(){
     <div class="group builder ${reorderMode?"reorder":""}">${rows}</div>
     <div class="btnrow">
       <button class="btn secondary sm" data-a="customAddOpen">${icon("plus")} Ajouter</button>
-      <button class="btn secondary sm" data-a="customFill">✨ Compléter</button>
+      <button class="btn secondary sm" data-a="customFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Compléter</button>
       <button class="btn secondary sm" data-a="saveTemplateOpen">${icon("bookmark")} ${S.custom.tplId?"Sauver":"Enregistrer"}</button>
     </div>
     <div class="btnrow"><button class="btn ${sessionsToday().length||plannedTemplate()?"big":"secondary"}" data-a="startCustom">${icon("play")} Commencer ma séance</button></div>
@@ -379,6 +379,8 @@ function renderPickerSheet(){
   if(inp){ inp.value = picker.q; inp.addEventListener("input", ()=>{ picker.q = inp.value; qs("#pickerList").innerHTML = pickerListHTML(); }); }
   refreshPickerFooter();
 }
+// dose conseillée selon l'objectif : « 3 × 8–12 » ou « 3 × 20–45 s »
+function exoDose(e){ const [a,b] = repRangeForGoal(e); return `${e.sets} × ${a}–${b}${isTimed(e) ? " s" : " reps"}`; }
 function pickerListHTML(){
   const q = normName(picker.q);
   const muscleOrder = {}; MUSCLES.forEach((m,i)=>muscleOrder[m.id]=i);
@@ -386,7 +388,7 @@ function pickerListHTML(){
     && (!picker.muscle || e.muscles.includes(picker.muscle))
     && (!picker.cat || exoCategory(e)===picker.cat)
     && (!q || normName(e.n).includes(q) || e.muscles.some(m=>normName(MUSCLE_MAP[m].n).includes(q))));
-  if(!pool.length) return `<div class="empty-state"><span class="em">🔍</span>Aucun exercice ne correspond.</div>`;
+  if(!pool.length) return `<div class="empty-state"><span class="em">${sfIcon("search","gray","lg")}</span>Aucun exercice ne correspond.</div>`;
   return EXO_CATS.map(c=>{
     const list = pool.filter(e=>exoCategory(e)===c.id).sort((a,b)=>muscleOrder[a.muscles[0]]-muscleOrder[b.muscles[0]] || a.n.localeCompare(b.n,"fr"));
     if(!list.length) return "";
@@ -397,7 +399,7 @@ function pickerListHTML(){
       return `${sub}<div class="row pick-row ${on?"on":""}" data-id="${e.id}">
         <button class="row-main" data-a="pickerTap" data-id="${e.id}">
           ${exoIcon(e)}
-          <div class="grow"><div class="t">${esc(e.n)}</div><div class="s">${musclesLabel(e)}${e.equip.includes("bench")?" · banc":""}</div></div>
+          <div class="grow"><div class="t">${esc(e.n)}</div><div class="s"><b class="dose">${exoDose(e)}</b> · ${musclesLabel(e)}</div></div>
         </button>
         <button class="info-btn" aria-label="Fiche de ${esc(e.n)}" data-a="pickerInfo" data-id="${e.id}">i</button>
         ${picker.multi?`<button class="pick-check" aria-label="Sélectionner" data-a="pickerTap" data-id="${e.id}">${on?icon("check"):""}</button>`:""}
@@ -416,7 +418,7 @@ function refreshPickerFooter(){
 function renderTodayLive(draft){
   const nav = `<div class="navbar live-nav"><div class="nb-left"><button class="icon-btn" aria-label="Abandonner la séance" data-a="abandonSession">${icon("close")}</button></div><div class="nb-title">${esc(liveName(draft))}</div><div class="nb-right"><button class="nb-done" data-a="finishSession">Terminer</button></div></div>`;
   if(!draft.exos.length){
-    return `${nav}<div class="content"><div class="empty-state"><span class="em">🧰</span>Tous les exercices ont été retirés.<br>Ajoute-en un pour continuer.</div>
+    return `${nav}<div class="content"><div class="empty-state"><span class="em">${sfIcon("toolbox","gray","lg")}</span>Tous les exercices ont été retirés.<br>Ajoute-en un pour continuer.</div>
     <div class="btnrow"><button class="btn" data-a="addExoOpen">${icon("plus")} Ajouter un exercice</button></div></div>`;
   }
   return `${nav}
@@ -533,7 +535,7 @@ function upNextHTML(idx){
   const ex = S.draft.exos[idx];
   const curDone = ex.sets.every(s=>s.done);
   const ni = nextUndone(idx);
-  if(ni<0 || (ni===idx)) return curDone || ni<0 ? "" : `<div class="up-next last"><span class="un-flag">🏁</span><div class="grow"><div class="un-k">Dernier exercice</div><div class="un-t">Plus que celui-ci, tu y es presque !</div></div></div>`;
+  if(ni<0 || (ni===idx)) return curDone || ni<0 ? "" : `<div class="up-next last"><span class="un-flag">${sfIcon("flag","green")}</span><div class="grow"><div class="un-k">Dernier exercice</div><div class="un-t">Plus que celui-ci, tu y es presque !</div></div></div>`;
   if(curDone) return ""; // le bouton « Exercice suivant » de la carte fait déjà le travail
   const e = S.draft.exos[ni], def = EXO_MAP[e.exoId], left = e.sets.filter(s=>!s.done).length;
   return `<button class="up-next r-${regionOf(def)}" data-a="focusJump" data-idx="${ni}">
@@ -550,7 +552,7 @@ function sessionCompleteHTML(draft){
   if(fresh) setTimeout(()=>{ const b = qs(".complete-card .cc-trophy"); if(b){ const r = b.getBoundingClientRect(); confettiBurst(r.left+r.width/2, r.top+r.height/2, 90); haptic([30,50,30,50,60]); } }, 250);
   return `<div class="complete-card ${fresh?"fresh":""}">
     <div class="cc-rays" aria-hidden="true"></div>
-    <div class="cc-trophy">🏆</div>
+    <div class="cc-trophy">${medalHTML({ cat:"regular", g:"cup", c:"orange" }, 3)}</div>
     <div class="cc-title">Séance complète !</div>
     <div class="cc-sub">Toutes les séries sont validées. Bravo.</div>
     <div class="cc-stats">
@@ -805,7 +807,7 @@ function openPlanDaySheet(day){
         <button class="btn secondary sm" data-a="tplOpenEditor" data-id="${cur.id}">${icon("edit")} Modifier</button></div>` : ""}
       ${S.templates.length ? `<p class="body" style="margin-bottom:12px">${cur?"Changer pour une autre séance :":`Quelle séance enregistrée veux-tu faire chaque ${label} ?`}</p><div class="group">${rows}</div>
         ${cur?`<div class="btnrow"><button class="btn ghost" data-a="planSet" data-d="${day}">Ne rien prévoir le ${label}</button></div>`:""}`
-      : `<div class="empty-state" style="padding:24px 20px"><span class="em">📋</span>Tu n'as pas encore de séance enregistrée.</div>`}
+      : `<div class="empty-state" style="padding:24px 20px"><span class="em">${sfIcon("bookmarkG","indigo","lg")}</span>Tu n'as pas encore de séance enregistrée.</div>`}
       <div class="btnrow"><button class="btn ${S.templates.length?"secondary":""}" data-a="planNew" data-d="${day}">${icon("plus")} Nouvelle séance pour le ${label}</button></div>
     </div>`);
 }

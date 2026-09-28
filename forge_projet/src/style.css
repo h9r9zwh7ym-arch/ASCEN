@@ -1209,6 +1209,10 @@ h2.sh .more.strong{font-weight:700}
 .sfi svg{width:19px;height:19px}
 .sfi.sm{width:22px;height:22px;border-radius:6px}
 .sfi.sm svg{width:15px;height:15px}
+.sfi.lg{width:56px;height:56px;border-radius:14px;box-shadow:0 8px 18px -8px var(--c),inset 0 0 0 .5px rgba(0,0,0,.08);background:linear-gradient(160deg,color-mix(in srgb,var(--c) 78%,#fff),var(--c) 60%)}
+.sfi.lg svg{width:32px;height:32px}
+.empty-state .em .sfi{margin:0 auto}
+.btn svg.spk,.tpl-add svg.spk{width:17px;height:17px}
 .sh-ico{display:inline-flex;align-items:center;gap:10px}
 .pick-h .sfi{vertical-align:-5px;margin-right:4px}
 
@@ -1412,3 +1416,31 @@ h2.sh button.more::after{content:none}
 .pick-row.on .pick-check{box-shadow:none}
 .pick-row.on .pick-check::before{background:var(--tint);box-shadow:none}
 .pick-check svg{position:relative;z-index:1}
+.sheet-grab{position:relative;cursor:grab}.sheet-grab::after{content:"";position:absolute;inset:-12px -80px}
+.sheet-hd{cursor:grab}.sheet-hd button{cursor:pointer}
+.be-ico{width:auto;height:auto;background:none;border-radius:0}
+.app-badge svg{width:13px;height:13px;color:var(--tint);vertical-align:-1px}
+.un-flag .sfi{width:28px;height:28px}
+.pick-row .dose{font-weight:600;color:var(--tint);font-variant-numeric:tabular-nums}
+.tpl-empty .te-ico{display:flex;justify-content:center;margin-bottom:6px}
+/* v2.4 : médailles en relief (SVG) */
+.medal{width:64px;height:64px;padding:0;background:none;border-radius:0;overflow:visible;filter:drop-shadow(0 1.5px 1.5px rgba(0,0,0,.2)) drop-shadow(0 6px 7px rgba(0,0,0,.14))}
+.medal::after{content:none!important}
+.medal .medal-svg{display:block;width:100%;height:100%;overflow:visible}
+.medal.t0{filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.12));opacity:.55}
+.medal.secret.t0{opacity:.9}
+.medal.sm{width:44px;height:44px;padding:0}
+.medal.big{width:136px;height:136px;padding:0;will-change:transform;transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.medal-modal .medal.big{animation:badgePop .5s cubic-bezier(.32,1.4,.4,1),mfloat 7s ease-in-out .5s infinite}
+.medal-modal .medal.big.tilting{animation:none;transition:transform .06s linear}
+@keyframes mfloat{0%,100%{transform:perspective(520px) rotateY(-14deg) rotateX(4deg)}50%{transform:perspective(520px) rotateY(14deg) rotateX(-3deg)}}
+.m-shine{animation:mshine 3.6s ease-in-out 1.2s 2}
+.medal.big .m-shine{animation-iteration-count:infinite}
+@keyframes mshine{0%{transform:translateX(0)}55%,100%{transform:translateX(210px)}}
+.m-glare{mix-blend-mode:soft-light;pointer-events:none}
+.medal-card .medal{margin-bottom:8px}
+.secret-card .mc-done{color:var(--purple,#AF52DE);font-weight:600}
+.secret-card:not(.found) .mc-name{letter-spacing:.2em;color:var(--label2)}
+.cc-trophy .medal{width:96px;height:96px}
+.cc-trophy{font-size:0;filter:none}
+@media (prefers-reduced-motion:reduce){.m-shine,.medal-modal .medal.big{animation:none!important}}

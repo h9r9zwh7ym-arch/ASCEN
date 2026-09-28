@@ -43,7 +43,7 @@ function renderOnboarding(){
   openSheet(`<div class="sheet-hd ob-hd">${obStep ? `<button class="te-cancel" data-a="obBack">${icon("chev")}<span>Retour</span></button>` : `<span></span>`}${obDots()}<button class="ob-skip" data-a="obSkip">Passer</button></div>
     <div class="sheet-body ob-body" id="obBody">${obBody()}</div>`,
     { tall:true, noGrab:true, footer: last
-      ? `<button class="btn" data-a="obFinish" data-v="plan">✨ Créer mon programme</button><button class="btn ghost" data-a="obFinish" data-v="free">Plus tard, je commence librement</button>`
+      ? `<button class="btn" data-a="obFinish" data-v="plan"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Créer mon programme</button><button class="btn ghost" data-a="obFinish" data-v="free">Plus tard, je commence librement</button>`
       : `<button class="btn" data-a="obNext">Continuer</button>` });
   const b = qs("#obBody"); if(b){ b.classList.remove("ob-in"); void b.offsetWidth; b.classList.add("ob-in"); }
 }

@@ -49,7 +49,7 @@ function renderHistory(){
   if(!sessions.length){
     return `<div class="navbar"><div class="nb-title">Historique</div></div><div class="content">
       <h1 class="lt">Historique</h1>
-      <div class="empty-state"><span class="em">📋</span>Aucune séance enregistrée pour l'instant.<br>Termine ta première séance pour la voir ici.</div>
+      <div class="empty-state"><span class="em">${sfIcon("history","indigo","lg")}</span>Aucune séance enregistrée pour l'instant.<br>Termine ta première séance pour la voir ici.</div>
     </div>`;
   }
   const months = [];

@@ -1210,6 +1210,10 @@ h2.sh .more.strong{font-weight:700}
 .sfi svg{width:19px;height:19px}
 .sfi.sm{width:22px;height:22px;border-radius:6px}
 .sfi.sm svg{width:15px;height:15px}
+.sfi.lg{width:56px;height:56px;border-radius:14px;box-shadow:0 8px 18px -8px var(--c),inset 0 0 0 .5px rgba(0,0,0,.08);background:linear-gradient(160deg,color-mix(in srgb,var(--c) 78%,#fff),var(--c) 60%)}
+.sfi.lg svg{width:32px;height:32px}
+.empty-state .em .sfi{margin:0 auto}
+.btn svg.spk,.tpl-add svg.spk{width:17px;height:17px}
 .sh-ico{display:inline-flex;align-items:center;gap:10px}
 .pick-h .sfi{vertical-align:-5px;margin-right:4px}
 
@@ -1413,6 +1417,34 @@ h2.sh button.more::after{content:none}
 .pick-row.on .pick-check{box-shadow:none}
 .pick-row.on .pick-check::before{background:var(--tint);box-shadow:none}
 .pick-check svg{position:relative;z-index:1}
+.sheet-grab{position:relative;cursor:grab}.sheet-grab::after{content:"";position:absolute;inset:-12px -80px}
+.sheet-hd{cursor:grab}.sheet-hd button{cursor:pointer}
+.be-ico{width:auto;height:auto;background:none;border-radius:0}
+.app-badge svg{width:13px;height:13px;color:var(--tint);vertical-align:-1px}
+.un-flag .sfi{width:28px;height:28px}
+.pick-row .dose{font-weight:600;color:var(--tint);font-variant-numeric:tabular-nums}
+.tpl-empty .te-ico{display:flex;justify-content:center;margin-bottom:6px}
+/* v2.4 : médailles en relief (SVG) */
+.medal{width:64px;height:64px;padding:0;background:none;border-radius:0;overflow:visible;filter:drop-shadow(0 1.5px 1.5px rgba(0,0,0,.2)) drop-shadow(0 6px 7px rgba(0,0,0,.14))}
+.medal::after{content:none!important}
+.medal .medal-svg{display:block;width:100%;height:100%;overflow:visible}
+.medal.t0{filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.12));opacity:.55}
+.medal.secret.t0{opacity:.9}
+.medal.sm{width:44px;height:44px;padding:0}
+.medal.big{width:136px;height:136px;padding:0;will-change:transform;transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.medal-modal .medal.big{animation:badgePop .5s cubic-bezier(.32,1.4,.4,1),mfloat 7s ease-in-out .5s infinite}
+.medal-modal .medal.big.tilting{animation:none;transition:transform .06s linear}
+@keyframes mfloat{0%,100%{transform:perspective(520px) rotateY(-14deg) rotateX(4deg)}50%{transform:perspective(520px) rotateY(14deg) rotateX(-3deg)}}
+.m-shine{animation:mshine 3.6s ease-in-out 1.2s 2}
+.medal.big .m-shine{animation-iteration-count:infinite}
+@keyframes mshine{0%{transform:translateX(0)}55%,100%{transform:translateX(210px)}}
+.m-glare{mix-blend-mode:soft-light;pointer-events:none}
+.medal-card .medal{margin-bottom:8px}
+.secret-card .mc-done{color:var(--purple,#AF52DE);font-weight:600}
+.secret-card:not(.found) .mc-name{letter-spacing:.2em;color:var(--label2)}
+.cc-trophy .medal{width:96px;height:96px}
+.cc-trophy{font-size:0;filter:none}
+@media (prefers-reduced-motion:reduce){.m-shine,.medal-modal .medal.big{animation:none!important}}
 </style></head><body><div id="app"></div><nav class="tabbar" aria-label="Onglets"></nav><div id="restbar"></div><div id="overlay" role="dialog"></div><div id="toast" role="status" aria-live="polite"></div><input type="file" id="fileImport" accept="application/json,.json" style="display:none"><script>
 // ================= MATÉRIEL =================
 // Catalogue du matériel reconnu par le moteur de suggestion. Chaque exercice de la
@@ -2397,7 +2429,8 @@ function dayMap_raw(){
 const LEVEL_TITLES = [[15,"Légende de la forge"],[10,"Maître forgeron·ne"],[6,"Forgeron·ne"],[3,"Compagnon·ne"],[1,"Apprenti·e"]];
 function totalXP(){ return memo("totalXP", totalXP_raw); }
 function totalXP_raw(){
-  const medalPts = Object.values(S.medals).reduce((t,m)=>t+[0,10,25,50,100].slice(1,(m.t||0)+1).reduce((a,b)=>a+b,0),0);
+  // un trophée secret vaut autant qu'un palier or
+  const medalPts = Object.keys(S.medals).reduce((t,id)=>{ const m = S.medals[id]; if(typeof MEDAL_MAP!=="undefined" && MEDAL_MAP[id] && MEDAL_MAP[id].secret) return t+(m.t?50:0); return t+[0,10,25,50,100].slice(1,(m.t||0)+1).reduce((a,b)=>a+b,0); },0);
   return S.sessions.length*50 + totalSets()*2 + (S.meta.prCount||0)*10 + medalPts;
 }
 // niveau L atteint à 125·L·(L−1) XP : 0, 250, 750, 1500, 2500…
@@ -2934,6 +2967,7 @@ const TABS = [
 ];
 
 const ICONS = {
+  sparkle:'<path d="m10 3.5 1.7 4.6 4.6 1.7-4.6 1.7L10 16.1l-1.7-4.6-4.6-1.7 4.6-1.7Z" fill="currentColor"/><path d="m17.5 13 .8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8Z" fill="currentColor"/>',
   home:'<path d="M3 11.5 12 4l9 7.5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v9a1 1 0 0 0 1 1H10v-6h4v6h3.5a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round"/>',
   clock:'<circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M12 7.5V12l3.2 2" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
   chart:'<path d="M4 20V10M12 20V4M20 20v-7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
@@ -2961,6 +2995,32 @@ const GLYPHS = {
   dumbbell:`<path d="M6.5 7.5v9M17.5 7.5v9M3.8 10v4M20.2 10v4M6.5 12h11" ${S_} stroke-width="2.4"/>`,
   flame:'<path d="M12 21c-3.4 0-6-2.5-6-5.9 0-3.4 2.4-5.3 3.6-7.8.3 1.7 1.2 2.8 2.2 3.2.2-3 1.4-5.6 3.6-7.5-.2 3.1 3.1 5.3 3.1 9.9 0 4.9-2.6 8.1-6.5 8.1Z" fill="#fff"/>',
   star:'<path d="m12 3.3 2.7 5.4 5.9.9-4.3 4.2 1 5.9-5.3-2.8-5.3 2.8 1-5.9-4.3-4.2 5.9-.9Z" fill="#fff"/>',
+  calPlan:`<rect x="4" y="5.5" width="16" height="14.5" rx="2.5" ${S_}/><path d="M4 10.2h16M8.5 3.5v3.6M15.5 3.5v3.6" ${S_}/><path d="m9 15 2 2 4-4" ${S_}/>`,
+  // ---- v2.4 : glyphes des trophées ----
+  heart:'<path d="M12 20s-7.5-4.6-7.5-10.2A4.2 4.2 0 0 1 12 7.2a4.2 4.2 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20Z" fill="#fff"/>',
+  anvil:'<path d="M3.5 7.5h11.5c.6 2.2 2.5 3.2 5.5 3.2v1.6h-5l-1.3 2.7h1.8v3.5H8v-3.5h1.8L8.5 12.3C5.2 12 3.5 10.2 3.5 7.5Z" fill="#fff"/>',
+  trendUp:`<path d="m4 17 5.2-5.2 3.4 3.4L20 7.8" ${S_} stroke-width="2.4"/><path d="M14.6 7.8H20v5.4" ${S_} stroke-width="2.4"/>`,
+  cap:`<path d="M12 5 2.5 9.4 12 13.8l9.5-4.4Z" fill="#fff"/><path d="M6.5 11.6v3.9c0 1.4 2.5 2.7 5.5 2.7s5.5-1.3 5.5-2.7v-3.9M20.6 10v5" ${S_}/>`,
+  plate:`<circle cx="12" cy="12" r="8" ${S_} stroke-width="2.4"/><circle cx="12" cy="12" r="3.2" ${S_}/><circle cx="12" cy="12" r=".9" fill="#fff"/>`,
+  hourglass:`<path d="M6.5 3.8h11M6.5 20.2h11" ${S_}/><path d="M8 3.8c0 4.4 8 4.8 8 8.2s-8 3.8-8 8.2M16 3.8c0 4.4-8 4.8-8 8.2s8 3.8 8 8.2" ${S_}/><path d="M9.6 18.6 12 16.4l2.4 2.2Z" fill="#fff"/>`,
+  compass:`<circle cx="12" cy="12" r="8.3" ${S_}/><path d="m15.8 8.2-2.4 5.2-5.2 2.4 2.4-5.2Z" fill="#fff"/>`,
+  gauge:`<path d="M4.2 16.5a7.8 7.8 0 1 1 15.6 0" ${S_} stroke-width="2.4"/><path d="m12 16.2 4-5.4" ${S_} stroke-width="2.4"/><circle cx="12" cy="16.2" r="1.6" fill="#fff"/>`,
+  sunrise:`<path d="M3.5 18.5h17M7 18.5a5 5 0 0 1 10 0M12 5.5v3M5.4 9.4l2 2M18.6 9.4l-2 2" ${S_}/>`,
+  moon:'<path d="M15.8 4.2a8 8 0 1 0 4 13.2 6.8 6.8 0 0 1-4-13.2Z" fill="#fff"/>',
+  sun:`<circle cx="12" cy="12" r="4" fill="#fff"/><path d="M12 3.2v2.2M12 18.6v2.2M3.2 12h2.2M18.6 12h2.2M5.8 5.8l1.5 1.5M16.7 16.7l1.5 1.5M5.8 18.2l1.5-1.5M16.7 7.3l1.5-1.5" ${S_}/>`,
+  shield:'<path d="M12 3.2 19.5 6v5.6c0 4.6-3.2 7.9-7.5 9.3-4.3-1.4-7.5-4.7-7.5-9.3V6Z" fill="#fff"/>',
+  leg:`<path d="M9.2 3.5v7.2L7.6 17c-.3 1.2.5 2.4 1.8 2.4h7" ${S_} stroke-width="2.8"/>`,
+  ruler:`<path d="M4.5 19.5V4.5l15 15Z" ${S_}/><path d="M8.5 15.5h3v-3" ${S_}/><path d="M4.5 9h2M4.5 13h2" ${S_}/>`,
+  gift:`<rect x="4.5" y="10.2" width="15" height="9.6" rx="1.6" ${S_}/><path d="M3.5 7h17v3.2h-17ZM12 7v12.8" ${S_}/><path d="M12 7c-1.8-3.6-5.2-3-4.2-.1M12 7c1.8-3.6 5.2-3 4.2-.1" ${S_}/>`,
+  leaf:'<path d="M19.8 4.2C10.2 4.2 5 8.8 5 15c0 1.7.5 3.1 1.2 4.2 1-4.1 4-7.6 8.4-9.7-3.7 2.7-6.1 6.2-6.9 10C17.2 20.4 20.4 13 19.8 4.2Z" fill="#fff"/>',
+  lock:`<rect x="6" y="10.5" width="12" height="9.5" rx="2.2" fill="#fff"/><path d="M8.6 10.5V8a3.4 3.4 0 0 1 6.8 0v2.5" ${S_} stroke-width="2.2"/>`,
+  cup:`<path d="M7.5 4h9v5.6a4.5 4.5 0 0 1-9 0Z" fill="#fff"/><path d="M7.5 6H4.8c0 2.6 1.3 4.2 3.2 4.6M16.5 6h2.7c0 2.6-1.3 4.2-3.2 4.6M12 14.2v3.3M8.5 20h7M9.8 17.5h4.4" ${S_}/>`,
+  phoenix:'<path d="M12 21c-3 0-5.2-2.2-5.2-5.1 0-2.2 1.3-3.6 2.6-5 .2 1.4 1 2.2 1.9 2.5-.4-2.6.6-5.2 3.2-7.4-.4 2.6 3.3 4.4 3.3 8.6 0 3.8-2.4 6.4-5.8 6.4Z" fill="#fff"/><path d="M4 9.5c1.5.3 2.6 1 3.3 2M20 9.5c-1.5.3-2.6 1-3.3 2M6 5.5c1.2.6 2 1.4 2.4 2.5M18 5.5c-1.2.6-2 1.4-2.4 2.5" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round"/>',
+  bookmarkG:'<path d="M7 3.8h10a1 1 0 0 1 1 1V20l-6-4-6 4V4.8a1 1 0 0 1 1-1Z" fill="#fff"/>',
+  search:`<circle cx="10.5" cy="10.5" r="5.5" ${S_}/><path d="m15 15 4.5 4.5" ${S_}/>`,
+  chart:`<path d="M5 19V11M10 19V6M15 19v-5M20 19V9" ${S_} stroke-width="2.6"/>`,
+  flag:`<path d="M6 20V4.5" ${S_}/><path d="M6 5h10.5l-2 3.2 2 3.3H6Z" fill="#fff"/>`,
+  history:`<circle cx="12" cy="12" r="7.5" ${S_}/><path d="M12 8v4.2l2.8 1.8" ${S_}/>`,
   calendar:`<rect x="4" y="5.5" width="16" height="14.5" rx="2.5" ${S_}/><path d="M4 10.2h16M8.5 3.5v3.6M15.5 3.5v3.6" ${S_}/>`,
   stopwatch:`<circle cx="12" cy="13.5" r="7" ${S_}/><path d="M12 13.5V9.8M9.8 3h4.4M18 6.8l1.4-1.4" ${S_}/>`,
   trophy:`<path d="M8 4h8v5.2a4 4 0 0 1-8 0Z" fill="#fff"/><path d="M8 6H5.2c0 2.3 1.2 3.8 3 4M16 6h2.8c0 2.3-1.2 3.8-3 4M12 13.3v3.7M8.5 20h7" ${S_}/>`,
@@ -3165,7 +3225,7 @@ function showOverlay(inner, kind){
   const ov = qs("#overlay");
   const gen = ++overlayGen;
   hideTip();
-  ov.innerHTML = `<div class="scrim" data-a="closesheet"></div>${inner}`;
+  ov.innerHTML = `<div class="scrim" data-a="dismisssheet"></div>${inner}`;
   ov.classList.add("open");
   ov.dataset.kind = kind;
   requestAnimationFrame(()=>requestAnimationFrame(()=>{ if(gen===overlayGen) ov.classList.add("show"); }));
@@ -3188,6 +3248,73 @@ function closeSheet(){
     if(dirtyOnClose){ dirtyOnClose=false; renderView(currentTab); }
   },300);
 }
+// ---------- glisser vers le bas pour fermer (comme les feuilles d'iOS) ----------
+// Depuis la poignée ou l'en-tête, ou depuis le contenu quand il est déjà tout en haut.
+// Une séance en cours d'édition avec des changements demande confirmation au lieu de fermer.
+function sheetDismissGuard(){
+  if(typeof tplEdit!=="undefined" && tplEdit && tplEdit.dirty && qs("#tplEdBody")){ ACT.tplEdCancel(); return true; }
+  return false;
+}
+function dismissSheet(){ if(!sheetDismissGuard()) closeSheet(); }
+(function(){
+  let drag = null;
+  function scrollerOf(el, sheet){
+    for(let n = el; n && n!==sheet; n = n.parentElement){
+      if(n.scrollHeight>n.clientHeight+1 && /auto|scroll/.test(getComputedStyle(n).overflowY)) return n;
+    }
+    return null;
+  }
+  function start(x, y, target){
+    const ov = qs("#overlay");
+    if(!ov.classList.contains("show") || ov.dataset.kind!=="sheet") return;
+    const sheet = target.closest && target.closest(".sheet");
+    if(!sheet || !qs(".sheet-grab", sheet) || target.closest("input,textarea,select")) return;
+    const onHandle = !!target.closest(".sheet-grab,.sheet-hd");
+    drag = { sheet, x0:x, y0:y, active:false, scroller: onHandle ? null : scrollerOf(target, sheet), dy:0, lastY:y, lastT:performance.now(), v:0 };
+  }
+  function move(x, y, e){
+    if(!drag) return;
+    const dy = y-drag.y0, dx = x-drag.x0;
+    if(!drag.active){
+      if(Math.abs(dx)>10 && Math.abs(dx)>Math.abs(dy)){ drag = null; return; }  // défilement horizontal (puces)
+      if(dy<-4 || (drag.scroller && drag.scroller.scrollTop>0)){ drag = null; return; }
+      if(dy<8) return;
+      drag.active = true; drag.y0 = y; drag.sheet.style.transition = "none";
+      document.activeElement && document.activeElement.blur && document.activeElement.blur();
+    }
+    if(e && e.cancelable) e.preventDefault();
+    const d = Math.max(0, y-drag.y0), now = performance.now();
+    drag.v = (y-drag.lastY)/Math.max(1, now-drag.lastT); drag.lastY = y; drag.lastT = now; drag.dy = d;
+    drag.sheet.style.transform = `translateY(${d}px)`;
+    const sc = qs("#overlay .scrim"); if(sc) sc.style.opacity = String(Math.max(0, 1-d/(drag.sheet.offsetHeight*0.9)));
+  }
+  function end(){
+    if(!drag) return;
+    const g = drag; drag = null;
+    if(!g.active) return;
+    const sc = qs("#overlay .scrim");
+    const far = g.dy > Math.min(140, g.sheet.offsetHeight*0.28) || (g.v>0.45 && g.dy>30);
+    g.sheet.style.transition = "transform .26s cubic-bezier(.32,.72,0,1)";
+    if(far && !sheetDismissGuard()){
+      g.sheet.style.transform = "translateY(100%)";
+      if(sc) sc.style.opacity = "";
+      suppressSheetClick = Date.now()+350;
+      closeSheet();
+    } else {
+      g.sheet.style.transform = ""; if(sc) sc.style.opacity = "";
+      setTimeout(()=>{ if(g.sheet.style.transform==="") g.sheet.style.transition = ""; }, 280);
+    }
+  }
+  document.addEventListener("touchstart", e=>{ if(e.touches.length===1) start(e.touches[0].clientX, e.touches[0].clientY, e.target); else drag = null; }, { passive:true });
+  document.addEventListener("touchmove", e=>{ if(drag) move(e.touches[0].clientX, e.touches[0].clientY, e); }, { passive:false });
+  document.addEventListener("touchend", end, { passive:true });
+  document.addEventListener("touchcancel", end, { passive:true });
+  // à la souris : uniquement depuis la poignée ou l'en-tête
+  document.addEventListener("mousedown", e=>{ if(e.button===0 && e.target.closest && e.target.closest(".sheet-grab,.sheet-hd") && !e.target.closest("button")) start(e.clientX, e.clientY, e.target); });
+  document.addEventListener("mousemove", e=>{ if(drag) move(e.clientX, e.clientY, e); });
+  document.addEventListener("mouseup", end);
+})();
+let suppressSheetClick = 0;
 function confirmSheet({title,html,ok,onOk,danger}){
   openModal(`<div style="font-weight:700;font-size:calc(17rem/17);margin-bottom:6px">${esc(title)}</div>
     <div style="color:var(--label2);font-size:calc(14.5rem/17);line-height:1.4;margin-bottom:18px">${html||""}</div>
@@ -3212,6 +3339,7 @@ function toast(msg){
 const ACT = {
   tab(d){ switchTab(d.id); },
   closesheet(){ closeSheet(); },
+  dismisssheet(){ if(Date.now()>suppressSheetClick) dismissSheet(); },
   confirmYes(){ const fn = qs("#overlay")._onYes; closeSheet(); if(fn) fn(); },
   numOk(){
     const fn = qs("#overlay")._onNum, v = parseFloat((qs("#numInput")||{}).value);
@@ -3851,41 +3979,53 @@ const MEDAL_CATS = [
 // t : seuils bronze / argent / or / platine. Le platine vise le très long terme :
 // plusieurs années d'entraînement régulier pour la plupart des familles.
 const MEDALS = [
-  { id:"sessions", cat:"regular", n:"Assiduité",        em:"🏋️", unit:"séances terminées", one:"séance terminée",     t:[1,25,150,500],   val:()=>S.sessions.length, desc:"Le platine représente environ trois ans à trois séances par semaine." },
-  { id:"streak",   cat:"regular", n:"Régularité",       em:"📅", unit:"semaines d'affilée",                          t:[2,8,26,104],     val:maxStreakWeeksEver, desc:"Semaines consécutives avec au moins une séance. Le platine demande deux ans sans interruption." },
-  { id:"perfect",  cat:"regular", n:"Semaine parfaite", em:"🎯", unit:"semaines à l'objectif", one:"semaine à l'objectif", t:[1,8,40,150],   val:perfectWeeksCount, desc:"Semaines où tu atteins ton objectif de séances hebdomadaires." },
-  { id:"fullmonth",cat:"regular", n:"Mois complet",     em:"🗓️", unit:"mois à 12 séances ou plus", one:"mois à 12 séances ou plus", t:[1,3,6,12], val:fullMonths },
-  { id:"ironyear", cat:"regular", n:"Année de fer",     em:"⚒️", unit:"années à 48 semaines actives", one:"année à 48 semaines actives", t:[1,2,3,5], val:ironYears, desc:"Une année civile où tu t'entraînes au moins 48 semaines sur 52. Le platine demande cinq années de ce niveau." },
-  { id:"fidelity", cat:"regular", n:"Fidélité",         em:"🤝", unit:"jours entre ta première et ta dernière séance", one:"jour entre ta première et ta dernière séance", t:[30,180,365,1095], val:spanDays, desc:"L'ancienneté de ta pratique. Le platine correspond à trois ans." },
-  { id:"planned",  cat:"regular", n:"Planificateur",    em:"📌", unit:"séances prévues faites le bon jour", one:"séance prévue faite le bon jour", t:[1,10,50,200], val:countSessions(s=>s.planned), desc:"Séances de ton planning hebdomadaire faites le jour prévu." },
+  { id:"sessions", g:"dumbbell", c:"orange", cat:"regular", n:"Assiduité",        em:"🏋️", unit:"séances terminées", one:"séance terminée",     t:[1,25,150,500],   val:()=>S.sessions.length, desc:"Le platine représente environ trois ans à trois séances par semaine." },
+  { id:"streak", g:"flame", c:"red",   cat:"regular", n:"Régularité",       em:"📅", unit:"semaines d'affilée",                          t:[2,8,26,104],     val:maxStreakWeeksEver, desc:"Semaines consécutives avec au moins une séance. Le platine demande deux ans sans interruption." },
+  { id:"perfect", g:"target", c:"pink",  cat:"regular", n:"Semaine parfaite", em:"🎯", unit:"semaines à l'objectif", one:"semaine à l'objectif", t:[1,8,40,150],   val:perfectWeeksCount, desc:"Semaines où tu atteins ton objectif de séances hebdomadaires." },
+  { id:"fullmonth", g:"calendar", c:"blue",cat:"regular", n:"Mois complet",     em:"🗓️", unit:"mois à 12 séances ou plus", one:"mois à 12 séances ou plus", t:[1,3,6,12], val:fullMonths },
+  { id:"ironyear", g:"anvil", c:"indigo", cat:"regular", n:"Année de fer",     em:"⚒️", unit:"années à 48 semaines actives", one:"année à 48 semaines actives", t:[1,2,3,5], val:ironYears, desc:"Une année civile où tu t'entraînes au moins 48 semaines sur 52. Le platine demande cinq années de ce niveau." },
+  { id:"fidelity", g:"heart", c:"pink", cat:"regular", n:"Fidélité",         em:"🤝", unit:"jours entre ta première et ta dernière séance", one:"jour entre ta première et ta dernière séance", t:[30,180,365,1095], val:spanDays, desc:"L'ancienneté de ta pratique. Le platine correspond à trois ans." },
+  { id:"planned", g:"calPlan", c:"teal",  cat:"regular", n:"Planificateur",    em:"📌", unit:"séances prévues faites le bon jour", one:"séance prévue faite le bon jour", t:[1,10,50,200], val:countSessions(s=>s.planned), desc:"Séances de ton planning hebdomadaire faites le jour prévu." },
 
-  { id:"prs",      cat:"force", n:"Records",           em:"💥", unit:"records personnels battus", one:"record personnel battu", t:[1,15,75,300], val:()=>S.meta.prCount||0 },
-  { id:"heavy",    cat:"force", n:"Poids lourd",       em:"🪨", unit:"kg sur une seule série",                       t:[20,60,100,150],  val:heaviestSet, desc:"La charge la plus lourde que tu as déplacée sur une série." },
-  { id:"doubled",  cat:"force", n:"Deux fois plus fort", em:"📈", unit:"ta force de départ",     t:[1.2,1.5,2,2.5], base:1, val:bestStrengthRatio, fmt:v=>v?"×"+round1(v).toLocaleString("fr-CH",{minimumFractionDigits:1}):"–", desc:"Ton meilleur 1RM estimé sur un exercice chargé, comparé à tes 3 premières séances de cet exercice (pratiqué depuis au moins 90 jours). Le platine demande ×2,5." },
-  { id:"mastery",  cat:"force", n:"Maîtrise",          em:"🎓", unit:"exercices maîtrisés", one:"exercice maîtrisé", t:[1,5,15,30],       val:masteredExosCount, desc:"Un exercice est maîtrisé quand tu l'as pratiqué dans 8 séances." },
+  { id:"prs", g:"bolt", c:"orange",      cat:"force", n:"Records",           em:"💥", unit:"records personnels battus", one:"record personnel battu", t:[1,15,75,300], val:()=>S.meta.prCount||0 },
+  { id:"heavy", g:"barbell", c:"indigo",    cat:"force", n:"Poids lourd",       em:"🪨", unit:"kg sur une seule série",                       t:[20,60,100,150],  val:heaviestSet, desc:"La charge la plus lourde que tu as déplacée sur une série." },
+  { id:"doubled", g:"trendUp", c:"green",  cat:"force", n:"Deux fois plus fort", em:"📈", unit:"ta force de départ",     t:[1.2,1.5,2,2.5], base:1, val:bestStrengthRatio, fmt:v=>v?"×"+round1(v).toLocaleString("fr-CH",{minimumFractionDigits:1}):"–", desc:"Ton meilleur 1RM estimé sur un exercice chargé, comparé à tes 3 premières séances de cet exercice (pratiqué depuis au moins 90 jours). Le platine demande ×2,5." },
+  { id:"mastery", g:"cap", c:"purple",  cat:"force", n:"Maîtrise",          em:"🎓", unit:"exercices maîtrisés", one:"exercice maîtrisé", t:[1,5,15,30],       val:masteredExosCount, desc:"Un exercice est maîtrisé quand tu l'as pratiqué dans 8 séances." },
 
-  { id:"volume",   cat:"volume", n:"Tonnage",          em:"🏔️", unit:"kg soulevés au total",                         t:[1000,25000,250000,1500000], val:totalVolumeAllTime },
-  { id:"bigday",   cat:"volume", n:"Grosse séance",    em:"💪", unit:"kg en une seule séance",                       t:[1000,4000,8000,15000], val:bestSessionVolume },
-  { id:"sets",     cat:"volume", n:"Séries",           em:"🔁", unit:"séries validées",                              t:[50,500,3000,12000], val:totalSets },
-  { id:"centurion",cat:"volume", n:"Centurion",        em:"💯", unit:"répétitions en une séance",                    t:[100,250,500,1000], val:maxRepsOneSession },
-  { id:"time",     cat:"volume", n:"Temps sous la barre", em:"⏱️", unit:"heures d'entraînement", one:"heure d'entraînement", t:[1,20,100,400], val:()=>totalDurationSec()/3600, fmt:v=>v<10?round1(v).toLocaleString("fr-CH"):fmtNum(v) },
-  { id:"marathon", cat:"volume", n:"Endurance",        em:"⌛", unit:"séances de 45 min ou plus", one:"séance de 45 min ou plus", t:[1,10,50,200], val:countSessions(s=>(s.durationSec||0)>=45*60) },
+  { id:"volume", g:"mountain", c:"brown",   cat:"volume", n:"Tonnage",          em:"🏔️", unit:"kg soulevés au total",                         t:[1000,25000,250000,1500000], val:totalVolumeAllTime },
+  { id:"bigday", g:"kettlebell", c:"red",   cat:"volume", n:"Grosse séance",    em:"💪", unit:"kg en une seule séance",                       t:[1000,4000,8000,15000], val:bestSessionVolume },
+  { id:"sets", g:"repeat", c:"blue",     cat:"volume", n:"Séries",           em:"🔁", unit:"séries validées",                              t:[50,500,3000,12000], val:totalSets },
+  { id:"centurion", g:{t:"100"}, c:"red",cat:"volume", n:"Centurion",        em:"💯", unit:"répétitions en une séance",                    t:[100,250,500,1000], val:maxRepsOneSession },
+  { id:"time", g:"stopwatch", c:"teal",     cat:"volume", n:"Temps sous la barre", em:"⏱️", unit:"heures d'entraînement", one:"heure d'entraînement", t:[1,20,100,400], val:()=>totalDurationSec()/3600, fmt:v=>v<10?round1(v).toLocaleString("fr-CH"):fmtNum(v) },
+  { id:"marathon", g:"hourglass", c:"yellow", cat:"volume", n:"Endurance",        em:"⌛", unit:"séances de 45 min ou plus", one:"séance de 45 min ou plus", t:[1,10,50,200], val:countSessions(s=>(s.durationSec||0)>=45*60) },
 
-  { id:"variety",  cat:"explore", n:"Polyvalence",     em:"🧭", unit:"exercices différents",                         t:[5,20,45,80],     val:distinctExosCount },
-  { id:"muscles",  cat:"explore", n:"Corps complet",   em:"🧬", unit:"semaines équilibrées", one:"semaine équilibrée", t:[1,10,40,100], val:balancedWeeks, desc:"Semaines où tu travailles au moins 8 groupes musculaires différents." },
-  { id:"equipcats",cat:"explore", n:"Touche-à-tout",   em:"🧰", unit:"types de matériel utilisés", one:"type de matériel utilisé", t:[2,3,4,6], val:equipCatsTrained, desc:"Poids du corps, haltères, barre, kettlebell, élastiques, barre de traction." },
-  { id:"intense",  cat:"regular", n:"Semaine intense", em:"⚡", unit:"semaines à 5 séances ou plus", one:"semaine à 5 séances ou plus", t:[1,5,20,52], val:intenseWeeks, desc:"Semaines d'au moins 5 séances. Le platine en demande 52." },
+  { id:"variety", g:"compass", c:"teal",  cat:"explore", n:"Polyvalence",     em:"🧭", unit:"exercices différents",                         t:[5,20,45,80],     val:distinctExosCount },
+  { id:"muscles", g:"person", c:"mint",  cat:"explore", n:"Corps complet",   em:"🧬", unit:"semaines équilibrées", one:"semaine équilibrée", t:[1,10,40,100], val:balancedWeeks, desc:"Semaines où tu travailles au moins 8 groupes musculaires différents." },
+  { id:"equipcats", g:"toolbox", c:"brown",cat:"explore", n:"Touche-à-tout",   em:"🧰", unit:"types de matériel utilisés", one:"type de matériel utilisé", t:[2,3,4,6], val:equipCatsTrained, desc:"Poids du corps, haltères, barre, kettlebell, élastiques, barre de traction." },
+  { id:"intense", g:"gauge", c:"orange",  cat:"regular", n:"Semaine intense", em:"⚡", unit:"semaines à 5 séances ou plus", one:"semaine à 5 séances ou plus", t:[1,5,20,52], val:intenseWeeks, desc:"Semaines d'au moins 5 séances. Le platine en demande 52." },
 
-  { id:"early",    cat:"style", n:"Lève-tôt",          em:"🌅", unit:"séances commencées avant 8 h", one:"séance commencée avant 8 h", t:[1,10,50,150], val:countSessions(s=>{ const h=startHour(s); return h!==null && h<8; }) },
-  { id:"night",    cat:"style", n:"Oiseau de nuit",    em:"🌙", unit:"séances commencées après 21 h", one:"séance commencée après 21 h", t:[1,10,50,150], val:countSessions(s=>startHour(s)>=21) },
-  { id:"weekend",  cat:"style", n:"Guerrier du week-end", em:"🏖️", unit:"séances le week-end", one:"séance le week-end", t:[1,10,50,150], val:countSessions(s=>{ const g = parseISO(s.date).getDay(); return g===0 || g===6; }) },
-  { id:"lunch",    cat:"style", n:"Pause de midi",     em:"🥪", unit:"séances commencées entre 11 h et 14 h", one:"séance commencée entre 11 h et 14 h", t:[1,10,40,120], val:countSessions(s=>{ const h=startHour(s); return h!==null && h>=11 && h<14; }) },
-  { id:"comeback", cat:"regular", n:"Retour gagnant",  em:"🔄", unit:"reprises après 2 semaines de pause", one:"reprise après 2 semaines de pause", t:[1,3,6,12], val:comebacks, desc:"Chaque fois que tu reprends après au moins 14 jours sans séance. Revenir, c'est déjà gagner." },
-  { id:"hold",     cat:"volume", n:"Gainage d'acier",  em:"🧱", unit:"minutes de maintien", one:"minute de maintien", t:[5,60,300,1200], val:holdMinutes, fmt:v=>v<10?round1(v).toLocaleString("fr-CH"):fmtNum(v), desc:"Temps total passé sur les exercices chronométrés (planche, chaise, suspension…). Le platine représente 20 heures." },
-  { id:"bodyweight",cat:"volume", n:"Poids du corps",  em:"🤸", unit:"répétitions au poids du corps", one:"répétition au poids du corps", t:[500,5000,25000,100000], val:bodyweightReps },
-  { id:"legs",     cat:"explore", n:"Jamais sans les jambes", em:"🦵", unit:"séances avec 3 séries de jambes ou plus", one:"séance avec 3 séries de jambes ou plus", t:[1,20,100,300], val:legDays },
-  { id:"architect",cat:"explore", n:"Architecte",       em:"📐", unit:"séances enregistrées", one:"séance enregistrée", t:[1,3,6,10], val:()=>S.templates.length, desc:"Construis ta bibliothèque de séances et place-les dans ta semaine." },
-  { id:"custom",   cat:"style", n:"Sur mesure",        em:"✍️", unit:"séances composées par toi", one:"séance composée par toi", t:[1,10,50,200], val:countSessions(s=>s.source==="custom") },
+  { id:"early", g:"sunrise", c:"orange",    cat:"style", n:"Lève-tôt",          em:"🌅", unit:"séances commencées avant 8 h", one:"séance commencée avant 8 h", t:[1,10,50,150], val:countSessions(s=>{ const h=startHour(s); return h!==null && h<8; }) },
+  { id:"night", g:"moon", c:"indigo",    cat:"style", n:"Oiseau de nuit",    em:"🌙", unit:"séances commencées après 21 h", one:"séance commencée après 21 h", t:[1,10,50,150], val:countSessions(s=>startHour(s)>=21) },
+  { id:"weekend", g:"sun", c:"yellow",  cat:"style", n:"Guerrier du week-end", em:"🏖️", unit:"séances le week-end", one:"séance le week-end", t:[1,10,50,150], val:countSessions(s=>{ const g = parseISO(s.date).getDay(); return g===0 || g===6; }) },
+  { id:"lunch", g:"history", c:"green",    cat:"style", n:"Pause de midi",     em:"🥪", unit:"séances commencées entre 11 h et 14 h", one:"séance commencée entre 11 h et 14 h", t:[1,10,40,120], val:countSessions(s=>{ const h=startHour(s); return h!==null && h>=11 && h<14; }) },
+  { id:"comeback", g:"restore", c:"blue", cat:"regular", n:"Retour gagnant",  em:"🔄", unit:"reprises après 2 semaines de pause", one:"reprise après 2 semaines de pause", t:[1,3,6,12], val:comebacks, desc:"Chaque fois que tu reprends après au moins 14 jours sans séance. Revenir, c'est déjà gagner." },
+  { id:"hold", g:"shield", c:"gray",     cat:"volume", n:"Gainage d'acier",  em:"🧱", unit:"minutes de maintien", one:"minute de maintien", t:[5,60,300,1200], val:holdMinutes, fmt:v=>v<10?round1(v).toLocaleString("fr-CH"):fmtNum(v), desc:"Temps total passé sur les exercices chronométrés (planche, chaise, suspension…). Le platine représente 20 heures." },
+  { id:"bodyweight", g:"person", c:"green",cat:"volume", n:"Poids du corps",  em:"🤸", unit:"répétitions au poids du corps", one:"répétition au poids du corps", t:[500,5000,25000,100000], val:bodyweightReps },
+  { id:"legs", g:"leg", c:"green",     cat:"explore", n:"Jamais sans les jambes", em:"🦵", unit:"séances avec 3 séries de jambes ou plus", one:"séance avec 3 séries de jambes ou plus", t:[1,20,100,300], val:legDays },
+  { id:"architect", g:"ruler", c:"purple",cat:"explore", n:"Architecte",       em:"📐", unit:"séances enregistrées", one:"séance enregistrée", t:[1,3,6,10], val:()=>S.templates.length, desc:"Construis ta bibliothèque de séances et place-les dans ta semaine." },
+  { id:"custom", g:"pencil", c:"orange",   cat:"style", n:"Sur mesure",        em:"✍️", unit:"séances composées par toi", one:"séance composée par toi", t:[1,10,50,200], val:countSessions(s=>s.source==="custom") },
+
+  // ---- trophées secrets (v2.4) : cachés jusqu'à leur découverte, un seul palier ----
+  { id:"s_newyear",  secret:true, cat:"secret", g:"sparkles", c:"purple", n:"Bonne résolution", hint:"Une date que tout le monde connaît.", unit:"séance le 1er janvier", t:[1], val:countSessions(s=>s.date.slice(5)==="01-01"), desc:"Une séance le 1er janvier : l'année commence bien." },
+  { id:"s_birthday", secret:true, cat:"secret", g:"gift", c:"pink", n:"Joyeux anniversaire", hint:"Reviens le même jour, un an plus tard.", unit:"séance le jour anniversaire de ta première", t:[1], val:()=>{ const f = firstSessionDate(); return f ? S.sessions.filter(s=>s.date.slice(5)===f.slice(5) && s.date.slice(0,4)>f.slice(0,4)).length : 0; }, desc:"Une séance le jour anniversaire de ta toute première séance." },
+  { id:"s_friday13", secret:true, cat:"secret", g:{t:"13"}, c:"gray", n:"Même pas peur", hint:"Certains jours portent malheur… pas à toi.", unit:"séance un vendredi 13", t:[1], val:countSessions(s=>{ const d = parseISO(s.date); return d.getDay()===5 && d.getDate()===13; }), desc:"Une séance un vendredi 13." },
+  { id:"s_sharp",    secret:true, cat:"secret", g:{t:"60'"}, c:"teal", n:"Pile à l'heure", hint:"Ni une minute de plus, ni une de moins.", unit:"séance d'une heure pile", t:[1], val:countSessions(s=>Math.abs((s.durationSec||0)-3600)<=30), desc:"Une séance d'exactement une heure, à 30 secondes près." },
+  { id:"s_phoenix",  secret:true, cat:"secret", g:"phoenix", c:"orange", n:"Phénix", hint:"Revenir de loin, c'est une victoire.", unit:"reprise après deux mois de pause", t:[1], val:()=>{ const d = Array.from(new Set(S.sessions.map(s=>s.date))).sort(); let n = 0; for(let i=1;i<d.length;i++) if(daysBetween(d[i-1], d[i])>=60) n++; return n; }, desc:"Tu as repris après au moins 60 jours sans séance. Le plus dur, c'est de revenir : c'est fait." },
+  { id:"s_week7",    secret:true, cat:"secret", g:{t:"7/7"}, c:"blue", n:"Semainier", hint:"Chaque jour a son charme.", unit:"jours de la semaine différents", t:[7], val:()=>new Set(S.sessions.map(s=>parseISO(s.date).getDay())).size, desc:"Tu t'es entraîné·e au moins une fois chaque jour de la semaine, du lundi au dimanche." },
+  { id:"s_seasons",  secret:true, cat:"secret", g:"leaf", c:"green", n:"Quatre saisons", hint:"Printemps, été, automne, hiver.", unit:"saisons dans une même année", t:[4], val:()=>{ const y = {}; S.sessions.forEach(s=>{ const m = +s.date.slice(5,7); (y[s.date.slice(0,4)] = y[s.date.slice(0,4)] || new Set()).add(Math.floor((m%12)/3)); }); return Math.max(0, ...Object.values(y).map(x=>x.size)); }, desc:"Des séances à chaque saison d'une même année civile." },
+  { id:"s_tripr",    secret:true, cat:"secret", g:{t:"×3"}, c:"red", n:"Journée record", hint:"Certains jours, tout s'aligne.", unit:"records dans une même séance", t:[3], val:()=>S.sessions.reduce((m,s)=>Math.max(m, sessionPRCount(s)), 0), desc:"Trois records personnels battus dans une seule séance." },
+  { id:"s_writer",   secret:true, cat:"secret", g:"pencil", c:"indigo", n:"Carnet de bord", hint:"Les mots comptent aussi.", unit:"séances annotées", t:[10], val:countSessions(s=>!!s.note), desc:"Dix séances accompagnées d'une note : ton carnet d'entraînement prend forme." },
+  { id:"s_visionary",secret:true, cat:"secret", g:"target", c:"red", n:"Visionnaire", hint:"Se fixer un cap… et l'atteindre.", unit:"objectifs atteints", t:[3], val:()=>S.targets.filter(t=>t.doneAt).length, desc:"Trois objectifs chiffrés atteints." },
 ];
 const MEDAL_MAP = {}; MEDALS.forEach(m=>MEDAL_MAP[m.id]=m);
 
@@ -3893,7 +4033,7 @@ function medalTier(m){ return (S.medals[m.id]||{}).t||0; }
 function medalVal(m){ return memo("mv:"+m.id, m.val); }
 function medalProgress(m){
   const v = medalVal(m), t = medalTier(m);
-  const next = t<4 ? m.t[t] : null, prev = t>0 ? m.t[t-1] : (m.base||0);
+  const next = t<m.t.length ? m.t[t] : null, prev = t>0 ? m.t[t-1] : (m.base||0);
   return { v, t, next, pct: next==null ? 1 : Math.max(0,Math.min(1,(v-prev)/(next-prev))) };
 }
 function medalUnit(m, v){ return v<=1 && m.one ? m.one : m.unit; }
@@ -3920,12 +4060,92 @@ function checkMedals(silent){
 }
 function tierCounts(){
   const c = [0,0,0,0,0];
-  MEDALS.forEach(m=>{ for(let k=1;k<=medalTier(m);k++) c[k]++; });
+  MEDALS.forEach(m=>{ if(!m.secret) for(let k=1;k<=medalTier(m);k++) c[k]++; });
   return c;
 }
+function tierLabel(m, k){ return m.secret ? "Secret" : TIERS[k].n; }
+const SECRETS = MEDALS.filter(m=>m.secret);
 
+// ---------- rendu des médailles (v2.4) ----------
+// Médaille en SVG : couronne de métal (bronze, argent, or, platine ; irisé pour les
+// secrets), biseau éclairé à l'inverse pour le relief, émail coloré propre à chaque
+// trophée, icône gravée, reflet brillant et éclat animé pour l'or et le platine.
+// La forme dépend de la famille : rond (régularité), écu (force), hexagone (volume),
+// octogone (découverte), rosace (style), pierre taillée (secrets).
+function polyPath(n, r1, r2, rot){
+  const pts = [];
+  for(let i=0;i<n*(r2?2:1);i++){ const r = r2 && i%2 ? r2 : r1, a = (rot||0) + i*Math.PI*2/(n*(r2?2:1)); pts.push((50+r*Math.sin(a)).toFixed(1)+" "+(50-r*Math.cos(a)).toFixed(1)); }
+  return "M"+pts.join("L")+"Z";
+}
+const MEDAL_SHAPES = {
+  regular: "M50 4a46 46 0 1 1 0 92a46 46 0 1 1 0-92Z",
+  force: "M50 3 89 15.5v30C89 71 71 87.5 50 97 29 87.5 11 71 11 45.5v-30Z",
+  volume: "M50 3 91 26.5v47L50 97 9 73.5v-47Z",
+  explore: polyPath(8, 48, 0, Math.PI/8),
+  style: polyPath(12, 48, 43.2, 0),
+  secret: "M28 6h44l23 30-45 60L5 36Z",
+};
+const MEDAL_METALS = {
+  0: ["#F4F5F7","#C4C8CF","#8E949D"],
+  1: ["#FFDDB8","#C98242","#6B3812"],
+  2: ["#FFFFFF","#CED4DB","#6C7581"],
+  3: ["#FFF7C8","#E9B524","#7F5000"],
+  4: ["#F3FEFF","#A8DFEC","#2C6A80"],
+};
+function hexMix(a, b, t){
+  const p = h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+  const x = p(a), y = p(b);
+  return "#"+x.map((v,i)=>Math.round(v+(y[i]-v)*t).toString(16).padStart(2,"0")).join("");
+}
+function ensureMedalDefs(){
+  if(document.getElementById("medal-defs")) return;
+  const stops = (arr)=>arr.map(([o,c])=>`<stop offset="${o}" stop-color="${c}"/>`).join("");
+  const metal = (id, [l,m,d], rev)=>`<linearGradient id="${id}" x1="${rev?1:0}" y1="${rev?1:0}" x2="${rev?0:1}" y2="${rev?0:1}">${stops([[0,l],[.32,m],[.55,d],[.78,m],[1,l]])}</linearGradient>`;
+  const iris = (id, rev)=>`<linearGradient id="${id}" x1="${rev?1:0}" y1="${rev?1:0}" x2="${rev?0:1}" y2="${rev?0:1}">${stops([[0,"#FFE0F7"],[.25,"#B7CCFF"],[.5,"#6C4DDB"],[.72,"#5FE3D2"],[1,"#FFEBB0"]])}</linearGradient>`;
+  let d = "";
+  Object.keys(MEDAL_METALS).forEach(k=>{ d += metal("mA-"+k, MEDAL_METALS[k]) + metal("mB-"+k, MEDAL_METALS[k], true); });
+  d += iris("mA-s") + iris("mB-s", true);
+  const faces = Object.assign({ locked:"#9AA0A8" }, IOS_COL);
+  Object.keys(faces).forEach(k=>{ const c = faces[k]; d += `<radialGradient id="mF-${k}" cx=".34" cy=".28" r=".9">${stops([[0,hexMix(c,"#ffffff",.42)],[.5,c],[1,hexMix(c,"#000000",.38)]])}</radialGradient>`; });
+  d += `<linearGradient id="mG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".75"/><stop offset=".55" stop-color="#fff" stop-opacity=".1"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>`;
+  d += `<linearGradient id="mS" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>`;
+  d += `<radialGradient id="mR"><stop offset="0" stop-color="#fff" stop-opacity=".6"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>`;
+  Object.keys(MEDAL_SHAPES).forEach(k=>{ const P = MEDAL_SHAPES[k];
+    d += `<clipPath id="mC-${k}"><path d="${P}" transform="matrix(.78 0 0 .78 11 11)"/></clipPath><clipPath id="mO-${k}"><path d="${P}"/></clipPath>`; });
+  const sv = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  sv.id = "medal-defs"; sv.setAttribute("width","0"); sv.setAttribute("height","0"); sv.setAttribute("aria-hidden","true");
+  sv.style.cssText = "position:absolute;width:0;height:0;overflow:hidden";
+  sv.innerHTML = `<defs>${d}</defs>`;
+  document.body.appendChild(sv);
+}
+function medalGlyph(m, locked){
+  if(locked && m.secret) return GLYPHS.lock;
+  const g = m.g;
+  if(g && typeof g==="object") return `<text x="12" y="16.2" text-anchor="middle" font-size="${g.t.length>2?8.6:10.5}" font-weight="800" font-family="-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif" letter-spacing="-.3" fill="#fff">${esc(g.t)}</text>`;
+  return GLYPHS[g] || GLYPHS.medal;
+}
+function medalSVG(m, tier, big){
+  ensureMedalDefs();
+  const shape = m.secret ? "secret" : (MEDAL_SHAPES[m.cat] ? m.cat : "regular"), P = MEDAL_SHAPES[shape];
+  const metal = !tier ? 0 : m.secret ? "s" : tier, face = tier ? (m.c||"orange") : "locked";
+  const sc = k=>`matrix(${k} 0 0 ${k} ${(50-50*k).toFixed(2)} ${(50-50*k).toFixed(2)})`;
+  const glyph = medalGlyph(m, !tier), dark = glyph.replace(/#fff/g, "#000");
+  const gy = shape==="force" ? -2.5 : shape==="secret" ? -5 : 0;
+  const shine = tier>=3 || (m.secret && tier);
+  return `<svg class="medal-svg" viewBox="0 0 100 100" aria-hidden="true">
+    <path d="${P}" fill="url(#mA-${metal})"/>
+    <path d="${P}" transform="${sc(.89)}" fill="url(#mB-${metal})"/>
+    <path d="${P}" transform="${sc(.78)}" fill="url(#mF-${face})"/>
+    <path d="${P}" transform="${sc(.78)}" fill="none" stroke="#000" stroke-opacity=".3" stroke-width="1.8"/>
+    <g transform="translate(32 ${32+gy}) scale(1.5)"><g transform="translate(0 .8)" opacity=".32">${dark}</g><g opacity="${tier?1:.8}">${glyph}</g></g>
+    <g clip-path="url(#mC-${shape})"><ellipse cx="40" cy="18" rx="48" ry="30" fill="url(#mG)"/></g>
+    ${shine ? `<g clip-path="url(#mO-${shape})"><g transform="rotate(22 50 50)"><rect class="m-shine" x="-70" y="-20" width="34" height="140" fill="url(#mS)"/></g></g>` : ""}
+    ${big ? `<circle class="m-glare" cx="30" cy="24" r="42" fill="url(#mR)" clip-path="url(#mO-${shape})"/>` : ""}
+    <path d="${P}" transform="${sc(.985)}" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="1.1"/>
+  </svg>`;
+}
 function medalHTML(m, tier, size){
-  return `<div class="medal t${tier} ${size||""}"><div class="medal-disc"><span class="em">${m.em}</span></div></div>`;
+  return `<div class="medal t${tier} ${m.secret?"secret":""} ${size||""}">${medalSVG(m, tier, size==="big")}</div>`;
 }
 function pipsHTML(tier){
   return `<div class="pips">${[1,2,3,4].map(k=>`<span class="pip ${k<=tier?"t"+k:""}"></span>`).join("")}</div>`;
@@ -3933,6 +4153,11 @@ function pipsHTML(tier){
 
 function medalCardHTML(m, i){
   const p = medalProgress(m);
+  if(m.secret) return `<button class="medal-card secret-card ${p.t?"found":""} stagger" style="--i:${i}" data-a="showMedal" data-id="${m.id}">
+    ${medalHTML(m, p.t)}
+    <div class="mc-name">${p.t ? esc(m.n) : "???"}</div>
+    <div class="mc-done">${p.t ? "Découvert" : "Secret"}</div>
+  </button>`;
   return `<button class="medal-card stagger" style="--i:${i}" data-a="showMedal" data-id="${m.id}">
     ${medalHTML(m, p.t)}
     <div class="mc-name">${esc(m.n)}</div>
@@ -3943,6 +4168,17 @@ function medalCardHTML(m, i){
 
 function showMedalModal(id){
   const m = MEDAL_MAP[id], p = medalProgress(m), st = S.medals[m.id]||{d:{}};
+  if(m.secret){
+    openModal(`<div class="medal-modal">
+      ${medalHTML(m, p.t, "big")}
+      <div class="mm-name">${p.t ? esc(m.n) : "Trophée secret"}</div>
+      <div class="mm-tier">${p.t ? `Découvert le ${fmtDate(localISO(new Date(st.d[1]||Date.now())))}` : "Pas encore découvert"}</div>
+      <div class="mm-desc">${esc(p.t ? m.desc : "Indice : "+m.hint)}</div>
+      <button class="btn secondary" style="margin-top:16px" data-a="closesheet">Fermer</button>
+    </div>`);
+    bindMedalTilt();
+    return;
+  }
   const rows = [1,2,3,4].map(k=>{
     const got = p.t>=k;
     return `<div class="tier-row ${got?"got":""}">
@@ -3962,6 +4198,22 @@ function showMedalModal(id){
     <div class="tier-list">${rows}</div>
     <button class="btn secondary" style="margin-top:16px" data-a="closesheet">Fermer</button>
   </div>`);
+  bindMedalTilt();
+}
+// la grande médaille se penche sous le doigt, avec un reflet qui suit
+function bindMedalTilt(){
+  const el = qs(".medal-modal .medal.big"); if(!el) return;
+  const glare = qs(".m-glare", el);
+  const move = e=>{
+    const r = el.getBoundingClientRect(), pt = e.touches ? e.touches[0] : e;
+    const x = Math.max(-1, Math.min(1, (pt.clientX-r.left)/r.width*2-1)), y = Math.max(-1, Math.min(1, (pt.clientY-r.top)/r.height*2-1));
+    el.classList.add("tilting");
+    el.style.transform = `perspective(520px) rotateY(${(x*22).toFixed(1)}deg) rotateX(${(-y*22).toFixed(1)}deg) scale(1.04)`;
+    if(glare){ glare.setAttribute("cx", (50+x*38).toFixed(1)); glare.setAttribute("cy", (50+y*38).toFixed(1)); }
+  };
+  const leave = ()=>{ el.classList.remove("tilting"); el.style.transform = ""; if(glare){ glare.setAttribute("cx","30"); glare.setAttribute("cy","24"); } };
+  el.addEventListener("pointermove", move); el.addEventListener("pointerleave", leave); el.addEventListener("pointerup", leave);
+  el.addEventListener("touchmove", e=>{ e.preventDefault(); move(e); }, { passive:false }); el.addEventListener("touchend", leave);
 }
 
 // ---------- confettis (canvas, sans dépendance) ----------
@@ -4005,7 +4257,7 @@ function showCelebration(session, ups, xpBefore, xpAfter, hits){
   const reps = sessionReps(session);
   const before = levelInfo(xpBefore), after = levelInfo(xpAfter);
   const levelUp = after.level>before.level;
-  const medalsHTML = ups.length ? `<div class="cel-medals">${ups.map((u,i)=>`<div class="cel-medal" style="--i:${i}">${medalHTML(u.m,u.tier)}<div class="cm-t">${esc(u.m.n)}</div><div class="cm-tier">${TIERS[u.tier].n}</div></div>`).join("")}</div>` : "";
+  const medalsHTML = ups.length ? `<div class="cel-medals">${ups.map((u,i)=>`<div class="cel-medal" style="--i:${i}">${medalHTML(u.m,u.tier)}<div class="cm-t">${esc(u.m.n)}</div><div class="cm-tier">${tierLabel(u.m, u.tier)}</div></div>`).join("")}</div>` : "";
   openModal(`<div class="cel">
     <div class="celebrate-ring">${icon("check")}</div>
     <div class="cel-title">Séance terminée !</div>
@@ -4191,7 +4443,7 @@ function exoRowHTML(def, sub, i, actions, app){
   return `<div class="row stagger ${fresh?"fresh":""}" style="--i:${Math.min(i+2,14)}">
     <button class="row-main" data-a="showExoInfo" data-id="${def.id}" aria-label="${esc(def.n)} : voir la fiche">
       <span class="xwrap">${exoIcon(def)}<span class="info-dot" aria-hidden="true">i</span></span>
-      <div class="grow"><div class="t">${esc(def.n)}${app?' <span class="app-badge" title="Ajouté par l\'app">✨</span>':""}</div><div class="s">${sub}</div></div>
+      <div class="grow"><div class="t">${esc(def.n)}${app?' <span class="app-badge" title="Ajouté par l\'app">'+icon("sparkle")+'</span>':""}</div><div class="s">${sub}</div></div>
     </button>${actions}
   </div>`;
 }
@@ -4223,7 +4475,7 @@ function proposalPaneHTML(draft){
   }
   if(!draft.exos.length){
     return `<div class="type-scroll">${typeChips}</div>${hero}
-      <div class="empty-state"><span class="em">🧰</span>Pas d'exercice disponible pour ce type de séance avec ton matériel.<br>Essaie un autre type, ou complète ton matériel dans l'onglet Profil.</div>`;
+      <div class="empty-state"><span class="em">${sfIcon("toolbox","gray","lg")}</span>Pas d'exercice disponible pour ce type de séance avec ton matériel.<br>Essaie un autre type, ou complète ton matériel dans l'onglet Profil.</div>`;
   }
   const rows = draft.exos.map((ex,i)=>exoRowHTML(EXO_MAP[ex.exoId], `${ex.targetSets} × ${repsLabel(ex.targetReps)}${ex.sets[0]&&ex.sets[0].weight?" · "+fmtLoad(EXO_MAP[ex.exoId], ex.sets[0].weight):""}`, i,
     `<button class="icon-btn" aria-label="Remplacer" data-a="swapExoOpen" data-idx="${i}">${icon("swap")}</button>
@@ -4339,18 +4591,18 @@ function tplListHTML(){
 function tplAddRowHTML(){
   return `<div class="tpl-add-row">
     <button class="tpl-add" data-a="tplNew">${icon("plus")}<span>Nouvelle séance</span></button>
-    <button class="tpl-add" data-a="weekWizard">✨<span>Programme de la semaine</span></button>
+    <button class="tpl-add" data-a="weekWizard"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg><span>Programme de la semaine</span></button>
   </div>`;
 }
 function templatesHTML(){
   if(!S.templates.length){
     return `<div class="tpl-section stagger" style="--i:5">
       <div class="tpl-empty">
-        <div class="te-ico">🗓️</div>
+        <div class="te-ico">${sfIcon("calPlan","red","lg")}</div>
         <div class="te-t">Tes séances de la semaine</div>
         <div class="te-s">Crée plusieurs séances (haut, bas, jambes…), puis place chacune sur ses jours : elle s'affichera toute seule le jour venu.</div>
         <button class="btn sm" data-a="tplNew">${icon("plus")} Nouvelle séance</button>
-        <button class="btn secondary sm" style="margin-top:8px" data-a="weekWizard">✨ Programme de la semaine</button>
+        <button class="btn secondary sm" style="margin-top:8px" data-a="weekWizard"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Programme de la semaine</button>
       </div>
     </div>`;
   }
@@ -4369,12 +4621,12 @@ function customPaneHTML(){
   const tail = templatesHTML() + weekPlanHTML();
   if(!c.length){
     return `<div class="builder-empty stagger" style="--i:4">
-      <div class="be-row"><div class="be-ico">✍️</div>
+      <div class="be-row"><div class="be-ico">${sfIcon("pencil","orange","lg")}</div>
       <div><div class="be-t">Compose ta séance</div>
       <div class="be-s">Choisis tes exercices ou laisse l'app te proposer une base.</div></div></div>
       <div class="be-actions">
         <button class="btn sm" data-a="customAddOpen">${icon("plus")} Choisir</button>
-        <button class="btn secondary sm" data-a="customFill">✨ L'app choisit</button>
+        <button class="btn secondary sm" data-a="customFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> L'app choisit</button>
       </div>
       <button class="btn ghost sm be-link" data-a="customFromProposal">Partir de la séance proposée</button>
     </div>${tail}`;
@@ -4401,7 +4653,7 @@ function customPaneHTML(){
     <div class="group builder ${reorderMode?"reorder":""}">${rows}</div>
     <div class="btnrow">
       <button class="btn secondary sm" data-a="customAddOpen">${icon("plus")} Ajouter</button>
-      <button class="btn secondary sm" data-a="customFill">✨ Compléter</button>
+      <button class="btn secondary sm" data-a="customFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Compléter</button>
       <button class="btn secondary sm" data-a="saveTemplateOpen">${icon("bookmark")} ${S.custom.tplId?"Sauver":"Enregistrer"}</button>
     </div>
     <div class="btnrow"><button class="btn ${sessionsToday().length||plannedTemplate()?"big":"secondary"}" data-a="startCustom">${icon("play")} Commencer ma séance</button></div>
@@ -4430,6 +4682,8 @@ function renderPickerSheet(){
   if(inp){ inp.value = picker.q; inp.addEventListener("input", ()=>{ picker.q = inp.value; qs("#pickerList").innerHTML = pickerListHTML(); }); }
   refreshPickerFooter();
 }
+// dose conseillée selon l'objectif : « 3 × 8–12 » ou « 3 × 20–45 s »
+function exoDose(e){ const [a,b] = repRangeForGoal(e); return `${e.sets} × ${a}–${b}${isTimed(e) ? " s" : " reps"}`; }
 function pickerListHTML(){
   const q = normName(picker.q);
   const muscleOrder = {}; MUSCLES.forEach((m,i)=>muscleOrder[m.id]=i);
@@ -4437,7 +4691,7 @@ function pickerListHTML(){
     && (!picker.muscle || e.muscles.includes(picker.muscle))
     && (!picker.cat || exoCategory(e)===picker.cat)
     && (!q || normName(e.n).includes(q) || e.muscles.some(m=>normName(MUSCLE_MAP[m].n).includes(q))));
-  if(!pool.length) return `<div class="empty-state"><span class="em">🔍</span>Aucun exercice ne correspond.</div>`;
+  if(!pool.length) return `<div class="empty-state"><span class="em">${sfIcon("search","gray","lg")}</span>Aucun exercice ne correspond.</div>`;
   return EXO_CATS.map(c=>{
     const list = pool.filter(e=>exoCategory(e)===c.id).sort((a,b)=>muscleOrder[a.muscles[0]]-muscleOrder[b.muscles[0]] || a.n.localeCompare(b.n,"fr"));
     if(!list.length) return "";
@@ -4448,7 +4702,7 @@ function pickerListHTML(){
       return `${sub}<div class="row pick-row ${on?"on":""}" data-id="${e.id}">
         <button class="row-main" data-a="pickerTap" data-id="${e.id}">
           ${exoIcon(e)}
-          <div class="grow"><div class="t">${esc(e.n)}</div><div class="s">${musclesLabel(e)}${e.equip.includes("bench")?" · banc":""}</div></div>
+          <div class="grow"><div class="t">${esc(e.n)}</div><div class="s"><b class="dose">${exoDose(e)}</b> · ${musclesLabel(e)}</div></div>
         </button>
         <button class="info-btn" aria-label="Fiche de ${esc(e.n)}" data-a="pickerInfo" data-id="${e.id}">i</button>
         ${picker.multi?`<button class="pick-check" aria-label="Sélectionner" data-a="pickerTap" data-id="${e.id}">${on?icon("check"):""}</button>`:""}
@@ -4467,7 +4721,7 @@ function refreshPickerFooter(){
 function renderTodayLive(draft){
   const nav = `<div class="navbar live-nav"><div class="nb-left"><button class="icon-btn" aria-label="Abandonner la séance" data-a="abandonSession">${icon("close")}</button></div><div class="nb-title">${esc(liveName(draft))}</div><div class="nb-right"><button class="nb-done" data-a="finishSession">Terminer</button></div></div>`;
   if(!draft.exos.length){
-    return `${nav}<div class="content"><div class="empty-state"><span class="em">🧰</span>Tous les exercices ont été retirés.<br>Ajoute-en un pour continuer.</div>
+    return `${nav}<div class="content"><div class="empty-state"><span class="em">${sfIcon("toolbox","gray","lg")}</span>Tous les exercices ont été retirés.<br>Ajoute-en un pour continuer.</div>
     <div class="btnrow"><button class="btn" data-a="addExoOpen">${icon("plus")} Ajouter un exercice</button></div></div>`;
   }
   return `${nav}
@@ -4584,7 +4838,7 @@ function upNextHTML(idx){
   const ex = S.draft.exos[idx];
   const curDone = ex.sets.every(s=>s.done);
   const ni = nextUndone(idx);
-  if(ni<0 || (ni===idx)) return curDone || ni<0 ? "" : `<div class="up-next last"><span class="un-flag">🏁</span><div class="grow"><div class="un-k">Dernier exercice</div><div class="un-t">Plus que celui-ci, tu y es presque !</div></div></div>`;
+  if(ni<0 || (ni===idx)) return curDone || ni<0 ? "" : `<div class="up-next last"><span class="un-flag">${sfIcon("flag","green")}</span><div class="grow"><div class="un-k">Dernier exercice</div><div class="un-t">Plus que celui-ci, tu y es presque !</div></div></div>`;
   if(curDone) return ""; // le bouton « Exercice suivant » de la carte fait déjà le travail
   const e = S.draft.exos[ni], def = EXO_MAP[e.exoId], left = e.sets.filter(s=>!s.done).length;
   return `<button class="up-next r-${regionOf(def)}" data-a="focusJump" data-idx="${ni}">
@@ -4601,7 +4855,7 @@ function sessionCompleteHTML(draft){
   if(fresh) setTimeout(()=>{ const b = qs(".complete-card .cc-trophy"); if(b){ const r = b.getBoundingClientRect(); confettiBurst(r.left+r.width/2, r.top+r.height/2, 90); haptic([30,50,30,50,60]); } }, 250);
   return `<div class="complete-card ${fresh?"fresh":""}">
     <div class="cc-rays" aria-hidden="true"></div>
-    <div class="cc-trophy">🏆</div>
+    <div class="cc-trophy">${medalHTML({ cat:"regular", g:"cup", c:"orange" }, 3)}</div>
     <div class="cc-title">Séance complète !</div>
     <div class="cc-sub">Toutes les séries sont validées. Bravo.</div>
     <div class="cc-stats">
@@ -4856,7 +5110,7 @@ function openPlanDaySheet(day){
         <button class="btn secondary sm" data-a="tplOpenEditor" data-id="${cur.id}">${icon("edit")} Modifier</button></div>` : ""}
       ${S.templates.length ? `<p class="body" style="margin-bottom:12px">${cur?"Changer pour une autre séance :":`Quelle séance enregistrée veux-tu faire chaque ${label} ?`}</p><div class="group">${rows}</div>
         ${cur?`<div class="btnrow"><button class="btn ghost" data-a="planSet" data-d="${day}">Ne rien prévoir le ${label}</button></div>`:""}`
-      : `<div class="empty-state" style="padding:24px 20px"><span class="em">📋</span>Tu n'as pas encore de séance enregistrée.</div>`}
+      : `<div class="empty-state" style="padding:24px 20px"><span class="em">${sfIcon("bookmarkG","indigo","lg")}</span>Tu n'as pas encore de séance enregistrée.</div>`}
       <div class="btnrow"><button class="btn ${S.templates.length?"secondary":""}" data-a="planNew" data-d="${day}">${icon("plus")} Nouvelle séance pour le ${label}</button></div>
     </div>`);
 }
@@ -5399,7 +5653,7 @@ function tplEdBodyHTML(){
       <div class="group builder te-list ${e.order?"reorder":""}">${rows}</div>` : `<div class="te-empty">Ajoute des exercices, ou laisse l'app en proposer.</div>`}
     <div class="te-actions">
       <button class="btn secondary sm" data-a="tplEdAdd">${icon("plus")} Ajouter</button>
-      <button class="btn secondary sm" data-a="tplEdFill">✨ Compléter</button>
+      <button class="btn secondary sm" data-a="tplEdFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Compléter</button>
       ${e.exos.length>1?`<button class="btn secondary sm" data-a="tplEdOrder">${e.order?"OK":"Ordre"}</button>`:""}
     </div>
     ${e.id?`<button class="btn ghost te-del" data-a="tplEdDelete">Supprimer cette séance</button>`:""}`;
@@ -5456,7 +5710,7 @@ function weekWizardBody(){
 function renderWeekWizard(){
   openSheet(`<div class="sheet-hd"><span class="t">Programme de la semaine</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
     <div class="sheet-body" id="wzBody">${weekWizardBody()}</div>`,
-    { tall:true, footer:`<button class="btn" data-a="wizardCreate">✨ Créer mes ${wizardN} séances</button>` });
+    { tall:true, footer:`<button class="btn" data-a="wizardCreate"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Créer mes ${wizardN} séances</button>` });
 }
 
 Object.assign(ACT, {
@@ -5536,7 +5790,7 @@ Object.assign(ACT, {
     setTimeout(()=>{ const c = qs(`.tpl-card2[data-id="${t.id}"]`); if(c){ c.scrollIntoView({ behavior:"smooth", block:"center" }); c.classList.add("flash"); } }, 380);
   },
   weekWizard(){ openWeekWizard(); },
-  wizardN(d){ wizardN = +d.v; const b = qs("#wzBody"); if(b) b.innerHTML = weekWizardBody(); const f = qs('[data-a="wizardCreate"]'); if(f) f.textContent = `✨ Créer mes ${wizardN} séances`; },
+  wizardN(d){ wizardN = +d.v; const b = qs("#wzBody"); if(b) b.innerHTML = weekWizardBody(); const f = qs('[data-a="wizardCreate"]'); if(f) f.innerHTML = `<svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Créer mes ${wizardN} séances`; },
   wizardCreate(){
     const split = WEEK_SPLITS[wizardN], days = split.map(s=>s[2]);
     S.templates.forEach(t=>{ t.days = (t.days||[]).filter(d=>!days.includes(d)); });
@@ -5655,7 +5909,7 @@ function renderOnboarding(){
   openSheet(`<div class="sheet-hd ob-hd">${obStep ? `<button class="te-cancel" data-a="obBack">${icon("chev")}<span>Retour</span></button>` : `<span></span>`}${obDots()}<button class="ob-skip" data-a="obSkip">Passer</button></div>
     <div class="sheet-body ob-body" id="obBody">${obBody()}</div>`,
     { tall:true, noGrab:true, footer: last
-      ? `<button class="btn" data-a="obFinish" data-v="plan">✨ Créer mon programme</button><button class="btn ghost" data-a="obFinish" data-v="free">Plus tard, je commence librement</button>`
+      ? `<button class="btn" data-a="obFinish" data-v="plan"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Créer mon programme</button><button class="btn ghost" data-a="obFinish" data-v="free">Plus tard, je commence librement</button>`
       : `<button class="btn" data-a="obNext">Continuer</button>` });
   const b = qs("#obBody"); if(b){ b.classList.remove("ob-in"); void b.offsetWidth; b.classList.add("ob-in"); }
 }
@@ -5742,7 +5996,7 @@ function renderHistory(){
   if(!sessions.length){
     return `<div class="navbar"><div class="nb-title">Historique</div></div><div class="content">
       <h1 class="lt">Historique</h1>
-      <div class="empty-state"><span class="em">📋</span>Aucune séance enregistrée pour l'instant.<br>Termine ta première séance pour la voir ici.</div>
+      <div class="empty-state"><span class="em">${sfIcon("history","indigo","lg")}</span>Aucune séance enregistrée pour l'instant.<br>Termine ta première séance pour la voir ici.</div>
     </div>`;
   }
   const months = [];
@@ -6234,7 +6488,7 @@ function levelCardHTML(){
 
 function overviewPaneHTML(){
   if(!S.sessions.length){
-    return `${levelCardHTML()}${targetsHTML()}<div class="empty-state"><span class="em">📈</span>Tes statistiques apparaîtront ici après ta première séance : régularité, tonnage, répartition musculaire, records…</div>`;
+    return `${levelCardHTML()}${targetsHTML()}<div class="empty-state"><span class="em">${sfIcon("chart","orange","lg")}</span>Tes statistiques apparaîtront ici après ta première séance : régularité, tonnage, répartition musculaire, records…</div>`;
   }
   const vol = totalVolumeAllTime(), hours = totalDurationSec()/3600;
   const kpis = `<div class="kpi-grid">
@@ -6277,7 +6531,7 @@ function overviewPaneHTML(){
       <div class="hbars">${hbarList(musc)}</div>
     </div>`:""}
     ${prs.length?`<h2 class="sh">Derniers records</h2><div class="group">${prs.map((p,i)=>`<button class="row tap stagger" style="--i:${10+i}" data-a="openExoChart" data-id="${p.def.id}">
-      <div class="ico" style="background:var(--orange)">💥</div>
+      ${sfIcon("bolt","orange")}
       <div class="grow"><div class="t">${esc(p.def.n)}</div><div class="s">${p.st.reps} reps${loadSuffix(p.def, p.st.weight)} · ${fmtRelative(p.s.date)}</div></div>
       <span class="chev">${icon("chev")}</span></button>`).join("")}</div>`:""}`;
 }
@@ -6302,7 +6556,7 @@ function exoSeries(id){
 
 function exosPaneHTML(){
   const ids = trainedExoIds();
-  if(!ids.length) return `<div class="empty-state"><span class="em">🏋️</span>Termine des séances pour suivre ta progression exercice par exercice.</div>`;
+  if(!ids.length) return `<div class="empty-state"><span class="em">${sfIcon("dumbbell","orange","lg")}</span>Termine des séances pour suivre ta progression exercice par exercice.</div>`;
   return `<div class="sh-sub" style="margin-top:4px">Courbe : ${"1RM estimé"} pour les exercices chargés, meilleure série pour le poids du corps.</div>
     <div class="group">${ids.map((id,i)=>{
     const { def, loaded, pts } = exoSeries(id);
@@ -6355,7 +6609,7 @@ function exoChartSheet(id){
 
 function medalsPaneHTML(){
   const c = tierCounts();
-  const next = MEDALS.map(m=>({ m, p:medalProgress(m) })).filter(x=>x.p.next!=null).sort((a,b)=>b.p.pct-a.p.pct).slice(0,3);
+  const next = MEDALS.filter(m=>!m.secret).map(m=>({ m, p:medalProgress(m) })).filter(x=>x.p.next!=null).sort((a,b)=>b.p.pct-a.p.pct).slice(0,3);
   return `<div class="medal-summary stagger" style="--i:0">
       ${[1,2,3,4].map(k=>`<div class="ms-cell"><span class="pip big t${k}"></span><div class="ms-n" data-count="${c[k]}">${c[k]}</div><div class="ms-l">${TIERS[k].n}</div></div>`).join("")}
     </div>
@@ -6370,7 +6624,10 @@ function medalsPaneHTML(){
       const done = list.reduce((t,m)=>t+medalTier(m),0);
       return `<h2 class="sh">${label}<span class="more" style="color:var(--label2)">${done}/${list.length*4}</span></h2>
         <div class="medal-grid">${list.map((m,i)=>medalCardHTML(m,i+4)).join("")}</div>`;
-    }).join("")}`;
+    }).join("")}
+    <h2 class="sh">Trophées secrets<span class="more" style="color:var(--label2)">${SECRETS.filter(m=>medalTier(m)).length}/${SECRETS.length}</span></h2>
+    <p class="hr-note" style="margin:-4px 20px 10px">Ils se dévoilent quand tu les découvres. Touche-en un pour un indice.</p>
+    <div class="medal-grid">${SECRETS.slice().sort((a,b)=>medalTier(b)-medalTier(a)).map((m,i)=>medalCardHTML(m,i+4)).join("")}</div>`;
 }
 
 Object.assign(ACT, {
@@ -6960,7 +7217,7 @@ Object.assign(ACT, {
   bodyDel(d){ S.body = S.body.filter(e=>e.d!==d.d); changed(); refreshBody(); },
 });
 // ================= INITIALISATION =================
-const APP_VERSION = "2.3";
+const APP_VERSION = "2.4";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 function applyTheme(){

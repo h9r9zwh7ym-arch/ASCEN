@@ -47,7 +47,7 @@ function tplEdBodyHTML(){
       <div class="group builder te-list ${e.order?"reorder":""}">${rows}</div>` : `<div class="te-empty">Ajoute des exercices, ou laisse l'app en proposer.</div>`}
     <div class="te-actions">
       <button class="btn secondary sm" data-a="tplEdAdd">${icon("plus")} Ajouter</button>
-      <button class="btn secondary sm" data-a="tplEdFill">✨ Compléter</button>
+      <button class="btn secondary sm" data-a="tplEdFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Compléter</button>
       ${e.exos.length>1?`<button class="btn secondary sm" data-a="tplEdOrder">${e.order?"OK":"Ordre"}</button>`:""}
     </div>
     ${e.id?`<button class="btn ghost te-del" data-a="tplEdDelete">Supprimer cette séance</button>`:""}`;
@@ -104,7 +104,7 @@ function weekWizardBody(){
 function renderWeekWizard(){
   openSheet(`<div class="sheet-hd"><span class="t">Programme de la semaine</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
     <div class="sheet-body" id="wzBody">${weekWizardBody()}</div>`,
-    { tall:true, footer:`<button class="btn" data-a="wizardCreate">✨ Créer mes ${wizardN} séances</button>` });
+    { tall:true, footer:`<button class="btn" data-a="wizardCreate"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Créer mes ${wizardN} séances</button>` });
 }
 
 Object.assign(ACT, {
@@ -184,7 +184,7 @@ Object.assign(ACT, {
     setTimeout(()=>{ const c = qs(`.tpl-card2[data-id="${t.id}"]`); if(c){ c.scrollIntoView({ behavior:"smooth", block:"center" }); c.classList.add("flash"); } }, 380);
   },
   weekWizard(){ openWeekWizard(); },
-  wizardN(d){ wizardN = +d.v; const b = qs("#wzBody"); if(b) b.innerHTML = weekWizardBody(); const f = qs('[data-a="wizardCreate"]'); if(f) f.textContent = `✨ Créer mes ${wizardN} séances`; },
+  wizardN(d){ wizardN = +d.v; const b = qs("#wzBody"); if(b) b.innerHTML = weekWizardBody(); const f = qs('[data-a="wizardCreate"]'); if(f) f.innerHTML = `<svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Créer mes ${wizardN} séances`; },
   wizardCreate(){
     const split = WEEK_SPLITS[wizardN], days = split.map(s=>s[2]);
     S.templates.forEach(t=>{ t.days = (t.days||[]).filter(d=>!days.includes(d)); });

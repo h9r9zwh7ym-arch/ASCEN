@@ -240,6 +240,31 @@ Changements :
   - `tests/README.md` décrit chaque fichier ;
   - `v24.js` couvre la v2.3.
 
+## 9 undecies. Version 2.4 : trophées en relief, secrets, glisser pour fermer
+
+- **Médailles en SVG** (`medalSVG`, `trophies.js`).
+  - Chaque médaille est faite de plusieurs couches :
+    - une couronne de métal (dégradé bronze, argent, or ou platine ; irisé pour les secrets ; étain pour un trophée non débloqué) ;
+    - un biseau éclairé à l'inverse, pour le relief ;
+    - un émail coloré propre à chaque trophée (`c`) ;
+    - une icône gravée (`g`, glyphe de `GLYPHS` ou texte court comme « 100 »), avec une ombre portée ;
+    - un reflet brillant, et un éclat animé pour l'or, le platine et les secrets.
+  - La forme dépend de la famille : rond (régularité), écu (force), hexagone (volume), octogone (découverte), rosace (style), pierre taillée (secrets).
+  - Les dégradés et masques sont définis une seule fois (`ensureMedalDefs`, `#medal-defs`).
+  - Dans la fiche, la grande médaille flotte en 3D et se penche sous le doigt, avec un reflet qui suit (`bindMedalTilt`).
+  - La carte « séance terminée » utilise une coupe en or du même style.
+  - Il ne reste plus d'emoji dans les trophées (le champ `em` n'est plus affiché).
+- **10 trophées secrets** (`secret:true`, un seul palier, `SECRETS`) : 1er janvier, anniversaire de la première séance, vendredi 13, séance d'une heure pile, reprise après 60 jours, les 7 jours de la semaine, 4 saisons dans l'année, 3 records dans une séance, 10 séances annotées, 3 objectifs atteints.
+  - Tant qu'ils ne sont pas découverts, ils s'affichent en « ??? » avec un cadenas et un indice.
+  - Chacun vaut 50 XP. Ils sont exclus des compteurs de paliers.
+- **Glisser vers le bas pour fermer** toutes les feuilles (`ui_shell.js`).
+  - Le geste part de la poignée ou de l'en-tête, ou du contenu quand il est tout en haut.
+  - Un petit geste lent laisse la feuille en place.
+  - Un éditeur de séance modifié demande confirmation (`sheetDismissGuard`). Le fond (`dismisssheet`) suit la même règle.
+- **Icônes dessinées** à la place des emojis : planning, « Compose ta séance », états vides, drapeau « dernier exercice », boutons ✨ (icône `sparkle`), derniers records.
+- **Sélecteur d'exercices** : chaque ligne affiche la dose conseillée selon l'objectif (« 3 × 8–12 reps » ou « 3 × 20–45 s », `exoDose`).
+- **Tests** : `v25.js`.
+
 ## 10. Cahier des charges d'origine (résumé)
 
 Voir le fichier `4a3df5ee-cahier-des-charges-forge.md` fourni au lancement du projet pour le texte complet. Points clés déjà couverts en v1.0 : matériel personnalisable et extensible, bibliothèque d'exercices filtrée, inclusion/exclusion d'exercices, objectifs personnalisés, suivi détaillé de séance (éditable, timer de repos, coche rapide), moteur de suggestion 100% local avec export/import IA, graphiques de progression, PR, streaks/régularité, trophées, écran d'accueil = séance du jour, thème clair/sombre automatique, page À propos avec copyright.

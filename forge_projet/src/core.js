@@ -376,7 +376,8 @@ function dayMap_raw(){
 const LEVEL_TITLES = [[15,"Légende de la forge"],[10,"Maître forgeron·ne"],[6,"Forgeron·ne"],[3,"Compagnon·ne"],[1,"Apprenti·e"]];
 function totalXP(){ return memo("totalXP", totalXP_raw); }
 function totalXP_raw(){
-  const medalPts = Object.values(S.medals).reduce((t,m)=>t+[0,10,25,50,100].slice(1,(m.t||0)+1).reduce((a,b)=>a+b,0),0);
+  // un trophée secret vaut autant qu'un palier or
+  const medalPts = Object.keys(S.medals).reduce((t,id)=>{ const m = S.medals[id]; if(typeof MEDAL_MAP!=="undefined" && MEDAL_MAP[id] && MEDAL_MAP[id].secret) return t+(m.t?50:0); return t+[0,10,25,50,100].slice(1,(m.t||0)+1).reduce((a,b)=>a+b,0); },0);
   return S.sessions.length*50 + totalSets()*2 + (S.meta.prCount||0)*10 + medalPts;
 }
 // niveau L atteint à 125·L·(L−1) XP : 0, 250, 750, 1500, 2500…
