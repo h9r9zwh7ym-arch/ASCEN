@@ -31,6 +31,7 @@ Variables utiles :
 | `v24.js` | Modifier une séance, objectifs chiffrés, bilan en image |
 | `v25.js` | Glisser vers le bas pour fermer, dose dans le sélecteur, trophées 3D et secrets |
 | `v26.js` | Stockage compact et copie IndexedDB, graphiques au doigt, transitions, exercice animé, Rewind |
+| `v27.js` | Trophée 3D : chargement à la demande, déblocage, particules, vue détaillée, rotation au doigt, boucle en pause hors écran, repli sans WebGL |
 | `audit.js` | Chaque écran à une largeur donnée (`W=320`) : débordements, cibles tactiles < 28 px, erreurs |
 | `gen_audit.js` | 11 520 séances générées : matériel, niveau, doublons, élastiques, valeurs invalides |
 | `offline.js` | Installation PWA et fonctionnement hors ligne (via un serveur local) |

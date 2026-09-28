@@ -7,6 +7,7 @@ const TABS = [
 ];
 
 const ICONS = {
+  lock:'<rect x="6" y="10.5" width="12" height="9.5" rx="2.2" fill="currentColor"/><path d="M8.6 10.5V8a3.4 3.4 0 0 1 6.8 0v2.5" stroke="currentColor" stroke-width="2" fill="none"/>',
   bolt:'<path d="M13.2 2.8 5.5 13.3h5.6l-.9 7.9 7.9-10.8h-5.7Z" fill="currentColor"/>',
   target:'<circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.9" fill="none"/><circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="1.9" fill="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>',
   warn:'<path d="M12 4 21 19.5H3Z" stroke="currentColor" stroke-width="1.9" fill="none" stroke-linejoin="round"/><path d="M12 10v4.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16.9" r="1.1" fill="currentColor"/>',
@@ -177,6 +178,7 @@ function renderView(id){
   el.classList.toggle("scrolled", scrollTop>4);
   el.scrollTop = scrollTop;
   settleSegs(el);
+  if(typeof afterRenderView==="function") afterRenderView(id, el);
 }
 // rendu avec entrée animée (apparition décalée des éléments .stagger, compteurs)
 // — réservé aux changements d'onglet ou de section, pas aux rendus après chaque action.

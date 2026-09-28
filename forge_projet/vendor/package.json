@@ -1,0 +1,7 @@
+{
+  "name": "forge-vendor",
+  "private": true,
+  "description": "Construit three-forge.js : sous-ensemble de Three.js utilisé par les trophées 3D (voir README).",
+  "scripts": { "build": "sh build.sh" },
+  "devDependencies": { "three": "0.186.1", "esbuild": "0.28.2" }
+}

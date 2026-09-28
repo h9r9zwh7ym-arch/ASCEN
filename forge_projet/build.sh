@@ -6,10 +6,12 @@ mkdir -p dist
 echo '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)"><meta name="apple-mobile-web-app-title" content="Forge"><meta name="description" content="Séances de musculation à domicile, progression et suivi, 100 % sur l’appareil."><link rel="apple-touch-icon" href="icon-180.png"><link rel="icon" href="icon-192.png"><title>Forge</title><style>'
 cat src/style.css
 echo '</style></head><body><div id="app"></div><nav class="tabbar" aria-label="Onglets"></nav><div id="restbar"></div><div id="overlay" role="dialog"></div><div id="toast" role="status" aria-live="polite"></div><input type="file" id="fileImport" accept="application/json,.json" style="display:none"><script>'
-cd src; cat data_equipment.js data_exercises.js data_pictos.js core.js engine.js ui_shell.js sfx.js fx.js timer.js charts.js trophies.js view_today.js tpl_editor.js onboarding.js view_history.js recap.js rewind.js view_progress.js view_profil.js init.js; cd ..
+cd src; cat data_equipment.js data_exercises.js data_pictos.js core.js engine.js ui_shell.js sfx.js fx.js timer.js charts.js trophies.js view_today.js tpl_editor.js onboarding.js view_history.js recap.js rewind.js view_progress.js trophy3d.js view_profil.js init.js; cd ..
 echo '</script></body></html>'
 } > dist/forge.html
 cp dist/forge.html ../index.html
 # fichiers d'installation (manifeste, icônes, hors ligne) : à la racine du dépôt, recopiés à côté du build
+# Three.js réduit (trophées 3D), chargé à la demande : à côté de la page
+cp vendor/three-forge.js dist/ && cp vendor/three-forge.js ../three-forge.js
 for f in manifest.webmanifest sw.js icon-180.png icon-192.png icon-512.png icon-maskable-512.png; do [ -f "../$f" ] && cp "../$f" dist/; done
 echo "dist/forge.html : $(wc -c < dist/forge.html) octets"

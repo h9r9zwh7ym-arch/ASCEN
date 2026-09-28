@@ -303,6 +303,32 @@ Changements :
   - Accessible par la carte Rewind (Historique) et suggéré sur l'accueil en début de mois.
 - **Tests** : `v26.js`.
 
+## 9 terdecies. Version 2.6 : premier trophée 3D (Three.js)
+
+- **Démonstration** : un seul trophée, « Assiduité », en tête de Progrès › Trophées (`src/trophy3d.js`). La collection complète viendra ensuite.
+- **Three.js** (`vendor/`) :
+  - sous-ensemble construit par esbuild (`three-forge.js`, voir `vendor/README.md`) ;
+  - copié à côté de la page par `build.sh` et chargé à la demande (`loadThree`), jamais au démarrage ;
+  - précaché par le service worker (`forge-v3`) pour le hors ligne.
+- **Médaille** :
+  - disque par révolution (`LatheGeometry`) : champ creusé au brossage concentrique (`roughnessMap` générée), perle, couronne biseautée ;
+  - anneau d'émail orange Forge à vernis (`clearcoat`) ;
+  - haltère en relief poli au centre ;
+  - anneau de suspension.
+  - Le métal suit le palier réel : étain si verrouillé, puis bronze, argent, or, platine. Dans la vue détaillée, on peut prévisualiser chaque métal avec une transition douce.
+- **Lumière** : environnement studio généré (`RoomEnvironment` + `PMREMGenerator`, aucune image téléchargée), une lumière principale et un contre-jour, tonalité ACES.
+- **Animations** :
+  - au repos : balancement lent et flottement ;
+  - au déblocage (premier affichage après un nouveau palier, `S.meta.t3dSeen`, ou « Revoir le déblocage ») : apparition avec rebond, deux tours qui ralentissent, lueur, 90 particules dorées, haptique et son ;
+  - « réduire les animations » : médaille fixe, simple fondu.
+- **Interaction** : un toucher sur la carte ouvre la vue détaillée. Le même canvas grandit jusqu'à sa place (technique FLIP) et affiche le palier, la description, la progression et l'aperçu des métaux. On peut faire tourner la médaille au doigt, avec inertie. Glisser vers le bas, la croix, le fond ou Échap referment.
+- **Performances** :
+  - un seul contexte WebGL, réutilisé entre la carte et la vue détaillée et entre les rendus d'onglet (`afterRenderView`) ;
+  - résolution plafonnée à 2× ;
+  - boucle de rendu arrêtée hors écran (`IntersectionObserver`) et quand l'app est en arrière-plan.
+- **Repli** : sans WebGL ou si le fichier ne se charge pas, la médaille SVG existante s'affiche et le toucher ouvre la fiche habituelle.
+- **Tests** : `v27.js`.
+
 ## 10. Cahier des charges d'origine (résumé)
 
 Voir le fichier `4a3df5ee-cahier-des-charges-forge.md` fourni au lancement du projet pour le texte complet. Points clés déjà couverts en v1.0 : matériel personnalisable et extensible, bibliothèque d'exercices filtrée, inclusion/exclusion d'exercices, objectifs personnalisés, suivi détaillé de séance (éditable, timer de repos, coche rapide), moteur de suggestion 100% local avec export/import IA, graphiques de progression, PR, streaks/régularité, trophées, écran d'accueil = séance du jour, thème clair/sombre automatique, page À propos avec copyright.

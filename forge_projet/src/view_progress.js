@@ -199,7 +199,7 @@ function exoChartSheet(id){
 function medalsPaneHTML(){
   const c = tierCounts();
   const next = MEDALS.filter(m=>!m.secret).map(m=>({ m, p:medalProgress(m) })).filter(x=>x.p.next!=null).sort((a,b)=>b.p.pct-a.p.pct).slice(0,3);
-  return `<div class="medal-summary stagger" style="--i:0">
+  return `${trophy3dCardHTML()}<div class="medal-summary stagger" style="--i:0">
       ${[1,2,3,4].map(k=>`<div class="ms-cell"><span class="pip big t${k}"></span><div class="ms-n" data-count="${c[k]}">${c[k]}</div><div class="ms-l">${TIERS[k].n}</div></div>`).join("")}
     </div>
     ${next.length?`<h2 class="sh">Prochains paliers</h2><div class="group">${next.map((x,i)=>`<button class="row tap stagger" style="--i:${i+1}" data-a="showMedal" data-id="${x.m.id}">

@@ -2,8 +2,8 @@
 // Stratégie « cache d'abord, mise à jour en arrière-plan » : la page s'ouvre depuis la
 // copie locale (aucune attente même avec un réseau lent ou absent), puis la dernière
 // version est téléchargée discrètement et servie au lancement suivant.
-const CACHE = "forge-v2";
-const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-180.png", "./icon-192.png", "./icon-512.png"];
+const CACHE = "forge-v3";
+const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-180.png", "./icon-192.png", "./icon-512.png", "./three-forge.js"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
 });

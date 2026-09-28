@@ -1613,3 +1613,41 @@ html[data-vt="fade"]::view-transition-new(root){animation-name:vtFadeIn}
 
 .rw-in>.rw-card,.rw-in>.rw-bolt{opacity:1;transform:none}
 .rw-ring>div{position:relative;display:flex;flex-direction:column;align-items:center}
+/* ================= v2.6 : trophée 3D (démonstration) ================= */
+.t3d-card{position:relative;display:flex;align-items:center;gap:6px;width:calc(100% - 32px);margin:0 16px 14px;padding:10px 18px 10px 6px;border-radius:24px;text-align:left;color:#fff;overflow:hidden;
+  background:radial-gradient(90% 120% at 22% 40%,rgba(255,150,40,.28),transparent 60%),linear-gradient(160deg,#26211C,#0B0907);box-shadow:0 16px 34px -18px rgba(0,0,0,.6),inset 0 0 0 .5px rgba(255,255,255,.08);transition:transform .25s cubic-bezier(.32,1.4,.4,1),opacity .2s}
+.t3d-card:active{transform:scale(.98)}
+.t3d-card.lifted{opacity:.35}
+.t3d-stage{position:relative;flex:none;width:150px;height:150px;display:grid;place-items:center}
+.t3d-stage .t3d-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.t3d-stage.live .t3d-fallback{opacity:0;transition:opacity .4s}
+.t3d-fallback .medal.big{width:104px;height:104px;animation:none}
+.t3d-info{display:flex;flex-direction:column;gap:3px;min-width:0}
+.t3d-info b{font-family:var(--serif);font-size:calc(24rem/17);line-height:1.1}
+.t3d-info span{font-size:calc(14rem/17);opacity:.75}
+.t3d-info .t3d-k{font-size:calc(11rem/17);font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#FFB36B;opacity:1}
+.t3d-full{position:fixed;inset:0;z-index:92}
+.t3d-scrim{position:absolute;inset:0;background:rgba(0,0,0,.55);-webkit-backdrop-filter:blur(14px) saturate(140%);backdrop-filter:blur(14px) saturate(140%);opacity:0;transition:opacity .35s}
+.t3d-full.show .t3d-scrim{opacity:1}
+.t3d-panel{position:absolute;left:0;right:0;bottom:0;max-height:94vh;overflow-y:auto;border-radius:28px 28px 0 0;padding:14px 20px calc(24px + env(safe-area-inset-bottom,0px));color:#fff;
+  background:radial-gradient(120% 60% at 50% 0%,rgba(255,150,40,.3),transparent 65%),linear-gradient(180deg,#221C16,#0A0806 55%);box-shadow:0 -20px 50px rgba(0,0,0,.4);transform:translateY(24px);opacity:0;transition:transform .45s cubic-bezier(.32,.72,0,1),opacity .3s}
+.t3d-full.show .t3d-panel{transform:none;opacity:1}
+.t3d-full.closing .t3d-panel{transform:translateY(40px);opacity:0}
+.t3d-x{position:absolute;right:12px;top:12px;width:44px;height:44px;border-radius:22px;display:grid;place-items:center;color:#fff;background:rgba(255,255,255,.12);z-index:2}
+.t3d-x svg{width:18px;height:18px}
+.t3d-big{width:min(78vw,340px);aspect-ratio:1;margin:8px auto 0;touch-action:none;cursor:grab;transition:transform .5s cubic-bezier(.32,.72,0,1);transform-origin:center}
+.t3d-big .t3d-canvas{width:100%;height:100%;display:block}
+.t3d-body{text-align:center;max-width:420px;margin:0 auto}
+.t3d-name{font-family:var(--serif);font-weight:700;font-size:calc(30rem/17);margin-top:4px}
+.t3d-tier{color:#FFB36B;font-weight:700;margin-top:2px}
+.t3d-desc{color:rgba(255,255,255,.75);font-size:calc(15rem/17);line-height:1.4;margin:10px 0 14px}
+.t3d-body .mc-bar{background:rgba(255,255,255,.14)}
+.t3d-prog{font-size:calc(13rem/17);color:rgba(255,255,255,.7);margin-top:8px}
+.t3d-sec{margin:20px 0 8px;font-size:calc(12rem/17);font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.55)}
+.t3d-metals{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.t3d-metals .chip{background:rgba(255,255,255,.1);color:#fff}
+.t3d-metals .chip.on{background:#fff;color:#1a120a}
+.t3d-metals .ii{width:12px;height:12px;opacity:.7;margin-left:2px}
+.t3d-actions{margin-top:18px}
+.t3d-actions .btn.secondary{background:rgba(255,255,255,.12);color:#fff}
+@media (prefers-reduced-motion:reduce){.t3d-big{transition:none}}
