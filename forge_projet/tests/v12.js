@@ -108,7 +108,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   // --- historique ---
   await page.click('.tabbtn[data-id="history"]');
   await wait(400);
-  await page.click('#v-history .row');
+  await page.click('#v-history [data-a="openSessionDetail"]');
   await wait(400);
   await shot('09_history_detail');
   await page.click('[data-a="redoSession"]');
