@@ -37,20 +37,24 @@ function greeting(){
   return name ? `${w} ${esc(name)}` : "Aujourd'hui";
 }
 function statPillsHTML(){
+  // résumé de la semaine : trois colonnes de même structure (valeur, libellé, jauge)
   const goal = S.goals.daysPerWeek||3, done = sessionsThisWeek(), streak = currentStreakWeeks();
   const lv = levelInfo();
   return `<div class="stat-pills stagger" style="--i:1">
     <button class="spill ${done>=goal?"full":""}" data-a="tab" data-id="progress" aria-label="${done} séances sur ${goal} cette semaine">
-      <span class="sp-ring">${miniRingSVG(done/goal)}</span>
-      <span class="sp-txt"><b><span data-count="${done}">${done}</span>/${goal}</b><small>semaine</small></span>
+      <span class="sp-v"><b data-count="${done}">${done}</b><i>/${goal}</i></span>
+      <span class="sp-l">cette semaine</span>
+      <span class="spg"><i style="width:${Math.min(100,Math.round(done/goal*100))}%"></i></span>
     </button>
     <button class="spill ${streak>0?"hot":""}" data-a="tab" data-id="progress" aria-label="${streak} semaines d'affilée">
-      <span class="sp-ico flame">${icon("flame")}</span>
-      <span class="sp-txt"><b><span data-count="${streak}">${streak}</span> sem.</b><small>d'affilée</small></span>
+      <span class="sp-v"><b data-count="${streak}">${streak}</b><i>sem.</i></span>
+      <span class="sp-l">d'affilée</span>
+      <span class="spg spg-dots">${[0,1,2,3,4].map(k=>`<i class="${k<Math.min(streak,5)?"on":""}"></i>`).join("")}</span>
     </button>
     <button class="spill" data-a="tab" data-id="profil" aria-label="Niveau ${lv.level}">
-      <span class="sp-lvl">${lv.level}</span>
-      <span class="sp-txt"><b class="sp-lbl">Niveau</b><span class="sp-xp"><i style="width:${Math.round(lv.pct*100)}%"></i></span></span>
+      <span class="sp-v"><i>niv.</i><b>${lv.level}</b></span>
+      <span class="sp-l">${Math.round(lv.pct*100)} % vers le ${lv.level+1}</span>
+      <span class="spg"><i style="width:${Math.round(lv.pct*100)}%"></i></span>
     </button>
   </div>`;
 }
@@ -187,8 +191,8 @@ function proposalPaneHTML(draft){
     ${!imported && draft.exos.length < Math.min(sessionSize(), draft.resolvedType==="core"?5:10) ? `<div class="ec-limit">Ton matériel limite ce type de séance à ${draft.exos.length} exercice${draft.exos.length>1?"s":""}. Le « + » ajoute un exercice d'un autre groupe.</div>` : ""}
     <div class="group" style="margin-top:8px">${rows}</div>
     <div class="btnrow">
-      <button class="btn secondary sm" data-a="addExoOpen">${icon("plus")} Ajouter</button>
-      ${imported?"":`<button class="btn secondary sm" data-a="regenSession">${icon("repeat")} Autre proposition</button>`}
+      <button class="btn tertiary sm" data-a="addExoOpen">${icon("plus")} Ajouter</button>
+      ${imported?"":`<button class="btn tertiary sm" data-a="regenSession">${icon("repeat")} Autre proposition</button>`}
     </div>
     <div class="btnrow"><button class="btn ${heroShown?"secondary":"big"}" data-a="startSession">${icon("play")} Commencer cette séance</button></div>`;
 }
@@ -298,8 +302,8 @@ function templatesHTML(){
         <div class="te-ico">${sfIcon("calPlan","red","lg")}</div>
         <div class="te-t">Tes séances de la semaine</div>
         <div class="te-s">Crée plusieurs séances (haut, bas, jambes…), puis place chacune sur ses jours : elle s'affichera toute seule le jour venu.</div>
-        <button class="btn sm" data-a="tplNew">${icon("plus")} Nouvelle séance</button>
-        <button class="btn secondary sm" style="margin-top:8px" data-a="weekWizard"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Programme de la semaine</button>
+        <button class="btn secondary sm" data-a="tplNew">${icon("plus")} Nouvelle séance</button>
+        <button class="btn ghost sm" data-a="weekWizard"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Programme de la semaine</button>
       </div>
     </div>`;
   }
@@ -322,8 +326,8 @@ function customPaneHTML(){
       <div><div class="be-t">Compose ta séance</div>
       <div class="be-s">Choisis tes exercices ou laisse l'app te proposer une base.</div></div></div>
       <div class="be-actions">
-        <button class="btn sm" data-a="customAddOpen">${icon("plus")} Choisir</button>
-        <button class="btn secondary sm" data-a="customFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> L'app choisit</button>
+        <button class="btn secondary sm" data-a="customAddOpen">${icon("plus")} Choisir</button>
+        <button class="btn tertiary sm" data-a="customFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> L'app choisit</button>
       </div>
       <button class="btn ghost sm be-link" data-a="customFromProposal">Partir de la séance proposée</button>
     </div>${tail}`;
@@ -349,9 +353,9 @@ function customPaneHTML(){
     <div class="region-legend">${Object.keys(REGIONS).filter(r=>regions[r]).map(r=>`<span><i class="r-${r}"></i>${REGIONS[r].n}</span>`).join("")}</div>
     <div class="group builder ${reorderMode?"reorder":""}">${rows}</div>
     <div class="btnrow">
-      <button class="btn secondary sm" data-a="customAddOpen">${icon("plus")} Ajouter</button>
-      <button class="btn secondary sm" data-a="customFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Compléter</button>
-      <button class="btn secondary sm" data-a="saveTemplateOpen">${icon("bookmark")} ${S.custom.tplId?"Sauver":"Enregistrer"}</button>
+      <button class="btn tertiary sm" data-a="customAddOpen">${icon("plus")} Ajouter</button>
+      <button class="btn tertiary sm" data-a="customFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Compléter</button>
+      <button class="btn tertiary sm" data-a="saveTemplateOpen">${icon("bookmark")} ${S.custom.tplId?"Sauver":"Enregistrer"}</button>
     </div>
     <div class="btnrow"><button class="btn ${sessionsToday().length||plannedTemplate()?"big":"secondary"}" data-a="startCustom">${icon("play")} Commencer ma séance</button></div>
     ${tail}`;
@@ -623,9 +627,10 @@ function effortHTML(){
   </div>`;
 }
 
-function lastTimeHTML(exoId){
+function lastTimeHTML(exoId, hasNote){
   const last = lastPerformance(exoId);
-  if(!last) return `<div class="fc-last">Première fois : prends tes repères</div>`;
+  // première fois : le conseil de l'exercice (note) le dit déjà, on ne le répète pas
+  if(!last) return hasNote ? "" : `<div class="fc-last">Première fois : prends tes repères</div>`;
   const done = last.exo.sets.filter(s=>s.done);
   const w = done[0] && done[0].weight;
   return `<div class="fc-last">La dernière fois (${fmtRelative(last.session.date)}) : ${done.map(s=>s.reps).join(" · ")}${loadSuffix(EXO_MAP[exoId], w)}</div>`;
@@ -697,7 +702,7 @@ function renderFocusCard(idx, ex, def){
         <button aria-label="Plus" data-a="stepWeight" data-exi="${idx}" data-si="${si}" data-d="1">+</button>
       </div></div>`:""}
     </div>
-    ${lastTimeHTML(ex.exoId)}
+    ${lastTimeHTML(ex.exoId, !!ex.note)}
     ${kgType(def) && (st.weight||0)>=8 && !S.draft.exos.some(e=>e.sets.some(x=>x.done)) ? `<div class="warmup">${ii("flame")} Échauffement : 1 série légère (≈ ${fmtDec(Math.max(1, Math.round((st.weight||0)*0.5)))} kg) de 8 à 10 répétitions avant de commencer.</div>` : ""}
     ${ex.note?`<div class="exo-note" style="margin:0 0 14px">${esc(ex.note)}${ex.harder&&EXO_MAP[ex.harder]&&!ex.sets.some(s=>s.done)?`<button class="note-act" data-a="swapHarder" data-idx="${idx}">Essayer maintenant ${icon("chev")}</button>`:""}</div>`:""}
     ${isTimed(def)
@@ -755,7 +760,7 @@ function overviewBodyHTML(){
   S.draft.exos.forEach((ex,i)=>(ex.sets.every(s=>s.done)?done:todo).push(row(ex,i)));
   return `${todo.length?`<div class="ov-h">À faire <span>${todo.length}</span></div><div class="group">${todo.join("")}</div>`:""}
     ${done.length?`<div class="ov-h done">Terminés <span>${done.length}</span></div><div class="group">${done.join("")}</div>`:""}
-    <div class="btnrow"><button class="btn secondary sm" data-a="addExoOpen">${icon("plus")} Ajouter des exercices</button></div>`;
+    <div class="btnrow"><button class="btn tertiary sm" data-a="addExoOpen">${icon("plus")} Ajouter des exercices</button></div>`;
 }
 
 let lastDoneForSave = null;

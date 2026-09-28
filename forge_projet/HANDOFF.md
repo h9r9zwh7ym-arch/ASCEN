@@ -371,6 +371,40 @@ YaYa a renommé l'app **ASCEN** et choisi, parmi trois pistes présentées sur u
 - **Vérification visuelle** : `tests/brand.js` capture les écrans clés en clair, en sombre, sur ordinateur (1280 px) et à l'accueil (`BRAND_DIR=… node tests/brand.js dist/forge.html`, images dans `tests/out/`).
 - Correctif livré juste avant : la copie de secours IndexedDB est enregistrée en octets bruts (`ArrayBuffer`) et non plus en `Blob`, que WebKit refuse en navigation privée (v26 échouait sous WebKit).
 
+## 9 sexdecies. Version 2.9 : audit UX/UI et système de design
+
+YaYa trouvait l'interface moins aboutie que Zeste sans savoir pourquoi. Diagnostic chiffré sur `style.css` avant correction :
+- 15 sections de versions empilées, 248 sélecteurs redéfinis ;
+- 77 tailles de texte (dont 12,5 / 13,5 / 14,5), 30 rayons, 61 ombres, graisses jusqu'à 900 : tout « criait » ;
+- l'orange partout : 4 boutons pleins sur Aujourd'hui, dosages, titres de groupe, barres de graphique roses ;
+- un arc-en-ciel d'icônes iOS dans le contenu ;
+- des lignes d'historique qui tronquaient les chiffres ;
+- des boîtes dans des boîtes et un conseil répété sur la carte de séance ;
+- 13 appels `env(safe-area-…)` épars et un `padding-top` sur `:root` qui rendait la page plus haute que l'écran.
+
+**Règles du système (à respecter pour toute évolution)** — jetons dans `:root`, composants dans la section « SYSTÈME ASCEN (v2.9) », en fin de `style.css`, qui fait référence :
+- **Texte** : uniquement l'échelle iOS `--fs-lt` 34 · `--fs-t1` 28 · `--fs-t2` 22 · `--fs-t3` 20 · `--fs-body` 17 · `--fs-callout` 16 · `--fs-sub` 15 · `--fs-foot` 13 · `--fs-cap` 12 · `--fs-cap2` 11. Graisses 400/500/600/700, jamais au-delà. Titres en `--display` (Geist), chiffres en `--num` (Barlow), le reste en système.
+- **Espacements** : multiples de 4 (`--sp-*`), marge latérale unique `--gutter` (16).
+- **Rayons** : `--r-ctl` 10 (contrôles), `--r-card` 16 (toutes les cartes), `--r-hero` 22 (carte du jour, carte de séance, feuilles), `--r-pill`. Pas d'ombre sur les cartes.
+- **Boutons** : `.btn` = primaire (aplat orange, texte encre), **un seul par écran** ; `.btn.secondary` = teinté orange ; `.btn.tertiary` = gris ; `.btn.ghost` = texte.
+- **Couleur** : l'orange sert aux actions et à la progression. Une sélection s'affiche en encre (puces, exercice courant). Les dosages et étiquettes sont neutres.
+- **Icônes** : pictos d'exercice sur fond teinté de la couleur de la région (plus d'aplats) ; icônes de contenu en orange teinté. Seuls les réglages du Profil gardent le code couleur iOS.
+- **Zones de sécurité** : uniquement `var(--sat)` / `var(--sab)` (+ `--tabbar-h`). Le haut des vues commence sous l'encoche, la barre d'onglets couvre l'indicateur d'accueil, et les feuilles ne dépassent jamais sous la barre d'état (`calc(100% - var(--sat) - 10px)` au lieu de `88vh`).
+
+**Composants repensés** :
+- résumé de semaine en une carte à trois colonnes identiques (valeur, libellé, jauge) ;
+- méta de la carte du jour en une ligne ;
+- rappels avec les actions sous le texte ;
+- cartes « composer » et « séances de la semaine » compactes ;
+- historique avec la durée sur la ligne du titre ;
+- barres de graphique pleines ;
+- sélecteur d'exercices allégé ;
+- carte de séance sans boîte grise ni conseil en double.
+
+**Vérifier** : `tests/ui_audit.js` capture chaque onglet en pleine hauteur, en bas de défilement et les feuilles principales, **avec une encoche simulée** (haut 59 px, bas 34 px, via `--sat`/`--sab`) ; `DARK=1`, `ENGINE=webkit`, `NO_NOTCH=1`.
+
+Note tests : `v14` peut dépasser son délai quand d'autres scripts Playwright tournent en parallèle. Seul, il passe.
+
 ## 10. Cahier des charges d'origine (résumé)
 
 Voir le fichier `4a3df5ee-cahier-des-charges-forge.md` fourni au lancement du projet pour le texte complet. Points clés déjà couverts en v1.0 : matériel personnalisable et extensible, bibliothèque d'exercices filtrée, inclusion/exclusion d'exercices, objectifs personnalisés, suivi détaillé de séance (éditable, timer de repos, coche rapide), moteur de suggestion 100% local avec export/import IA, graphiques de progression, PR, streaks/régularité, trophées, écran d'accueil = séance du jour, thème clair/sombre automatique, page À propos avec copyright.

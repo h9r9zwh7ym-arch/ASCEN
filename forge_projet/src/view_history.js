@@ -71,9 +71,9 @@ function renderHistory(){
       const prs = sessionPRCount(s);
       return `<button class="row tap stagger" style="--i:${Math.min(i++,12)}" data-a="openSessionDetail" data-id="${s.id}">
         ${sessionIcon(s)}
-        <div class="grow"><div class="t">${esc(sessionTitle(s))}${prs?` <span class="pr-badge">${ii("bolt")} ${prs}</span>`:""}</div>
+        <div class="grow"><div class="hr-top"><span class="t">${esc(sessionTitle(s))}${prs?` <span class="pr-badge">${ii("bolt")} ${prs}</span>`:""}</span><span class="hr-dur">${s.durationSec?fmtDuration(s.durationSec):""}</span></div>
         <div class="s">${esc(fmtDate(s.date,"short"))} · ${nb(sessionSetCount(s),"série")}${sessionVolume(s)?" · "+fmtKg(sessionVolume(s)):""}</div>${s.note?`<div class="hn">${esc(s.note)}</div>`:""}</div>
-        <div class="val">${s.durationSec?fmtDuration(s.durationSec):""}</div><span class="chev">${icon("chev")}</span>
+        <span class="chev">${icon("chev")}</span>
       </button>`;
     }).join("");
     return `<h2 class="sh">${MOIS_LONG[d.getMonth()].replace(/^./,c=>c.toUpperCase())} ${d.getFullYear()}</h2>
@@ -91,7 +91,7 @@ function renderHistory(){
     </div>
     <div class="group rc-entry stagger" style="--i:1"><button class="row tap" style="width:100%" data-a="openRecap">${sfIcon("sparkles","orange")}<div class="grow"><div class="t">Rewind</div><div class="s">Revis ton mois ou ton année en animation</div></div><span class="chev">${icon("chev")}</span></button></div>
     ${html}
-    ${more>0?`<div class="btnrow"><button class="btn secondary" data-a="histMore">Afficher ${Math.min(more,25)} séance${Math.min(more,25)>1?"s":""} de plus <span class="muted-n">· ${more} restante${more>1?"s":""}</span></button></div>`:""}
+    ${more>0?`<div class="btnrow"><button class="btn tertiary" data-a="histMore">Afficher ${Math.min(more,25)} séance${Math.min(more,25)>1?"s":""} de plus</button></div><div class="hr-note center">${more} au total non affichée${more>1?"s":""}</div>`:""}
   </div>`;
 }
 

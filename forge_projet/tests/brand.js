@@ -9,7 +9,7 @@ const OUT = path.join(OUT_ROOT, process.env.BRAND_DIR || 'brand'); fs.mkdirSync(
   const file = 'file://' + path.resolve(process.argv[2]);
   const errors = [];
   const seed = () => { if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
-    const ex = ['developpe_couche_halteres', 'rowing_haltere', 'pompes', 'elevations_laterales', 'squat_gobelet', 'planche'];
+    const ex = ['dc_haltere', 'rowing_uni_haltere', 'pompes', 'elevations_laterales', 'squat_gobelet', 'planche'];
     const ss = []; for (let i = 0; i < 40; i++) { const d = new Date(2026, 5, 1 + i * 2.5); if (d > new Date(2026, 8, 26)) break;
       const iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
       ss.push({ id: 'b' + i, date: iso, source: 'engine', type: 'auto', resolvedType: ['push', 'pull', 'legs', 'full'][i % 4], startedAt: iso + 'T07:10:00.000Z', completedAt: iso + 'T07:48:00.000Z', durationSec: 2280 + (i % 5) * 120,

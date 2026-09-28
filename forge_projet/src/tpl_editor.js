@@ -156,7 +156,7 @@ Object.assign(ACT, {
   tplEdCancel(){
     if(!tplEdit || !tplEdit.dirty){ tplEdit = null; closeSheet(); return; }
     openModal(`<div style="font-weight:700;font-size:calc(17rem/17);margin-bottom:6px">Abandonner les modifications ?</div>
-      <div style="color:var(--label2);font-size:calc(14.5rem/17);margin-bottom:18px">Ce que tu as changé dans cette séance ne sera pas enregistré.</div>
+      <div style="color:var(--label2);font-size:var(--fs-sub);margin-bottom:18px">Ce que tu as changé dans cette séance ne sera pas enregistré.</div>
       <div style="display:flex;flex-direction:column;gap:8px">
         <button class="btn danger" data-a="tplEdDiscard">Abandonner</button>
         <button class="btn ghost" data-a="tplEdResume">Continuer l'édition</button>

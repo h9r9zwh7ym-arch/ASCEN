@@ -392,7 +392,7 @@ function dismissSheet(){ if(!sheetDismissGuard()) closeSheet(); }
 let suppressSheetClick = 0;
 function confirmSheet({title,html,ok,onOk,danger}){
   openModal(`<div style="font-weight:700;font-size:calc(17rem/17);margin-bottom:6px">${esc(title)}</div>
-    <div style="color:var(--label2);font-size:calc(14.5rem/17);line-height:1.4;margin-bottom:18px">${html||""}</div>
+    <div style="color:var(--label2);font-size:var(--fs-sub);line-height:1.4;margin-bottom:18px">${html||""}</div>
     <div style="display:flex;flex-direction:column;gap:8px">
       <button class="btn ${danger?"danger":""}" data-a="confirmYes">${esc(ok||"OK")}</button>
       <button class="btn ghost" data-a="closesheet" style="height:40px">Annuler</button>
