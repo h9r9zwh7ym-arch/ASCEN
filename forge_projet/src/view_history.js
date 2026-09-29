@@ -144,7 +144,7 @@ Object.assign(ACT, {
     const v = el.value.trim().slice(0,280);
     if(v===(s.note||"")) return;
     if(v) s.note = v; else delete s.note;
-    changed();
+    sessionTouched(s); changed();
   },
   openSessionDetail(d){
     const s = S.sessions.find(x=>x.id===d.id);
@@ -263,7 +263,7 @@ Object.assign(ACT, {
       const t = new Date(s.startedAt), n = parseISO(e.date); n.setHours(t.getHours(), t.getMinutes(), 0, 0);
       s.startedAt = n.toISOString();
     }
-    s.date = e.date; s.exos = exos;
+    s.date = e.date; s.exos = exos; sessionTouched(s);
     if(e.min){ s.durationSec = e.min*60; if(s.startedAt) s.completedAt = new Date(Date.parse(s.startedAt)+s.durationSec*1000).toISOString(); }
     else delete s.durationSec;
     S.sessions.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);

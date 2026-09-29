@@ -1940,3 +1940,5 @@ h2.sh .more{font-family:var(--sans);font-size:var(--fs-sub);font-weight:500;lett
    :where() = spécificité nulle, les gestes dédiés (pan-y, none) gardent la main */
 :where(*){touch-action:manipulation}
 :where(button){-webkit-user-select:none;user-select:none}
+/* écran qui n'a pas pu s'afficher (renderView) */
+.view-err .em svg{width:34px;height:34px;color:var(--orange,#FF9500)}

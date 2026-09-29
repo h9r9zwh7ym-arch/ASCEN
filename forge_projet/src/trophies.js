@@ -7,20 +7,18 @@ const TIERS = [
   { n:"Diamant", pts:100 },
 ];
 
+// valeurs calculées à partir des résumés de séance (sessionSummary, core.js)
+function sumOf(k){ let n = 0; for(const s of S.sessions) n += sessionSummary(s)[k]; return n; }
 function masteredExosCount(){
   const counts = {};
-  S.sessions.forEach(s=>s.exos.forEach(ex=>{
-    if(ex.sets.some(st=>st.done)) counts[ex.exoId]=(counts[ex.exoId]||0)+1;
-  }));
+  S.sessions.forEach(s=>sessionSummary(s).exos.forEach(id=>{ counts[id]=(counts[id]||0)+1; }));
   return Object.values(counts).filter(c=>c>=8).length;
 }
 const countSessions = pred => ()=>S.sessions.filter(pred).length;
 // --- valeurs des trophées ajoutés en v2.0 ---
-function doneSetsOf(pred){ let n = 0; S.sessions.forEach(s=>s.exos.forEach(ex=>{ const d = EXO_MAP[ex.exoId]; if(d && pred(d)) ex.sets.forEach(st=>{ if(st.done) n += st.reps||0; }); })); return n; }
-const BW_EQUIP = new Set(["bodyweight","bench","mat","pullup_bar"]);
-function holdMinutes(){ return doneSetsOf(d=>isTimed(d))/60; }
-function bodyweightReps(){ return doneSetsOf(d=>!isTimed(d) && d.equip.every(q=>BW_EQUIP.has(q))); }
-function legDays(){ return S.sessions.filter(s=>s.exos.reduce((t,ex)=>{ const d = EXO_MAP[ex.exoId]; return t + (d && regionOf(d)==="legs" ? ex.sets.filter(x=>x.done).length : 0); },0)>=3).length; }
+function holdMinutes(){ return sumOf("holdSec")/60; }
+function bodyweightReps(){ return sumOf("bwReps"); }
+function legDays(){ return S.sessions.filter(s=>sessionSummary(s).legSets>=3).length; }
 function comebacks(){
   const days = Array.from(new Set(S.sessions.map(s=>s.date))).sort();
   let n = 0; for(let i=1;i<days.length;i++) if(daysBetween(days[i-1], days[i])>=14) n++;
@@ -45,9 +43,9 @@ function balancedWeeks(){
     const k = weekKey(s.date);
     let set = per.get(k); if(!set){ set = new Set(); per.set(k, set); }
     if(set.size>=11) continue;
-    for(const ex of s.exos){
-      const d = EXO_MAP[ex.exoId];
-      if(!d || !ex.sets.some(st=>st.done)) continue;
+    for(const id of sessionSummary(s).exos){
+      const d = EXO_MAP[id];
+      if(!d) continue;
       for(const m of d.muscles) if(m!=="cardio") set.add(m);
     }
   }
@@ -55,24 +53,14 @@ function balancedWeeks(){
   return n;
 }
 function maxRepsOneSession(){ return S.sessions.reduce((m,s)=>Math.max(m, sessionReps(s)), 0); }
-function heaviestSet(){
-  let m = 0;
-  S.sessions.forEach(s=>s.exos.forEach(ex=>{ if(!kgType(EXO_MAP[ex.exoId])) return; ex.sets.forEach(st=>{ if(st.done && st.weight>m) m = st.weight; }); }));
-  return m;
-}
+function heaviestSet(){ return S.sessions.reduce((m,s)=>Math.max(m, sessionSummary(s).maxKg), 0); }
 // Progression de force sur un exercice chargé : meilleur 1RM estimé comparé à la
 // meilleure des 3 premières séances, pour un exercice pratiqué depuis au moins 90 jours
 // (évite qu'une progression de débutant de quelques semaines donne le diamant).
 function bestStrengthRatio(){
   const hist = {};
   // les séances sont déjà enregistrées dans l'ordre chronologique
-  for(const s of S.sessions) for(const ex of s.exos){
-    const def = EXO_MAP[ex.exoId];
-    if(!def || !kgType(def)) continue;
-    let e = 0;
-    for(const st of ex.sets) if(st.done && st.weight){ const v = estimated1RM(st.weight, st.reps); if(v>e) e = v; }
-    if(e) (hist[ex.exoId]=hist[ex.exoId]||[]).push({ date:s.date, e });
-  }
+  for(const s of S.sessions) for(const [id, e] of sessionSummary(s).e1) (hist[id]=hist[id]||[]).push({ date:s.date, e });
   let best = 0;
   Object.values(hist).forEach(h=>{
     if(h.length<4 || daysBetween(h[0].date, h[h.length-1].date)<90) return;
@@ -95,7 +83,7 @@ function ironYears(){
 }
 function equipCatsTrained(){
   const c = new Set();
-  S.sessions.forEach(s=>s.exos.forEach(ex=>{ const d=EXO_MAP[ex.exoId]; if(d && ex.sets.some(st=>st.done)) c.add(exoCategory(d)); }));
+  S.sessions.forEach(s=>sessionSummary(s).exos.forEach(id=>{ const d = EXO_MAP[id]; if(d) c.add(exoCategory(d)); }));
   return c.size;
 }
 
@@ -171,6 +159,7 @@ function fmtMedalVal(m, v){
 function checkMedals(silent){
   const ups = [];
   const now = new Date().toISOString();
+  let moved = false;
   MEDALS.forEach(m=>{
     const v = medalVal(m);
     const reached = m.t.filter(th=>v>=th).length;
@@ -178,10 +167,11 @@ function checkMedals(silent){
     if(reached>cur.t){
       for(let k=cur.t+1;k<=reached;k++){ cur.d[k] = now; if(!silent) ups.push({ m, tier:k }); }
       cur.t = reached;
-      S.medals[m.id] = cur;
+      S.medals[m.id] = cur; moved = true;
     }
   });
-  save();
+  // save() invalide tous les calculs mis en cache : seulement si un palier a changé
+  if(moved) save();
   return ups;
 }
 function tierCounts(){

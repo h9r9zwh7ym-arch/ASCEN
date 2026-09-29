@@ -398,7 +398,10 @@ function renderPickerSheet(){
     { tall:true, footer: picker.multi ? `<button class="btn" id="pickerDone" data-a="pickerDone" disabled>Ajouter</button>` : null,
       restore:renderPickerSheet, onBack:picker.onCancel || null });
   const inp = qs("#pickerSearch");
-  if(inp){ inp.value = picker.q; inp.addEventListener("input", ()=>{ picker.q = inp.value; qs("#pickerList").innerHTML = pickerListHTML(); }); }
+  // recherche : une seule reconstruction de la liste par image, même en tapant vite
+  let pending = 0;
+  if(inp){ inp.value = picker.q; inp.addEventListener("input", ()=>{ picker.q = inp.value; if(pending) return;
+    pending = requestAnimationFrame(()=>{ pending = 0; const l = qs("#pickerList"); if(l && picker) l.innerHTML = pickerListHTML(); }); }); }
   // retour depuis une fiche : on retrouve la liste là où on l'avait laissée
   const list = qs("#pickerList"); if(list && picker.scroll) list.scrollTop = picker.scroll;
   refreshPickerFooter();
@@ -758,7 +761,8 @@ function refreshFocusRegion(){
   if(!el || !S.draft || !S.draft.startedAt) return;
   el.innerHTML = renderFocusRegionInner(S.draft);
   const strip = qs("#liveStrip");
-  if(strip){ const sl = (qs("#lsChips")||{}).scrollLeft||0; strip.innerHTML = liveStripHTML(S.draft); qs("#lsChips").scrollLeft = sl; centerStripChip(true); }
+  // centrage du bandeau à l'image suivante : lire sa géométrie ici forcerait une mise en page de plus
+  if(strip){ const sl = (qs("#lsChips")||{}).scrollLeft||0; strip.innerHTML = liveStripHTML(S.draft); requestAnimationFrame(()=>{ const c = qs("#lsChips"); if(c){ c.scrollLeft = sl; centerStripChip(true); } }); }
   stripBump = -1;
   const head = qs("#liveHead");
   if(head){
@@ -767,10 +771,9 @@ function refreshFocusRegion(){
     head.innerHTML = liveHeadHTML(S.draft);
     const segs = qsa(".lp-seg i", head);
     if(oldW.length===segs.length && !reducedMotion()){
-      const target = segs.map(i=>i.style.width);
-      segs.forEach((i,k)=>{ i.style.transition = "none"; i.style.width = oldW[k]; });
-      void head.offsetWidth;
-      segs.forEach((i,k)=>{ i.style.transition = ""; i.style.width = target[k]; if(target[k]!==oldW[k]) i.parentElement.classList.add("grew"); });
+      // la barre part de l'ancienne largeur (Web Animations : pas de mise en page forcée)
+      segs.forEach((i,k)=>{ const to = i.style.width; if(to===oldW[k]) return; i.parentElement.classList.add("grew");
+        if(i.animate) try{ i.style.transition = "none"; i.animate([{ width:oldW[k] }, { width:to }], { duration:600, easing:"cubic-bezier(.32,.72,0,1)" }); }catch(e){} });
       const b = qs(".lh-pct b", head), newPct = parseInt(b.textContent)||0;
       if(newPct!==oldPct){
         b.classList.add("bump");
@@ -818,7 +821,7 @@ function finalizeSession(){
     draft.exos = draft.exos.filter(ex=>!isStretchEntry(ex));
     if(!draft.exos.length && !draft.name) draft.name = "Étirements";
   }
-  S.sessions.push(compactSession(clone(draft)));
+  S.sessions.push(markStored(compactSession(clone(draft))));
   if(draft.source==="imported" && S.importedProgram.length) S.importedProgram.shift();
   S.draft = null;
   liveFocusIdx = 0;
@@ -1252,6 +1255,10 @@ Object.assign(ACT, {
     const ex = S.draft.exos[+d.exi], st = ex.sets[+d.si], isW = d.f==="weight";
     promptNumber({ title: isW?"Charge de la série":"Répétitions", value: isW?st.weight:st.reps, unit: isW?"kg":"reps", step: isW?"0.5":"1",
       onOk: v=>{
+        // bornes réalistes (comme dans l'édition de l'historique) : une faute de frappe ne doit pas
+        // gonfler le tonnage, les records et les trophées ; élastiques = niveaux 1 à 5
+        const def = EXO_MAP[ex.exoId], bands = def && loadableTypeOf(def)==="bands";
+        v = isW ? Math.min(bands ? 5 : 500, v) : Math.min(9999, v);
         // la nouvelle valeur s'applique aussi aux séries suivantes non validées
         ex.sets.forEach((s,i)=>{ if(i>=+d.si && !s.done){ if(isW) s.weight = round1(v); else s.reps = Math.round(v); } });
         save(); refreshFocusRegion();

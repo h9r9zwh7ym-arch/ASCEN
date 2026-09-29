@@ -157,7 +157,12 @@ function withTransition(kind, fn){
   if(!canVT()) return fn();
   document.documentElement.dataset.vt = kind;
   const t = document.startViewTransition(fn);
-  t.finished.finally(()=>{ delete document.documentElement.dataset.vt; });
+  // deux changements rapprochés interrompent la transition précédente : ses promesses sont
+  // rejetées (AbortError), sans conséquence ; une erreur de l'écran lui-même est notée
+  const done = ()=>{ if(document.documentElement.dataset.vt===kind) delete document.documentElement.dataset.vt; };
+  t.finished.then(done, done);
+  t.ready.catch(()=>{});
+  if(t.updateCallbackDone) t.updateCallbackDone.catch(err=>{ if(!err || err.name!=="AbortError") reportError("transition", err); });
 }
 function switchTab(id){
   if(canVT() && currentTab && currentTab!==id){
@@ -183,12 +188,22 @@ function renderView(id){
   if(!el || !VIEWS[id]) return;
   const scrollTop = el.scrollTop;
   hideTip();
-  el.innerHTML = VIEWS[id]();
+  // un écran qui échoue (donnée inattendue) ne doit ni rester vide ni bloquer l'app : message
+  // sobre et bouton pour réessayer, les autres onglets restent utilisables
+  let html;
+  try{ html = VIEWS[id](); }catch(err){ reportError("écran "+id, err); html = viewErrorHTML(id); }
+  el.innerHTML = html;
   el._ver = DATA_VER; el._day = todayISO(); // rendu à jour pour ces données
   el.classList.toggle("scrolled", scrollTop>4);
-  el.scrollTop = scrollTop;
+  // rétablir la position force une mise en page immédiate : inutile en haut de page (cas courant)
+  if(scrollTop>0) el.scrollTop = scrollTop;
   settleSegs(el);
-  if(typeof afterRenderView==="function") afterRenderView(id, el);
+  if(typeof afterRenderView==="function") try{ afterRenderView(id, el); }catch(err){ reportError("après "+id, err); }
+}
+function viewErrorHTML(id){
+  return `<div class="content"><div class="empty-state view-err"><span class="em">${ii("warn")}</span>
+    Cet écran n'a pas pu s'afficher.<br>Tes données ne sont pas touchées.
+    <div class="btnrow" style="justify-content:center"><button class="btn secondary sm" data-a="retryView" data-v="${id}">Réessayer</button></div></div></div>`;
 }
 // rendu avec entrée animée (apparition décalée des éléments .stagger, compteurs)
 // — réservé aux changements d'onglet ou de section, pas aux rendus après chaque action.
@@ -196,12 +211,13 @@ let enterTimer = null;
 function renderViewAnimated(id, reuse){
   const el = qs("#v-"+id);
   if(!el) return;
-  el.classList.remove("enter"); void el.offsetWidth; // relance les animations d'entrée
-  el.classList.add("enter");
   // changement d'onglet sans modification des données : on réutilise le rendu existant
-  // (ni reconstruction du HTML ni nouvelle mise en page complète)
-  if(!(reuse && el._ver===DATA_VER && el._day===todayISO() && el.firstChild)) renderView(id);
-  else settleSegs(el);
+  // (ni reconstruction du HTML ni nouvelle mise en page complète) ; il faut alors relancer
+  // les animations d'entrée. Un rendu neuf les joue de lui-même (éléments nouveaux).
+  if(reuse && el._ver===DATA_VER && el._day===todayISO() && el.firstChild){
+    el.classList.remove("enter"); void el.offsetWidth;
+    el.classList.add("enter"); settleSegs(el);
+  } else { el.classList.add("enter"); renderView(id); }
   animateCounts(el);
   clearTimeout(enterTimer);
   enterTimer = setTimeout(()=>{ el.classList.remove("enter"); el.dataset.dir = ""; }, 1200);
@@ -216,16 +232,17 @@ function segHTML(key, options, cur, action){
     ${options.map(([id,label])=>`<button role="tab" aria-selected="${id===cur}" class="${id===cur?"on":""}" data-a="${action}" data-v="${id}">${label}</button>`).join("")}
   </div>`;
 }
+// L'indicateur glisse de l'ancienne à la nouvelle position. Web Animations plutôt qu'une
+// transition relancée par lecture de offsetWidth : cette lecture forçait la mise en page
+// complète de l'écran qu'on venait de construire (≈ 20 ms par rendu sur téléphone).
 function settleSegs(root){
   qsa(".seg", root).forEach(sg=>{
     const key = sg.dataset.seg, cur = +sg.dataset.cur, ind = qs(".seg-ind", sg);
     const prev = SEG_PREV[key]==null ? cur : SEG_PREV[key];
-    ind.style.transition = "none";
-    ind.style.transform = `translateX(${prev*100}%)`;
-    void ind.offsetWidth;
-    ind.style.transition = "";
-    ind.style.transform = `translateX(${cur*100}%)`;
     SEG_PREV[key] = cur;
+    ind.style.transition = "none";
+    ind.style.transform = `translateX(${cur*100}%)`;
+    if(prev!==cur && ind.animate) try{ ind.animate([{ transform:`translateX(${prev*100}%)` }, { transform:`translateX(${cur*100}%)` }], { duration:320, easing:"cubic-bezier(.32,.72,0,1)" }); }catch(e){}
   });
 }
 
@@ -462,6 +479,7 @@ function toast(msg, ic){
 
 // ---------- délégation d'actions ----------
 const ACT = {
+  retryView(d){ renderViewAnimated(d.v||currentTab); },
   tab(d){ switchTab(d.id); },
   closesheet(){ if(!sheetBack()) closeSheet(); },
   sheetBack(){ if(!sheetBack()) closeSheet(); },

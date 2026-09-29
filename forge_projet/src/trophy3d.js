@@ -29,7 +29,9 @@ function t3dGeo(key, make){ if(!T3D.geo.has(key)){ const g = make(); g.userData.
 function t3dReduced(){ return !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches); }
 function t3dWebGL(){
   if(T3D.gl!=null) return T3D.gl;
-  try{ const c = document.createElement("canvas"); T3D.gl = !!(c.getContext("webgl2") || c.getContext("webgl")); }catch(e){ T3D.gl = false; }
+  // contexte de test rendu tout de suite : iOS limite le nombre de contextes WebGL ouverts
+  try{ const c = document.createElement("canvas"), g = c.getContext("webgl2") || c.getContext("webgl"); T3D.gl = !!g;
+    const x = g && g.getExtension("WEBGL_lose_context"); if(x) x.loseContext(); }catch(e){ T3D.gl = false; }
   return T3D.gl;
 }
 function t3dUsable(){ return !T3D.failed && t3dWebGL(); }
@@ -349,9 +351,8 @@ function t3dPump(){
 // remplace le dessin SVG par la vignette 3D quand l'élément devient visible
 let t3dSnapIO = null;
 function upgradeMedals(root){
-  if(!t3dUsable()) return;
   const els = qsa(".medal[data-mid]:not(.m3d):not(.big)", root||document);
-  if(!els.length) return;
+  if(!els.length || !t3dUsable()) return;   // test WebGL seulement s'il y a une médaille à améliorer
   if(!t3dSnapIO) t3dSnapIO = "IntersectionObserver" in window ? new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){ t3dSnapIO.unobserve(e.target); t3dFill(e.target); } }), { rootMargin:"200px" }) : null;
   els.forEach(el=>{ el.classList.add("m3d"); t3dSnapIO ? t3dSnapIO.observe(el) : t3dFill(el); });
 }
@@ -366,8 +367,13 @@ function t3dFill(el){
   }).catch(()=>{});
 }
 // toute médaille ajoutée au document (onglets, célébration, fiches) est améliorée
-new MutationObserver(ms=>{ if(!t3dUsable()) return; for(const m of ms) for(const n of m.addedNodes){ if(n.nodeType===1 && (n.matches && n.matches(".medal[data-mid]") || n.querySelector && n.querySelector(".medal[data-mid]"))){ upgradeMedals(n.parentNode||n); } } })
-  .observe(document.documentElement, { childList:true, subtree:true });
+// (au calme : la vignette 3D remplace le dessin après coup, jamais pendant un rendu ou le démarrage)
+const t3dIdle = window.requestIdleCallback || (f=>setTimeout(f, 60));
+new MutationObserver(ms=>{
+  const roots = new Set();
+  for(const m of ms) for(const n of m.addedNodes){ if(n.nodeType===1 && (n.matches && n.matches(".medal[data-mid]") || n.querySelector && n.querySelector(".medal[data-mid]"))) roots.add(n.parentNode||n); }
+  if(roots.size) t3dIdle(()=>{ if(t3dUsable()) roots.forEach(r=>{ if(r.isConnected) upgradeMedals(r); }); }, { timeout:600 });
+}).observe(document.documentElement, { childList:true, subtree:true });
 
 // ---------- rendu vivant (carte mise en avant + fiche détaillée) ----------
 async function t3dContext(){
@@ -610,4 +616,5 @@ Object.assign(ACT, {
 document.addEventListener("keydown", e=>{ if(e.key==="Escape" && qs(".t3d-full")) t3dClose(); });
 
 // après chaque rendu d'onglet : carte mise en avant + vignettes 3D
-function afterRenderView(id, el){ if(id==="progress") mountTrophy3D(el); upgradeMedals(el); }
+// les vignettes 3D des médailles sont posées par l'observateur plus haut, au calme
+function afterRenderView(id, el){ if(id==="progress") mountTrophy3D(el); }

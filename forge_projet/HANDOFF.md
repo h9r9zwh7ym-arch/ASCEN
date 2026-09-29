@@ -466,6 +466,42 @@ Note tests : `v14` peut dépasser son délai quand d'autres scripts Playwright t
 - **Pas de zoom au double appui** : `:where(*){touch-action:manipulation}` (spécificité nulle, les gestes dédiés gardent `pan-y` ou `none`) et `maximum-scale=1` (pas de zoom au focus d'un champ). Le pincement reste possible pour l'accessibilité.
 - **Test** : `v31`.
 
+## 9 vicies. Version 3.3 : fiabilité et performances
+
+Mesures : `tests/profile.js`, profil CPU par scénario sur 3 ans d'historique (≈ 470 séances), processeur ralenti ×4. Build non minifié pour avoir les noms : `NO_MINIFY=1 sh build.sh && node tests/profile.js dist/forge.html`, puis `sh build.sh`.
+
+- **Performances**
+  - **Mises en page forcées supprimées.**
+    - L'indicateur des contrôles segmentés (`settleSegs`) lisait `offsetWidth` après chaque rendu pour relancer sa transition. Il passe à Web Animations.
+    - `renderView` ne rétablit la position de défilement que si elle n'est pas nulle.
+    - En séance, la barre de progression est animée avec Web Animations, et le bandeau d'exercices est centré à l'image suivante.
+    - Gain sur un téléphone : environ 20 ms par rendu d'écran.
+  - **Enregistrement.**
+    - Chaque séance de l'historique est encodée une fois (`packedJSON`, cache `PACK_CACHE`) : 30 ms → 1 ms pour 470 séances.
+    - Tout code qui modifie une séance déjà enregistrée doit appeler `sessionTouched(s)` (fait dans la note, l'édition et `recomputePRFlags`).
+    - La copie de secours IndexedDB est regroupée : au plus une écriture toutes les 3 s, et tout de suite à la sortie (`flushPersist`).
+  - **Résumé de séance** (`sessionSummary`, core.js).
+    - Séries, répétitions, tonnage, records, séries de jambes, secondes de gainage, répétitions au poids du corps, charge max et 1RM estimés sont calculés une fois par séance enregistrée.
+    - Les séances de l'historique sont marquées (`markStored`, symbole non sérialisé) ; les autres (séance en cours, édition) sont toujours recalculées.
+    - `sessionVolume`, `sessionSetCount`, `sessionReps`, `sessionPRCount` et une douzaine de trophées s'en servent. Trophées : ≈ 110 → 65 ms.
+  - **`checkMedals`** n'enregistre (et n'invalide les statistiques) que si un palier change. Au démarrage, il est fait au calme (`requestIdleCallback`).
+  - **Dates** : `parseISO` sans tableau intermédiaire, `daysBetween` par numéro de jour mis en cache (`dayNum`), heure de début mise en cache par séance (`startHour`), catégorie d'exercice mise en cache (`exoCategory`).
+  - **Démarrage.**
+    - L'historique au format compact n'est plus recopié deux fois.
+    - Le test WebGL n'a lieu que s'il y a une médaille à améliorer, au calme, et son contexte est libéré tout de suite : iOS limite le nombre de contextes.
+  - **Recherche d'exercice** : une seule reconstruction de la liste par image.
+- **Fiabilité**
+  - **Séance illisible au chargement.**
+    - Avant, elle faisait échouer tout le chargement : l'app repartait sur un historique vide, les données mises de côté.
+    - Maintenant, chaque séance est décodée à part et une entrée abîmée est écartée (`LOAD_SKIPPED`).
+    - L'original est gardé (`forge.v1.illisible.*`) et un message le signale.
+  - **Valeurs numériques garanties** (sauvegarde restaurée, import) : un texte dans les répétitions faisait des totaux faux.
+  - **Écran en échec** : `renderView` rattrape l'erreur, affiche « Cet écran n'a pas pu s'afficher » avec un bouton « Réessayer » (`retryView`) et la note dans `ERR_LOG`. Les autres onglets restent utilisables. `afterRenderView` est protégé de même.
+  - **Bornes de saisie** en séance : charge ≤ 500 kg (élastique : niveau ≤ 5), répétitions et secondes ≤ 9999, comme dans l'édition de l'historique.
+  - **Compression de la copie de secours sans Blob** (`gz`/`gunz`) : WebKit lit un Blob via une URL interne `blob:`, refusée pendant qu'on quitte la page, justement quand la copie est écrite.
+  - **Transitions entre onglets** : deux changements rapprochés interrompent la transition précédente. Ses promesses rejetées sont maintenant traitées (plus d'erreur non gérée), et une erreur de l'écran lui-même est notée.
+- **Tests** : `v32` ; outil `profile.js`.
+
 ## 10. Cahier des charges d'origine (résumé)
 
 Voir le fichier `4a3df5ee-cahier-des-charges-forge.md` fourni au lancement du projet pour le texte complet. Points clés déjà couverts en v1.0 : matériel personnalisable et extensible, bibliothèque d'exercices filtrée, inclusion/exclusion d'exercices, objectifs personnalisés, suivi détaillé de séance (éditable, timer de repos, coche rapide), moteur de suggestion 100% local avec export/import IA, graphiques de progression, PR, streaks/régularité, trophées, écran d'accueil = séance du jour, thème clair/sombre automatique, page À propos avec copyright.

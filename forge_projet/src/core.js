@@ -3,6 +3,10 @@ const STORAGE_KEY = "forge.v1";
 // sources de séance abrégées dans le format compact (déclarées avant le chargement)
 const SRC_CODE = { engine:"e", custom:"c", imported:"i", template:"t" };
 const SRC_NAME = { e:"engine", c:"custom", i:"imported", t:"template" };
+// séance enregistrée (historique) : marquée pour que ses résumés puissent être gardés en cache
+// (voir sessionSummary). Déclaré avant load(), qui marque l'historique au chargement.
+const STORED = typeof Symbol==="function" ? Symbol("stored") : "__stored";
+function markStored(s){ Object.defineProperty(s, STORED, { value:true, configurable:true }); return s; }
 
 function defaultState(){
   return {
@@ -23,6 +27,7 @@ function defaultState(){
   };
 }
 
+let LOAD_SKIPPED = 0;   // séances illisibles écartées au chargement (signalées une fois, voir init.js)
 let S = load();
 
 // ---------- stockage compact (v2.5) ----------
@@ -56,17 +61,30 @@ function unpackSession(o){
   if(o.a) s.startedAt = new Date(o.a).toISOString(); if(o.c) s.completedAt = new Date(o.c).toISOString();
   if(o.u) s.durationSec = o.u;
   s.exos = (o.x||[]).map(([exoId, sets, targetReps])=>{
-    const ex = { exoId, sets: sets.map(([reps, weight, f])=>{ const st = { reps, done:true }; if(weight!=null) st.weight = weight; if(f&1) st.pr = true; if(f>>1) st.effort = f>>1; return st; }) };
+    const ex = { exoId, sets: sets.map(([reps, weight, f])=>{ const st = { reps:+reps||0, done:true }; if(weight!=null && isFinite(weight)) st.weight = +weight; if(f&1) st.pr = true; if(f>>1) st.effort = f>>1; return st; }) };
     if(targetReps) ex.targetReps = targetReps;
     return ex;
   });
   if(Array.isArray(o.s) && o.s.length) s.stretches = o.s.map(([exoId, sec])=>({ exoId, sec }));
   return s;
 }
+// Encodage mis en cache par séance : une séance terminée ne change presque jamais, on ne
+// réencode que les nouvelles ou celles qu'on vient de modifier. Tout code qui modifie une
+// séance déjà enregistrée doit appeler sessionTouched(s) (ou sessionTouched() pour toutes).
+let PACK_CACHE = new WeakMap();
+function sessionTouched(s){ if(s){ PACK_CACHE.delete(s); SUM_CACHE.delete(s); } else { PACK_CACHE = new WeakMap(); SUM_CACHE = new WeakMap(); } }
+function packedJSON(s){
+  let j = PACK_CACHE.get(s);
+  if(j===undefined){ j = JSON.stringify(packSession(s)); PACK_CACHE.set(s, j); }
+  return j;
+}
+const ZS_MARK = "\u0000zs\u0000", ZS_MARK_JSON = JSON.stringify(ZS_MARK);
 function serializeState(savedAt){
-  const o = Object.assign({}, S, { sessions:[], zs:S.sessions.map(packSession), fmt:2 });
+  const o = Object.assign({}, S, { sessions:[], zs:ZS_MARK, fmt:2 });
   o.meta = Object.assign({}, S.meta, { savedAt });
-  return JSON.stringify(o);
+  // l'historique (« zs », dernière clé avant fmt) est inséré tel quel, chaînes déjà encodées
+  const j = JSON.stringify(o), k = j.lastIndexOf(ZS_MARK_JSON);
+  return j.slice(0, k) + "[" + S.sessions.map(packedJSON).join(",") + "]" + j.slice(k + ZS_MARK_JSON.length);
 }
 // ---------- copie de secours IndexedDB ----------
 // Chaque enregistrement est aussi copié dans IndexedDB (quota bien plus large). Si
@@ -94,21 +112,29 @@ function idbGet(){
   }));
 }
 // la copie de secours est compressée (gzip natif du navigateur) : ~6 à 8 fois plus petite
+// Sans Blob : WebKit lit un Blob via une URL interne « blob: », refusée pendant qu'on quitte la
+// page (la copie est justement écrite à ce moment-là). Octets bruts en sortie : WebKit refuse
+// aussi les Blob dans IndexedDB en navigation privée.
 async function gz(str){
   if(typeof CompressionStream==="undefined") return str;
-  const s = new Blob([str]).stream().pipeThrough(new CompressionStream("gzip"));
-  // octets bruts plutôt qu'un Blob : WebKit refuse les Blob dans IndexedDB en navigation privée
-  return await new Response(s).arrayBuffer();
+  const cs = new CompressionStream("gzip"), w = cs.writable.getWriter();
+  w.write(new TextEncoder().encode(str)).catch(()=>{}); w.close().catch(()=>{});
+  return await new Response(cs.readable).arrayBuffer();
 }
 async function gunz(data){
   if(typeof data==="string") return data;
-  const s = new Blob([data]).stream().pipeThrough(new DecompressionStream("gzip"));
+  const s = new Response(data).body.pipeThrough(new DecompressionStream("gzip"));
   return await new Response(s).text();
 }
-let idbPending = null, idbWriting = false;
-function idbMirror(str, savedAt){
-  // une seule écriture à la fois ; la dernière version gagne
+let idbPending = null, idbWriting = false, idbLast = 0, idbTimer = null;
+function idbMirror(str, savedAt, now){
+  // une seule écriture à la fois ; la dernière version gagne. Pendant une séance on enregistre
+  // souvent : la copie compressée n'est refaite qu'au plus toutes les 3 s (et tout de suite
+  // quand l'app passe en arrière-plan), le stockage principal, lui, est écrit à chaque fois
   idbPending = { str, savedAt };
+  const wait = idbLast + 3000 - Date.now();
+  if(!now && wait>0){ if(!idbTimer) idbTimer = setTimeout(()=>{ idbTimer = null; if(idbPending) idbMirror(idbPending.str, idbPending.savedAt, true); }, wait); return; }
+  clearTimeout(idbTimer); idbTimer = null; idbLast = Date.now();
   if(idbWriting) return;
   idbWriting = true;
   (async ()=>{
@@ -154,6 +180,8 @@ function load(){
     if(!raw) return defaultState();
     const st = normalizeState(JSON.parse(raw));
     loadedFromLS = true;
+    // des séances illisibles ont été écartées : l'original est gardé de côté avant la prochaine écriture
+    if(LOAD_SKIPPED) try{ localStorage.setItem(STORAGE_KEY+".illisible."+Date.now(), raw); }catch(e){}
     return st;
   }catch(e){
     // données illisibles : on les met de côté au lieu de les écraser à la prochaine sauvegarde
@@ -176,17 +204,34 @@ function normalizeState(parsed){
     merged.meta = Object.assign({}, d.meta, parsed.meta||{});
     merged.custom = Object.assign({}, d.custom, parsed.custom||{});
     // format compact (v2.5) ; une liste « sessions » non vide (import externe) reste prioritaire
-    if(Array.isArray(parsed.zs) && !(parsed.sessions && parsed.sessions.length)) parsed.sessions = parsed.zs.map(unpackSession);
+    // format compact : chaque séance est décodée à part ; une entrée abîmée est écartée (et comptée)
+    // au lieu de faire échouer tout le chargement, ce qui démarrait l'app sur un historique vide
+    let fromZs = false;
+    if(Array.isArray(parsed.zs) && !(parsed.sessions && parsed.sessions.length)){
+      fromZs = true; parsed.sessions = [];
+      for(const o of parsed.zs){ try{ parsed.sessions.push(unpackSession(o)); }catch(e){ LOAD_SKIPPED++; } }
+    }
     delete merged.zs; delete merged.fmt;
     // robustesse : une donnée abîmée (import externe, ancienne version, écriture interrompue) ne
     // doit jamais empêcher l'app de démarrer. Les entrées illisibles sont écartées ; l'historique
     // garde ses exercices même inconnus (renommés depuis), il n'est jamais supprimé.
     const okSet = st=>st && typeof st==="object";
     const okExo = ex=>ex && typeof ex==="object" && typeof ex.exoId==="string" && Array.isArray(ex.sets);
-    parsed.sessions = (Array.isArray(parsed.sessions)?parsed.sessions:[]).filter(ss=>ss && typeof ss.date==="string" && /^\d{4}-\d{2}-\d{2}/.test(ss.date) && Array.isArray(ss.exos))
-      .map(ss=>Object.assign({}, ss, { date:ss.date.slice(0,10), exos:ss.exos.filter(okExo).map(ex=>Object.assign({}, ex, { sets:ex.sets.filter(okSet) })) }));
+    const okSession = ss=>ss && typeof ss.date==="string" && /^\d{4}-\d{2}-\d{2}/.test(ss.date) && Array.isArray(ss.exos);
+    const before = Array.isArray(parsed.sessions) ? parsed.sessions.length : 0;
+    if(fromZs){
+      // notre propre format, déjà compact : pas de recopie (le démarrage lit tout l'historique)
+      parsed.sessions = parsed.sessions.filter(okSession);
+      parsed.sessions.forEach(ss=>{ if(ss.exos.some(ex=>!okExo(ex) || !ex.sets.length)) ss.exos = ss.exos.filter(ex=>okExo(ex) && ex.sets.length); });
+    } else {
+      parsed.sessions = (Array.isArray(parsed.sessions)?parsed.sessions:[]).filter(okSession)
+        .map(ss=>compactSession(Object.assign({}, ss, { date:ss.date.slice(0,10), exos:ss.exos.filter(okExo).map(ex=>Object.assign({}, ex, { sets:ex.sets.filter(okSet) })) })));
+    }
+    LOAD_SKIPPED += before - parsed.sessions.length;
     const known = ex=>ex && EXO_MAP[ex.exoId];
-    merged.sessions = parsed.sessions.map(compactSession).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0); // ordre chronologique garanti (les statistiques s'appuient dessus)
+    merged.sessions = parsed.sessions.map(markStored);
+    // ordre chronologique garanti (les statistiques s'appuient dessus) ; déjà trié en général
+    if(merged.sessions.some((x,i,a)=>i && a[i-1].date>x.date)) merged.sessions.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
     // séances enregistrées, Ma séance, séance en cours : seulement des exercices connus
     merged.templates = (Array.isArray(parsed.templates)?parsed.templates:[]).filter(t=>t && t.id && Array.isArray(t.exos))
       .map(t=>Object.assign({}, t, { n:String(t.n||"Séance"), days:Array.isArray(t.days)?t.days.filter(x=>x>=0 && x<=6):[], exos:t.exos.filter(known) }));
@@ -250,8 +295,9 @@ function compactSession(s){
     exoId: ex.exoId,
     targetReps: ex.targetReps,
     sets: ex.sets.filter(st=>st.done).map(st=>{
-      const o = { reps: st.reps, done: true };
-      if(st.weight!=null) o.weight = st.weight;
+      // nombres garantis (sauvegarde restaurée, import) : un texte ferait des totaux faux
+      const o = { reps: Math.max(0, +st.reps||0), done: true };
+      if(st.weight!=null && st.weight!=="" && isFinite(st.weight)) o.weight = +st.weight;
       if(st.pr) o.pr = true;
       if(st.effort) o.effort = st.effort; // ressenti (répétitions en réserve) pour la progression
       return o;
@@ -266,12 +312,12 @@ function save(){
   clearTimeout(persistTimer);
   persistTimer = setTimeout(persistNow, 400);
 }
-function persistNow(){
+function persistNow(urgent){
   clearTimeout(persistTimer); persistTimer = null;
   if(persistBlocked) return;
   const savedAt = Date.now(), str = serializeState(savedAt);
   S.meta.savedAt = savedAt;
-  idbMirror(str, savedAt);
+  idbMirror(str, savedAt, urgent===true);
   try{ localStorage.setItem(STORAGE_KEY, str); persistFailed = false; }
   catch(e){
     // localStorage plein ou refusé : la copie IndexedDB prend le relais, on prévient une fois
@@ -279,8 +325,10 @@ function persistNow(){
     persistFailed = true;
   }
 }
-window.addEventListener("pagehide", ()=>{ if(persistTimer) persistNow(); });
-document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="hidden" && persistTimer) persistNow(); });
+// sortie de l'app : écriture immédiate, copie de secours comprise
+function flushPersist(){ if(persistTimer) persistNow(true); else if(idbPending) idbMirror(idbPending.str, idbPending.savedAt, true); }
+window.addEventListener("pagehide", flushPersist);
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="hidden") flushPersist(); });
 
 // ---------- utilitaires ----------
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
@@ -293,9 +341,20 @@ function localISO(d){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
 function todayISO(){ return localISO(new Date()); }
-function parseISO(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); }
+// appelées des milliers de fois par les statistiques : pas de tableau intermédiaire
+function parseISO(s){
+  if(s.length===10) return new Date(+s.slice(0,4), +s.slice(5,7)-1, +s.slice(8,10));
+  const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d);
+}
 function addDaysISO(iso,n){ const d=parseISO(iso); d.setDate(d.getDate()+n); return localISO(d); }
-function daysBetween(a,b){ return Math.round((parseISO(b)-parseISO(a))/86400000); }
+// numéro de jour (UTC, donc sans décalage d'heure d'été), mis en cache : une date ne change pas
+const DAYNUM = new Map();
+function dayNum(iso){
+  let n = DAYNUM.get(iso);
+  if(n===undefined){ const d = parseISO(iso); n = Math.round(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())/86400000); if(DAYNUM.size>20000) DAYNUM.clear(); DAYNUM.set(iso, n); }
+  return n;
+}
+function daysBetween(a,b){ return dayNum(b)-dayNum(a); }
 // une date ne change jamais de semaine : résultat mis en cache (appelé des milliers de fois
 // par les statistiques et les trophées)
 const WEEK_CACHE = new Map();
@@ -364,20 +423,48 @@ function daysSinceTrained_raw(muscleId){
   return 999;
 }
 function setVolume(st){ return (st.done? (st.reps||0)*(st.weight||0) : 0); }
-function sessionVolume(s){
-  // tonnage en kg : les élastiques (niveaux de résistance) n'y entrent pas
-  return s.exos.reduce((t,ex)=>{ const d = EXO_MAP[ex.exoId]; if(d && loadableTypeOf(d)==="bands") return t; return t+ex.sets.reduce((tt,st)=>tt+setVolume(st),0); },0);
+
+// ---------- résumé d'une séance (v3.3) ----------
+// Les statistiques et les trophées parcouraient chaque série de tout l'historique, une fois par
+// indicateur (une quarantaine). Une séance enregistrée ne change plus : on la résume une fois
+// (séries, répétitions, tonnage, records, jambes, gainage, charge max, 1RM estimés…) et le
+// résumé est gardé tant que l'objet n'est pas modifié (sessionTouched). Les séances « vivantes »
+// (séance en cours, édition) ne sont pas marquées et sont toujours recalculées.
+let SUM_CACHE = new WeakMap();
+const BW_ONLY = new Set(["bodyweight","bench","mat","pullup_bar"]);
+function sessionSummary(s){
+  const stored = !!s[STORED];
+  let r = stored ? SUM_CACHE.get(s) : undefined;
+  if(r) return r;
+  r = { sets:0, reps:0, vol:0, prs:0, legSets:0, holdSec:0, bwReps:0, maxKg:0, exos:[], e1:[] };
+  for(const ex of s.exos){
+    const d = EXO_MAP[ex.exoId];
+    let n = 0, reps = 0, vol = 0, prs = 0, mx = 0, e1 = 0;
+    for(const st of ex.sets){
+      if(!st.done) continue;
+      n++; const rp = st.reps||0, w = st.weight||0;
+      reps += rp; vol += rp*w; if(st.pr) prs++;
+      if(st.weight>mx) mx = st.weight;
+      if(w){ const v = estimated1RM(w, st.reps); if(v>e1) e1 = v; }
+    }
+    r.sets += n; r.prs += prs;
+    if(!d || loadableTypeOf(d)!=="bands") r.vol += vol;     // tonnage en kg : sans les élastiques
+    const timed = d && isTimed(d);
+    if(!timed) r.reps += reps;                             // les exercices tenus comptent des secondes
+    if(!n || !d) { if(n) r.exos.push(ex.exoId); continue; }
+    r.exos.push(ex.exoId);
+    if(timed) r.holdSec += reps;
+    else if(d.equip.every(q=>BW_ONLY.has(q))) r.bwReps += reps;
+    if(regionOf(d)==="legs") r.legSets += n;
+    if(kgType(d)){ if(mx>r.maxKg) r.maxKg = mx; if(e1) r.e1.push([ex.exoId, e1]); }
+  }
+  if(stored) SUM_CACHE.set(s, r);
+  return r;
 }
-function sessionSetCount(s){
-  return s.exos.reduce((t,ex)=>t+ex.sets.filter(st=>st.done).length,0);
-}
-function sessionReps(s){
-  // les exercices chronométrés (gainage, corde…) stockent des secondes : ils ne comptent pas comme répétitions
-  return s.exos.reduce((t,ex)=>{ const d = EXO_MAP[ex.exoId]; if(d && isTimed(d)) return t; return t+ex.sets.filter(st=>st.done).reduce((a,st)=>a+(st.reps||0),0); },0);
-}
-function sessionPRCount(s){
-  return s.exos.reduce((t,ex)=>t+ex.sets.filter(st=>st.done&&st.pr).length,0);
-}
+function sessionVolume(s){ return sessionSummary(s).vol; }
+function sessionSetCount(s){ return sessionSummary(s).sets; }
+function sessionReps(s){ return sessionSummary(s).reps; }
+function sessionPRCount(s){ return sessionSummary(s).prs; }
 function totalVolumeAllTime(){ return memo("totalVolumeAllTime", totalVolumeAllTime_raw); }
 function totalVolumeAllTime_raw(){ return S.sessions.reduce((t,s)=>t+sessionVolume(s),0); }
 function totalSets(){ return memo("totalSets", totalSets_raw); }
@@ -389,19 +476,25 @@ function bestSessionVolume_raw(){ return S.sessions.reduce((m,s)=>Math.max(m,ses
 function distinctExosCount(){ return memo("distinctExosCount", distinctExosCount_raw); }
 function distinctExosCount_raw(){
   const ids = new Set();
-  S.sessions.forEach(s=>s.exos.forEach(ex=>{ if(ex.sets.some(st=>st.done)) ids.add(ex.exoId); }));
+  S.sessions.forEach(s=>sessionSummary(s).exos.forEach(id=>ids.add(id)));
   return ids.size;
 }
 function distinctMusclesCount(){ return memo("distinctMusclesCount", distinctMusclesCount_raw); }
 function distinctMusclesCount_raw(){
   const ms = new Set();
-  S.sessions.forEach(s=>s.exos.forEach(ex=>{
-    const def = EXO_MAP[ex.exoId];
-    if(def && ex.sets.some(st=>st.done)) def.muscles.forEach(m=>{ if(m!=="cardio") ms.add(m); });
+  S.sessions.forEach(s=>sessionSummary(s).exos.forEach(id=>{
+    const def = EXO_MAP[id];
+    if(def) def.muscles.forEach(m=>{ if(m!=="cardio") ms.add(m); });
   }));
   return ms.size;
 }
-function startHour(s){ return s.startedAt ? new Date(s.startedAt).getHours() : null; }
+// heure de début (heure locale) : l'analyse d'une date ISO complète coûte, on la garde par séance
+const HOUR_CACHE = new WeakMap();
+function startHour(s){
+  if(!s.startedAt) return null;
+  const c = HOUR_CACHE.get(s); if(c && c.a===s.startedAt) return c.h;
+  const h = new Date(s.startedAt).getHours(); HOUR_CACHE.set(s, { a:s.startedAt, h }); return h;
+}
 
 function estimated1RM(weight,reps){
   if(!weight||!reps) return weight||0;
@@ -444,7 +537,9 @@ function recomputePRFlags(){
         if(!st.done) return;
         if(st.pr) before++;
         const w = st.weight||0, r = st.reps||0, e = estimated1RM(w,r);
+        const was = !!st.pr;
         if(b && (w||r) && (w>c.w || e>c.r+0.01)){ st.pr = true; after++; } else delete st.pr;
+        if(was!==!!st.pr) sessionTouched(s);
         c.w = Math.max(c.w,w); c.r = Math.max(c.r,e);
       });
     });

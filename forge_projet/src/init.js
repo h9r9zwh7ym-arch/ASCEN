@@ -1,5 +1,5 @@
 // ================= INITIALISATION =================
-const APP_VERSION = "3.2";
+const APP_VERSION = "3.3";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 function applyTheme(){
@@ -46,10 +46,12 @@ function showSplash(){
 function init(){
   buildShell();
   applyTheme();
-  checkMedals(true); // médailles déjà méritées (ex. après mise à jour) : attribuées sans célébration
   applyPlannedSession(); // la séance prévue aujourd'hui s'affiche directement
   switchTab("today");
   showSplash();
+  // médailles déjà méritées (ex. après une mise à jour) : attribuées sans célébration, au calme
+  // (une quarantaine de statistiques sur tout l'historique : pas pendant le démarrage)
+  (window.requestIdleCallback || (f=>setTimeout(f, 1600)))(()=>{ const v = DATA_VER; checkMedals(true); if(DATA_VER!==v && !(S.draft && S.draft.startedAt)) renderView(currentTab); }, { timeout:2500 });
   // manifeste d'installation : seulement servi par un vrai serveur (en fichier local, WebKit refuse de le lire)
   if(/^https?:$/.test(location.protocol) && !document.querySelector('link[rel="manifest"]')){ const l = document.createElement("link"); l.rel = "manifest"; l.href = "manifest.webmanifest"; document.head.appendChild(l); }
   // hors ligne : service worker (uniquement servi en https, pas en fichier local ni en aperçu)
@@ -57,6 +59,7 @@ function init(){
   // une nouvelle version a été téléchargée en arrière-plan : elle servira au prochain lancement
   try{ if("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", e=>{ if(e.data && e.data.type==="forge-updated") toast("Mise à jour prête : elle s'appliquera au prochain lancement"); }); }catch(e){}
   idbRecover(); // copie de secours IndexedDB (voir core.js)
+  if(LOAD_SKIPPED) setTimeout(()=>toast(`${LOAD_SKIPPED} séance${LOAD_SKIPPED>1?"s":""} illisible${LOAD_SKIPPED>1?"s":""} mise${LOAD_SKIPPED>1?"s":""} de côté, le reste de l'historique est intact`), 1800);
   cleanupStorage();
   // demander un stockage persistant (le navigateur ne l'effacera pas pour libérer de la place)
   try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(p=>{ if(!p) navigator.storage.persist(); }).catch(()=>{}); }catch(e){}

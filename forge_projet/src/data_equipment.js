@@ -66,8 +66,11 @@ const EXO_CATS = [
   { id:"jump_rope",  n:"Corde à sauter" },
   { id:"stretch",    n:"Étirements" },
 ];
+const EXO_CAT_ORDER = ["dumbbells","barbell","kettlebell","bands","pullup_bar","dip_bars","suspension","ab_roller","jump_rope"];
 function exoCategory(e){
-  if(e.pattern==="stretch") return "stretch";
-  for(const c of ["dumbbells","barbell","kettlebell","bands","pullup_bar","dip_bars","suspension","ab_roller","jump_rope"]) if(e.equip.includes(c)) return c;
-  return "bodyweight";
+  if(e._cat) return e._cat;   // ne dépend que de la fiche : calculé une fois
+  let c = "bodyweight";
+  if(e.pattern==="stretch") c = "stretch";
+  else for(const k of EXO_CAT_ORDER) if(e.equip.includes(k)){ c = k; break; }
+  return (e._cat = c);
 }
