@@ -12,7 +12,7 @@ function sessionIcon(s){
   s.exos.forEach(ex=>{ const d=EXO_MAP[ex.exoId]; if(d) count[regionOf(d)] = (count[regionOf(d)]||0) + ex.sets.filter(st=>st.done).length; });
   const region = Object.keys(count).sort((a,b)=>count[b]-count[a])[0] || "core";
   const first = s.exos.map(ex=>EXO_MAP[ex.exoId]).find(d=>d && regionOf(d)===region);
-  return `<span class="xico r-${region}">${pictoSVG(first?pictoKey(first):"squat")}</span>`;
+  return `<span class="xico r-${region}">${(first ? exoPicto(first) : pictoSVG("squat"))}</span>`;
 }
 
 // Affichage par paquets : l'historique complet (des centaines de séances après

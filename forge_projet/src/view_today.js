@@ -62,7 +62,7 @@ function heroPicts(ids){
   const defs = ids.map(id=>EXO_MAP[id]).filter(Boolean);
   // chaque pictogramme ouvre la fiche de l'exercice ; « +N » mène à la liste complète
   const more = defs.length>5 ? `<button class="hp-more" data-a="heroShowAll" aria-label="Voir les ${defs.length} exercices">+${defs.length-5}</button>` : "";
-  return `<div class="hero-picts">${defs.slice(0,5).map((d,i)=>`<button class="hp" style="--k:${i}" data-a="showExoInfo" data-id="${d.id}" aria-label="${esc(d.n)} : voir la fiche">${pictoSVG(pictoKey(d))}</button>`).join("")}${more}</div>`;
+  return `<div class="hero-picts">${defs.slice(0,5).map((d,i)=>`<button class="hp" style="--k:${i}" data-a="showExoInfo" data-id="${d.id}" aria-label="${esc(d.n)} : voir la fiche">${exoPicto(d)}</button>`).join("")}${more}</div>`;
 }
 // « Ensuite : jeu. · Jambes » — la prochaine séance planifiée, pour voir sa semaine d'un coup d'œil
 function nextPlannedLine(){
@@ -506,7 +506,7 @@ function liveStripHTML(draft){
     const allDone = !draft.exos.some(x=>x.sets.some(s=>!s.done));
     const cls = (i===idx && !allDone ? "current" : "") + (d===n ? " done" : d ? " started" : " todo") + (i===stripBump ? " bump" : "");
     return `<button class="ls-chip ${cls}" data-a="focusJump" data-idx="${i}" aria-label="${esc(def.n)} : ${d===n?"terminé":`${d} sur ${n} séries`}">
-      <span class="ls-ring r-${regionOf(def)}" style="--p:${Math.round(d/n*100)}"><span>${d===n?icon("check"):pictoSVG(pictoKey(def))}</span></span>
+      <span class="ls-ring r-${regionOf(def)}" style="--p:${Math.round(d/n*100)}"><span>${d===n?icon("check"):exoPicto(def)}</span></span>
       <span class="ls-name">${esc(def.n)}</span>
       <span class="ls-sets">${d}/${n}</span>
     </button>`;
@@ -793,7 +793,7 @@ function overviewBodyHTML(){
     const done = ex.sets.filter(s=>s.done).length, n = ex.sets.length, allDone = done===n;
     return `<div class="row ov-row ${i===liveFocusIdx?"current":""} ${allDone?"done":""}">
       <button class="row-main" data-a="jumpFromOverview" data-idx="${i}">
-        <span class="ls-ring r-${regionOf(def)}" style="--p:${Math.round(done/n*100)}"><span>${allDone?icon("check"):pictoSVG(pictoKey(def))}</span></span>
+        <span class="ls-ring r-${regionOf(def)}" style="--p:${Math.round(done/n*100)}"><span>${allDone?icon("check"):exoPicto(def)}</span></span>
         <div class="grow"><div class="t">${esc(def.n)}</div><div class="s">${allDone?"Terminé":i===liveFocusIdx?`En cours · ${done}/${n} séries`:`${done}/${nb(n,"série")}`}</div></div>
       </button>
       <button class="icon-btn" aria-label="Remplacer" data-a="swapExoOpen" data-idx="${i}">${icon("swap")}</button>
@@ -854,7 +854,7 @@ function openPlanDaySheet(day){
   const cur = S.templates.find(t=>(t.days||[]).includes(day));
   const label = JOURS[(day+1)%7];
   const rows = S.templates.map(t=>`<button class="row tap" data-a="planSet" data-d="${day}" data-id="${t.id}">
-      ${cur&&cur.id===t.id ? `<span class="xico done">${icon("check")}</span>` : (EXO_MAP[(t.exos[0]||{}).exoId] ? `<span class="xico r-${tplRegion(t)}">${pictoSVG(pictoKey(EXO_MAP[t.exos[0].exoId]))}</span>` : `<span class="xico">${icon("bookmark")}</span>`)}
+      ${cur&&cur.id===t.id ? `<span class="xico done">${icon("check")}</span>` : (EXO_MAP[(t.exos[0]||{}).exoId] ? `<span class="xico r-${tplRegion(t)}">${exoPicto(EXO_MAP[t.exos[0].exoId])}</span>` : `<span class="xico">${icon("bookmark")}</span>`)}
       <div class="grow"><div class="t">${esc(t.n)}</div><div class="s">${t.exos.length} exercices · ${t.exos.reduce((a,e)=>a+e.sets,0)} séries</div></div>
     </button>`).join("");
   openSheet(`<div class="sheet-hd"><span class="t">Le ${label}</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>

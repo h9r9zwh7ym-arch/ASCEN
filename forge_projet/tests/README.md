@@ -42,6 +42,7 @@ Variables utiles :
 | `v31.js` | Création unique (Ma séance → Enregistrer, facultatif), plus de Calendrier, bulle des graphiques, reprise après arrière-plan (gestes, son, repos, jour suivant), pas de zoom au double appui |
 | `v32.js` | Fiabilité et performances : encodage en cache toujours exact, résumés de séance, séance abîmée écartée, écran en échec rattrapé, bornes de saisie, copie de secours regroupée |
 | `v33.js` | Un seul « L'app choisit », pictogrammes de la carte du jour touchables, plan de séance (variété, ordre), pictogrammes animés corrigés et zone travaillée plus fine |
+| `v34.js` | Pictogrammes sur squelette : longueurs d'os constantes à chaque image, appuis atteints, rien sous le sol, un pictogramme par exercice, vue de face avec épaules |
 | `profile.js` | Outil : profil CPU par scénario (démarrage, rendus, séance, fin de séance) sur 3 ans d'historique, processeur ×4. `NO_MINIFY=1 sh build.sh` avant pour avoir les noms de fonctions |
 | `anim_sheet.js` | Planche de contrôle des animations d'exercices (départ/fin), par famille (`FAMILIES=pushup,plank`) |
 | `t3d_perf.js` | Trophées 3D : vignettes, cadence, construction, vue Diamant (`TAG=nom`) |

@@ -41,12 +41,12 @@ const OUT = path.join(OUT_ROOT, 'v33'); fs.mkdirSync(OUT, { recursive: true });
   log('Plan:', JSON.stringify(plan)); if (plan.order || plan.fam > 2 || plan.muscle > 4 || !plan.haut.includes('epaules') || !plan.haut.includes('dos')) fail('plan de séance équilibré');
   // 4. pictogrammes animés : poses complètes, variantes propres (plus de doublons évidents), zone travaillée fine
   const pic = await page.evaluate(() => {
-    let bad = 0; EXOS.forEach(e => { const p = animPose(e); for (const P of [p.A, p.B]) for (const k of ['H', 'N', 'P', 'K', 'F', 'E', 'W']) if (!P[k] || P[k].some(v => isNaN(v))) bad++; });
-    const same = (a, b) => JSON.stringify(animPose(EXO_MAP[a])) === JSON.stringify(animPose(EXO_MAP[b]));
+    let bad = 0; EXOS.forEach(e => { const p = animRig(e); for (const P of [p.A, p.B]) for (const k of ['H', 'N', 'P', 'K', 'F', 'E', 'W']) if (!P[k] || P[k].some(v => isNaN(v))) bad++; });
+    const same = (a, b) => JSON.stringify(animRig(EXO_MAP[a]).frames) === JSON.stringify(animRig(EXO_MAP[b]).frames);
     const pairs = [['squat_barre', 'squat_pdc'], ['front_squat_barre', 'squat_barre'], ['rowing_inverse_barre', 'rowing_barre'], ['renegade_row', 'rowing_deux_halteres'], ['kickback_fessier_elastique', 'pont_fessier'], ['kb_sumo_deadlift', 'rdl_halteres'], ['curl_incline', 'curl_biceps'], ['fentes_marchees', 'fentes_halteres']];
     const dups = pairs.filter(([a, b]) => EXO_MAP[a] && EXO_MAP[b] && same(a, b)).map(x => x.join('='));
-    const floor = animPose(EXO_MAP.floor_press_haltere).env, incl = animPose(EXO_MAP.dc_incline_haltere).env;
-    const benchLeft = /M4\.5 16\.2h13\.5/.test(floor) || /M4\.5 16\.2h13\.5/.test(incl);
+    const floor = animRig(EXO_MAP.floor_press_haltere).env, incl = animRig(EXO_MAP.dc_incline_haltere).env;
+    const benchLeft = /M4\.5 16\.3h13\.5/.test(floor) || /M4\.5 16\.3h13\.5/.test(incl);
     return { bad, dups, benchLeft };
   });
   await page.evaluate(() => ACT.showExoInfo({ id: 'squat_barre' })); await wait(600);

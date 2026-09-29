@@ -61,6 +61,21 @@ const PICTO_OF = {
 const PICTO_BY_PATTERN = { squat:"squat", hinge:"hinge", push:"pushup", pull:"row", lunge:"lunge", core:"plank", calf:"calf" };
 
 function pictoKey(def){ return PICTO_OF[def.id] || PICTO_BY_PATTERN[def.pattern] || "squat"; }
+// pictogramme propre à chaque exercice : la pose de fin du squelette animé (mêmes proportions,
+// même mouvement que la fiche), en trait plus épais pour les petites tailles. Repli : famille.
+const PICTO_CACHE = new Map();
+function exoPicto(def){
+  if(!def) return pictoSVG("squat");
+  if(PICTO_CACHE.has(def.id)) return PICTO_CACHE.get(def.id);
+  let svg;
+  try{
+    if(typeof RIGS==="undefined" || !RIGS[def.id]) throw 0;
+    const rig = animRig(def), rd = RIGS[def.id], f = rd.icon==="A" ? rig.A : rd.icon==="mid" ? rig.frames[rig.frames.length>>1] : rig.B;
+    svg = `<svg class="picto" viewBox="0 0 24 24" aria-hidden="true"><path d="${rig.env||FLOOR}" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity=".38"/><path d="${animPath(f)}" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${f.H[0].toFixed(2)}" cy="${f.H[1].toFixed(2)}" r="2.3" fill="currentColor"/></svg>`;
+  }catch(e){ svg = pictoSVG(pictoKey(def)); }
+  PICTO_CACHE.set(def.id, svg);
+  return svg;
+}
 function pictoSVG(key){
   const p = PICTO_PATHS[key] || PICTO_PATHS.squat;
   return `<svg class="picto" viewBox="0 0 24 24" aria-hidden="true"><circle cx="${p.h[0]}" cy="${p.h[1]}" r="2.1" fill="currentColor"/><path d="${p.d}" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -80,7 +95,7 @@ function regionOf(def){ return def._region || (def._region = REGION_OF_MUSCLE[de
 // tuile d'exercice : pictogramme sur fond de la couleur de zone
 function exoIcon(def, size){
   const k = size||""; def._ico = def._ico || {};
-  return def._ico[k] || (def._ico[k] = `<span class="xico r-${regionOf(def)} ${k}" title="${esc(REGIONS[regionOf(def)].n)}">${pictoSVG(pictoKey(def))}</span>`);
+  return def._ico[k] || (def._ico[k] = `<span class="xico r-${regionOf(def)} ${k}" title="${esc(REGIONS[regionOf(def)].n)}">${exoPicto(def)}</span>`);
 }
 
 // ================= EXERCICES ANIMÉS (fiche technique) =================
@@ -280,34 +295,150 @@ function animPose(def){
 }
 function animPath(p){
   const q = k=>(p[k]||p[k.replace("2","")]).map(v=>v.toFixed(2)).join(" ");
+  if(p.S) return `M${q("N")}L${q("P")}M${q("S")}L${q("S2")}M${q("Q")}L${q("Q2")}M${q("Q")}L${q("K")}L${q("F")}M${q("Q2")}L${q("K2")}L${q("F2")}M${q("S")}L${q("E")}L${q("W")}M${q("S2")}L${q("E2")}L${q("W2")}`;
   return `M${q("N")}L${q("P")}M${q("P")}L${q("K")}L${q("F")}M${q("P")}L${q("K2")}L${q("F2")}M${q("N")}L${q("E")}L${q("W")}M${q("N")}L${q("E2")}L${q("W2")}`;
 }
 function focusPath(p, seg){
-  const a = p[seg[0]], b = p[seg[1]], at = t=>[(a[0]+(b[0]-a[0])*t).toFixed(2), (a[1]+(b[1]-a[1])*t).toFixed(2)].join(" ");
+  const a = p.S && seg[0]==="N" && seg[1]==="E" ? p.S : p.S && seg[0]==="P" && seg[1]==="K" ? p.Q : p[seg[0]], b = p[seg[1]], at = t=>[(a[0]+(b[0]-a[0])*t).toFixed(2), (a[1]+(b[1]-a[1])*t).toFixed(2)].join(" ");
   return `M${at(seg[2])}L${at(seg[3])}`;
+}
+// ---------- squelette (v3.5) ----------
+// Les poses A et B décrivent des positions d'articulations ; les animer en faisant glisser ces
+// positions en ligne droite étirait ou raccourcissait les membres (103 exercices sur 155 avaient
+// un bras, une cuisse ou le tronc qui changeait de longueur). Désormais chaque pose est lue comme
+// des ANGLES d'os, le corps est reconstruit avec des longueurs fixes (cinématique directe), et
+// l'animation fait tourner les articulations. Les points d'appui (pieds au sol, mains sur la
+// barre ou au sol, bassin sur le banc) restent en place : le membre en appui est résolu en
+// cinématique inverse (deux segments), du côté où il était plié dans le dessin d'origine.
+const BONE_L = { head:2.75, trunk:5.6, thigh:4.2, shin:4.2, uarm:3.0, farm:3.1 };
+const LIMBS = [ ["P","K","F","thigh","shin"], ["P","K2","F2","thigh","shin"], ["N","E","W","uarm","farm"], ["N","E2","W2","uarm","farm"] ];
+const jp = (P,k)=>P[k]||P[k.replace("2","")];
+const dir = a=>[Math.cos(a), Math.sin(a)];
+const bAng = (a,b,fb)=>{ const dx = b[0]-a[0], dy = b[1]-a[1]; return Math.hypot(dx,dy)<0.35 ? fb : Math.atan2(dy,dx); };
+function poseAngles(P){
+  const t = bAng(jp(P,"P"), jp(P,"N"), -Math.PI/2), o = { t, h:bAng(jp(P,"N"), jp(P,"H"), t) };
+  LIMBS.forEach(([r,m,e])=>{ const u = bAng(jp(P,r), jp(P,m), r==="N" ? t+Math.PI : Math.PI/2); o[m] = u; o[e] = bAng(jp(P,m), jp(P,e), u); });
+  return o;
+}
+const lerpA = (a,b,t)=>{ const d = ((b-a)%(2*Math.PI)+3*Math.PI)%(2*Math.PI)-Math.PI; return a+d*t; };
+const lerpP = (a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t];
+function fkPose(g){
+  const add = (p,a,l)=>{ const d = dir(a); return [p[0]+d[0]*l, p[1]+d[1]*l]; };
+  const P = [0,0], N = add(P, g.t, BONE_L.trunk), o = { P, N, H:add(N, g.h, BONE_L.head) };
+  LIMBS.forEach(([r,m,e,l1,l2])=>{ o[m] = add(o[r], g[m], BONE_L[l1]); o[e] = add(o[m], g[e], BONE_L[l2]); });
+  return o;
+}
+// cinématique inverse à deux segments : l'articulation du milieu reste du côté de « hint »
+function ik2(R, T, L1, L2, hint){
+  const dx = T[0]-R[0], dy = T[1]-R[1], d = Math.max(Math.abs(L1-L2)+.05, Math.min(L1+L2-.02, Math.hypot(dx,dy)));
+  const a = Math.atan2(dy,dx), b = Math.acos(Math.max(-1, Math.min(1, (L1*L1+d*d-L2*L2)/(2*L1*d))));
+  const m1 = [R[0]+Math.cos(a+b)*L1, R[1]+Math.sin(a+b)*L1], m2 = [R[0]+Math.cos(a-b)*L1, R[1]+Math.sin(a-b)*L1];
+  const pick = Math.hypot(m1[0]-hint[0], m1[1]-hint[1]) <= Math.hypot(m2[0]-hint[0], m2[1]-hint[1]) ? m1 : m2;
+  const ea = Math.atan2(T[1]-pick[1], T[0]-pick[0]);
+  return [pick, [pick[0]+Math.cos(ea)*L2, pick[1]+Math.sin(ea)*L2]];
+}
+const ANIM_FRAMES = 8, ANIM_CACHE = new Map();
+// pose écrite en angles (data_rigs.js) → positions ; extrémités posées résolues en cinématique inverse
+// vue de face : épaules et hanches écartées (les bras partaient du cou, les jambes d'un seul point)
+const SHOULDER_W = 1.55, HIP_W = .85;
+const rootOf = (o, r, second)=>o.S ? (r==="N" ? (second ? o.S2 : o.S) : (second ? o.Q2 : o.Q)) : o[r];
+function frontRoots(o, t){
+  const px = Math.cos(t+Math.PI/2), py = Math.sin(t+Math.PI/2);
+  o.S = [o.N[0]-px*SHOULDER_W, o.N[1]-py*SHOULDER_W]; o.S2 = [o.N[0]+px*SHOULDER_W, o.N[1]+py*SHOULDER_W];
+  o.Q = [o.P[0]-px*HIP_W, o.P[1]-py*HIP_W]; o.Q2 = [o.P[0]+px*HIP_W, o.P[1]+py*HIP_W];
+}
+function rigSolve(p){
+  const R = Math.PI/180, pin = Object.assign({}, p.pin||{}), face = p.face||1;
+  const ang = { K:p.K, F:p.F, E:p.E, W:p.W };
+  // second membre : identique au premier sauf mention contraire (angles et appui)
+  ang.K2 = p.K2!==undefined ? p.K2 : p.K; ang.F2 = p.F2!==undefined ? p.F2 : p.F;
+  ang.E2 = p.E2!==undefined ? p.E2 : p.E; ang.W2 = p.W2!==undefined ? p.W2 : p.W;
+  if(!pin.F2 && pin.F && p.K2===undefined && p.F2===undefined) pin.F2 = pin.F;
+  if(!pin.W2 && pin.W && p.E2===undefined && p.W2===undefined) pin.W2 = pin.W;
+  const add = (q,a,l)=>[q[0]+Math.cos(a)*l, q[1]+Math.sin(a)*l];
+  const o = { P:p.P.slice() };
+  // nk : cou raccourci (haussement d'épaules : les épaules montent vers les oreilles)
+  o.N = add(o.P, p.t*R, BONE_L.trunk); o.H = add(o.N, (p.h!==undefined ? p.h : p.t)*R, p.nk || BONE_L.head); o.nk = p.nk || BONE_L.head;
+  if(p.front) frontRoots(o, p.t*R);
+  LIMBS.forEach(([r,m,e,l1,l2])=>{
+    const leg = r==="P", u = ang[m]!==undefined ? ang[m] : 90, l = ang[e]!==undefined ? ang[e] : 90, root = rootOf(o, r, m.endsWith("2"));
+    o[m] = add(root, u*R, BONE_L[l1]); o[e] = add(o[m], l*R, BONE_L[l2]);
+    if(pin[e]){
+      // genou vers l'avant, coude vers l'arrière, sauf angle donné
+      const hint = ang[m]!==undefined ? o[m] : add(root, (leg ? (face>0 ? 30 : 150) : (face>0 ? 150 : 30))*R, BONE_L[l1]);
+      const s = ik2(root, pin[e], BONE_L[l1], BONE_L[l2], hint); o[m] = s[0]; o[e] = s[1];
+    }
+  });
+  o.pin = pin;
+  return o;
+}
+function rigFromData(def, rd){
+  const base = animPose(def), A = rigSolve(rd.A), B = rigSolve(rd.B), front = !!(rd.A.front || rd.B.front);
+  // angles de chaque os, membres mesurés depuis leur racine (épaule ou hanche en vue de face)
+  const angles = o=>{ const g = { t:bAng(o.P, o.N, -Math.PI/2) }; g.h = bAng(o.N, o.H, g.t);
+    LIMBS.forEach(([r,m,e])=>{ const root = rootOf(o, r, m.endsWith("2")); g[m] = bAng(root, o[m], Math.PI/2); g[e] = bAng(o[m], o[e], g[m]); }); return g; };
+  const gA = angles(A), gB = angles(B), both = LIMBS.filter(([,,e])=>A.pin[e] && B.pin[e]);
+  const frame = t=>{
+    const g = {}; Object.keys(gA).forEach(k=>g[k] = lerpA(gA[k], gB[k], t));
+    const add = (q,a,l)=>[q[0]+Math.cos(a)*l, q[1]+Math.sin(a)*l];
+    const f = { P:lerpP(A.P, B.P, t) }; f.N = add(f.P, g.t, BONE_L.trunk); f.H = add(f.N, g.h, A.nk+(B.nk-A.nk)*t);
+    if(front) frontRoots(f, g.t);
+    LIMBS.forEach(([r,m,e,l1,l2])=>{ const root = rootOf(f, r, m.endsWith("2")); f[m] = add(root, g[m], BONE_L[l1]); f[e] = add(f[m], g[e], BONE_L[l2]); });
+    both.forEach(([r,m,e,l1,l2])=>{ const s = ik2(rootOf(f, r, m.endsWith("2")), lerpP(A.pin[e], B.pin[e], t), BONE_L[l1], BONE_L[l2], f[m]); f[m] = s[0]; f[e] = s[1]; });
+    return f;
+  };
+  const ease = x=>x*x*(3-2*x), frames = [];
+  for(let i=0;i<=ANIM_FRAMES;i++) frames.push(frame(ease(i/ANIM_FRAMES)));
+  return { env:rd.env || FLOOR, dur:rd.dur || base.dur, grip:rd.grip || base.grip, frames, A:frames[0], B:frames[ANIM_FRAMES], anchor:"P", contacts:both.map(c=>c[2]), two:true };
+}
+function animRig(def){
+  if(ANIM_CACHE.has(def.id)) return ANIM_CACHE.get(def.id);
+  if(typeof RIGS!=="undefined" && RIGS[def.id]){ const rig = rigFromData(def, RIGS[def.id]); ANIM_CACHE.set(def.id, rig); return rig; }
+  const pose = animPose(def), A = pose.A, B = pose.B;
+  const gA = poseAngles(A), gB = poseAngles(B);
+  const mv = k=>{ const a = jp(A,k), b = jp(B,k); return Math.hypot(a[0]-b[0], a[1]-b[1]); };
+  // point d'ancrage : le bassin s'il ne bouge pas (assis, allongé, debout sur place), sinon le
+  // point d'appui le plus immobile (pieds, mains à la barre, genoux au sol)
+  const anchor = mv("P")<.3 ? "P" : ["F","F2","W","W2","K","K2"].reduce((b,k)=>mv(k)<mv(b)-.05 ? k : b, "F");
+  // membres en appui : leur extrémité ne bouge (presque) pas entre le départ et la fin
+  const contacts = LIMBS.filter(([,m,e])=>e!==anchor && mv(e)<.45 && (A[e] || !A[m] || e==="F" || e==="W"));
+  const frame = t=>{
+    const g = {}; Object.keys(gA).forEach(k=>g[k] = lerpA(gA[k], gB[k], t));
+    const f = fkPose(g), target = lerpP(jp(A,anchor), jp(B,anchor), t), src = f[anchor];
+    Object.keys(f).forEach(k=>{ f[k] = [f[k][0]+target[0]-src[0], f[k][1]+target[1]-src[1]]; });
+    contacts.forEach(([r,m,e,l1,l2])=>{ const T = lerpP(jp(A,e), jp(B,e), t); const [mid, end] = ik2(f[r], T, BONE_L[l1], BONE_L[l2], f[m]); f[m] = mid; f[e] = end; });
+    return f;
+  };
+  const ease = x=>x*x*(3-2*x);
+  const frames = []; for(let i=0;i<=ANIM_FRAMES;i++) frames.push(frame(ease(i/ANIM_FRAMES)));
+  const rig = { env:pose.env, dur:pose.dur, grip:pose.grip, frames, A:frames[0], B:frames[ANIM_FRAMES], anchor, contacts:contacts.map(c=>c[2]) };
+  ANIM_CACHE.set(def.id, rig);
+  return rig;
 }
 // charge tenue : disque aux mains pour les exercices chargés (pas les élastiques)
 function exoAnimSVG(def){
-  const pose = animPose(def);
+  const rig = animRig(def);
   const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   const lt = typeof loadableTypeOf==="function" ? loadableTypeOf(def) : null, w = lt && lt!=="bands" ? (lt==="barbell" ? 1.9 : 1.3) : 0;
-  const A = pose.A, B = pose.B, dur = (pose.dur || (isTimed(def) ? 3.6 : 2.4)) + "s";
-  const spl = `calcMode="spline" keyTimes="0;.45;1" keySplines=".45 0 .55 1;.45 0 .55 1" dur="${dur}" repeatCount="indefinite"`;
-  const anim = (attr, a, b)=> reduce ? "" : `<animate attributeName="${attr}" values="${a};${b};${a}" ${spl}/>`;
-  const pt = (P, k)=>P[k]||P[k.replace("2","")];
-  const dot = (k, r, cls)=>{ const a = pt(A,k), b = pt(B,k);
-    return `<circle class="${cls}" cx="${a[0]}" cy="${a[1]}" r="${r}">${anim("cx", a[0], b[0])}${anim("cy", a[1], b[1])}</circle>`; };
-  // prise marteau : charge verticale (ellipse) au lieu d'un disque
-  const load = k=> pose.grip==="v" ? (()=>{ const a = pt(A,k), b = pt(B,k);
-    return `<ellipse class="ea-load" cx="${a[0]}" cy="${a[1]}" rx="${(w*.55).toFixed(2)}" ry="${(w*1.25).toFixed(2)}">${anim("cx", a[0], b[0])}${anim("cy", a[1], b[1])}</ellipse>`; })() : dot(k, w, "ea-load");
-  const two = A.W2 || B.W2;
+  const F = rig.frames, n = F.length-1, dur = (rig.dur || (isTimed(def) ? 3.6 : 2.4)) + "s";
+  // aller (45 % du temps) puis retour, images intermédiaires calculées articulation par articulation
+  const seq = F.concat(F.slice(0,-1).reverse());
+  const kt = seq.map((_,i)=>(i<=n ? i/n*.45 : .45+(i-n)/n*.55).toFixed(3)).join(";");
+  const anim = (attr, fn)=> reduce ? "" : `<animate attributeName="${attr}" values="${seq.map(fn).join(";")}" keyTimes="${kt}" dur="${dur}" repeatCount="indefinite"/>`;
+  const r2 = v=>v.toFixed(2);
+  const dot = (k, r, cls)=>`<circle class="${cls}" cx="${r2(F[0][k][0])}" cy="${r2(F[0][k][1])}" r="${r}">${anim("cx", f=>r2(f[k][0]))}${anim("cy", f=>r2(f[k][1]))}</circle>`;
+  const load = k=> rig.grip==="v"
+    ? `<ellipse class="ea-load" cx="${r2(F[0][k][0])}" cy="${r2(F[0][k][1])}" rx="${r2(w*.55)}" ry="${r2(w*1.25)}">${anim("cx", f=>r2(f[k][0]))}${anim("cy", f=>r2(f[k][1]))}</ellipse>`
+    : dot(k, w, "ea-load");
+  const pose = animPose(def), two = rig.two ? Math.hypot(F[0].W[0]-F[0].W2[0], F[0].W[1]-F[0].W2[1])>.6 : (pose.A.W2 || pose.B.W2);
   const seg = FOCUS_SEG[def.muscles[0]];
-  const focus = seg ? `<path class="ea-focus" d="${focusPath(A, seg)}">${anim("d", focusPath(A, seg), focusPath(B, seg))}</path>` : "";
+  const focus = seg ? `<path class="ea-focus" d="${focusPath(F[0], seg)}">${anim("d", f=>focusPath(f, seg))}</path>` : "";
   return `<svg class="exo-anim" viewBox="0 0 24 24" aria-label="Animation du mouvement">
-    <path class="ea-env" d="${pose.env||FLOOR}"/>
-    <path class="ea-body" d="${animPath(A)}">${anim("d", animPath(A), animPath(B))}</path>
+    <path class="ea-env" d="${rig.env||FLOOR}"/>
+    <path class="ea-body" d="${animPath(F[0])}">${anim("d", animPath)}</path>
     ${focus}
     ${dot("H", 2.15, "ea-head")}
     ${w ? load("W") + (two ? load("W2") : "") : ""}
   </svg>`;
 }
+

@@ -520,6 +520,26 @@ Mesures : `tests/profile.js`, profil CPU par scénario sur 3 ans d'historique (�
   - `tests/anim_sheet.js` (FAMILIES, NAME) : planche de contrôle à regarder après toute retouche.
 - **Test** : `v33`.
 
+## 9 duovicies. Version 3.5 : pictogrammes sur squelette
+
+Constat : les poses étaient des positions d'articulations animées en ligne droite. 103 exercices sur 155 avaient un membre ou le tronc qui changeait de longueur (membres « désarticulés »). Plusieurs dessins étaient faits avec des proportions impossibles : bras de 7 unités dans la planche, jambes 1,6× trop longues dans la pompe pike.
+
+- **Squelette** (`data_pictos.js`).
+  - Longueurs d'os fixes (`BONE_L` : tronc 5,6, cuisse et tibia 4,2, bras 3,0, avant-bras 3,1, cou 2,75).
+  - Chaque image est reconstruite à partir d'angles (cinématique directe) ; l'animation interpole les angles sur 8 images aller + retour (`rigFromData`, SMIL `values` / `keyTimes`). Plus aucun membre ne s'étire au milieu du mouvement.
+  - Les extrémités posées (`pin` : pieds au sol, mains sur la barre, au sol ou sur le banc) sont résolues en cinématique inverse à deux segments (`ik2`), pliées du côté de l'angle donné.
+  - Vue de face (`front:true`) : épaules et hanches écartées (`frontRoots`, `S`/`S2`/`Q`/`Q2`) ; avant, bras et jambes partaient d'un seul point.
+  - `nk` : cou raccourci pour les haussements d'épaules.
+- **Poses** (`src/data_rigs.js`, chargé après `data_pictos.js`).
+  - Les 155 exercices sont réécrits : bassin `P`, angle du tronc `t`, de la tête `h`, des membres `K F E W` (et `K2 F2 E2 W2`), appuis `pin`, décor `env`, durée `dur`, pictogramme `icon` (A, B ou mid).
+  - Aides : `stand`, `FRONT`, `HANG`, `bodyLine` (corps gainé des pieds aux épaules), `supine`, `quad`, `BENCH_LIE`, `INCL_LIE`, `rot`.
+  - Repère : 0° à droite, 90° en bas ; sol y = 20,8.
+  - L'ancien système (`ANIM_POSES`, `ANIM_VARIANT`) sert de repli pour un exercice sans pose.
+- **Pictogrammes de liste** : `exoPicto(def)` dessine la pose de fin (ou `icon`) du squelette, trait plus épais. Chaque exercice a son pictogramme (134 dessins différents pour 155 exercices) au lieu d'une vingtaine de familles.
+- **Contrôle** :
+  - `tests/anim_sheet.js` affiche départ, milieu et fin de chaque exercice (FAMILIES, NAME).
+  - `tests/v34.js` vérifie, pour chaque exercice et chaque image : longueurs d'os constantes (écart 0), appuis atteints, rien sous le sol, épaules écartées en vue de face.
+
 ## 10. Cahier des charges d'origine (résumé)
 
 Voir le fichier `4a3df5ee-cahier-des-charges-forge.md` fourni au lancement du projet pour le texte complet. Points clés déjà couverts en v1.0 : matériel personnalisable et extensible, bibliothèque d'exercices filtrée, inclusion/exclusion d'exercices, objectifs personnalisés, suivi détaillé de séance (éditable, timer de repos, coche rapide), moteur de suggestion 100% local avec export/import IA, graphiques de progression, PR, streaks/régularité, trophées, écran d'accueil = séance du jour, thème clair/sombre automatique, page À propos avec copyright.

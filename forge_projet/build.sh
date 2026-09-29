@@ -13,7 +13,7 @@ b64(){ base64 < "$1" | tr -d '\n'; }
 printf "@font-face{font-family:'Geist ASCEN';src:url(data:font/woff2;base64,%s) format('woff2');font-weight:560 720;font-display:swap}@font-face{font-family:'ASCEN Num';src:url(data:font/woff2;base64,%s) format('woff2');font-weight:100 900;font-display:swap;unicode-range:U+20,U+25,U+2B-2F,U+30-3A,U+A0,U+D7,U+2013,U+2212,U+202F}" "$(b64 src/fonts/geist-ascen.woff2)" "$(b64 src/fonts/barlow-num.woff2)"
 $CSS < src/style.css
 echo '</style></head><body><div id="app"></div><nav class="tabbar" aria-label="Onglets"></nav><div id="restbar"></div><div id="overlay" role="dialog"></div><div id="toast" role="status" aria-live="polite"></div><input type="file" id="fileImport" accept="application/json,.json" style="display:none"><script>'
-cd src; cat data_equipment.js data_exercises.js data_pictos.js core.js engine.js ui_shell.js sfx.js fx.js timer.js charts.js trophies.js view_today.js tpl_editor.js onboarding.js view_history.js recap.js rewind.js view_progress.js trophy3d.js view_profil.js init.js | $JS; cd ..
+cd src; cat data_equipment.js data_exercises.js data_pictos.js data_rigs.js core.js engine.js ui_shell.js sfx.js fx.js timer.js charts.js trophies.js view_today.js tpl_editor.js onboarding.js view_history.js recap.js rewind.js view_progress.js trophy3d.js view_profil.js init.js | $JS; cd ..
 echo '</script></body></html>'
 } > dist/forge.html
 cp dist/forge.html ../index.html
