@@ -1946,3 +1946,29 @@ h2.sh .more{font-family:var(--sans);font-size:var(--fs-sub);font-weight:500;lett
 .hero-picts .hp{transition:transform .15s}
 .hero-picts .hp:active{transform:scale(.88)}
 .hero-picts .hp-more{min-width:36px;min-height:36px}
+/* v3.6 : carte des muscles (fiche exercice, Progrès) */
+.mm{display:block;width:100%;max-width:250px;height:auto;margin:4px auto 0;overflow:visible}
+.mm-base{fill:var(--fill)}
+.mm-z{fill:var(--fill);transition:fill-opacity .3s}
+.mm-z.on{fill:var(--rc);fill-opacity:calc(.22 + .78 * var(--v))}
+.mm-z[data-tip]{cursor:pointer}
+.mm-z.tip-on{stroke:var(--label);stroke-width:.8}
+.mm-cap{font-size:4.4px;fill:var(--label3);text-anchor:middle;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.exo-mm{margin:6px 16px 0;padding:10px 0 4px;border-radius:var(--r-card);background:var(--bg2)}
+.exo-mm .mm{max-width:210px}
+.mm-card .mm{max-width:270px;margin-top:10px}
+.mm-legend{display:flex;justify-content:center;gap:14px;margin-top:8px;font-size:var(--fs-cap);color:var(--label2)}
+.mm-legend span{display:flex;align-items:center;gap:5px}
+.mm-legend i{width:12px;height:12px;border-radius:4px;background:var(--r-push);opacity:calc(.22 + .78 * var(--v))}
+/* ---------- défis (v3.6) ---------- */
+.ch-row .sfi,.ch-pick .sfi{flex:none}
+.ch-pick{align-items:flex-start}
+.ch-pick .sfi{margin-top:2px}
+.ch-pick .btn{flex:none;align-self:center}
+.ch-on{flex:none;align-self:center;font-size:var(--fs-foot);font-weight:700;color:var(--tint-ink);padding:4px 10px;border-radius:999px;background:color-mix(in srgb,var(--tint-ink) 14%,transparent)}
+.ch-won{display:inline-flex;align-items:center;gap:3px;margin-left:6px;font-size:var(--fs-foot);font-weight:700;color:var(--green);vertical-align:1px}
+.ch-won .ii{width:12px;height:12px}
+.ch-count{font-size:var(--fs-foot);font-weight:600;color:var(--label2);text-transform:none;letter-spacing:0}
+.cel-chal{background:color-mix(in srgb,var(--tint-ink) 15%,transparent);color:var(--tint-ink)}
+.ch-group{margin-bottom:14px}
+.ch-pick .s{white-space:normal;overflow:visible;text-overflow:clip;display:block}

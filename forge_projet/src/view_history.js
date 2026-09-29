@@ -268,11 +268,12 @@ Object.assign(ACT, {
     else delete s.durationSec;
     S.sessions.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
     recomputePRFlags();
+    const won = checkChallenges();
     checkMedals(true); // un palier atteint grâce à la correction est noté sans fête
     const hits = checkTargets();
     histEdit = null;
     changed();
     openSheet(sessionDetailHTML(s));
-    sfx("seg"); toast(hits.length ? "Séance modifiée · objectif atteint" : "Séance modifiée", hits.length ? "target" : "check");
+    sfx("seg"); toast(won.length ? `Séance modifiée · défi réussi : ${CHAL_MAP[won[0].id].n}` : hits.length ? "Séance modifiée · objectif atteint" : "Séance modifiée", won.length ? "flag" : hits.length ? "target" : "check");
   },
 });

@@ -540,6 +540,24 @@ Constat : les poses étaient des positions d'articulations animées en ligne dro
   - `tests/anim_sheet.js` affiche départ, milieu et fin de chaque exercice (FAMILIES, NAME).
   - `tests/v34.js` vérifie, pour chaque exercice et chaque image : longueurs d'os constantes (écart 0), appuis atteints, rien sous le sol, épaules écartées en vue de face.
 
+## 9 tervicies. Version 3.6 : carte des muscles, défis, audit de robustesse
+
+- **Carte des muscles** (`src/musclemap.js`) : deux silhouettes stylisées (face, dos) en SVG ; chaque muscle est une zone colorée selon sa région, avec une intensité de 0 à 1 (`muscleMapSVG(levels, tips, opts)`).
+  - Fiche d'exercice : muscle principal plein, secondaires à 42 % (`exoMuscleMap`). Pas de carte pour un exercice uniquement cardio.
+  - Progrès, Résumé : « Muscles de la semaine » (`weekMuscleMapHTML`), séries des 7 derniers jours par muscle. La couleur est pleine au repère de 6 séries (force) ou 10 séries (autres objectifs). Toucher un muscle affiche sa bulle (même mécanisme `data-tip` que les graphiques). Liste « À renforcer ».
+- **Défis** (`src/challenges.js`) : 8 défis courts (7 à 30 jours) lancés depuis Progrès, 3 au plus en même temps.
+  - Défis : 100 pompes, 10 min de gainage, tout le corps, 1 000 répétitions, 12 séances, jambes, 3 records, 10 tonnes (masqué sans matériel chargeable).
+  - La progression se calcule depuis l'historique (séances datées du lancement à la fin du délai) : rien à saisir.
+  - État : `S.challenges = [{id, start, doneAt?, missedAt?}]`, filtré par forme dans `normalizeState`. Un identifiant inconnu est gardé mais ignoré.
+  - `checkChallenges()` : appelé à la fin d'une séance (avant `checkMedals`), après une correction d'historique et à l'affichage de la section (délais dépassés).
+  - Réussite : ligne « Défi réussi » dans la fête de fin de séance, nouveau trophée « Défis relevés » (1 / 5 / 15 / 40).
+  - Abandon avec confirmation. Un défi manqué ou réussi peut être relancé.
+- **Audit de robustesse** :
+  - État enregistré abîmé (valeurs nulles, types faux, éléments nuls ou inconnus, séance en cours cassée) : l'app démarre et tous les écrans s'affichent (vérifié par `tests/v35.js`).
+  - Réinitialisation : efface aussi les copies illisibles mises de côté. Elle recharge même si IndexedDB est bloquée (délai de 2,5 s).
+  - Restauration : accepte aussi le format compact (`zs`) ; un fichier illisible ne change rien (message) ; le minuteur de repos d'une séance en cours est arrêté.
+- **Tests** : `tests/v35.js` couvre la carte (fiche et semaine, bulle), le cycle de vie des défis (lancement, plafond, réussite fêtée et trophée, rechargement, délai dépassé, abandon, relance, défi en tonnes masqué sans charges), les états abîmés et la réinitialisation.
+
 ## 10. Cahier des charges d'origine (résumé)
 
 Voir le fichier `4a3df5ee-cahier-des-charges-forge.md` fourni au lancement du projet pour le texte complet. Points clés déjà couverts en v1.0 : matériel personnalisable et extensible, bibliothèque d'exercices filtrée, inclusion/exclusion d'exercices, objectifs personnalisés, suivi détaillé de séance (éditable, timer de repos, coche rapide), moteur de suggestion 100% local avec export/import IA, graphiques de progression, PR, streaks/régularité, trophées, écran d'accueil = séance du jour, thème clair/sombre automatique, page À propos avec copyright.

@@ -96,6 +96,7 @@ const MEDALS = [
   { id:"sessions", g:"dumbbell", c:"orange", cat:"regular", n:"Assiduité", unit:"séances terminées", one:"séance terminée",     t:[1,25,150,500],   val:()=>S.sessions.length, desc:"Le diamant représente environ trois ans à trois séances par semaine." },
   { id:"streak", g:"flame", c:"red",   cat:"regular", n:"Régularité", unit:"semaines d'affilée",                          t:[2,8,26,104],     val:maxStreakWeeksEver, desc:"Semaines consécutives avec au moins une séance. Le diamant demande deux ans sans interruption." },
   { id:"perfect", g:"target", c:"pink",  cat:"regular", n:"Semaine parfaite", unit:"semaines à l'objectif", one:"semaine à l'objectif", t:[1,8,40,150],   val:perfectWeeksCount, desc:"Semaines où tu atteins ton objectif de séances hebdomadaires." },
+  { id:"challenges", g:"flag", c:"orange", cat:"regular", n:"Défis relevés", unit:"défis réussis", one:"défi réussi", t:[1,5,15,40], val:()=>challengesDone(), desc:"Défis lancés depuis Progrès et réussis dans le temps imparti." },
   { id:"fullmonth", g:"calendar", c:"blue",cat:"regular", n:"Mois complet", unit:"mois à 12 séances ou plus", one:"mois à 12 séances ou plus", t:[1,3,6,12], val:fullMonths },
   { id:"ironyear", g:"anvil", c:"indigo", cat:"regular", n:"Année de fer", unit:"années à 48 semaines actives", one:"année à 48 semaines actives", t:[1,2,3,5], val:ironYears, desc:"Une année civile où tu t'entraînes au moins 48 semaines sur 52. Le diamant demande cinq années de ce niveau." },
   { id:"fidelity", g:"heart", c:"pink", cat:"regular", n:"Fidélité", unit:"jours entre ta première et ta dernière séance", one:"jour entre ta première et ta dernière séance", t:[30,180,365,1095], val:spanDays, desc:"L'ancienneté de ta pratique. Le diamant correspond à trois ans." },
@@ -375,7 +376,7 @@ function confettiBurst(x, y, count){
 }
 
 // ---------- fin de séance ----------
-function showCelebration(session, ups, xpBefore, xpAfter, hits){
+function showCelebration(session, ups, xpBefore, xpAfter, hits, won){
   const vol = Math.round(sessionVolume(session));
   const sets = sessionSetCount(session);
   const prs = sessionPRCount(session);
@@ -394,6 +395,7 @@ function showCelebration(session, ups, xpBefore, xpAfter, hits){
     </div>
     ${prs?`<div class="cel-pr">${ii("bolt")} ${prs} record${prs>1?"s":""} battu${prs>1?"s":""}</div>`:""}
     ${(hits||[]).map((t,i)=>`<div class="cel-target" style="--i:${i}">${ii("target")} Objectif atteint : ${esc(EXO_MAP[t.exoId].n)}, ${fmtTarget(t.kind, t.value)}</div>`).join("")}
+    ${(won||[]).map((c,i)=>`<div class="cel-target cel-chal" style="--i:${(hits||[]).length+i}">${ii("star")} Défi réussi : ${esc(CHAL_MAP[c.id].n)}</div>`).join("")}
     <div class="cel-xp">
       <div class="cel-xp-hd"><span>${levelUp?`Niveau ${after.level} atteint !`:`Niveau ${after.level}`}</span><span class="xpg">+${xpAfter-xpBefore} XP</span></div>
       <div class="xpbar"><span id="celXp" style="width:${Math.round((levelUp?0:before.pct)*100)}%"></span></div>

@@ -77,7 +77,7 @@ function levelCardHTML(){
 
 function overviewPaneHTML(){
   if(!S.sessions.length){
-    return `${levelCardHTML()}${targetsHTML()}<div class="empty-state"><span class="em">${sfIcon("chart","orange","lg")}</span>Tes statistiques apparaîtront ici après ta première séance : régularité, tonnage, répartition musculaire, records…</div>`;
+    return `${levelCardHTML()}${targetsHTML()}${challengesHTML()}<div class="empty-state"><span class="em">${sfIcon("chart","orange","lg")}</span>Tes statistiques apparaîtront ici après ta première séance : régularité, tonnage, répartition musculaire, records…</div>`;
   }
   const vol = totalVolumeAllTime(), hours = totalDurationSec()/3600;
   const kpis = `<div class="kpi-grid">
@@ -99,7 +99,8 @@ function overviewPaneHTML(){
   const musc = muscleSets(30);
   const prs = recentPRs(5);
 
-  return `${levelCardHTML()}${targetsHTML()}${kpis}
+  return `${levelCardHTML()}${targetsHTML()}${challengesHTML()}${kpis}
+    ${weekMuscleMapHTML()}
     ${weekVolumeHTML()}
     <div class="chart-card stagger" style="--i:6">
       <div class="cc-h"><div class="cc-t">Régularité</div><div class="cc-s">18 dernières semaines</div></div>

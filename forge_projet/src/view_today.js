@@ -832,13 +832,14 @@ function finalizeSession(){
   const ids = draft.exos.map(e=>e.exoId).join();
   const known = draft.tplId || S.templates.some(t=>t.exos.map(e=>e.exoId).join()===ids);
   lastDoneForSave = known || !draft.exos.length ? null : { n: draft.name && draft.source!=="engine" ? draft.name : sessionTitle(draft), exos: draft.exos.map(e=>({ exoId:e.exoId, sets:e.sets.filter(s=>s.done).length||e.sets.length })) };
+  const won = checkChallenges(); // avant les trophées : « Défis relevés » compte la réussite
   const ups = checkMedals();
   const hits = checkTargets();
   const xpAfter = totalXP();
   save();
   scrollTodayTop();
   renderViewAnimated("today");
-  showCelebration(draft, ups, xpBefore, xpAfter, hits);
+  showCelebration(draft, ups, xpBefore, xpAfter, hits, won);
 }
 
 // changer d'écran (aperçu ↔ séance en cours) repart du haut de la page
@@ -1339,6 +1340,7 @@ Object.assign(ACT, {
         <div class="exo-tags"><span class="rtag r-${region}">${REGIONS[region].n}</span><span class="etag">${sfIcon(EQUIP_GLYPH[cat.id]||"wrench", EQUIP_COLOR[cat.id]||"gray", "xs")} ${esc(cat.n)}</span>${e.equip.includes("bench")?`<span class="etag">+ banc</span>`:""}</div>
       </div>
       <div class="exo-muscle-chips">${e.muscles.map((m,i)=>`<span class="chip mchip ${i===0?"main":""}">${MUSCLE_MAP[m].n}${i===0?" <small>principal</small>":""}</span>`).join("")}</div>
+      ${e.muscles.some(m=>m!=="cardio") ? `<div class="exo-mm">${exoMuscleMap(e)}</div>` : ""}
       ${stats}
       <div class="exo-facts">
         <div><b>${e.sets} × ${e.repsMin}-${e.repsMax}</b><span>${isTimed(e)?"secondes":"répétitions"} conseillées</span></div>

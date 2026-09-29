@@ -204,11 +204,13 @@ function restoreData(){
     const f = inp.files && inp.files[0]; inp.remove(); if(!f) return;
     let data;
     try{ const o = JSON.parse(await f.text()); data = o && o.data ? o.data : o; }catch(e){ data = null; }
-    if(!data || !Array.isArray(data.sessions)){ openModal(`<div style="font-weight:700;color:var(--red)">Fichier non reconnu</div><div class="hr-note" style="margin-top:8px">Choisis un fichier de sauvegarde créé par ASCEN (ascen-sauvegarde-….json) ou par Forge.</div><button class="btn secondary" style="margin-top:14px" data-a="closesheet">OK</button>`); return; }
-    const n = data.sessions.length, t = (data.templates||[]).length;
+    if(!data || typeof data!=="object" || !(Array.isArray(data.sessions) || Array.isArray(data.zs))){ openModal(`<div style="font-weight:700;color:var(--red)">Fichier non reconnu</div><div class="hr-note" style="margin-top:8px">Choisis un fichier de sauvegarde créé par ASCEN (ascen-sauvegarde-….json) ou par Forge.</div><button class="btn secondary" style="margin-top:14px" data-a="closesheet">OK</button>`); return; }
+    const n = (Array.isArray(data.sessions) && data.sessions.length ? data.sessions : data.zs || []).length, t = Array.isArray(data.templates) ? data.templates.length : 0;
     confirmSheet({ title:"Restaurer cette sauvegarde ?", html:`${n} séance${n>1?"s":""} et ${t} séance${t>1?"s":""} enregistrée${t>1?"s":""}. Les données actuelles de cet appareil seront remplacées (une copie de secours est gardée).`, ok:"Restaurer", danger:true, onOk:()=>{
       try{ localStorage.setItem(STORAGE_KEY+".avant-restauration", JSON.stringify(S)); }catch(e){}
-      S = normalizeState(data);
+      let st; try{ st = normalizeState(data); }catch(e){ ERR_LOG.push({ at:new Date().toISOString(), where:"restauration", msg:String(e && e.message || e).slice(0,200) }); toast("Sauvegarde illisible : rien n'a été changé", "warn"); return; }
+      if(S.draft) stopRestTimer();
+      S = st;
       S.meta.lastBackup = S.meta.lastBackup || todayISO();
       save(); persistNow(); applyTheme(); checkMedals(true);
       renderViewAnimated(currentTab); toast(`Sauvegarde restaurée : ${n} séance${n>1?"s":""}`);
@@ -450,7 +452,11 @@ Object.assign(ACT, {
 
   confirmReset(){
     confirmSheet({ title:"Réinitialiser toutes les données ?", html:"Cette action est irréversible : séances, matériel, objectifs et trophées seront définitivement supprimés.", ok:"Tout supprimer", danger:true,
-      onOk:()=>{ persistBlocked = true; localStorage.removeItem(STORAGE_KEY); idbClear().then(()=>location.reload()); } });
+      onOk:()=>{
+        // on recharge même si IndexedDB ne répond pas
+        const go = ()=>location.reload(); setTimeout(go, 4000);
+        wipeStorage().catch(()=>{}).then(go);
+      } });
   },
 });
 VIEWS.profil = renderProfil;

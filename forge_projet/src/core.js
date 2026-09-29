@@ -19,6 +19,7 @@ function defaultState(){
     custom: { exos:[] },   // « Ma séance » : [{exoId, sets}]
     templates: [],         // modèles enregistrés : [{id, n, exos:[{exoId, sets}]}]
     importedProgram: [],
+    challenges: [],         // défis [{id, start:"AAAA-MM-JJ", doneAt?, missedAt?}] (challenges.js)
     targets: [],            // objectifs chiffrés [{id, exoId, kind:"reps"|"kg"|"sec", value, start, createdAt, doneAt}]
     body: [],               // pesées facultatives [{d:"AAAA-MM-JJ", kg}]
     medals: {},            // {familleId: {t: palier atteint 0-4, d: {1: iso, 2: iso…}}}
@@ -131,6 +132,7 @@ function idbMirror(str, savedAt, now){
   // une seule écriture à la fois ; la dernière version gagne. Pendant une séance on enregistre
   // souvent : la copie compressée n'est refaite qu'au plus toutes les 3 s (et tout de suite
   // quand l'app passe en arrière-plan), le stockage principal, lui, est écrit à chaque fois
+  if(persistBlocked) return;
   idbPending = { str, savedAt };
   const wait = idbLast + 3000 - Date.now();
   if(!now && wait>0){ if(!idbTimer) idbTimer = setTimeout(()=>{ idbTimer = null; if(idbPending) idbMirror(idbPending.str, idbPending.savedAt, true); }, wait); return; }
@@ -141,6 +143,14 @@ function idbMirror(str, savedAt, now){
     while(idbPending){ const j = idbPending; idbPending = null; try{ await idbPut(await gz(j.str), j.savedAt); }catch(e){ try{ await idbPut(j.str, j.savedAt); }catch(e2){} } }
     idbWriting = false;
   })();
+}
+// réinitialisation : plus aucune écriture, on attend celle en cours (sinon elle rétablirait
+// l'ancienne copie après l'effacement), puis on efface la base, les copies mises de côté et la copie de secours
+async function wipeStorage(){
+  persistBlocked = true; clearTimeout(persistTimer); persistTimer = null; clearTimeout(idbTimer); idbTimer = null; idbPending = null;
+  for(let i=0; idbWriting && i<40; i++) await new Promise(r=>setTimeout(r, 50));
+  try{ Object.keys(localStorage).filter(k=>k===STORAGE_KEY || k.startsWith(STORAGE_KEY+".")).forEach(k=>localStorage.removeItem(k)); }catch(e){}
+  await idbClear();
 }
 function idbClear(){ return idbOpen().then(db=>new Promise(ok=>{ const tx = db.transaction(IDB_STORE, "readwrite"); tx.objectStore(IDB_STORE).clear(); tx.oncomplete = tx.onerror = ()=>{ db.close(); ok(); }; })).catch(()=>{}); }
 var loadedFromLS; // var : affecté pendant load(), qui s'exécute avant cette ligne
@@ -245,6 +255,7 @@ function normalizeState(parsed){
     merged.prefs.excluded = Array.isArray(merged.prefs.excluded) ? merged.prefs.excluded.filter(id=>EXO_MAP[id]) : [];
     merged.prefs.included = Array.isArray(merged.prefs.included) ? merged.prefs.included.filter(id=>EXO_MAP[id]) : [];
     merged.importedProgram = parsed.importedProgram||[];
+    merged.challenges = (Array.isArray(parsed.challenges)?parsed.challenges:[]).filter(c=>c && typeof c.id==="string" && /^\d{4}-\d{2}-\d{2}$/.test(c.start));
     merged.targets = (Array.isArray(parsed.targets)?parsed.targets:[]).filter(t=>t && t.id && EXO_MAP[t.exoId] && ["reps","kg","sec"].includes(t.kind) && t.value>0);
     merged.body = (Array.isArray(parsed.body)?parsed.body:[]).filter(e=>e && /^\d{4}-\d{2}-\d{2}$/.test(e.d) && e.kg>=20 && e.kg<=400).sort((a,b)=>a.d<b.d?-1:1);
     delete merged.settings.todayMode; // v1.2 : remplacé par todayTab (« Ma séance » en premier)
