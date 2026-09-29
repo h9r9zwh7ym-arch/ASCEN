@@ -101,6 +101,9 @@ function idbOpen(){
 }
 function idbPut(data, savedAt){
   return idbOpen().then(db=>new Promise((ok, ko)=>{
+    // réinitialisation en cours : une écriture partie avant l'effacement ne doit pas le défaire
+    // (vérifié au dernier moment, juste avant d'ouvrir la transaction)
+    if(persistBlocked){ db.close(); return ok(); }
     const tx = db.transaction(IDB_STORE, "readwrite");
     tx.objectStore(IDB_STORE).put({ data, savedAt }, "main");
     tx.oncomplete = ()=>{ db.close(); ok(); }; tx.onerror = ()=>{ db.close(); ko(tx.error); };
@@ -140,7 +143,7 @@ function idbMirror(str, savedAt, now){
   if(idbWriting) return;
   idbWriting = true;
   (async ()=>{
-    while(idbPending){ const j = idbPending; idbPending = null; try{ await idbPut(await gz(j.str), j.savedAt); }catch(e){ try{ await idbPut(j.str, j.savedAt); }catch(e2){} } }
+    while(idbPending && !persistBlocked){ const j = idbPending; idbPending = null; try{ await idbPut(await gz(j.str), j.savedAt); }catch(e){ try{ await idbPut(j.str, j.savedAt); }catch(e2){} } }
     idbWriting = false;
   })();
 }
@@ -150,6 +153,9 @@ async function wipeStorage(){
   persistBlocked = true; clearTimeout(persistTimer); persistTimer = null; clearTimeout(idbTimer); idbTimer = null; idbPending = null;
   for(let i=0; idbWriting && i<40; i++) await new Promise(r=>setTimeout(r, 50));
   await idbClear(); // d'abord la copie de secours : un autre onglet rechargé ne peut plus la reprendre
+  // une écriture qui aurait dépassé l'attente est neutralisée par persistBlocked (idbPut) ;
+  // second effacement par sécurité si elle était déjà engagée
+  if(idbWriting) await idbClear();
   try{ Object.keys(localStorage).filter(k=>k===STORAGE_KEY || k.startsWith(STORAGE_KEY+".")).forEach(k=>localStorage.removeItem(k)); }catch(e){}
 }
 function idbClear(){ return idbOpen().then(db=>new Promise(ok=>{ const tx = db.transaction(IDB_STORE, "readwrite"); tx.objectStore(IDB_STORE).clear(); tx.oncomplete = tx.onerror = ()=>{ db.close(); ok(); }; })).catch(()=>{}); }

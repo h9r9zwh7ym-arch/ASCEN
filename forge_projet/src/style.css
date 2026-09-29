@@ -1940,7 +1940,6 @@ body.live-focus #restbar{bottom:calc(14px + var(--sab))}
 /* v4.0 : l'arrivée sur un onglet est animée en JS (Web Animations), une seule fois par changement */
 .view.active{animation:none}
 .tabbar{view-transition-name:none}
-.pick-row{content-visibility:auto;contain-intrinsic-size:auto 60px}
 /* corriger les séries faites (v4.0) */
 button.set-dots{display:flex;margin-left:auto;margin-right:auto;padding:6px 10px;border-radius:14px;position:relative}
 button.set-dots:active{background:var(--fill2)}

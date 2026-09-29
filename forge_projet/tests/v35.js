@@ -14,7 +14,9 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const log = (...a) => console.log(`[${wk ? 'webkit' : 'chromium'}]`, ...a);
   const open = async (state) => {
     const page = await ctx.newPage(); page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
-    await page.addInitScript(s => { if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1'); localStorage.setItem('forge.v1', s); }, JSON.stringify(state));
+    // une seule fois par page, même si le navigateur perd sessionStorage au rechargement (marqueur hors des clés de l'app)
+    const tok = Math.random().toString(36).slice(2);
+    await page.addInitScript(([s, tok]) => { if (sessionStorage.getItem('seeded') || localStorage.getItem('__seed_' + tok)) return; sessionStorage.setItem('seeded', '1'); localStorage.setItem('__seed_' + tok, '1'); localStorage.setItem('forge.v1', s); }, [JSON.stringify(state), tok]);
     await page.goto(APP); await page.waitForSelector('#splash', { state: 'detached', timeout: 8000 }); await page.waitForTimeout(600);
     return page;
   };
@@ -109,7 +111,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const pr = await open({ meta: { onboarded: true }, sessions: [{ id: 'a', date: iso(1), exos: [done('pompes', 3, 10)] }] });
   await pr.evaluate(() => { localStorage.setItem('forge.v1.illisible.1', '{'); ACT.confirmReset(); }); await pr.waitForTimeout(400);
   await Promise.all([pr.waitForNavigation({ timeout: 8000 }), pr.click('[data-a="confirmYes"]')]);
-  await pr.waitForTimeout(1500);
+  await pr.waitForSelector('#obBody', { timeout: 8000 }).catch(() => {}); await pr.waitForTimeout(300);
   const reset = await pr.evaluate(() => ({ n: S.sessions.length, keys: Object.keys(localStorage).filter(k => k.startsWith('forge.v1.')).length, onb: !!document.querySelector('#obBody') }));
   log('Reset:', JSON.stringify(reset)); if (reset.n !== 0 || reset.keys || !reset.onb) fail('réinitialisation complète');
   await pr.close();
