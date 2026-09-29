@@ -23,7 +23,7 @@ function defaultState(){
     targets: [],            // objectifs chiffrés [{id, exoId, kind:"reps"|"kg"|"sec", value, start, createdAt, doneAt}]
     body: [],               // pesées facultatives [{d:"AAAA-MM-JJ", kg}]
     medals: {},            // {familleId: {t: palier atteint 0-4, d: {1: iso, 2: iso…}}}
-    settings: { theme:"auto", unit:"kg", todayTab:"custom", name:"", sound:true, stretching:false },
+    settings: { theme:"auto", unit:"kg", todayTab:"custom", name:"", why:"", sound:true, stretching:false }, // why : « ton pourquoi »
     meta: { createdAt: new Date().toISOString(), prCount:0 },
   };
 }
@@ -268,7 +268,7 @@ function normalizeState(parsed){
     merged.body = (Array.isArray(parsed.body)?parsed.body:[]).filter(e=>e && /^\d{4}-\d{2}-\d{2}$/.test(e.d) && e.kg>=20 && e.kg<=400).sort((a,b)=>a.d<b.d?-1:1);
     // réglages : même type que la valeur par défaut ; les textes-codes (thème, niveau…) restent des
     // mots simples (ils finissent dans des classes et attributs) ; seul le prénom est libre (échappé)
-    const coerce = (obj, def)=>{ for(const k in obj){ const dv = def[k], v = obj[k]; if(dv===undefined || k==="name") continue;
+    const coerce = (obj, def)=>{ for(const k in obj){ const dv = def[k], v = obj[k]; if(dv===undefined || k==="name" || k==="why") continue;
       if(typeof dv==="number"){ const n = Number(v); obj[k] = isFinite(n) ? n : dv; }
       else if(typeof dv==="boolean") obj[k] = v===true || v===false ? v : dv;
       else if(typeof dv==="string") obj[k] = typeof v==="string" && /^[\w-]{0,40}$/.test(v) ? v : dv;
@@ -277,6 +277,7 @@ function normalizeState(parsed){
     merged.goals.daysPerWeek = Math.min(7, Math.max(1, Math.round(merged.goals.daysPerWeek)||3));
     merged.goals.exoCount = Math.min(12, Math.max(0, Math.round(merged.goals.exoCount)||0));
     merged.settings.name = String(merged.settings.name||"").slice(0,40);
+    merged.settings.why = String(merged.settings.why||"").slice(0,120);
     merged.templates.forEach(t=>{ if(!safeId(t.id)) t.id = uid(); });
     merged.targets.forEach(t=>{ if(!safeId(t.id)) t.id = uid(); });
     merged.challenges = merged.challenges.filter(c=>safeId(c.id));
@@ -405,6 +406,10 @@ function dayNum(iso){
   return n;
 }
 function daysBetween(a,b){ return dayNum(b)-dayNum(a); }
+function daysSinceLastSession(){ const s = S.sessions[S.sessions.length-1]; return s ? daysBetween(s.date, todayISO()) : null; }
+// « ton pourquoi » rappelé quand on revient après quelques jours sans séance
+const WHY_AFTER_DAYS = 4;
+function whyReminder(){ const w = (S.settings.why||"").trim(), g = daysSinceLastSession(); return w && g!=null && g>=WHY_AFTER_DAYS && !(S.draft && S.draft.startedAt) ? w : ""; }
 // une date ne change jamais de semaine : résultat mis en cache (appelé des milliers de fois
 // par les statistiques et les trophées)
 const WEEK_CACHE = new Map();
@@ -598,25 +603,43 @@ function recomputePRFlags(){
 }
 
 // ---------- régularité ----------
-// semaines consécutives avec au moins une séance ; la semaine en cours pas encore
-// entamée ne casse pas la série (on repart de la semaine précédente).
-function currentStreakWeeks(){
+// Semaines consécutives avec au moins une séance. La semaine en cours pas encore entamée ne
+// casse pas la série. Joker : une semaine sans séance est pardonnée si aucun autre joker n'a
+// servi dans les 4 semaines précédentes (≈ une par mois : vacances, maladie). Deux semaines
+// vides d'affilée cassent la série. Une semaine « joker » ne compte pas dans la longueur.
+const JOKER_GAP = 4;
+function streakInfo(){ return memo("streakInfo:"+todayISO(), streakInfo_raw); }
+function streakInfo_raw(){
   const weeks = new Set(S.sessions.map(s=>weekKey(s.date)));
-  let cursor = weekKey(todayISO());
-  if(!weeks.has(cursor)) cursor = addDaysISO(cursor,-7);
-  let n=0;
-  while(weeks.has(cursor)){ n++; cursor = addDaysISO(cursor,-7); }
-  return n;
+  const thisWeek = weekKey(todayISO());
+  let cursor = weeks.has(thisWeek) ? thisWeek : addDaysISO(thisWeek,-7);
+  // à rebours : jokers espacés d'au moins JOKER_GAP semaines
+  let n = 0, jokers = [], lastJokerIdx = -Infinity, i = 0;
+  for(;;){
+    if(weeks.has(cursor)) n++;
+    else if(weeks.has(addDaysISO(cursor,-7)) && i-lastJokerIdx>=JOKER_GAP){
+      jokers.push(cursor); lastJokerIdx = i;
+    } else break;
+    cursor = addDaysISO(cursor,-7); i++;
+  }
+  if(!n) jokers = [];
+  // joker récent (dans les 4 dernières semaines) : affiché, et pas de nouveau joker avant qu'il expire
+  const recent = jokers.find(w=>daysBetween(w, thisWeek)<JOKER_GAP*7) || null;
+  return { n, jokers, recent, nextJokerIn: recent ? JOKER_GAP - Math.round(daysBetween(recent, thisWeek)/7) : 0 };
 }
+function currentStreakWeeks(){ return streakInfo().n; }
 function maxStreakWeeksEver(){ return memo("maxStreakWeeksEver", maxStreakWeeksEver_raw); }
 function maxStreakWeeksEver_raw(){
   const weeks = Array.from(new Set(S.sessions.map(s=>weekKey(s.date)))).sort();
-  let best=0, cur=0, prev=null;
-  weeks.forEach(w=>{
-    cur = (prev && addDaysISO(prev,7)===w) ? cur+1 : 1;
-    best = Math.max(best,cur); prev = w;
-  });
-  return best;
+  if(!weeks.length) return 0;
+  const has = new Set(weeks);
+  let best = 0, cur = 0, lastJoker = -Infinity, i = 0;
+  for(let w = weeks[0]; w<=weeks[weeks.length-1]; w = addDaysISO(w,7), i++){
+    if(has.has(w)){ cur++; best = Math.max(best, cur); }
+    else if(cur>0 && has.has(addDaysISO(w,7)) && i-lastJoker>=JOKER_GAP) lastJoker = i;
+    else { cur = 0; lastJoker = -Infinity; }
+  }
+  return Math.max(best, currentStreakWeeks());
 }
 function perfectWeeksCount(){ return memo("perfectWeeksCount", perfectWeeksCount_raw); }
 function perfectWeeksCount_raw(){

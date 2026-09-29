@@ -94,7 +94,7 @@ const MEDAL_CATS = [
 // plusieurs années d'entraînement régulier pour la plupart des familles.
 const MEDALS = [
   { id:"sessions", g:"dumbbell", c:"orange", cat:"regular", n:"Assiduité", unit:"séances terminées", one:"séance terminée",     t:[1,25,150,500],   val:()=>S.sessions.length, desc:"Le diamant représente environ trois ans à trois séances par semaine." },
-  { id:"streak", g:"flame", c:"red",   cat:"regular", n:"Régularité", unit:"semaines d'affilée",                          t:[2,8,26,104],     val:maxStreakWeeksEver, desc:"Semaines consécutives avec au moins une séance. Le diamant demande deux ans sans interruption." },
+  { id:"streak", g:"flame", c:"red",   cat:"regular", n:"Régularité", unit:"semaines d'affilée",                          t:[2,8,26,104],     val:maxStreakWeeksEver, desc:"Semaines consécutives avec au moins une séance. Une semaine sans séance par mois est pardonnée (joker). Le diamant demande deux ans de régularité." },
   { id:"perfect", g:"target", c:"pink",  cat:"regular", n:"Semaine parfaite", unit:"semaines à l'objectif", one:"semaine à l'objectif", t:[1,8,40,150],   val:perfectWeeksCount, desc:"Semaines où tu atteins ton objectif de séances hebdomadaires." },
   { id:"challenges", g:"flag", c:"orange", cat:"regular", n:"Défis relevés", unit:"défis réussis", one:"défi réussi", t:[1,5,15,40], val:()=>challengesDone(), desc:"Défis lancés depuis Progrès et réussis dans le temps imparti." },
   { id:"fullmonth", g:"calendar", c:"blue",cat:"regular", n:"Mois complet", unit:"mois à 12 séances ou plus", one:"mois à 12 séances ou plus", t:[1,3,6,12], val:fullMonths },
@@ -376,6 +376,31 @@ function confettiBurst(x, y, count){
 }
 
 // ---------- fin de séance ----------
+// Progrès concrets de la séance : pour chaque exercice, comparaison avec la séance d'il y a
+// environ un mois (la plus récente datant d'au moins 3 semaines, sinon la toute première si elle
+// a 2 semaines ou plus). Charge max, puis répétitions à cette charge ; secondes tenues ; répétitions.
+// Les deux plus fortes hausses sont affichées.
+function sessionProgressLines(session){
+  const best = (ex, def)=>{ const d = ex.sets.filter(s=>s.done && (s.reps||0)>0); if(!d.length) return null;
+    if(kgType(def)){ const w = Math.max(...d.map(s=>s.weight||0)); return { w, r:Math.max(...d.filter(s=>(s.weight||0)===w).map(s=>s.reps||0)) }; }
+    return { w:0, r:Math.max(...d.map(s=>s.reps||0)) }; };
+  const lines = [];
+  session.exos.forEach(ex=>{
+    const def = EXO_MAP[ex.exoId]; if(!def || isStretch(def)) return;
+    const now = best(ex, def); if(!now) return;
+    const past = S.sessions.filter(s=>s!==session && s.id!==session.id && s.date<session.date && s.exos.some(e=>e.exoId===ex.exoId && e.sets.some(x=>x.done)));
+    if(!past.length) return;
+    const old = past.filter(s=>daysBetween(s.date, session.date)>=21).pop() || (daysBetween(past[0].date, session.date)>=14 ? past[0] : null);
+    if(!old) return;
+    const then = best(old.exos.find(e=>e.exoId===ex.exoId), def); if(!then) return;
+    const since = `depuis le ${fmtDate(old.date)}`;
+    if(kgType(def) && now.w>then.w+0.01) lines.push({ g:(now.w-then.w)/Math.max(1,then.w), t:`${def.n} : ${fmtDec(now.w)} kg, +${fmtDec(now.w-then.w)} kg ${since}` });
+    else if(kgType(def) && Math.abs(now.w-then.w)<0.01 && now.r>then.r) lines.push({ g:(now.r-then.r)/Math.max(1,then.r)*.6, t:`${def.n} : ${now.r} reps à ${fmtDec(now.w)} kg, +${now.r-then.r} ${since}` });
+    else if(!kgType(def) && now.r>then.r){ const u = isTimed(def) ? " s" : " reps";
+      lines.push({ g:(now.r-then.r)/Math.max(1,then.r), t:`${def.n} : ${now.r}${u}, +${now.r-then.r}${u} ${since}` }); }
+  });
+  return lines.sort((a,b)=>b.g-a.g).slice(0,2).map(l=>l.t);
+}
 function showCelebration(session, ups, xpBefore, xpAfter, hits, won){
   const vol = Math.round(sessionVolume(session));
   const sets = sessionSetCount(session);
@@ -394,6 +419,7 @@ function showCelebration(session, ups, xpBefore, xpAfter, hits, won){
             : `<div><div class="n" data-count="${reps}">${reps}</div><div class="l">répétitions</div></div>`}
     </div>
     ${prs?`<div class="cel-pr">${ii("bolt")} ${prs} record${prs>1?"s":""} battu${prs>1?"s":""}</div>`:""}
+    ${sessionProgressLines(session).map((t,i)=>`<div class="cel-prog" style="--i:${i}">${ii("chart")}<span>${esc(t)}</span></div>`).join("")}
     ${(hits||[]).map((t,i)=>`<div class="cel-target" style="--i:${i}">${ii("target")} Objectif atteint : ${esc(EXO_MAP[t.exoId].n)}, ${fmtTarget(t.kind, t.value)}</div>`).join("")}
     ${(won||[]).map((c,i)=>`<div class="cel-target cel-chal" style="--i:${(hits||[]).length+i}">${ii("star")} Défi réussi : ${esc(CHAL_MAP[c.id].n)}</div>`).join("")}
     <div class="cel-xp">

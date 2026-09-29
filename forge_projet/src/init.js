@@ -1,5 +1,5 @@
 // ================= INITIALISATION =================
-const APP_VERSION = "3.8";
+const APP_VERSION = "3.9";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 function applyTheme(){
@@ -14,6 +14,7 @@ function applyTheme(){
 // on « relève la barre ». Les animations portent sur des <div>, jamais sur des éléments
 // internes aux SVG : piège Safari documenté dans Zeste.
 function splashTagline(){
+  const why = whyReminder(); if(why) return `« ${why} »`;
   const t = plannedTemplate();
   if(t && !sessionsToday().some(s=>s.tplId===t.id)) return `Aujourd'hui : ${t.n}`;
   const streak = currentStreakWeeks();

@@ -32,7 +32,10 @@ function obBody(){
     <div class="wz-n">${[2,3,4,5,6].map(n=>`<button class="${n===S.goals.daysPerWeek?"on":""}" data-a="obDays" data-v="${n}">${n}</button>`).join("")}</div>
     <div class="ob-note">2 à 3 séances suffisent pour progresser nettement : l'important est de tenir dans la durée.</div>
     <div class="te-sec">Durée d'une séance</div>
-    <div class="cal-alarm">${[["court","≈ 20 min"],["moyen","≈ 35 min"],["long","≈ 50 min"]].map(([k,l])=>`<button class="chip ${S.goals.sessionLength===k?"on":""}" data-a="obLen" data-v="${k}">${l}</button>`).join("")}</div>`;
+    <div class="cal-alarm">${[["court","≈ 20 min"],["moyen","≈ 35 min"],["long","≈ 50 min"]].map(([k,l])=>`<button class="chip ${S.goals.sessionLength===k?"on":""}" data-a="obLen" data-v="${k}">${l}</button>`).join("")}</div>
+    <div class="te-sec">Pourquoi tu t'entraînes ? <span class="ob-opt">facultatif</span></div>
+    <div class="num-field"><input id="obWhy" type="text" maxlength="120" placeholder="Ex. être en forme pour la randonnée d'été" value="${esc(S.settings.why||"")}"></div>
+    <div class="ob-note">ASCEN te le rappellera les jours où la motivation manque.</div>`;
   const split = WEEK_SPLITS[Math.min(6, Math.max(2, S.goals.daysPerWeek))];
   return `<div class="ob-t2">Ta semaine</div><div class="ob-s2">ASCEN peut créer tes ${split.length} séances et les placer dans la semaine. Chaque jour prévu, ta séance s'affichera directement.</div>
     <div class="group wz-list">${split.map(([type,name,day],i)=>`<div class="row wz-row" style="--k:${i}"><span class="wz-day">${JOURS_COURTS[day]}</span><div class="grow"><div class="t">${esc(name)}</div><div class="s">${esc(SESSION_TYPE_MAP[type].n)}</div></div></div>`).join("")}</div>
@@ -60,6 +63,7 @@ function parseWeightList(txt){
 }
 function obCollect(){
   const n = qs("#obName"); if(n) S.settings.name = n.value.trim();
+  const w = qs("#obWhy"); if(w) S.settings.why = w.value.trim().slice(0,120);
   const db = qs("#obDb");
   if(db){ S.equipment.weights.dumbbells = Array.from(new Set(parseWeightList(db.value))).sort((a,b)=>a-b); }
 }

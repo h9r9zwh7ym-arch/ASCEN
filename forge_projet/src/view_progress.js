@@ -87,7 +87,7 @@ function overviewPaneHTML(){
     <div class="kpi stagger" style="--i:4"><div class="kpi-l">Séries validées</div><div class="kpi-v" data-count="${totalSets()}">${fmtNum(totalSets())}</div><div class="kpi-s">${S.meta.prCount||0} records battus</div></div>
   </div>
   <div class="stat-strip stagger" style="--i:5;margin-top:10px">
-    <div class="stat-box"><div class="num">${currentStreakWeeks()}</div><div class="lbl">sem. d'affilée</div></div>
+    <div class="stat-box" data-tip="${esc(jokerTip())}" tabindex="0"><div class="num">${currentStreakWeeks()}</div><div class="lbl">sem. d'affilée${streakInfo().recent?" · joker":""}</div></div>
     <div class="stat-box"><div class="num">${maxStreakWeeksEver()}</div><div class="lbl">meilleure série</div></div>
     <div class="stat-box"><div class="num">${weeklyAverage(8).toLocaleString("fr-CH")}</div><div class="lbl">séances / sem.</div></div>
   </div>`;
@@ -327,3 +327,10 @@ Object.assign(ACT, {
   delTarget(d){ S.targets = S.targets.filter(x=>x.id!==d.id); targetDraft = null; closeSheet(); changed(); },
 });
 VIEWS.progress = renderProgress;
+
+// bulle de la série : la règle du joker, et quand il redevient disponible
+function jokerTip(){
+  const si = streakInfo();
+  if(si.recent) return `Joker utilisé (semaine du ${fmtDate(si.recent)}) : la série continue. Prochain joker dans ${si.nextJokerIn} semaine${si.nextJokerIn>1?"s":""}.`;
+  return "Joker disponible : une semaine sans séance par mois ne casse pas la série.";
+}

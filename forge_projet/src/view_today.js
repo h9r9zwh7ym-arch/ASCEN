@@ -33,7 +33,7 @@ function greeting(){
 }
 function statPillsHTML(){
   // résumé de la semaine : trois colonnes de même structure (valeur, libellé, jauge)
-  const goal = S.goals.daysPerWeek||3, done = sessionsThisWeek(), streak = currentStreakWeeks();
+  const goal = S.goals.daysPerWeek||3, done = sessionsThisWeek(), si = streakInfo(), streak = si.n;
   const lv = levelInfo();
   return `<div class="stat-pills stagger" style="--i:1">
     <button class="spill ${done>=goal?"full":""}" data-a="tab" data-id="progress" aria-label="${done} séances sur ${goal} cette semaine">
@@ -41,9 +41,9 @@ function statPillsHTML(){
       <span class="sp-l">cette semaine</span>
       <span class="spg"><i style="width:${Math.min(100,Math.round(done/goal*100))}%"></i></span>
     </button>
-    <button class="spill ${streak>0?"hot":""}" data-a="tab" data-id="progress" aria-label="${streak} semaines d'affilée">
+    <button class="spill ${streak>0?"hot":""}" data-a="tab" data-id="progress" aria-label="${streak} semaines d'affilée${si.recent?", joker utilisé":""}">
       <span class="sp-v"><b data-count="${streak}">${streak}</b><i>sem.</i></span>
-      <span class="sp-l">d'affilée</span>
+      <span class="sp-l">${si.recent ? "joker utilisé" : "d'affilée"}</span>
       <span class="spg spg-dots">${[0,1,2,3,4].map(k=>`<i class="${k<Math.min(streak,5)?"on":""}"></i>`).join("")}</span>
     </button>
     <button class="spill" data-a="tab" data-id="profil" aria-label="Niveau ${lv.level}">
@@ -124,6 +124,7 @@ function renderTodayPreview(draft){
       <h1 class="lt">${greeting()}</h1>
     </div>
     ${statPillsHTML()}
+    ${whyReminder() ? `<div class="why-card stagger" style="--i:2"><div class="why-k">${ii("flame")} Ton pourquoi</div><div class="why-t">« ${esc(whyReminder())} »</div><div class="why-s">${daysSinceLastSession()} jours sans séance : une seule suffit pour reprendre le fil.</div></div>` : ""}
     ${heroHTML(draft)}
     ${recapNudgeKey() ? `<div class="backup-nudge rc-nudge stagger" style="--i:3">${sfIcon("sparkles","orange")}<div class="grow"><div class="t">Ton Rewind de ${MOIS_LONG[parseISO(recapNudgeKey()+"-01").getMonth()]} est prêt</div><div class="s">Revis ton mois en une minute.</div></div><div class="bn-act"><button data-a="openRewind" data-kind="month" data-key="${recapNudgeKey()}">Lancer</button><button class="later" data-a="recapLater">Plus tard</button></div></div>` : ""}
     ${backupDue() ? `<div class="backup-nudge stagger" style="--i:3">${sfIcon("download","green")}<div class="grow"><div class="t">Sauvegarde conseillée</div><div class="s">${S.sessions.length} séances sont stockées uniquement sur ce téléphone.</div></div><div class="bn-act"><button data-a="backupData">Sauvegarder</button><button class="later" data-a="backupLater">Plus tard</button></div></div>` : ""}

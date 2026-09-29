@@ -628,6 +628,26 @@ Règles appliquées :
 - « Annuler » : retrait d'un exercice, suppression d'une séance, expiration.
 - Sauvegarde piégée neutralisée, CSP présente.
 
+## 9 septvicies. Version 3.9 : motivation
+
+Constat : l'app a déjà beaucoup de mécaniques de jeu (XP, 40 trophées, défis, objectifs, Rewind). La recherche montre qu'au-delà d'un certain nombre l'effet s'inverse. On a donc renforcé la régularité et la visibilité des progrès plutôt qu'ajouté des récompenses.
+
+- **Joker de série** (`streakInfo()` et `maxStreakWeeksEver_raw()`, `core.js`) :
+  - Une semaine sans séance est pardonnée si aucun autre joker n'a servi dans les 4 semaines précédentes (`JOKER_GAP`). Deux semaines vides d'affilée cassent la série, et une semaine joker ne compte pas dans la longueur.
+  - `streakInfo()` renvoie `{ n, jokers, recent, nextJokerIn }` ; il est mémorisé par jour et par version des données.
+  - Affichage :
+    - pastille « joker utilisé » sur l'accueil ;
+    - « · joker » dans Progrès, avec une bulle qui explique la règle et le délai avant le prochain joker (`jokerTip()`) ;
+    - la description du trophée « Régularité » le mentionne.
+- **Progrès concrets en fin de séance** (`sessionProgressLines()`, `trophies.js`) :
+  - Chaque exercice est comparé à la séance la plus récente datant d'au moins 3 semaines (sinon à la première, si elle a au moins 2 semaines).
+  - Critères : charge maximale, puis répétitions à cette charge ; secondes tenues ; répétitions au poids du corps.
+  - Les deux plus fortes hausses s'affichent dans l'écran de fin (`.cel-prog`). Rien n'est affiché sans hausse.
+- **« Ton pourquoi »** (`S.settings.why`, 120 caractères, texte libre échappé, exempté de la normalisation des textes-codes) :
+  - Saisi à l'inscription (étape Objectif) ou dans le Profil (sous le nom, `editWhy`/`saveWhy`).
+  - Rappelé quand la dernière séance date d'au moins 4 jours (`whyReminder()`, `WHY_AFTER_DAYS`) : carte sur l'accueil (`.why-card`), et phrase du lancement à la place du message habituel.
+- **Tests** : `tests/v38.js` (six cas de série avec joker, pastille, lignes de progrès, pourquoi échappé, rappel et limite de longueur).
+
 ## 10. Cahier des charges d'origine (résumé)
 
 Voir le fichier `4a3df5ee-cahier-des-charges-forge.md` fourni au lancement du projet pour le texte complet. Points clés déjà couverts en v1.0 : matériel personnalisable et extensible, bibliothèque d'exercices filtrée, inclusion/exclusion d'exercices, objectifs personnalisés, suivi détaillé de séance (éditable, timer de repos, coche rapide), moteur de suggestion 100% local avec export/import IA, graphiques de progression, PR, streaks/régularité, trophées, écran d'accueil = séance du jour, thème clair/sombre automatique, page À propos avec copyright.

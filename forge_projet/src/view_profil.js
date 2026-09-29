@@ -18,6 +18,7 @@ function profileHeroHTML(){
       <div class="ph-title">Niveau ${lv.level} · ${esc(lv.title)}</div>
       <div class="xpbar"><span style="width:${Math.round(lv.pct*100)}%"></span></div>
       <div class="ph-sub">${since?`Membre actif depuis le ${fmtDate(since)} ${parseISO(since).getFullYear()}`:"Ta première séance t'attend"}</div>
+      <button class="ph-why ${S.settings.why?"":"empty"}" data-a="editWhy">${S.settings.why ? `« ${esc(S.settings.why)} »` : "Ajoute ton pourquoi"} ${icon("edit")}</button>
     </div>
   </div>
   <div class="ph-medals stagger" style="--i:1">
@@ -377,6 +378,17 @@ Object.assign(ACT, {
       </div>`);
     setTimeout(()=>{ const i=qs("#nameInput"); if(i) i.focus(); }, 80);
   },
+  editWhy(){
+    openModal(`<div style="font-weight:700;font-size:calc(17rem/17);margin-bottom:6px">Ton pourquoi</div>
+      <div class="hr-note" style="margin-bottom:12px">Ce qui te pousse à t'entraîner. ASCEN te le rappelle quand tu reviens après quelques jours sans séance.</div>
+      <div class="num-field"><input id="whyInput" type="text" maxlength="120" placeholder="Ex. être en forme pour la randonnée d'été" value="${esc(S.settings.why||"")}"></div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
+        <button class="btn" data-a="saveWhy">Enregistrer</button>
+        <button class="btn ghost" data-a="closesheet" style="height:40px">Annuler</button>
+      </div>`);
+    setTimeout(()=>{ const i=qs("#whyInput"); if(i) i.focus(); }, 80);
+  },
+  saveWhy(){ S.settings.why = ((qs("#whyInput")||{}).value||"").trim().slice(0,120); closeSheet(); save(); changed(); },
   saveName(){ S.settings.name = ((qs("#nameInput")||{}).value||"").trim(); closeSheet(); save(); changed(); },
   openEquip, openGoals, openExoPrefs, openExportImport, openAppearance, openAbout,
   backupData(){ backupData(); }, restoreData(){ restoreData(); }, openInstall(){ openInstall(); },

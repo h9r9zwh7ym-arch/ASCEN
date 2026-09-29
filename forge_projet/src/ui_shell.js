@@ -544,7 +544,7 @@ document.addEventListener("keydown", e=>{
   if(e.key==="Enter" && e.target && e.target.id==="tplEdName"){ e.preventDefault(); e.target.blur(); }
   if(e.key==="Enter" && e.target && e.target.id==="bodyIn"){ e.preventDefault(); ACT.bodyAdd(); }
   if(e.key==="Enter" && e.target && /^wadd-/.test(e.target.id||"")){ e.preventDefault(); ACT.addWeight({ id:e.target.id.slice(5) }); }
-  if(e.key==="Enter" && e.target && (e.target.id==="nameInput" || e.target.id==="tplName")){
+  if(e.key==="Enter" && e.target && (e.target.id==="nameInput" || e.target.id==="whyInput" || e.target.id==="tplName")){
     e.preventDefault(); const b = qs('.center-modal [data-a^="save"]'); if(b) b.click();
   }
 });
