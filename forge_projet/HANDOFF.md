@@ -502,6 +502,24 @@ Mesures : `tests/profile.js`, profil CPU par scénario sur 3 ans d'historique (�
   - **Transitions entre onglets** : deux changements rapprochés interrompent la transition précédente. Ses promesses rejetées sont maintenant traitées (plus d'erreur non gérée), et une erreur de l'écran lui-même est notée.
 - **Tests** : `v32` ; outil `profile.js`.
 
+## 9 unvicies. Version 3.4 : proposition d'exercices, pictogrammes
+
+- **Compose ta séance** : deux boutons seulement, « Choisir » et « L'app choisit ». « Partir de la séance proposée » (`customFromProposal`) est retiré.
+- **Carte du jour** : chaque pictogramme ouvre la fiche de l'exercice ; « +N » descend à la liste (`heroShowAll`). Les lignes de la séance proposée ouvraient déjà la fiche.
+- **Moteur de proposition** (`pickExosForSession`, engine.js).
+  - Un plan d'emplacements par type de séance (`SESSION_PLANS`) remplace le cycle fixe de mouvements. Chaque emplacement donne des mouvements acceptés et des muscles visés.
+  - Pénalités de variété : même famille −4,5 par occurrence, même muscle principal −2,2, même mouvement −0,6. Petit bonus aux exercices polyarticulaires en tête de séance.
+  - Ordre : gros mouvements d'abord, gainage puis mollets à la fin (`PATTERN_LATE`).
+  - Niveau intermédiaire : versions allégées (pompes sur les genoux…) légèrement écartées.
+  - Mesuré sur 60 séances par cas (`tests/v33.js` pour l'essentiel) : 0 doublon de muscle en corps complet à 6 exercices (1 avant), ordre toujours respecté (60/60 fautif avant en haut du corps).
+- **Pictogrammes animés.**
+  - Zone travaillée plus fine : trait 2,3 au lieu de 3.
+  - Variantes : `like` (reprendre une autre variante) et `envOnly` (le décor remplace celui de la base). Plus de banc plat dessiné sous le développé incliné ou au sol.
+  - Corrigés : squat barre (barre sur le dos), front squat (coudes hauts), squat élastique, marche latérale (vue de face, élastique aux genoux), squat assisté aux sangles (une jambe), fentes marchées (on avance), fente arrière barre / goblet, squat bulgare haltères (banc), kickback fessier (à quatre pattes), soulevé de terre sumo (pieds écartés), rowing renegade (en planche), rowing inversé à la barre, rowing et curl aux sangles (corps incliné), rowing appui banc incliné, curl incliné (assis), thruster (de profil jusqu'aux bras tendus), pompes déclinées (pieds plus hauts que les épaules).
+  - Pictogrammes de liste « row » et « crunch » redessinés, plus lisibles.
+  - `tests/anim_sheet.js` (FAMILIES, NAME) : planche de contrôle à regarder après toute retouche.
+- **Test** : `v33`.
+
 ## 10. Cahier des charges d'origine (résumé)
 
 Voir le fichier `4a3df5ee-cahier-des-charges-forge.md` fourni au lancement du projet pour le texte complet. Points clés déjà couverts en v1.0 : matériel personnalisable et extensible, bibliothèque d'exercices filtrée, inclusion/exclusion d'exercices, objectifs personnalisés, suivi détaillé de séance (éditable, timer de repos, coche rapide), moteur de suggestion 100% local avec export/import IA, graphiques de progression, PR, streaks/régularité, trophées, écran d'accueil = séance du jour, thème clair/sombre automatique, page À propos avec copyright.

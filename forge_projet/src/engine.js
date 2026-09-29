@@ -1,5 +1,4 @@
 // ================= MOTEUR DE SUGGESTION (100% local, aucun appel réseau) =================
-const PATTERN_CYCLE = ["squat","hinge","push","pull","lunge","core","calf"];
 const SESSION_SIZE = { court:4, moyen:6, long:8 };
 // nombre d'exercices d'une séance proposée : choisi par l'utilisateur, sinon selon la durée
 // la proposition du jour suit les réglages (matériel, niveau, taille) tant qu'elle n'est ni
@@ -46,6 +45,7 @@ function scoreExo(exo){
   // niveau : les débutants privilégient les exercices accessibles, les avancés les plus exigeants
   const lv = S.goals.level;
   if(lv==="debutant") score += exo.level===1 ? 1.5 : 0;
+  else if(lv==="intermediaire" && exo.level===1) score -= 0.7;   // versions allégées (pompes genoux…) : plutôt pour débuter
   else if(lv==="avance") score += exo.level===3 ? 1 : exo.level===1 ? -1 : 0;
   score -= recencyPenalty(exo.id);
   return score;
@@ -247,34 +247,68 @@ function poolForType(typeId){
   return base.filter(e=>e.muscles.some(m=>t.muscles.includes(m)));
 }
 
-// avoid : exercices de la proposition précédente, fortement pénalisés pour que
-// « Autre proposition » change vraiment. Le léger aléa départage les ex æquo.
 // famille d'un exercice (« pompes », « squat », « rowing »…) : deux variantes du même
 // mouvement dans une séance font doublon, on préfère varier quand c'est possible
 function exoFamily(e){ return e.id.split("_")[0]; }
-function pickExosForSession(n, pool, avoid){
+
+// ---------- plan de séance (v3.4) ----------
+// Chaque type de séance suit un plan d'emplacements, du plus exigeant au plus léger : on
+// commence par les mouvements polyarticulaires (jambes, poussée, tirage), puis les
+// compléments, et le gainage et les mollets ferment la séance. Un emplacement = mouvements
+// acceptés (p) et muscles principaux visés (m). Avant, un cycle fixe de mouvements ignorait
+// les muscles déjà couverts : trois exercices de pectoraux et aucun d'épaules en « Haut du corps ».
+const Q = ["quadriceps"], HIP = ["fessiers","ischios"], PEC = ["pect"], SH = ["epaules"], BACK = ["dos"];
+const SESSION_PLANS = {
+  full: [ {p:["squat","lunge"],m:Q}, {p:["push"],m:PEC}, {p:["hinge"],m:HIP}, {p:["pull"],m:BACK}, {p:["core"]},
+          {p:["push"],m:SH}, {p:["lunge","squat"]}, {p:["pull"],m:["biceps","epaules","dos"]}, {p:["calf"]}, {p:["push"],m:["triceps"]} ],
+  haut: [ {p:["push"],m:PEC}, {p:["pull"],m:BACK}, {p:["push"],m:SH}, {p:["pull"],m:BACK}, {p:["push"],m:["triceps"]},
+          {p:["pull"],m:["biceps"]}, {p:["pull"],m:["epaules"]}, {p:["push"],m:PEC}, {p:["pull","core"],m:["avantbras"]}, {p:["pull"],m:["biceps"]} ],
+  bas:  [ {p:["squat"],m:Q}, {p:["hinge"],m:HIP}, {p:["lunge"]}, {p:["hinge"],m:HIP}, {p:["calf"]}, {p:["core"]},
+          {p:["squat","lunge"]}, {p:["hinge"]}, {p:["core"]}, {p:["calf"]} ],
+  push: [ {p:["push"],m:PEC}, {p:["push"],m:SH}, {p:["push"],m:PEC}, {p:["push"],m:["triceps"]}, {p:["push"],m:SH}, {p:["push"],m:["triceps"]},
+          {p:["push"],m:PEC}, {p:["core"]} ],
+  pull: [ {p:["pull"],m:BACK}, {p:["pull"],m:BACK}, {p:["pull"],m:["biceps"]}, {p:["pull"],m:["epaules"]}, {p:["pull"],m:["biceps"]},
+          {p:["pull","core"],m:["avantbras"]}, {p:["hinge"]}, {p:["core"]} ],
+  bras: [ {m:["biceps"]}, {m:["triceps"]}, {m:["biceps"]}, {m:["triceps"]}, {m:["avantbras"]}, {m:["biceps"]}, {m:["triceps"]}, {p:["core"]} ],
+  core: [ {p:["core"],m:["abdos"]}, {p:["core"],m:["cardio"]}, {p:["core"],m:["abdos"]}, {p:["core"]}, {p:["core"],m:["cardio","abdos"]}, {p:["core"]} ],
+};
+// fin de séance : gainage, mollets (et cardio) passent après les gros mouvements
+const PATTERN_LATE = { core:2, calf:1 };
+
+// avoid : exercices de la proposition précédente, fortement pénalisés pour que
+// « Autre proposition » change vraiment. Le léger aléa départage les ex æquo.
+function pickExosForSession(n, pool, avoid, typeId){
   pool = pool || engineExos();
   avoid = avoid || new Set();
-  const score = {};
-  pool.forEach(e=>{ score[e.id] = scoreExo(e) + Math.random()*1.2 - (avoid.has(e.id)?6:0); });
-  const byScore = (a,b)=>score[b.id]-score[a.id];
-  const chosen = [];
-  const usedIds = new Set();
-  for(let bucketI=0; chosen.length<n && bucketI<PATTERN_CYCLE.length*3; bucketI++){
-    const pattern = PATTERN_CYCLE[bucketI % PATTERN_CYCLE.length];
-    const fams = new Set(chosen.map(exoFamily));
-    const adj = e=>score[e.id] - (fams.has(exoFamily(e))?3:0);
-    const candidates = pool.filter(e=>e.pattern===pattern && !usedIds.has(e.id)).sort((a,b)=>adj(b)-adj(a));
-    if(candidates.length){ chosen.push(candidates[0]); usedIds.add(candidates[0].id); }
-  }
+  const base = {};
+  pool.forEach(e=>{
+    let sc = scoreExo(e) + Math.random()*1.2 - (avoid.has(e.id)?6:0);
+    base[e.id] = sc;
+  });
+  const chosen = [], used = new Set(), muscleN = {}, patN = {};
+  // variété : même famille, même muscle principal ou même mouvement déjà présents
+  const adj = (e, slotI)=>{
+    const fams = chosen.filter(c=>exoFamily(c)===exoFamily(e)).length;
+    let sc = base[e.id] - fams*4.5 - (muscleN[e.muscles[0]]||0)*2.2 - (patN[e.pattern]||0)*0.6;
+    if(slotI<3 && e.muscles.length>=3) sc += 0.8;       // en tête : les exercices qui font travailler plusieurs muscles
+    return sc;
+  };
+  const take = e=>{ chosen.push(e); used.add(e.id); muscleN[e.muscles[0]] = (muscleN[e.muscles[0]]||0)+1; patN[e.pattern] = (patN[e.pattern]||0)+1; };
+  const plan = SESSION_PLANS[typeId] || SESSION_PLANS.full;
+  plan.forEach((slot, i)=>{
+    if(chosen.length>=n) return;
+    const cand = pool.filter(e=>!used.has(e.id) && (!slot.p || slot.p.includes(e.pattern)) && (!slot.m || slot.m.includes(e.muscles[0])));
+    if(!cand.length) return;
+    take(cand.reduce((b,x)=>adj(x,i)>adj(b,i)?x:b));
+  });
+  // plan épuisé ou matériel limité : les meilleurs restants, toujours en variant
   while(chosen.length<n){
-    const fams = new Set(chosen.map(exoFamily));
-    const rest = pool.filter(e=>!usedIds.has(e.id));
+    const rest = pool.filter(e=>!used.has(e.id));
     if(!rest.length) break;
-    const e = rest.reduce((b,x)=>score[x.id]-(fams.has(exoFamily(x))?3:0) > score[b.id]-(fams.has(exoFamily(b))?3:0) ? x : b);
-    chosen.push(e); usedIds.add(e.id);
+    take(rest.reduce((b,x)=>adj(x,99)>adj(b,99)?x:b));
   }
-  return chosen;
+  // ordre de la séance : gros mouvements d'abord, gainage et mollets à la fin
+  return chosen.map((e,i)=>({ e, k:(PATTERN_LATE[e.pattern]||0)*100 + i })).sort((a,b)=>a.k-b.k).map(x=>x.e);
 }
 
 function sessionEntryFor(exo, setsN){
@@ -290,7 +324,7 @@ function generateEngineSession(typeId, avoid){
   let resolved = typeId, reason = null;
   if(typeId==="auto"){ const r = resolveAutoType(); resolved = r.type; reason = r.reason; }
   const n = sessionSize();
-  const exos = pickExosForSession(resolved==="core" ? Math.min(n,5) : n, poolForType(resolved), avoid);
+  const exos = pickExosForSession(resolved==="core" ? Math.min(n,5) : n, poolForType(resolved), avoid, resolved);
   const session = {
     id: uid(), date: todayISO(), source:"engine", type:typeId, resolvedType:resolved, reason,
     startedAt:null, completedAt:null,

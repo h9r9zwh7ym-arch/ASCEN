@@ -60,8 +60,9 @@ function statPillsHTML(){
 }
 function heroPicts(ids){
   const defs = ids.map(id=>EXO_MAP[id]).filter(Boolean);
-  const more = defs.length>5 ? `<span class="hp-more">+${defs.length-5}</span>` : "";
-  return `<div class="hero-picts">${defs.slice(0,5).map((d,i)=>`<span class="hp" style="--k:${i}">${pictoSVG(pictoKey(d))}</span>`).join("")}${more}</div>`;
+  // chaque pictogramme ouvre la fiche de l'exercice ; « +N » mène à la liste complète
+  const more = defs.length>5 ? `<button class="hp-more" data-a="heroShowAll" aria-label="Voir les ${defs.length} exercices">+${defs.length-5}</button>` : "";
+  return `<div class="hero-picts">${defs.slice(0,5).map((d,i)=>`<button class="hp" style="--k:${i}" data-a="showExoInfo" data-id="${d.id}" aria-label="${esc(d.n)} : voir la fiche">${pictoSVG(pictoKey(d))}</button>`).join("")}${more}</div>`;
 }
 // « Ensuite : jeu. · Jambes » — la prochaine séance planifiée, pour voir sa semaine d'un coup d'œil
 function nextPlannedLine(){
@@ -346,7 +347,6 @@ function customPaneHTML(){
         <button class="btn secondary sm" data-a="customAddOpen">${icon("plus")} Choisir</button>
         <button class="btn tertiary sm" data-a="customFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> L'app choisit</button>
       </div>
-      <button class="btn ghost sm be-link" data-a="customFromProposal">Partir de la séance proposée</button>
     </div>${tail}`;
   }
   const rows = c.map((e,i)=>{
@@ -1110,10 +1110,9 @@ Object.assign(ACT, {
       closeSheet(); save(); changed();
     }});
   },
-  customFromProposal(){
-    const d = getOrCreateDraft();
-    S.custom = { exos: d.exos.map(e=>({ exoId:e.exoId, sets:e.sets.length, app:true })), name:null };
-    save(); renderViewAnimated("today"); toast("Séance proposée copiée : modifie-la à ton goût");
+  heroShowAll(){
+    const g = qs("#v-today .group.builder, #v-today .exo-count + .group, #v-today .exo-count ~ .group");
+    if(g) g.scrollIntoView({ behavior:"smooth", block:"start" });
   },
   customSets(d){
     const e = S.custom.exos[+d.idx];
