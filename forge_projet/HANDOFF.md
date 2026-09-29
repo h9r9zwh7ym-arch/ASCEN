@@ -648,6 +648,43 @@ Constat : l'app a déjà beaucoup de mécaniques de jeu (XP, 40 trophées, défi
   - Rappelé quand la dernière séance date d'au moins 4 jours (`whyReminder()`, `WHY_AFTER_DAYS`) : carte sur l'accueil (`.why-card`), et phrase du lancement à la place du message habituel.
 - **Tests** : `tests/v38.js` (six cas de série avec joker, pastille, lignes de progrès, pourquoi échappé, rappel et limite de longueur).
 
+## 9 duodetricies. Version 4.0 : version finale (fluidité, compléments, vérifications)
+
+**Onglets et fluidité** (`switchTabNow`, `reselectTab`, `ui_shell.js`) :
+- **Bug corrigé :** toucher l'onglet déjà affiché rejouait toutes les animations d'entrée, comme un rechargement. Maintenant la page remonte en haut en douceur (convention iOS), et en haut de Progrès on revient au Résumé. `ACT.tab` distingue les deux cas.
+- Changement d'onglet :
+  - Plus de View Transitions, qui capturaient toute la page, et plus de cascade rejouée à chaque visite. L'écran d'arrivée apparaît en fondu court avec un glissement de 12 px (Web Animations, sans mise en page forcée).
+  - Le contenu n'est reconstruit que si les données ont changé. Les animations d'entrée et les compteurs ne se jouent qu'à la première visite (`v._seen`).
+  - `aria-current="page"` sur l'onglet actif.
+- Sous-onglets de Progrès : rendu direct et fondu du `.seg-pane`, `scrollTop` remis à 0 avant le rendu.
+- Barres de progression de la séance animées en `scaleX` (compositeur) au lieu de `width`, qui recalculait la mise en page à chaque image.
+- Préchauffage au calme (`init.js`) : les pictogrammes des 155 exercices sont calculés par petits lots en `requestIdleCallback`, et le test WebGL des trophées est fait au même moment. Lignes du choix d'exercices en `content-visibility:auto`.
+
+Mesures (`tests/tab_perf.js`, processeur ×4, 3 ans d'historique) :
+
+| Mesure | Avant | Après |
+|---|---|---|
+| Images longues sur 7 changements d'onglet | 69 | 3 à 11 |
+| Pire image (changement d'onglet) | 150 ms | 33 à 50 ms |
+| Pire image à l'ouverture du choix d'exercices | 233 ms | 50 à 100 ms |
+
+**Compléments** :
+- **Corriger une série déjà validée** pendant la séance :
+  - Accès : toucher les points de série, le récapitulatif de l'exercice terminé, ou ••• « Corriger les séries faites ».
+  - Feuille `openDoneSets` : répétitions et charge ajustables (`dsStep`), validation annulable (`dsUndo`).
+  - Le record est recalculé (`draftSetIsPR`, `setPRFlag`, compteur `prCount` ajusté).
+- **Temps de repos réglable** (Profil › Entraînement) : `S.settings.rest` vaut court (×0,7), conseillé ou long (×1,35) ; `restFor(def)` arrondit à 5 s, 20 s au minimum.
+- **Séance express** (`buildExpressSession`) : 3 exercices variés (plan « tout le corps ») × 2 séries, repos de 45 s au plus, nom « Séance express ».
+  - Lancée depuis la carte du jour (« Pas le temps ? ») ou depuis la carte « Ton pourquoi ».
+  - Source `engine` : elle ne compte pas pour le trophée « Sur mesure ».
+- **Export de l'historique en CSV** (Profil › Mes données) : `historyCSV()` écrit une ligne par série, avec séparateur « ; », virgule décimale, BOM UTF-8 et guillemets échappés. Partage ou téléchargement via `shareOrDownload()`, mis en commun avec la sauvegarde.
+- Unités : les exercices tenus affichent des secondes (record, meilleure série, total tenu, derniers records), et les progrès de fin de séance utilisent des décimales à la française.
+
+**Vérifications** :
+- Tour visuel de 27 écrans en clair et en sombre (`tests/tour.js` + `tests/montage.js`) ; audit d'accessibilité repassé (`tests/ux_audit.js`).
+- Test du singe (`tests/monkey.js`) : environ 3 000 touchers aléatoires sur Chromium et WebKit, sans erreur. Une version courte est ajoutée à `run.sh`.
+- `tests/v39.js` couvre toutes les nouveautés.
+
 ## 10. Cahier des charges d'origine (résumé)
 
 Voir le fichier `4a3df5ee-cahier-des-charges-forge.md` fourni au lancement du projet pour le texte complet. Points clés déjà couverts en v1.0 : matériel personnalisable et extensible, bibliothèque d'exercices filtrée, inclusion/exclusion d'exercices, objectifs personnalisés, suivi détaillé de séance (éditable, timer de repos, coche rapide), moteur de suggestion 100% local avec export/import IA, graphiques de progression, PR, streaks/régularité, trophées, écran d'accueil = séance du jour, thème clair/sombre automatique, page À propos avec copyright.

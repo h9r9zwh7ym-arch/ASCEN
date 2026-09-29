@@ -47,6 +47,10 @@ Variables utiles :
 | `v36.js` | Deux onglets : chacun reprend ce que l'autre enregistre, changement en attente conservé, feuille ouverte respectée, réinitialisation propagée |
 | `v37.js` | Accessibilité (compteur lisible en sombre, zones de toucher ≥ 44 en séance), « Annuler » après une suppression, première charge réaliste, barre d'onglets effacée en séance, sauvegarde piégée neutralisée (XSS), CSP |
 | `v38.js` | Motivation : joker de série (6 cas), pastille « joker utilisé », progrès concrets en fin de séance, « ton pourquoi » (Profil, rappel après 4 jours, échappé, 120 caractères) |
+| `v39.js` | v4.0 : onglet re-touché (remonte sans reconstruire), retour sur un onglet sans nouveau rendu, record en secondes, repos réglable appliqué, correction et annulation d'une série faite, séance express, export CSV (lignes, échappement, téléchargement) |
+| `monkey.js` | Test du singe (aussi dans `run.sh`) : touchers aléatoires pondérés vers les boutons peu essayés, avec changement d'onglet régulier. Toute erreur ou écran en échec est signalé. `SEED`, `N`, `ENGINE=webkit` |
+| `tab_perf.js`, `ui_perf.js` | Outils : fluidité des changements d'onglet et des gestes courants (processeur ×4, 3 ans d'historique), images longues et pire image |
+| `tour.js` + `montage.js` | Outils : captures de tous les écrans (`DARK=1` pour le sombre), assemblées en planches de 8 pour la revue visuelle |
 | `ux_audit.js` | Outil (hors suite) : mesure par écran les cibles tactiles < 44 pt (Apple) et < 24 px (WCAG 2.5.8), le contraste du texte (WCAG 1.4.3), le texte < 11 px, les champs < 16 px et les boutons sans nom. `DARK=1` pour le mode sombre |
 | `profile.js` | Outil : profil CPU par scénario (démarrage, rendus, séance, fin de séance) sur 3 ans d'historique, processeur ×4. `NO_MINIFY=1 sh build.sh` avant pour avoir les noms de fonctions |
 | `anim_sheet.js` | Planche de contrôle des animations d'exercices (départ/fin), par famille (`FAMILIES=pushup,plank`) |

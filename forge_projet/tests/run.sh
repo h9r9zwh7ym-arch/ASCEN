@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.." || exit 1
 ENGINES="${1:-all}"; [ "$ENGINES" = "all" ] && ENGINES="chromium webkit"
 sh build.sh >/dev/null || { echo "Échec de la construction"; exit 1; }
 APP="$(pwd)/dist/forge.html"
-SUITES="smoke test2 focus v12 v13 v14 v15 v16 v17 v19 v20 v21 v22 v23 v24 v25 v26 v27 v28 v29 v30 v31 v32 v33 v34 v35 v36 v37 v38"
+SUITES="smoke test2 focus v12 v13 v14 v15 v16 v17 v19 v20 v21 v22 v23 v24 v25 v26 v27 v28 v29 v30 v31 v32 v33 v34 v35 v36 v37 v38 v39"
 FAIL=0
 run(){ # $1 = libellé, reste = commande
   label="$1"; shift
@@ -20,6 +20,7 @@ done
 for w in 320 390 430; do run "mise en page $w px" env W="$w" node tests/audit.js "$APP"; done
 run "mise en page sombre" env W=390 DARK=1 node tests/audit.js "$APP"
 run "génération des séances" node tests/gen_audit.js "$APP"
+run "touchers aléatoires (test du singe)" env SEED=3 N=250 node tests/monkey.js "$APP"
 # hors ligne : le service worker exige http(s), on sert la racine du dépôt
 ( cd .. && python3 -m http.server 8765 >/dev/null 2>&1 ) & SRV=$!
 i=0; until curl -s --noproxy localhost -o /dev/null http://localhost:8765/ || [ $i -ge 20 ]; do sleep 0.5; i=$((i+1)); done
