@@ -193,6 +193,25 @@ function switchTabNow(id){
   }
   if(typeof renderRestBar==="function") renderRestBar();
   syncLiveChrome();
+  prerenderStaleViews();
+}
+// Onglets déjà visités dont les données ont changé : reconstruits pendant les temps morts (un à la
+// fois), pour que le prochain changement d'onglet soit instantané au lieu de reconstruire au toucher.
+// Rien pendant une séance en cours (barre d'onglets masquée, batterie) ni pour les trophées 3D.
+let prerenderQueued = false;
+function prerenderStaleViews(){
+  if(prerenderQueued) return;
+  const idle = window.requestIdleCallback || (f=>setTimeout(()=>f({ timeRemaining:()=>12, didTimeout:false }), 400));
+  const stale = ()=>(S.draft && S.draft.startedAt) ? [] : TAB_ORDER.filter(id=>id!==currentTab).map(id=>qs("#v-"+id))
+    .filter(v=>v && v._seen && !(v._ver===DATA_VER && v._day===todayISO()) && !(v.id==="v-progress" && typeof progressTab!=="undefined" && progressTab==="medals"));
+  prerenderQueued = true;
+  idle(function step(dl){
+    const list = stale();
+    if(!list.length){ prerenderQueued = false; return; }
+    if(dl && !dl.didTimeout && dl.timeRemaining()<10){ idle(step, { timeout:3000 }); return; }
+    try{ renderView(list[0].id.slice(2)); }catch(e){}
+    if(list.length>1) idle(step, { timeout:3000 }); else prerenderQueued = false;
+  }, { timeout:3000 });
 }
 // onglet déjà affiché touché à nouveau : retour en haut en douceur (convention iOS) ; déjà en
 // haut de Progrès sur un sous-onglet : retour au résumé. Jamais de reconstruction de la page.

@@ -346,6 +346,7 @@ function compactSession(s){
 }
 function save(){
   DATA_VER++;
+  if(typeof prerenderStaleViews==="function") prerenderStaleViews();
   if(persistBlocked) return;
   clearTimeout(persistTimer);
   persistTimer = setTimeout(persistNow, 400);

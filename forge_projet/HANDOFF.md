@@ -658,6 +658,7 @@ Constat : l'app a déjà beaucoup de mécaniques de jeu (XP, 40 trophées, défi
   - `aria-current="page"` sur l'onglet actif.
 - Sous-onglets de Progrès : rendu direct et fondu du `.seg-pane`, `scrollTop` remis à 0 avant le rendu.
 - Barres de progression de la séance animées en `scaleX` (compositeur) au lieu de `width`, qui recalculait la mise en page à chaque image.
+- Pré-rendu au calme (`prerenderStaleViews`, appelé par `save()` et à chaque changement d'onglet) : les onglets déjà visités dont les données ont changé sont reconstruits un par un en `requestIdleCallback`. Ce n'est pas fait pendant une séance en cours ni sur l'écran des trophées 3D. Après une séance, le changement d'onglet passe de 45–140 ms à 2–8 ms.
 - Préchauffage au calme (`init.js`) : les pictogrammes des 155 exercices sont calculés par petits lots en `requestIdleCallback`, et le test WebGL des trophées est fait au même moment. Lignes du choix d'exercices en `content-visibility:auto`.
 
 Mesures (`tests/tab_perf.js`, processeur ×4, 3 ans d'historique) :
