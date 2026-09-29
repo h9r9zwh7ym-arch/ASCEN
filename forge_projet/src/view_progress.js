@@ -42,7 +42,7 @@ function weekVolumeHTML(){
     <div class="wv-list">${rows.map((r,i)=>`<div class="wv-row" style="--i:${i}">
       <span class="wv-n">${esc(r.n)}</span>
       <span class="wv-track"><i class="r-${r.region} ${r.sets>=goal?"ok":""}" style="width:${Math.min(100, r.sets/max*100).toFixed(1)}%"></i><b style="left:${(goal/max*100).toFixed(1)}%"></b></span>
-      <span class="wv-v">${fmtDec(r.sets)}<small>${r.freq?` · ${r.freq}×`:""}</small></span>
+      <span class="wv-v">${fmtDec(r.sets)}<small class="wv-f">${r.freq?` · ${r.freq}×`:""}</small></span>
     </div>`).join("")}</div>
     <div class="wv-foot">${ok}/${rows.length} groupes au repère${low.length && low.length<rows.length ? ` · à renforcer : ${low.slice(0,3).map(esc).join(", ")}` : ""}. Viser chaque muscle au moins 2 fois par semaine (le « × »).</div>
   </div>`;
@@ -173,7 +173,7 @@ function exoChartSheet(id){
       <div class="grow"><div class="t" style="font-size:calc(15rem/17)">${esc(fmtDate(p.s.date,"long"))}</div>
       <div class="set-chips">${p.done.map(st=>`<span class="chip ${st.pr?"pr":""}">${st.pr?ii("bolt"):""}${st.reps}${loadSuffix(def, st.weight)}</span>`).join("")}</div></div>
     </div>`).join("");
-  openSheet(`<div class="sheet-hd"><span class="t">${esc(def.n)}</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
+  openSheet(`<div class="sheet-hd"><span class="t">${esc(def.n)}</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
     <div class="sheet-body">
     <div class="stat-strip">
       <div class="stat-box"><div class="num">${pts.length}</div><div class="lbl">séances</div></div>

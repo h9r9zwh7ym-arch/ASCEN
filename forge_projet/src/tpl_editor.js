@@ -106,7 +106,7 @@ function weekWizardBody(){
     ${clash.length?`<div class="te-hint">${ii("warn","warn")} Ces jours sont déjà pris par ${clash.map(t=>`« ${esc(t.n)} »`).join(", ")} : ces séances seront gardées mais retirées de ces jours.</div>`:""}`;
 }
 function renderWeekWizard(){
-  openSheet(`<div class="sheet-hd"><span class="t">Programme de la semaine</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
+  openSheet(`<div class="sheet-hd"><span class="t">Programme de la semaine</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
     <div class="sheet-body" id="wzBody">${weekWizardBody()}</div>`,
     { tall:true, footer:`<button class="btn" data-a="wizardCreate"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Créer mes ${wizardN} séances</button>` });
 }

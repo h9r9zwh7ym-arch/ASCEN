@@ -383,7 +383,7 @@ function renderPickerSheet(){
   const owned = new Set(availableExos().map(exoCategory));
   const cats = [["","Tout le matériel"]].concat(EXO_CATS.filter(c=>owned.has(c.id)).map(c=>[c.id, c.n])).map(([id,n])=>`<button class="chip cat ${(picker.cat||"")===id?"on":""}" data-a="pickerCat" data-v="${id}">${esc(n)}</button>`).join("");
   const chips = [["","Tous les muscles"]].concat(MUSCLES.map(m=>[m.id,m.n])).map(([id,n])=>`<button class="chip ${(picker.muscle||"")===id?"on":""}" data-a="pickerMuscle" data-v="${id}">${esc(n)}</button>`).join("");
-  openSheet(`<div class="sheet-hd">${picker.onCancel?`<button class="te-cancel" data-a="pickerCancel">${icon("chev")}<span>Retour</span></button>`:""}<span class="t">${esc(picker.title)}</span>${picker.onCancel?`<span class="te-spacer"></span>`:`<button class="icon-btn" data-a="closesheet">${icon("close")}</button>`}</div>
+  openSheet(`<div class="sheet-hd">${picker.onCancel?`<button class="te-cancel" data-a="pickerCancel">${icon("chev")}<span>Retour</span></button>`:""}<span class="t">${esc(picker.title)}</span>${picker.onCancel?`<span class="te-spacer"></span>`:`<button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button>`}</div>
     <div class="picker-top">
       <label class="search">${icon("search")}<input id="pickerSearch" type="search" placeholder="Rechercher un exercice" autocomplete="off"></label>
       <div class="chip-scroll" id="pickerCats">${cats}</div>
@@ -852,7 +852,7 @@ function openPlanDaySheet(day){
       ${cur&&cur.id===t.id ? `<span class="xico done">${icon("check")}</span>` : (EXO_MAP[(t.exos[0]||{}).exoId] ? `<span class="xico r-${tplRegion(t)}">${exoPicto(EXO_MAP[t.exos[0].exoId])}</span>` : `<span class="xico">${icon("bookmark")}</span>`)}
       <div class="grow"><div class="t">${esc(t.n)}</div><div class="s">${t.exos.length} exercices · ${t.exos.reduce((a,e)=>a+e.sets,0)} séries</div></div>
     </button>`).join("");
-  openSheet(`<div class="sheet-hd"><span class="t">Le ${label}</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
+  openSheet(`<div class="sheet-hd"><span class="t">Le ${label}</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
     <div class="sheet-body">
       ${cur ? `<div class="pd-cur r-${tplRegion(cur)}"><span class="tc-bar-s"></span><div class="grow"><div class="pd-k">Prévu le ${label}</div><div class="pd-t">${esc(cur.n)}</div></div>
         <button class="btn secondary sm" data-a="tplOpenEditor" data-id="${cur.id}">${icon("edit")} Modifier</button></div>` : ""}
@@ -1056,10 +1056,15 @@ Object.assign(ACT, {
     sfx("remove");
     if(S.draft.startedAt) closeSheet();
     const row = el && !S.draft.startedAt && el.closest(".row");
+    const draft = S.draft, i = +d.idx;
     const go = ()=>{
-      S.draft.exos.splice(+d.idx,1);
-      if(liveFocusIdx>=S.draft.exos.length) liveFocusIdx = Math.max(0,S.draft.exos.length-1);
+      const [ex] = draft.exos.splice(i,1); if(!ex) return;
+      if(liveFocusIdx>=draft.exos.length) liveFocusIdx = Math.max(0,draft.exos.length-1);
       changed();
+      toast(`${EXO_MAP[ex.exoId] ? EXO_MAP[ex.exoId].n : "Exercice"} retiré`, null, ()=>{
+        if(S.draft!==draft || draft.exos.includes(ex)) return;
+        draft.exos.splice(Math.min(i, draft.exos.length), 0, ex); if(draft.startedAt) liveFocusIdx = Math.min(i, draft.exos.length-1); changed();
+      });
     };
     if(row){ row.classList.add("leaving"); setTimeout(go, 220); } else go();
   },
@@ -1114,7 +1119,12 @@ Object.assign(ACT, {
   customRemove(d, el){
     sfx("remove");
     const row = el.closest(".row");
-    const go = ()=>{ S.custom.exos.splice(+d.idx,1); changed(); };
+    const i = +d.idx;
+    const go = ()=>{
+      const [ex] = S.custom.exos.splice(i,1); if(!ex) return; changed();
+      const list = S.custom.exos;
+      toast(`${EXO_MAP[ex.exoId] ? EXO_MAP[ex.exoId].n : "Exercice"} retiré`, null, ()=>{ if(S.custom.exos!==list || list.includes(ex)) return; list.splice(Math.min(i, list.length), 0, ex); changed(); });
+    };
     if(row){ row.classList.add("leaving"); setTimeout(go, 220); } else go();
   },
   customClear(){
@@ -1147,9 +1157,14 @@ Object.assign(ACT, {
   deleteTemplate(d){
     const t = S.templates.find(x=>x.id===d.id); if(!t) return;
     confirmSheet({ title:`Supprimer « ${t.n} » ?`, html:"La séance enregistrée et ses jours de planning seront supprimés.", ok:"Supprimer", danger:true, onOk:()=>{
+      const i = S.templates.indexOf(t), wasCustom = S.custom.tplId===d.id;
       S.templates = S.templates.filter(x=>x.id!==d.id);
-      if(S.custom.tplId===d.id) delete S.custom.tplId;
+      if(wasCustom) delete S.custom.tplId;
       save(); changed();
+      toast(`« ${t.n} » supprimée`, "trash", ()=>{
+        if(S.templates.some(x=>x.id===t.id)) return;
+        S.templates.splice(Math.min(i, S.templates.length), 0, t); if(wasCustom) S.custom.tplId = t.id; save(); changed();
+      });
     } });
   },
 
@@ -1207,9 +1222,14 @@ Object.assign(ACT, {
       </div>
       <button class="btn ghost" style="height:40px;margin-top:6px" data-a="closesheet">Fermer</button>`);
   },
-  openOverview(){ openSheet(`<div class="sheet-hd"><span class="t">Exercices de la séance</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div><div class="sheet-body">${overviewBodyHTML()}</div>`); },
+  openOverview(){ openSheet(`<div class="sheet-hd"><span class="t">Exercices de la séance</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body">${overviewBodyHTML()}</div>`); },
   removeExoOverview(d){
-    S.draft.exos.splice(+d.idx,1);
+    const draft = S.draft, i = +d.idx, [ex] = draft.exos.splice(i,1); if(!ex) return;
+    toast(`${EXO_MAP[ex.exoId] ? EXO_MAP[ex.exoId].n : "Exercice"} retiré`, null, ()=>{
+      if(S.draft!==draft || draft.exos.includes(ex)) return;
+      draft.exos.splice(Math.min(i, draft.exos.length), 0, ex); save(); refreshFocusRegion();
+      const b = qs(".sheet-body"); if(b && qs("#overlay").classList.contains("open")) b.innerHTML = overviewBodyHTML();
+    });
     if(liveFocusIdx>=S.draft.exos.length) liveFocusIdx = Math.max(0,S.draft.exos.length-1);
     save();
     refreshFocusRegion();
@@ -1261,6 +1281,7 @@ Object.assign(ACT, {
     const si = ex.sets.findIndex(s=>!s.done);
     if(si<0) return;
     const st = ex.sets[si];
+    haptic(12);
     let [bx,by] = centerOf(".validate");
     if(bx==null){ [bx,by] = centerOf(".focus-card .set-dots"); if(bx==null){ bx = innerWidth/2; by = innerHeight/2; } }
     // les textes flottants partent des points de série (même place avant et après le repos)

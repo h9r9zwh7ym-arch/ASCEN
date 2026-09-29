@@ -239,6 +239,14 @@ function normalizeState(parsed){
     }
     LOAD_SKIPPED += before - parsed.sessions.length;
     const known = ex=>ex && EXO_MAP[ex.exoId];
+    // identifiants : ils sont insérés dans des attributs HTML (data-id). Une sauvegarde importée
+    // piégée ne doit rien pouvoir y injecter : un identifiant inattendu est remplacé, un lien retiré.
+    const ID_RE = /^[A-Za-z0-9_.:-]{1,64}$/, safeId = x=>typeof x==="string" && ID_RE.test(x);
+    parsed.sessions.forEach(ss=>{
+      if(!safeId(ss.id)) ss.id = uid();
+      if(ss.tplId!=null && !safeId(ss.tplId)) delete ss.tplId;
+      ss.exos.forEach(ex=>{ if(!safeId(ex.exoId)) ex.exoId = "inconnu"; });
+    });
     merged.sessions = parsed.sessions.map(markStored);
     // ordre chronologique garanti (les statistiques s'appuient dessus) ; déjà trié en général
     if(merged.sessions.some((x,i,a)=>i && a[i-1].date>x.date)) merged.sessions.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
@@ -258,6 +266,24 @@ function normalizeState(parsed){
     merged.challenges = (Array.isArray(parsed.challenges)?parsed.challenges:[]).filter(c=>c && typeof c.id==="string" && /^\d{4}-\d{2}-\d{2}$/.test(c.start));
     merged.targets = (Array.isArray(parsed.targets)?parsed.targets:[]).filter(t=>t && t.id && EXO_MAP[t.exoId] && ["reps","kg","sec"].includes(t.kind) && t.value>0);
     merged.body = (Array.isArray(parsed.body)?parsed.body:[]).filter(e=>e && /^\d{4}-\d{2}-\d{2}$/.test(e.d) && e.kg>=20 && e.kg<=400).sort((a,b)=>a.d<b.d?-1:1);
+    // réglages : même type que la valeur par défaut ; les textes-codes (thème, niveau…) restent des
+    // mots simples (ils finissent dans des classes et attributs) ; seul le prénom est libre (échappé)
+    const coerce = (obj, def)=>{ for(const k in obj){ const dv = def[k], v = obj[k]; if(dv===undefined || k==="name") continue;
+      if(typeof dv==="number"){ const n = Number(v); obj[k] = isFinite(n) ? n : dv; }
+      else if(typeof dv==="boolean") obj[k] = v===true || v===false ? v : dv;
+      else if(typeof dv==="string") obj[k] = typeof v==="string" && /^[\w-]{0,40}$/.test(v) ? v : dv;
+      else if(dv && typeof dv==="object" && (!v || typeof v!=="object")) obj[k] = dv; } };
+    coerce(merged.goals, d.goals); coerce(merged.settings, d.settings);
+    merged.goals.daysPerWeek = Math.min(7, Math.max(1, Math.round(merged.goals.daysPerWeek)||3));
+    merged.goals.exoCount = Math.min(12, Math.max(0, Math.round(merged.goals.exoCount)||0));
+    merged.settings.name = String(merged.settings.name||"").slice(0,40);
+    merged.templates.forEach(t=>{ if(!safeId(t.id)) t.id = uid(); });
+    merged.targets.forEach(t=>{ if(!safeId(t.id)) t.id = uid(); });
+    merged.challenges = merged.challenges.filter(c=>safeId(c.id));
+    merged.equipment.custom = (Array.isArray(merged.equipment.custom)?merged.equipment.custom:[]).filter(c=>c && typeof c==="object")
+      .map(c=>Object.assign({}, c, { id:safeId(c.id) ? c.id : uid(), n:String(c.n||"Équipement").slice(0,60) }));
+    if(merged.custom.tplId!=null && !safeId(merged.custom.tplId)) delete merged.custom.tplId;
+    if(merged.draft){ if(!safeId(merged.draft.id)) merged.draft.id = uid(); if(merged.draft.tplId!=null && !safeId(merged.draft.tplId)) delete merged.draft.tplId; }
     delete merged.settings.todayMode; // v1.2 : remplacé par todayTab (« Ma séance » en premier)
     // v2.2 : nouveaux équipements. On garde le comportement précédent : un banc servait aussi
     // aux exercices inclinés, et quiconque faisait du squat à la barre avait des supports.

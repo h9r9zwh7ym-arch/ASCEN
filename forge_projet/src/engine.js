@@ -117,6 +117,26 @@ function lowerWeight(exo, current){
   if(owned.length){ const lower = owned.slice().reverse().find(w=>w<current-0.001); return lower!==undefined ? lower : current; }
   return Math.max(0, round1(current-(DEFAULT_INCREMENT[type]||2.5)));
 }
+// Première fois : un point de départ réaliste (charge par haltère, ou barre entière) selon le
+// type de mouvement et le niveau, ramené au poids possédé le plus proche en dessous. Avant :
+// la plus petite charge possédée, voire 1 kg — l'utilisateur devait tout remonter à la main.
+const START_KG = {
+  dumbbells:{ small:5, press:10, pull:10, legs:12, core:6 },
+  kettlebell:{ small:8, press:12, pull:12, legs:16, core:8 },
+  barbell:{ small:20, press:30, pull:30, legs:40, core:20 },
+};
+function startWeight(exo, type){
+  const tbl = START_KG[type]; if(!tbl) return null;
+  const m = exo.muscles[0];
+  const kind = ["biceps","triceps","avantbras","mollets"].includes(m) || /elevations|oiseau|ecarte|pull_over|face_pull|shrug/.test(exo.id) ? "small"
+    : ["squat","hinge","lunge"].includes(exo.pattern) ? "legs" : exo.pattern==="pull" ? "pull" : exo.pattern==="core" ? "core" : "press";
+  const lv = S.goals.level==="debutant" ? .8 : S.goals.level==="avance" ? 1.3 : 1;
+  const target = tbl[kind]*lv;
+  const owned = (S.equipment.weights[type]||[]).slice().sort((a,b)=>a-b);
+  if(!owned.length) return type==="barbell" ? Math.max(20, Math.round(target/5)*5) : Math.max(1, Math.round(target));
+  const below = owned.filter(w=>w<=target+0.001);
+  return below.length ? below[below.length-1] : owned[0];
+}
 function suggestForExo(exo, setsN){
   const [rMin,rMax] = repRangeForGoal(exo);
   const n = setsN || exo.sets, timed = isTimed(exo);
@@ -124,7 +144,7 @@ function suggestForExo(exo, setsN){
   let weight = null;
   if(type){
     const owned = (S.equipment.weights[type]||[]).slice().sort((a,b)=>a-b);
-    weight = owned.length ? owned[0] : (DEFAULT_INCREMENT[type]||2.5);
+    weight = type==="bands" ? (owned.length ? owned[0] : 1) : startWeight(exo, type);
   }
   const mid = Math.round((rMin+rMax)/2);
   let reps = new Array(n).fill(timed ? rMin : mid), note = null, harder = null;

@@ -1,5 +1,5 @@
 // ================= INITIALISATION =================
-const APP_VERSION = "3.7.1";
+const APP_VERSION = "3.8";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 function applyTheme(){
@@ -104,6 +104,20 @@ function onExternalState(){
   if(qs("#overlay").classList.contains("open")) dirtyOnClose = true; else renderView(currentTab);
   toast("Données mises à jour depuis un autre onglet");
 }
+// Taille du texte réglée sur l'iPhone (Réglages › Luminosité et affichage › Taille du texte) :
+// Safari expose la taille « corps de texte » via la police système -apple-system-body. Toute
+// l'échelle typographique est en rem : elle suit, bornée à 17–21 px pour garder la mise en page.
+function applyTextSize(){
+  try{
+    const p = document.createElement("div"); p.style.font = "-apple-system-body";
+    if(!p.style.font) return; // hors Safari : taille par défaut
+    p.style.position = "absolute"; p.style.visibility = "hidden"; document.body.appendChild(p);
+    const px = parseFloat(getComputedStyle(p).fontSize); p.remove();
+    if(px) document.documentElement.style.fontSize = Math.min(21, Math.max(17, Math.round(px)))+"px";
+  }catch(e){}
+}
+applyTextSize();
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) applyTextSize(); });
 let appDay = todayISO(), appAway = false;
 function appSuspend(){
   document.dispatchEvent(new Event("ascen:suspend"));

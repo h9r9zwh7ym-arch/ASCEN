@@ -45,6 +45,7 @@ Variables utiles :
 | `v34.js` | Pictogrammes sur squelette : longueurs d'os constantes à chaque image, appuis atteints, rien sous le sol, un pictogramme par exercice, vue de face avec épaules |
 | `v35.js` | Carte des muscles (fiche, semaine, bulle), défis (lancement, 3 au plus, réussite fêtée et trophée, rechargement, délai dépassé, abandon), états enregistrés abîmés, réinitialisation complète |
 | `v36.js` | Deux onglets : chacun reprend ce que l'autre enregistre, changement en attente conservé, feuille ouverte respectée, réinitialisation propagée |
+| `v37.js` | Accessibilité (compteur lisible en sombre, zones de toucher ≥ 44 en séance), « Annuler » après une suppression, première charge réaliste, barre d'onglets effacée en séance, sauvegarde piégée neutralisée (XSS), CSP |
 | `ux_audit.js` | Outil (hors suite) : mesure par écran les cibles tactiles < 44 pt (Apple) et < 24 px (WCAG 2.5.8), le contraste du texte (WCAG 1.4.3), le texte < 11 px, les champs < 16 px et les boutons sans nom. `DARK=1` pour le mode sombre |
 | `profile.js` | Outil : profil CPU par scénario (démarrage, rendus, séance, fin de séance) sur 3 ans d'historique, processeur ×4. `NO_MINIFY=1 sh build.sh` avant pour avoir les noms de fonctions |
 | `anim_sheet.js` | Planche de contrôle des animations d'exercices (départ/fin), par famille (`FAMILIES=pushup,plank`) |

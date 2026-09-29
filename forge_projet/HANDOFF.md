@@ -590,6 +590,44 @@ Constat : les poses étaient des positions d'articulations animées en ligne dro
   - Espaces typographiques : « 100 % », « ≈ 20 min ».
   - Tournures : « tricher en fin de série », « monte et descends », « redescends lentement, sans à-coups », phrases nominales complétées dans trois consignes.
 
+## 9 sexvicies. Version 3.8 : accessibilité, ergonomie, sécurité
+
+Règles appliquées :
+- Apple Human Interface Guidelines : cibles tactiles de 44 pt, contraste, Dynamic Type.
+- WCAG 2.2 : 1.4.3 (contraste) et 2.5.8 (taille des cibles).
+- Heuristiques de Nielsen, notamment « pouvoir annuler ».
+- Bonnes pratiques PWA pour iOS.
+- Outil de mesure : `tests/ux_audit.js`, qui tient compte des zones de toucher agrandies.
+
+**Accessibilité** (bloc CSS « v3.8 · accessibilité mesurée », en fin de `style.css`) :
+- `--tint-ink` passe à `#AD3A12` en clair : au moins 4,7:1 sur tous les fonds.
+- Onglets inactifs : `--tab-off` à 72 % en clair et 58 % en sombre.
+- Médailles argent et or : texte foncé.
+- Bug corrigé : le compteur « 0/3 » de la puce en cours était blanc sur fond blanc en mode sombre.
+- Zones de toucher d'au moins 44 × 44 via un `::before` centré, sans changer le dessin. Le `position:relative` est posé en `:where()` pour ne pas écraser un `position:absolute` existant.
+- Boutons − / + de la séance à 40 px (zone de toucher 44). Puces d'exercice et lignes du choix d'exercices à 44 px de haut.
+- Texte des graphiques à 11 px minimum.
+- `aria-label` ajouté sur tous les boutons de fermeture.
+- Dynamic Type : `applyTextSize()` (`init.js`) lit la taille « corps de texte » d'iOS via `-apple-system-body`. La base passe de 17 px à 21 px maximum, toute l'échelle est en rem. Recalculée au retour dans l'app.
+
+**Ergonomie** :
+- « Annuler » dans le message pendant 5 s : `toast(msg, icône, undo)` et `ACT.toastUndo`. Couvre le retrait d'un exercice (séance proposée, Ma séance, séance en cours, vue d'ensemble), la suppression d'une séance de l'historique ou d'une séance enregistrée, et le retrait d'un équipement perso. La restauration réinsère à la même place ; elle ne fait rien si l'état a changé entre-temps.
+- Retour haptique sur iPhone : Safari n'a pas `navigator.vibrate`. Le repli bascule un `<input type="checkbox" switch>` invisible par son libellé (iOS 18+, seulement pendant un geste). Utilisé notamment à la validation d'une série.
+- Séance en cours : classe `body.live-focus` (`syncLiveChrome`). La barre d'onglets s'efface et la barre de repos descend en bas de l'écran.
+- Première charge réaliste : `startWeight()` (`engine.js`) choisit selon le mouvement (isolation, poussée, tirage, jambes, gainage), le type de matériel et le niveau, puis la ramène au poids possédé juste en dessous. Avant : le plus petit poids, souvent 1 à 2 kg.
+
+**Sécurité** :
+- Faille corrigée : des identifiants piégés dans une sauvegarde restaurée (séance, séance enregistrée, objectif, équipement perso) étaient insérés tels quels dans des attributs `data-id`, ce qui permettait d'exécuter du JavaScript.
+- `normalizeState` valide maintenant tous les identifiants (`/^[A-Za-z0-9_.:-]{1,64}$/`) : remplacés, ou lien retiré.
+- Réglages et objectifs ramenés au type de leur valeur par défaut. Les textes-codes sont limités à `[\w-]` et le nombre de jours à 1–7. Le prénom reste libre (échappé), limité à 40 caractères.
+- Content-Security-Policy dans la page : `connect-src 'self'`, `object-src 'none'`, `base-uri 'none'`, `form-action 'none'`. Même en cas de faille, rien ne peut partir vers un serveur tiers.
+- Attention : dans `build.sh`, l'en-tête est entre apostrophes shell, donc les `'self'` de la CSP y sont écrits `'\''self'\''`.
+
+**Tests** : `tests/v37.js`
+- Puce lisible en sombre, zones de toucher de la séance ≥ 44, barre d'onglets effacée puis revenue, charges de départ.
+- « Annuler » : retrait d'un exercice, suppression d'une séance, expiration.
+- Sauvegarde piégée neutralisée, CSP présente.
+
 ## 10. Cahier des charges d'origine (résumé)
 
 Voir le fichier `4a3df5ee-cahier-des-charges-forge.md` fourni au lancement du projet pour le texte complet. Points clés déjà couverts en v1.0 : matériel personnalisable et extensible, bibliothèque d'exercices filtrée, inclusion/exclusion d'exercices, objectifs personnalisés, suivi détaillé de séance (éditable, timer de repos, coche rapide), moteur de suggestion 100% local avec export/import IA, graphiques de progression, PR, streaks/régularité, trophées, écran d'accueil = séance du jour, thème clair/sombre automatique, page À propos avec copyright.

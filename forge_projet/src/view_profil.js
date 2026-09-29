@@ -219,7 +219,7 @@ function restoreData(){
   inp.click();
 }
 function openInstall(){
-  openSheet(`<div class="sheet-hd"><span class="t">Installer ASCEN</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
+  openSheet(`<div class="sheet-hd"><span class="t">Installer ASCEN</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
     <div class="sheet-body">
       <p class="body" style="margin:0 4px 14px">Installée sur l'écran d'accueil, ASCEN s'ouvre en plein écran comme une vraie app, fonctionne sans réseau, et Safari ne peut plus effacer tes données après quelques jours sans visite.</p>
       <div class="group install-steps">
@@ -264,7 +264,7 @@ function equipBodyHTML(){
       </div>
     </div>`;
   }).join("");
-  const customs = S.equipment.custom.map(c=>`<div class="row">${sfIcon("wrench","gray")}<div class="grow"><div class="t">${esc(c.n)}</div></div><button class="icon-btn" data-a="removeCustom" data-id="${c.id}">${icon("close")}</button></div>`).join("");
+  const customs = S.equipment.custom.map(c=>`<div class="row">${sfIcon("wrench","gray")}<div class="grow"><div class="t">${esc(c.n)}</div></div><button class="icon-btn" data-a="removeCustom" data-id="${c.id}" aria-label="Retirer ${esc(c.n)}">${icon("close")}</button></div>`).join("");
   return `<div class="group">${rows}</div>${weightEditors}
     <h2 class="sh">Autre équipement</h2>
     <div class="hr-note" style="margin-top:-6px">Pour mémoire : ces équipements n'influencent pas les séances proposées. Le matériel ci-dessus, lui, est pris en compte.</div>
@@ -273,7 +273,7 @@ function equipBodyHTML(){
     </div>`;
 }
 function openEquip(){
-  openSheet(`<div class="sheet-hd"><span class="t">Matériel</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div><div class="sheet-body">${equipBodyHTML()}</div>`);
+  openSheet(`<div class="sheet-hd"><span class="t">Matériel</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body">${equipBodyHTML()}</div>`);
 }
 function refreshEquip(){ const b=qs(".sheet-body"); if(b) b.innerHTML = equipBodyHTML(); }
 
@@ -306,7 +306,7 @@ function goalsBodyHTML(){
     <div class="group" style="margin-top:10px">${emphasisRows}</div>`;
 }
 function openGoals(){
-  openSheet(`<div class="sheet-hd"><span class="t">Objectifs</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div><div class="sheet-body">${goalsBodyHTML()}</div>`);
+  openSheet(`<div class="sheet-hd"><span class="t">Objectifs</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body">${goalsBodyHTML()}</div>`);
 }
 function refreshGoals(){ const b=qs(".sheet-body"); if(b) b.innerHTML = goalsBodyHTML(); }
 
@@ -328,7 +328,7 @@ function exoPrefsBodyHTML(){
   }).join("");
 }
 function openExoPrefs(){
-  openSheet(`<div class="sheet-hd"><span class="t">Exercices</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div><div class="sheet-body">${exoPrefsBodyHTML()}</div>`);
+  openSheet(`<div class="sheet-hd"><span class="t">Exercices</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body">${exoPrefsBodyHTML()}</div>`);
 }
 function refreshExoPrefs(){ const b=qs(".sheet-body"); if(b) b.innerHTML = exoPrefsBodyHTML(); }
 
@@ -342,7 +342,7 @@ function exportImportBodyHTML(){
     ${S.importedProgram.length? `<h2 class="sh">Programme importé</h2><div class="group">${importedRows}</div><div class="btnrow"><button class="btn ghost" data-a="clearImported">Supprimer le programme importé</button></div>`:""}`;
 }
 function openExportImport(){
-  openSheet(`<div class="sheet-hd"><span class="t">Suggestion par IA</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div><div class="sheet-body">${exportImportBodyHTML()}</div>`);
+  openSheet(`<div class="sheet-hd"><span class="t">Suggestion par IA</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body">${exportImportBodyHTML()}</div>`);
 }
 
 // ---------- Apparence ----------
@@ -351,12 +351,12 @@ function appearanceBodyHTML(){
   return `<div class="chips" style="padding-top:4px">${opts.map(([v,l])=>`<button class="chip ${S.settings.theme===v?"on":""}" data-a="setTheme" data-v="${v}">${l}</button>`).join("")}</div>`;
 }
 function openAppearance(){
-  openSheet(`<div class="sheet-hd"><span class="t">Apparence</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div><div class="sheet-body">${appearanceBodyHTML()}</div>`);
+  openSheet(`<div class="sheet-hd"><span class="t">Apparence</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body">${appearanceBodyHTML()}</div>`);
 }
 
 // ---------- À propos ----------
 function openAbout(){
-  openSheet(`<div class="sheet-hd"><span class="t">À propos</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
+  openSheet(`<div class="sheet-hd"><span class="t">À propos</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
     <div class="sheet-body">
     <div class="about-logo">${ascenMark()}<span>Un cran plus haut, à chaque séance.</span></div>
     <p class="body" style="margin-top:4px">ASCEN est une app de suivi de musculation pensée pour un usage solo sur iPhone. Elle propose une séance chaque jour à partir de ton matériel, de tes objectifs et de ton historique, grâce à un moteur de règles 100 % local — aucune donnée n'est envoyée sur un serveur.</p>
@@ -401,7 +401,11 @@ Object.assign(ACT, {
     if(v){ S.equipment.custom.push({id:uid(),n:v}); save(); }
     refreshEquip();
   },
-  removeCustom(d){ S.equipment.custom = S.equipment.custom.filter(c=>c.id!==d.id); save(); refreshEquip(); },
+  removeCustom(d){
+    const c = S.equipment.custom.find(x=>x.id===d.id); if(!c) return;
+    S.equipment.custom = S.equipment.custom.filter(x=>x!==c); save(); refreshEquip();
+    toast(`${c.n} retiré`, null, ()=>{ if(S.equipment.custom.includes(c)) return; S.equipment.custom.push(c); save(); refreshEquip(); });
+  },
 
   setGoalOverall(d){ S.goals.overall = d.v; save(); refreshGoals(); },
   setSessionLength(d){ S.goals.sessionLength = d.v; S.goals.exoCount = 0; save(); refreshGoals(); regenerateDraftIfIdle(); },
@@ -490,7 +494,7 @@ function bodyBodyHTML(){
 function refreshBody(){ const b = qs("#bodyBody"); if(b) b.innerHTML = bodyBodyHTML(); }
 Object.assign(ACT, {
   openBody(){
-    openSheet(`<div class="sheet-hd"><span class="t">Poids du corps</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
+    openSheet(`<div class="sheet-hd"><span class="t">Poids du corps</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
       <div class="sheet-body" id="bodyBody">${bodyBodyHTML()}</div>`, { tall:true });
   },
   bodyAdd(){
@@ -517,7 +521,7 @@ function storageYearsLeft(){
 Object.assign(ACT, {
   openStorage(){
     const u = storageUsage(), pct = Math.min(100, u/STORAGE_QUOTA*100), yrs = storageYearsLeft();
-    openSheet(`<div class="sheet-hd"><span class="t">Espace de stockage</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
+    openSheet(`<div class="sheet-hd"><span class="t">Espace de stockage</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
       <div class="sheet-body" id="stoBody">
         <div class="chart-card" style="margin-top:0">
           <div class="cc-h"><div class="cc-t">${fmtBytes(u)} sur ~5 Mo</div><div class="cc-s">${S.sessions.length} séance${S.sessions.length>1?"s":""} enregistrée${S.sessions.length>1?"s":""}</div></div>

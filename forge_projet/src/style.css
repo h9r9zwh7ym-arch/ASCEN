@@ -1885,3 +1885,42 @@ h2.sh .more{font-family:var(--sans);font-size:var(--fs-sub);font-weight:500;lett
 .cel-chal{background:color-mix(in srgb,var(--tint-ink) 15%,transparent);color:var(--tint-ink)}
 .ch-group{margin-bottom:14px}
 .ch-pick .s{white-space:normal;overflow:visible;text-overflow:clip;display:block}
+
+/* ======== v3.8 · accessibilité mesurée (tests/ux_audit.js) ========
+   Contraste ≥ 4,5:1 (WCAG 1.4.3), cibles tactiles ≥ 44 pt (Apple HIG) sans changer le dessin,
+   texte ≥ 11 px dans les graphiques. */
+:root,:root[data-theme="light"]{--tint-ink:#AD3A12;--tab-off:rgba(50,47,42,.72)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--tab-off:rgba(244,243,241,.58)}}
+:root[data-theme="dark"]{--tab-off:rgba(244,243,241,.58)}
+/* puce de l'exercice en cours : le compteur suit la couleur de la puce (il était blanc sur blanc en sombre) */
+.ls-chip.current .ls-sets{color:var(--bg2)!important;opacity:.72}
+.tier-tag.t2,.tier-tag.t3{color:#141210}
+.safety-box .lbl{color:var(--tint-ink)}
+.wp-t{color:var(--label2)}
+.info-dot,.pick-row .info-btn{color:var(--label2)!important}
+.info-btn{box-shadow:inset 0 0 0 1.5px var(--label3)}
+/* zone de toucher agrandie à 44 × 44 au minimum, centrée sur le contrôle */
+:where(.icon-btn,.btn.sm,.nb-done,.big-stepper button,.mini-step button,#restbar button,.seg button,.chip,.switch,.info-btn,.navbtn,.type-chip,.spill){position:relative}
+.icon-btn::before,.btn.sm::before,.nb-done::before,.big-stepper button::before,.mini-step button::before,#restbar button::before,.seg button::before,.chip::before,.switch::before,.info-btn::before,.navbtn::before,.type-chip::before,.spill::before{
+  content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%);border-radius:inherit}
+/* pendant l'effort : boutons − / + plus grands */
+.big-stepper button{width:40px;height:40px;border-radius:20px}
+/* graphiques : 11 px minimum */
+.cc-gl span,.cc-goal span,.cc-x span,.hm-months,.hm-days,.hm-legend{font-size:11px}
+.lc-tick{font-size:11px}
+.wv-v small{font-size:11px}
+:where(.hero-picts .hp,.later,.bn-act button,.ph-name,.fc-menu,.fc-info,.ring-adjust button,.focus-nav .center-link){position:relative}
+.hero-picts .hp::before,.later::before,.bn-act button::before,.ph-name::before,.fc-menu::before,.fc-info::before,.ring-adjust button::before,.focus-nav .center-link::before{
+  content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%);border-radius:inherit}
+.ls-chip{height:44px}
+.pick-row{min-height:44px}
+.pick-row .row-main{min-height:44px}
+.seg button{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px}
+#toast.has-act{pointer-events:auto;display:flex;align-items:center;gap:4px;padding:6px 6px 6px 16px;text-align:left}
+#toast .t-undo{margin-left:10px;padding:0 14px;min-height:34px;border-radius:17px;background:var(--tint-bg);color:var(--tint-ink);font-weight:700;font-size:var(--fs-sub);flex:none;position:relative}
+#toast .t-undo::before{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:44px;transform:translate(-50%,-50%)}
+/* séance en cours : barre d'onglets effacée */
+.tabbar{transition:transform .35s cubic-bezier(.32,.72,0,1),opacity .25s}
+body.live-focus .tabbar{transform:translateY(105%);opacity:0;pointer-events:none}
+body.live-focus #v-today{padding-bottom:calc(var(--sab) + 48px)}
+body.live-focus #restbar{bottom:calc(14px + var(--sab))}

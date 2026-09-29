@@ -190,7 +190,7 @@ function openRecap(kind, key){
   recap = { kind: kind||"month", key: key || recapDefault(kind||"month") };
   if(recap.kind==="month") S.meta.recapSeen = recap.key; // la suggestion de l'accueil disparaît
   save();
-  openSheet(`<div class="sheet-hd"><span class="t">Rewind</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
+  openSheet(`<div class="sheet-hd"><span class="t">Rewind</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
     <div class="sheet-body" id="rcBody">${recapBodyHTML()}</div>`,
     { tall:true, footer:`<button class="btn secondary" data-a="recapShare">Enregistrer ou partager l'image</button>` });
   settleSegs(qs("#rcBody"));

@@ -179,7 +179,11 @@ function switchTabNow(id, vt){
   qsa(".view").forEach(v=>v.classList.toggle("active", v.id==="v-"+id));
   renderViewAnimated(id, true);
   if(typeof renderRestBar==="function") renderRestBar();
+  syncLiveChrome();
 }
+// séance en cours à l'écran : la barre d'onglets s'efface (toute la hauteur pour l'effort, rien
+// ne passe dessous) ; « Terminer » et la croix restent en haut pour sortir
+function syncLiveChrome(){ document.body.classList.toggle("live-focus", currentTab==="today" && !!(S.draft && S.draft.startedAt)); }
 
 const VIEWS = {};
 function renderView(id){
@@ -193,6 +197,7 @@ function renderView(id){
   let html;
   try{ html = VIEWS[id](); }catch(err){ reportError("écran "+id, err); html = viewErrorHTML(id); }
   el.innerHTML = html;
+  if(id==="today") syncLiveChrome();
   el._ver = DATA_VER; el._day = todayISO(); // rendu à jour pour ces données
   el.classList.toggle("scrolled", scrollTop>4);
   // rétablir la position force une mise en page immédiate : inutile en haut de page (cas courant)
@@ -469,16 +474,21 @@ function confirmSheet({title,html,ok,onOk,danger}){
 
 // ---------- toast ----------
 let toastTimer=null;
-function toast(msg, ic){
+// undo (facultatif) : le message porte un bouton « Annuler » pendant 5 s (Nielsen : pouvoir revenir en arrière)
+let toastUndoFn = null;
+function toast(msg, ic, undo){
   const t = qs("#toast");
-  if(ic) t.innerHTML = ii(ic, "t-ic")+esc(msg); else t.textContent = msg;
+  t.innerHTML = (ic ? ii(ic, "t-ic") : "")+esc(msg)+(undo ? `<button class="t-undo" data-a="toastUndo">Annuler</button>` : "");
+  toastUndoFn = typeof undo==="function" ? undo : null;
+  t.classList.toggle("has-act", !!toastUndoFn);
   t.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=>t.classList.remove("show"), 2200);
+  toastTimer = setTimeout(()=>{ t.classList.remove("show","has-act"); toastUndoFn = null; }, toastUndoFn ? 5000 : 2200);
 }
 
 // ---------- délégation d'actions ----------
 const ACT = {
+  toastUndo(){ const f = toastUndoFn; toastUndoFn = null; clearTimeout(toastTimer); qs("#toast").classList.remove("show","has-act"); if(f){ f(); sfx("seg"); } },
   retryView(d){ renderViewAnimated(d.v||currentTab); },
   tab(d){ switchTab(d.id); },
   closesheet(){ if(!sheetBack()) closeSheet(); },

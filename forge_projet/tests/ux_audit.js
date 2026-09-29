@@ -19,7 +19,8 @@ const __pw = require('playwright'); const path = require('path');
     const small = [], tiny = [], noName = [];
     document.querySelectorAll('button, a[href], [data-a], input, select, [role=button], [data-tip][tabindex]').forEach(e => {
       if (!vis(e) || e.closest('[aria-hidden=true]')) return; const r = e.getBoundingClientRect();
-      const w = Math.round(r.width), h = Math.round(r.height), id = `${name(e)} (${w}×${h})`;
+      const pb = getComputedStyle(e, '::before'), hit = pb.content !== 'none' && pb.position === 'absolute'; // zone de toucher agrandie (::before)
+      const w = Math.round(Math.max(r.width, hit ? parseFloat(pb.width) || 0 : 0)), h = Math.round(Math.max(r.height, hit ? parseFloat(pb.height) || 0 : 0)), id = `${name(e)} (${w}×${h})`;
       if (w < 24 || h < 24) tiny.push(id); else if (w < 44 || h < 44) small.push(id);
       if ((e.tagName === 'BUTTON' || e.getAttribute('role') === 'button') && !(e.getAttribute('aria-label') || e.textContent.trim() || e.title)) noName.push('.' + [...e.classList].join('.'));
     });
@@ -38,7 +39,7 @@ const __pw = require('playwright'); const path = require('path');
       const fgRgb = fg.rgb.map((v, i) => v * fg.a * (+cs.opacity) + bg[i] * (1 - fg.a * (+cs.opacity)));
       const L1 = Lrgb(fgRgb), L2 = Lrgb(bg), ratio = (Math.max(L1, L2) + .05) / (Math.min(L1, L2) + .05);
       const large = fs >= 24 || (fs >= 18.66 && fw >= 700), need = large ? 3 : 4.5;
-      if (ratio < need) lowC.push(`${txt} ${ratio.toFixed(2)}:1 (${fs}px)`); }
+      if (ratio < need) lowC.push(`${txt} ${ratio.toFixed(2)}:1 (${fs}px) <${e.tagName.toLowerCase()}.${[...e.classList].join(".")}${e.closest("button")?" in ."+[...e.closest("button").classList].join("."):""}${e.closest("button")&&e.closest("button").disabled?" disabled":""}>`); }
     const inputs = [...document.querySelectorAll('input:not([type=file]):not([type=checkbox]),select,textarea')].filter(vis).filter(e => parseFloat(getComputedStyle(e).fontSize) < 16).map(e => `${e.id || e.name || e.type} ${getComputedStyle(e).fontSize}`);
     return { small, tiny, noName, lowC, tinyText, inputs };
   });

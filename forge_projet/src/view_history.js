@@ -118,7 +118,7 @@ function sessionDetailHTML(s){
     </div>`;
   }).join("");
   const time = s.startedAt ? new Date(s.startedAt).toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit"}) : "";
-  return `<div class="sheet-hd"><span class="t">${esc(sessionTitle(s))}</span><button class="icon-btn" data-a="closesheet">${icon("close")}</button></div>
+  return `<div class="sheet-hd"><span class="t">${esc(sessionTitle(s))}</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
     <div class="sheet-body">
     <p class="body" style="margin-bottom:12px">${esc(fmtDate(s.date,"long"))}${time?" à "+time:""}</p>
     <div class="stat-strip">
@@ -160,7 +160,14 @@ Object.assign(ACT, {
   },
   deleteSession(d){
     confirmSheet({ title:"Supprimer cette séance ?", html:"Elle disparaîtra de l'historique et des statistiques. Les trophées déjà obtenus sont conservés.", ok:"Supprimer", danger:true,
-      onOk:()=>{ S.sessions = S.sessions.filter(x=>x.id!==d.id); save(); changed(); toast("Séance supprimée"); } });
+      onOk:()=>{
+        const s = S.sessions.find(x=>x.id===d.id); if(!s) return;
+        S.sessions = S.sessions.filter(x=>x!==s); recomputePRFlags(); save(); changed();
+        toast("Séance supprimée", "trash", ()=>{
+          if(S.sessions.some(x=>x.id===s.id)) return;
+          S.sessions.push(s); S.sessions.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0); sessionTouched(s); recomputePRFlags(); save(); changed();
+        });
+      } });
   },
 });
 VIEWS.history = renderHistory;
