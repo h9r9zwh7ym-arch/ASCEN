@@ -1,5 +1,5 @@
 // ================= INITIALISATION =================
-const APP_VERSION = "3.6";
+const APP_VERSION = "3.7";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 function applyTheme(){
@@ -97,6 +97,13 @@ init();
 // retour, si le jour a changé, l'écran du jour, le planning et la séance proposée se remettent
 // à jour (une séance commencée reste intacte). Son et trophées 3D ont leur propre reprise
 // (sfx.js, trophy3d.js).
+// état repris d'un autre onglet (voir core.js) : minuteur, thème et écran à jour
+function onExternalState(){
+  if(!(S.draft && S.draft.startedAt) && typeof stopRestTimer==="function") stopRestTimer();
+  applyTheme();
+  if(qs("#overlay").classList.contains("open")) dirtyOnClose = true; else renderView(currentTab);
+  toast("Données mises à jour depuis un autre onglet");
+}
 let appDay = todayISO(), appAway = false;
 function appSuspend(){
   document.dispatchEvent(new Event("ascen:suspend"));

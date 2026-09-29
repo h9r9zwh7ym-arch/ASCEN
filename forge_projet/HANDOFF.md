@@ -558,6 +558,28 @@ Constat : les poses étaient des positions d'articulations animées en ligne dro
   - Restauration : accepte aussi le format compact (`zs`) ; un fichier illisible ne change rien (message) ; le minuteur de repos d'une séance en cours est arrêté.
 - **Tests** : `tests/v35.js` couvre la carte (fiche et semaine, bulle), le cycle de vie des défis (lancement, plafond, réussite fêtée et trophée, rechargement, délai dépassé, abandon, relance, défi en tonnes masqué sans charges), les états abîmés et la réinitialisation.
 
+## 9 quatervicies. Version 3.7 : nettoyage, robustesse, performances
+
+- **Dépôt** :
+  - `forge_projet/dist/` n'est plus suivi par Git (`forge_projet/.gitignore`). C'était une copie exacte des fichiers de la racine, avec Three.js en double. `build.sh` le génère toujours pour les tests.
+  - Nouveau `README.md` à la racine : utilisation, organisation du dépôt, construction et tests.
+- **Code mort retiré** :
+  - Fonctions `miniRingSVG`, `liveEyebrow`, `heTime`, `setVolume` et `PATTERN_LABEL`.
+  - Actions `backToPicker`, `editTemplateDays`, `tplDayToggle`.
+  - 83 règles CSS dont les classes n'existent plus (anneau de motivation, bannière de planning, « séance faite aujourd'hui », anciens badges) : environ 6 Ko de moins.
+- **Plusieurs onglets** :
+  - L'app ouverte deux fois (deux onglets, ou Safari et un ordinateur) reprend ce que l'autre instance enregistre, via l'événement `storage` (`core.js`) et `onExternalState` (`init.js`). Avant, la dernière sauvegarde écrasait silencieusement le travail de l'autre onglet.
+  - Si des changements sont en attente d'écriture, l'onglet les garde et sa sauvegarde l'emporte.
+  - Si une feuille est ouverte, l'écran se met à jour à sa fermeture.
+  - Une réinitialisation dans un onglet fait recharger les autres. `wipeStorage` efface maintenant la copie de secours avant le stockage principal, pour qu'un autre onglet ne puisse pas la reprendre.
+- **Mesures** (`tests/profile.js`, 3 ans d'historique, processeur ralenti ×4) :
+  - Démarrage : environ 1 s.
+  - Validation d'une série : environ 30 ms, surtout la mise en page.
+  - Onglets : 20 à 45 ms. Trophées : environ 120 ms au premier affichage, à cause du test WebGL.
+  - Rien de prioritaire à optimiser.
+  - Une fusion du CSS dupliqué (csso) ne ferait gagner que 6 %, au prix de réordonner la cascade : écartée.
+- **Tests** : `tests/v36.js` (synchronisation entre onglets, changement en attente conservé, feuille ouverte, réinitialisation propagée).
+
 ## 10. Cahier des charges d'origine (résumé)
 
 Voir le fichier `4a3df5ee-cahier-des-charges-forge.md` fourni au lancement du projet pour le texte complet. Points clés déjà couverts en v1.0 : matériel personnalisable et extensible, bibliothèque d'exercices filtrée, inclusion/exclusion d'exercices, objectifs personnalisés, suivi détaillé de séance (éditable, timer de repos, coche rapide), moteur de suggestion 100% local avec export/import IA, graphiques de progression, PR, streaks/régularité, trophées, écran d'accueil = séance du jour, thème clair/sombre automatique, page À propos avec copyright.

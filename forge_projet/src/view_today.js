@@ -26,11 +26,6 @@ function renderToday(){
 }
 
 // ---------- accueil : en-tête, pastilles, carte « action du jour » ----------
-function miniRingSVG(pct){
-  const r=18, c=2*Math.PI*r;
-  const off = c*(1-Math.min(1,pct));
-  return `<svg viewBox="0 0 46 46"><circle class="bgc" cx="23" cy="23" r="${r}"/><circle class="fgc" cx="23" cy="23" r="${r}" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" style="--c:${c.toFixed(1)}"/></svg>`;
-}
 function greeting(){
   const h = new Date().getHours(), name = (S.settings.name||"").trim().split(" ")[0];
   const w = h<5 ? "Bonne nuit" : h<12 ? "Bonjour" : h<18 ? "Salut" : "Bonsoir";
@@ -542,7 +537,6 @@ function centerStripChip(smooth){
   if(!c) return;
   strip.scrollTo({ left: c.offsetLeft - strip.clientWidth/2 + c.offsetWidth/2, behavior: smooth?"smooth":"auto" });
 }
-function liveEyebrow(draft){ return fmtClock(elapsedSec(draft)); }
 // chronomètre de séance : une seule mise à jour du texte par seconde
 setInterval(()=>{
   const c = document.getElementById("liveClock");
@@ -1030,7 +1024,6 @@ Object.assign(ACT, {
     toast(`Compose ta séance, puis enregistre-la pour le ${JOURS[(day+1)%7]}`);
   },
   pickerInfo(d){ const l = qs("#pickerList"); if(picker && l) picker.scroll = l.scrollTop; ACT.showExoInfo({ id:d.id }); },
-  backToPicker(){ if(!sheetBack() && picker) renderPickerSheet(); },
   swapFromInfo(d){
     const idx = +d.idx;
     S.draft.exos[idx] = sessionEntryFor(EXO_MAP[d.id]);
@@ -1038,8 +1031,6 @@ Object.assign(ACT, {
     closeSheet(); save(); refreshFocusRegion();
     toast(`Remplacé par ${EXO_MAP[d.id].n}`);
   },
-  editTemplateDays(d){ openTplEditor(d.id); },
-  tplDayToggle(d, el){ el.classList.toggle("on"); },
   draftCount(d){
     // le nombre d'exercices ne concerne que la force : le bloc d'étirements reste à la fin
     const dir = parseInt(d.d,10), ex = S.draft.exos, main = mainExos(S.draft), firstCool = ex.findIndex(isStretchEntry);

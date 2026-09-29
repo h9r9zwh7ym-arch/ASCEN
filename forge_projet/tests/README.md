@@ -44,6 +44,7 @@ Variables utiles :
 | `v33.js` | Un seul « L'app choisit », pictogrammes de la carte du jour touchables, plan de séance (variété, ordre), pictogrammes animés corrigés et zone travaillée plus fine |
 | `v34.js` | Pictogrammes sur squelette : longueurs d'os constantes à chaque image, appuis atteints, rien sous le sol, un pictogramme par exercice, vue de face avec épaules |
 | `v35.js` | Carte des muscles (fiche, semaine, bulle), défis (lancement, 3 au plus, réussite fêtée et trophée, rechargement, délai dépassé, abandon), états enregistrés abîmés, réinitialisation complète |
+| `v36.js` | Deux onglets : chacun reprend ce que l'autre enregistre, changement en attente conservé, feuille ouverte respectée, réinitialisation propagée |
 | `profile.js` | Outil : profil CPU par scénario (démarrage, rendus, séance, fin de séance) sur 3 ans d'historique, processeur ×4. `NO_MINIFY=1 sh build.sh` avant pour avoir les noms de fonctions |
 | `anim_sheet.js` | Planche de contrôle des animations d'exercices (départ/fin), par famille (`FAMILIES=pushup,plank`) |
 | `t3d_perf.js` | Trophées 3D : vignettes, cadence, construction, vue Diamant (`TAG=nom`) |

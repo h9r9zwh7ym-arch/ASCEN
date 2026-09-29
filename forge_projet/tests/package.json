@@ -1,7 +1,7 @@
 {
   "name": "forge-tests",
   "private": true,
-  "description": "Tests navigateur de Forge (Playwright, Chromium + WebKit)",
+  "description": "Tests navigateur d’ASCEN (Playwright, Chromium + WebKit)",
   "scripts": { "test": "sh run.sh" },
   "devDependencies": { "playwright": "^1.55.0" }
 }

@@ -149,8 +149,8 @@ function idbMirror(str, savedAt, now){
 async function wipeStorage(){
   persistBlocked = true; clearTimeout(persistTimer); persistTimer = null; clearTimeout(idbTimer); idbTimer = null; idbPending = null;
   for(let i=0; idbWriting && i<40; i++) await new Promise(r=>setTimeout(r, 50));
+  await idbClear(); // d'abord la copie de secours : un autre onglet rechargé ne peut plus la reprendre
   try{ Object.keys(localStorage).filter(k=>k===STORAGE_KEY || k.startsWith(STORAGE_KEY+".")).forEach(k=>localStorage.removeItem(k)); }catch(e){}
-  await idbClear();
 }
 function idbClear(){ return idbOpen().then(db=>new Promise(ok=>{ const tx = db.transaction(IDB_STORE, "readwrite"); tx.objectStore(IDB_STORE).clear(); tx.oncomplete = tx.onerror = ()=>{ db.close(); ok(); }; })).catch(()=>{}); }
 var loadedFromLS; // var : affecté pendant load(), qui s'exécute avant cette ligne
@@ -339,6 +339,19 @@ function persistNow(urgent){
 // sortie de l'app : écriture immédiate, copie de secours comprise
 function flushPersist(){ if(persistTimer) persistNow(true); else if(idbPending) idbMirror(idbPending.str, idbPending.savedAt, true); }
 window.addEventListener("pagehide", flushPersist);
+// l'app ouverte dans un autre onglet a enregistré : on reprend sa version (la plus récente) au
+// lieu de l'écraser à la prochaine sauvegarde. Si nos propres changements partent à l'instant,
+// on ne fait rien : la dernière écriture gagne, comme avant.
+window.addEventListener("storage", e=>{
+  if(e.key!==STORAGE_KEY || persistBlocked) return;
+  // données effacées ailleurs : plus d'écriture ici, rechargement une fois la copie de secours effacée aussi
+  if(e.newValue==null){ persistBlocked = true; setTimeout(()=>location.reload(), 900); return; }
+  if(persistTimer) return;
+  let st; try{ st = normalizeState(JSON.parse(e.newValue)); }catch(err){ return; }
+  if(S.meta.savedAt && !(st.meta.savedAt > S.meta.savedAt)) return;
+  S = st; DATA_VER++;
+  if(typeof onExternalState==="function") onExternalState();
+});
 document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="hidden") flushPersist(); });
 
 // ---------- utilitaires ----------
@@ -433,7 +446,6 @@ function daysSinceTrained_raw(muscleId){
   }
   return 999;
 }
-function setVolume(st){ return (st.done? (st.reps||0)*(st.weight||0) : 0); }
 
 // ---------- résumé d'une séance (v3.3) ----------
 // Les statistiques et les trophées parcouraient chaque série de tout l'historique, une fois par

@@ -168,7 +168,6 @@ VIEWS.history = renderHistory;
 // ---------- modifier une séance enregistrée ----------
 // On travaille sur une copie : rien n'est touché tant qu'on n'a pas appuyé sur « Enregistrer ».
 let histEdit = null;
-function heTime(s){ return s.startedAt ? new Date(s.startedAt).toTimeString().slice(0,5) : ""; }
 function heSetRow(def, i, j, st){
   const lt = loadableTypeOf(def), timed = isTimed(def);
   const load = lt==="bands"
