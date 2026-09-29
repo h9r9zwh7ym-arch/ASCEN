@@ -1937,3 +1937,7 @@ body.live-focus #restbar{bottom:calc(14px + var(--sab))}
 .why-k .ii{width:14px;height:14px}
 .why-t{margin-top:6px;font-family:var(--display);font-size:var(--fs-t3,20px);font-weight:700;line-height:1.25;color:var(--label)}
 .why-s{margin-top:6px;font-size:var(--fs-foot);color:var(--label2)}
+/* v4.0 : l'arrivée sur un onglet est animée en JS (Web Animations), une seule fois par changement */
+.view.active{animation:none}
+.tabbar{view-transition-name:none}
+.pick-row{content-visibility:auto;contain-intrinsic-size:auto 60px}

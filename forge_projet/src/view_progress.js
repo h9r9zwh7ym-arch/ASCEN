@@ -221,11 +221,15 @@ function medalsPaneHTML(){
 }
 
 Object.assign(ACT, {
-  progressTab(d, el){
+  progressTab(d){
     if(progressTab===d.v) return;
-    // l'indicateur du sélecteur glisse tout de suite, le contenu change en fondu
-    const seg = el && el.closest(".seg"); if(seg){ seg.dataset.cur = ["overview","exos","medals"].indexOf(d.v); settleSegs(seg.parentElement); }
-    withTransition("fade", ()=>{ progressTab = d.v; renderViewAnimated("progress"); qs("#v-progress").scrollTop = 0; });
+    // v4.0 : plus de capture de toute la page (View Transitions) ni de cascade rejouée : le
+    // sélecteur glisse (settleSegs), le contenu est reconstruit et apparaît en fondu court
+    progressTab = d.v; const v = qs("#v-progress");
+    if(v.scrollTop) v.scrollTop = 0; // avant le rendu : pas de seconde mise en page forcée
+    renderView("progress");
+    const pane = v.querySelector(".seg-pane");
+    if(pane && pane.animate && !reducedMotion()) try{ pane.animate([{ opacity:0, transform:"translateY(6px)" }, { opacity:1, transform:"none" }], { duration:200, easing:"cubic-bezier(.2,.8,.2,1)" }); }catch(e){}
   },
   openExoChart(d){ exoChartSheet(d.id); },
 });

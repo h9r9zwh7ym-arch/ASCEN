@@ -53,6 +53,16 @@ function init(){
   // médailles déjà méritées (ex. après une mise à jour) : attribuées sans célébration, au calme
   // (une quarantaine de statistiques sur tout l'historique : pas pendant le démarrage)
   (window.requestIdleCallback || (f=>setTimeout(f, 1600)))(()=>{ const v = DATA_VER; checkMedals(true); if(DATA_VER!==v && !(S.draft && S.draft.startedAt)) renderView(currentTab); }, { timeout:2500 });
+  // préchauffage au calme (v4.0) : les pictogrammes de tous les exercices sont calculés par petits
+  // lots pendant les temps morts, pour que le choix d'exercices s'ouvre sans à-coup ; le test
+  // WebGL des trophées 3D (≈ 40 ms la première fois) est fait au même moment
+  const idle = window.requestIdleCallback || (f=>setTimeout(()=>f({ timeRemaining:()=>8 }), 200));
+  const warm = EXOS.slice(); let warmedGL = false;
+  (function step(dl){
+    while(warm.length && (!dl || dl.timeRemaining()>3)){ const d = warm.shift(); try{ exoIcon(d); exoIcon(d, "sm"); }catch(e){} }
+    if(!warmedGL && (!dl || dl.timeRemaining()>12)){ warmedGL = true; try{ if(typeof t3dWebGL==="function") t3dWebGL(); }catch(e){} }
+    if(warm.length || !warmedGL) idle(step, { timeout:4000 });
+  })();
   // manifeste d'installation : seulement servi par un vrai serveur (en fichier local, WebKit refuse de le lire)
   if(/^https?:$/.test(location.protocol) && !document.querySelector('link[rel="manifest"]')){ const l = document.createElement("link"); l.rel = "manifest"; l.href = "manifest.webmanifest"; document.head.appendChild(l); }
   // hors ligne : service worker (uniquement servi en https, pas en fichier local ni en aperçu)

@@ -768,7 +768,9 @@ function refreshFocusRegion(){
     if(oldW.length===segs.length && !reducedMotion()){
       // la barre part de l'ancienne largeur (Web Animations : pas de mise en page forcée)
       segs.forEach((i,k)=>{ const to = i.style.width; if(to===oldW[k]) return; i.parentElement.classList.add("grew");
-        if(i.animate) try{ i.style.transition = "none"; i.animate([{ width:oldW[k] }, { width:to }], { duration:600, easing:"cubic-bezier(.32,.72,0,1)" }); }catch(e){} });
+        // échelle horizontale plutôt que largeur : animée par le compositeur, sans mise en page à chaque image
+        const r0 = parseFloat(oldW[k])||0, r1 = parseFloat(to)||0;
+        if(i.animate && r1>0) try{ i.style.transition = "none"; i.style.transformOrigin = "left center"; i.animate([{ transform:`scaleX(${r0/r1})` }, { transform:"scaleX(1)" }], { duration:600, easing:"cubic-bezier(.32,.72,0,1)" }); }catch(e){} });
       const b = qs(".lh-pct b", head), newPct = parseInt(b.textContent)||0;
       if(newPct!==oldPct){
         b.classList.add("bump");

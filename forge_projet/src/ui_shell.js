@@ -164,22 +164,41 @@ function withTransition(kind, fn){
   t.ready.catch(()=>{});
   if(t.updateCallbackDone) t.updateCallbackDone.catch(err=>{ if(!err || err.name!=="AbortError") reportError("transition", err); });
 }
-function switchTab(id){
-  if(canVT() && currentTab && currentTab!==id){
-    const from = TAB_ORDER.indexOf(currentTab), to = TAB_ORDER.indexOf(id);
-    return withTransition(to>from ? "tab-r" : "tab-l", ()=>switchTabNow(id, true));
-  }
-  switchTabNow(id);
-}
-function switchTabNow(id, vt){
+// Changement d'onglet (v4.0) : comme sur iOS, immédiat et léger. L'écran d'arrivée apparaît en
+// fondu court avec un petit glissement dans le sens de l'onglet ; son contenu n'est reconstruit
+// que si les données ont changé, et les animations d'entrée (cartes en cascade, compteurs) ne se
+// jouent qu'à la première visite. Avant : capture de toute la page (View Transitions) + cascade
+// rejouée à chaque visite, ce qui donnait l'impression d'un rechargement.
+function switchTab(id){ switchTabNow(id); }
+function switchTabNow(id){
   const from = TAB_ORDER.indexOf(currentTab), to = TAB_ORDER.indexOf(id);
-  const v = qs("#v-"+id); if(v) v.dataset.dir = vt || from<0||from===to ? "" : to>from ? "r" : "l";
+  const v = qs("#v-"+id); if(!v) return;
+  const changed = currentTab!==id;
+  v.dataset.dir = !changed || from<0 ? "" : to>from ? "r" : "l";
   currentTab = id;
-  qsa(".tabbtn").forEach(b=>b.classList.toggle("on", b.dataset.id===id));
-  qsa(".view").forEach(v=>v.classList.toggle("active", v.id==="v-"+id));
-  renderViewAnimated(id, true);
+  qsa(".tabbtn").forEach(b=>{ const on = b.dataset.id===id; b.classList.toggle("on", on); if(on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
+  qsa(".view").forEach(x=>x.classList.toggle("active", x===v));
+  const upToDate = v._ver===DATA_VER && v._day===todayISO() && v.firstChild;
+  if(!upToDate){
+    const first = !v._seen; v._seen = true;
+    if(first){ v.classList.add("enter"); clearTimeout(enterTimer); enterTimer = setTimeout(()=>v.classList.remove("enter"), 1200); }
+    renderView(id);
+    if(first) animateCounts(v);
+  } else settleSegs(v);
+  // fondu d'arrivée par l'API Web Animations : aucune mise en page forcée, rien à nettoyer
+  if(changed && v.animate && !reducedMotion()){
+    const dx = v.dataset.dir==="r" ? 12 : v.dataset.dir==="l" ? -12 : 0;
+    try{ v.animate([{ opacity:0, transform:`translateX(${dx}px)` }, { opacity:1, transform:"none" }], { duration:220, easing:"cubic-bezier(.2,.8,.2,1)" }); }catch(e){}
+  }
   if(typeof renderRestBar==="function") renderRestBar();
   syncLiveChrome();
+}
+// onglet déjà affiché touché à nouveau : retour en haut en douceur (convention iOS) ; déjà en
+// haut de Progrès sur un sous-onglet : retour au résumé. Jamais de reconstruction de la page.
+function reselectTab(){
+  const v = qs("#v-"+currentTab); if(!v) return;
+  if(v.scrollTop>4){ try{ v.scrollTo({ top:0, behavior:reducedMotion() ? "auto" : "smooth" }); }catch(e){ v.scrollTop = 0; } return; }
+  if(currentTab==="progress" && typeof progressTab!=="undefined" && progressTab!=="overview" && ACT.progressTab) ACT.progressTab({ v:"overview" });
 }
 // séance en cours à l'écran : la barre d'onglets s'efface (toute la hauteur pour l'effort, rien
 // ne passe dessous) ; « Terminer » et la croix restent en haut pour sortir
@@ -490,7 +509,7 @@ function toast(msg, ic, undo){
 const ACT = {
   toastUndo(){ const f = toastUndoFn; toastUndoFn = null; clearTimeout(toastTimer); qs("#toast").classList.remove("show","has-act"); if(f){ f(); sfx("seg"); } },
   retryView(d){ renderViewAnimated(d.v||currentTab); },
-  tab(d){ switchTab(d.id); },
+  tab(d){ if(d.id===currentTab) reselectTab(); else switchTab(d.id); },
   closesheet(){ if(!sheetBack()) closeSheet(); },
   sheetBack(){ if(!sheetBack()) closeSheet(); },
   dismisssheet(){ if(Date.now()>suppressSheetClick) dismissSheet(); },
