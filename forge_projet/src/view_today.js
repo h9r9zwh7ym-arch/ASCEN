@@ -111,6 +111,7 @@ function heroHTML(draft){
     <span class="hero-meta">${meta.map(m=>`<span>${m}</span>`).join("")}</span>
     ${heroPicts(ids)}
     <button class="hero-go" ${act}><span class="hg-ico">${icon("play")}</span>C'est parti</button>
+    <button class="hero-express" data-a="startExpress">${icon("timer")} Pas le temps ? Séance express · 10 min</button>
     ${nextPlannedLine()}
   </div>`;
 }
@@ -124,7 +125,7 @@ function renderTodayPreview(draft){
       <h1 class="lt">${greeting()}</h1>
     </div>
     ${statPillsHTML()}
-    ${whyReminder() ? `<div class="why-card stagger" style="--i:2"><div class="why-k">${ii("flame")} Ton pourquoi</div><div class="why-t">« ${esc(whyReminder())} »</div><div class="why-s">${daysSinceLastSession()} jours sans séance : une seule suffit pour reprendre le fil.</div></div>` : ""}
+    ${whyReminder() ? `<div class="why-card stagger" style="--i:2"><div class="why-k">${ii("flame")} Ton pourquoi</div><div class="why-t">« ${esc(whyReminder())} »</div><div class="why-s">${daysSinceLastSession()} jours sans séance : une seule suffit pour reprendre le fil.</div><button class="btn secondary sm why-go" data-a="startExpress">${icon("timer")} Séance express · 10 min</button></div>` : ""}
     ${heroHTML(draft)}
     ${recapNudgeKey() ? `<div class="backup-nudge rc-nudge stagger" style="--i:3">${sfIcon("sparkles","orange")}<div class="grow"><div class="t">Ton Rewind de ${MOIS_LONG[parseISO(recapNudgeKey()+"-01").getMonth()]} est prêt</div><div class="s">Revis ton mois en une minute.</div></div><div class="bn-act"><button data-a="openRewind" data-kind="month" data-key="${recapNudgeKey()}">Lancer</button><button class="later" data-a="recapLater">Plus tard</button></div></div>` : ""}
     ${backupDue() ? `<div class="backup-nudge stagger" style="--i:3">${sfIcon("download","green")}<div class="grow"><div class="t">Sauvegarde conseillée</div><div class="s">${S.sessions.length} séances sont stockées uniquement sur ce téléphone.</div></div><div class="bn-act"><button data-a="backupData">Sauvegarder</button><button class="later" data-a="backupLater">Plus tard</button></div></div>` : ""}
@@ -687,7 +688,10 @@ function renderFocusCard(idx, ex, def){
     <div class="fc-icon">${exoIcon(def,"lg")}</div>
     <div class="fc-name">${esc(def.n)}</div>
     <div class="fc-sub">${musclesLabel(def)}</div>`;
-  const setDots = si => `<div class="set-dots">${ex.sets.map((s,i)=>`<span class="sd ${s.done?"done":i===si?"current":""} ${i===jd?"just":""} ${s.pr?"pr":""}"></span>`).join("")}</div>`;
+  const anyDone = ex.sets.some(s=>s.done);
+  const dots = si => ex.sets.map((s,i)=>`<span class="sd ${s.done?"done":i===si?"current":""} ${i===jd?"just":""} ${s.pr?"pr":""}"></span>`).join("");
+  // une série validée par erreur se corrige en touchant les points (ou via •••)
+  const setDots = si => anyDone ? `<button class="set-dots tap" data-a="editDoneSets" data-exi="${idx}" aria-label="Corriger les séries faites">${dots(si)}</button>` : `<div class="set-dots">${dots(si)}</div>`;
 
   if(resting){
     const remain = Math.max(0, Math.round((restState.endAt-Date.now())/1000));
@@ -710,7 +714,7 @@ function renderFocusCard(idx, ex, def){
     return `<div class="focus-card r-${regionOf(def)} ${animClass}">${header}
       <div class="fc-done-badge">${icon("check")}</div>
       <div class="fc-done-t">Exercice terminé</div>
-      <div class="fc-recap">${recap}</div>
+      <button class="fc-recap tap" data-a="editDoneSets" data-exi="${idx}" aria-label="Corriger les séries faites">${recap}</button>
       ${(()=>{ const ni = nextUndone(idx); if(ni<0) return ""; const nd = EXO_MAP[S.draft.exos[ni].exoId];
         return `<button class="btn big next-exo" data-a="focusJump" data-idx="${ni}"><span class="ne-k">Exercice suivant</span><span class="ne-n">${esc(nd.n)}</span>${icon("chev")}</button>`; })()}
       <div class="fc-quiet"><button data-a="addSetFocus" data-exi="${idx}">+ Ajouter une série</button></div>
@@ -1134,6 +1138,14 @@ Object.assign(ACT, {
     confirmSheet({ title:"Vider ma séance ?", html:"Les exercices choisis seront retirés. Tes séances enregistrées ne changent pas.", ok:"Vider", danger:true,
       onOk:()=>{ S.custom = { exos:[] }; save(); renderViewAnimated("today"); } });
   },
+  startExpress(){
+    if(S.draft && S.draft.startedAt) return;
+    const s = buildExpressSession(); if(!s.exos.length) return;
+    S.draft = s; S.draft.startedAt = new Date().toISOString();
+    liveFocusIdx = 0; completeShown = false;
+    save(); scrollTodayTop(); renderViewAnimated("today");
+    showLaunch(S.draft);
+  },
   startCustom(){
     if(!S.custom.exos.length) return;
     S.draft = buildCustomSession(S.custom.exos, S.custom.name);
@@ -1220,6 +1232,7 @@ Object.assign(ACT, {
         <button data-a="showExoInfo" data-id="${def.id}">${icon("search")}<span>Fiche et technique</span></button>
         <button data-a="swapExoOpen" data-idx="${i}">${icon("swap")}<span>Remplacer l'exercice</span></button>
         <button data-a="addSetFocus" data-exi="${i}">${icon("plus")}<span>Ajouter une série</span></button>
+        ${S.draft.exos[i].sets.some(s=>s.done) ? `<button data-a="editDoneSets" data-exi="${i}">${icon("edit")}<span>Corriger les séries faites</span></button>` : ""}
         <button data-a="toggleFlow">${icon("repeat")}<span>${circuitMode()?"Enchaînement : exercice suivant après chaque repos":"Enchaînement : toutes les séries d'abord"}</span></button>
         <button class="danger" data-a="removeExo" data-idx="${i}">${icon("trash")}<span>Retirer de la séance</span></button>
       </div>
@@ -1311,7 +1324,7 @@ Object.assign(ACT, {
     if(!st.pr && !exoFinished0(ex)) floatText(fx0, fy0, `Série ${si+1}`, "", "check");
     const exoFinished = !ex.sets.some(s=>!s.done);
     const ni = nextUndone(exi);
-    if(ni>=0) startRestTimer(def.restSec, def.n, exoFinished ? ni : exi, exoFinished, { exi, si });
+    if(ni>=0) startRestTimer(S.draft.express ? Math.min(45, restFor(def)) : restFor(def), def.n, exoFinished ? ni : exi, exoFinished, { exi, si });
     else stopRestTimer();
     if(exoFinished){
       if(!st.pr) confettiBurst(bx, by, 36);
@@ -1359,7 +1372,7 @@ Object.assign(ACT, {
       ${stats}
       <div class="exo-facts">
         <div><b>${e.sets} × ${e.repsMin}-${e.repsMax}</b><span>${isTimed(e)?"secondes":"répétitions"} conseillées</span></div>
-        <div><b>${e.restSec} s</b><span>de repos</span></div>
+        <div><b>${restFor(e)} s</b><span>de repos</span></div>
         <div><b>${e.uni?"Unilatéral":"Bilatéral"}</b><span>${e.uni?"un côté à la fois":"les deux côtés"}</span></div>
       </div>
       <h2 class="sh">Exécution</h2>
@@ -1419,3 +1432,56 @@ Object.assign(ACT, {
   },
 });
 VIEWS.today = renderToday;
+
+// ---------- corriger une série déjà validée (v4.0) ----------
+// Répétitions et charge ajustables, ou validation annulée (la série redevient à faire). Le record
+// de la série est recalculé avec la même règle qu'en direct.
+function draftSetIsPR(ex, si){
+  const st = ex.sets[si], w = st.weight||0, r = st.reps||0, prev = ex.sets.filter((s,i)=>s.done && i<si);
+  const beats = w>Math.max(0,...prev.map(s=>s.weight||0)) || estimated1RM(w,r)>Math.max(0,...prev.map(s=>estimated1RM(s.weight||0,s.reps||0)))+0.01;
+  return !!((w||r) && beats && isNewPR(ex.exoId, w, r));
+}
+function setPRFlag(ex, si){
+  const st = ex.sets[si], was = !!st.pr, now = st.done && draftSetIsPR(ex, si);
+  if(was!==now){ st.pr = now || undefined; if(!now) delete st.pr; S.meta.prCount = Math.max(0, (S.meta.prCount||0) + (now?1:-1)); }
+}
+function doneSetsBodyHTML(exi){
+  const ex = S.draft && S.draft.exos[exi]; if(!ex) return "";
+  const def = EXO_MAP[ex.exoId], lt = loadableTypeOf(def), unit = isTimed(def) ? "s" : "reps";
+  const rows = ex.sets.map((s,si)=>!s.done ? "" : `<div class="row ds-row">
+      <span class="ds-n">${si+1}</span>
+      <div class="ds-f"><div class="mini-step"><button data-a="dsStep" data-exi="${exi}" data-si="${si}" data-f="reps" data-d="-1" aria-label="Moins de ${unit}">−</button><span>${s.reps||0}</span><button data-a="dsStep" data-exi="${exi}" data-si="${si}" data-f="reps" data-d="1" aria-label="Plus de ${unit}">+</button></div><small>${unit}</small></div>
+      ${lt ? `<div class="ds-f"><div class="mini-step"><button data-a="dsStep" data-exi="${exi}" data-si="${si}" data-f="weight" data-d="-1" aria-label="Moins lourd">−</button><span>${lt==="bands" ? esc(bandLabel(s.weight||1)).slice(0,6) : fmtDec(s.weight||0)}</span><button data-a="dsStep" data-exi="${exi}" data-si="${si}" data-f="weight" data-d="1" aria-label="Plus lourd">+</button></div><small>${lt==="bands"?"élastique":"kg"}</small></div>` : ""}
+      ${s.pr ? `<span class="ds-pr" title="Record">${ii("bolt")}</span>` : ""}
+      <button class="icon-btn ds-undo" data-a="dsUndo" data-exi="${exi}" data-si="${si}" aria-label="Annuler la validation de la série ${si+1}">${icon("undo")}</button>
+    </div>`).join("");
+  return `<p class="hr-note" style="margin:0 20px 12px">Ajuste une série validée par erreur, ou annule sa validation : elle redeviendra la prochaine à faire.</p><div class="group">${rows || `<div class="row"><div class="grow s">Aucune série validée.</div></div>`}</div>`;
+}
+function openDoneSets(exi){
+  const def = EXO_MAP[S.draft.exos[exi].exoId];
+  openSheet(`<div class="sheet-hd"><span class="t">Séries faites · ${esc(def.n)}</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body" id="dsBody">${doneSetsBodyHTML(exi)}</div>`);
+}
+Object.assign(ACT, {
+  editDoneSets(d){ if(S.draft && S.draft.exos[+d.exi]) openDoneSets(+d.exi); },
+  dsStep(d){
+    const exi = +d.exi, si = +d.si, ex = S.draft && S.draft.exos[exi]; if(!ex || !ex.sets[si] || !ex.sets[si].done) return;
+    const st = ex.sets[si], def = EXO_MAP[ex.exoId], dir = parseInt(d.d,10);
+    if(d.f==="reps") st.reps = Math.min(9999, Math.max(0, (st.reps||0)+dir*(isTimed(def) ? 5 : 1)));
+    else st.weight = stepWeightValue(def, st.weight||0, dir);
+    ex.sets.forEach((s,i)=>{ if(s.done && i>=si) setPRFlag(ex, i); });
+    sfx("step", dir>0); save(); refreshFocusRegion();
+    const b = qs("#dsBody"); if(b) b.innerHTML = doneSetsBodyHTML(exi);
+  },
+  dsUndo(d){
+    const exi = +d.exi, si = +d.si, ex = S.draft && S.draft.exos[exi]; if(!ex || !ex.sets[si]) return;
+    const st = ex.sets[si];
+    if(st.pr){ S.meta.prCount = Math.max(0, (S.meta.prCount||0)-1); delete st.pr; }
+    st.done = false; delete st.effort;
+    ex.sets.forEach((s,i)=>{ if(s.done && i>si) setPRFlag(ex, i); });
+    if(restState && restState.src && restState.src.exi===exi && restState.src.si===si) stopRestTimer();
+    liveFocusIdx = exi; sfx("remove"); save(); refreshFocusRegion();
+    const b = qs("#dsBody");
+    if(!ex.sets.some(s=>s.done)) closeSheet(); else if(b) b.innerHTML = doneSetsBodyHTML(exi);
+    toast(`Série ${si+1} à refaire`);
+  },
+});

@@ -26,6 +26,7 @@ const ICONS = {
   flame:'<path d="M12 3s4 3.5 4 7.5a4 4 0 1 1-8 0c0-1 .4-1.8 1-2.5-.1 1 .3 1.6.9 1.9C9.6 7 10.5 5 12 3Z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/>',
   edit:'<path d="M4 20l.9-3.6L16.4 5 19 7.6 7.6 19 4 20Z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/>',
   timer:'<circle cx="12" cy="13" r="7.5" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M12 9.5V13l2.5 1.5M9.5 2.5h5M12 2.5v2.6" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/>',
+  undo:'<path d="M9 14 4 9l5-5" stroke="currentColor" stroke-width="1.9" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" stroke="currentColor" stroke-width="1.9" fill="none" stroke-linecap="round"/>',
   swap:'<path d="M6 8h11l-3-3M18 16H7l3 3" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
   play:'<path d="M8 5.5v13l10.5-6.5L8 5.5Z" fill="currentColor"/>',
   bookmark:'<path d="M7 4h10v16l-5-3.6L7 20V4Z" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round"/>',
@@ -535,7 +536,7 @@ function reportError(where, err){
   if(typeof console!=="undefined") console.warn("[ASCEN]", where, err);
   if(Date.now()-errToastAt>5000){ errToastAt = Date.now(); try{ toast("Petit souci, l'écran a été rechargé — rien n'est perdu", "warn"); }catch(e){} }
 }
-const ONCE_ACTS = new Set(["validateSet","finishSession","startSession","startCustom","startTemplate","pickerDone","infoAdd","addToCustom","tplEdSave","saveTemplate","saveTemplateNew","backupData","obFinish","confirmYes","holdStop","histEditSave"]);
+const ONCE_ACTS = new Set(["startExpress","validateSet","finishSession","startSession","startCustom","startTemplate","pickerDone","infoAdd","addToCustom","tplEdSave","saveTemplate","saveTemplateNew","backupData","obFinish","confirmYes","holdStop","histEditSave"]);
 let lastAct = { name:"", el:null, t:0 };
 function runAction(name, el, e){
   const fn = ACT[name]; if(!fn) return;

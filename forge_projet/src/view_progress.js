@@ -122,7 +122,7 @@ function overviewPaneHTML(){
     </div>`:""}
     ${prs.length?`<h2 class="sh">Derniers records</h2><div class="group">${prs.map((p,i)=>`<button class="row tap stagger" style="--i:${10+i}" data-a="openExoChart" data-id="${p.def.id}">
       ${sfIcon("bolt","orange")}
-      <div class="grow"><div class="t">${esc(p.def.n)}</div><div class="s">${p.st.reps} reps${loadSuffix(p.def, p.st.weight)} · ${fmtRelative(p.s.date)}</div></div>
+      <div class="grow"><div class="t">${esc(p.def.n)}</div><div class="s">${p.st.reps} ${isTimed(p.def)?"s":"reps"}${loadSuffix(p.def, p.st.weight)} · ${fmtRelative(p.s.date)}</div></div>
       <span class="chev">${icon("chev")}</span></button>`).join("")}</div>`:""}`;
 }
 
@@ -154,7 +154,7 @@ function exosPaneHTML(){
     const pr = exoPRs(id);
     return `<button class="row tap stagger" style="--i:${Math.min(i,12)}" data-a="openExoChart" data-id="${id}">
       ${exoIcon(def)}
-      <div class="grow"><div class="t">${esc(def.n)}</div><div class="s">${pts.length} séance${pts.length>1?"s":""} · ${loaded&&pr.maxWeight?"record "+pr.maxWeight+" kg":"record "+Math.max(...pts.map(p=>p.best))+" reps"}</div></div>
+      <div class="grow"><div class="t">${esc(def.n)}</div><div class="s">${pts.length} séance${pts.length>1?"s":""} · ${loaded&&pr.maxWeight?"record "+fmtDec(pr.maxWeight)+" kg":"record "+Math.max(...pts.map(p=>p.best))+(isTimed(def)?" s":" reps")}</div></div>
       ${sparkline(pts.slice(-10).map(p=>p.best))}
       <span class="chev">${icon("chev")}</span>
     </button>`;
@@ -179,11 +179,11 @@ function exoChartSheet(id){
       <div class="stat-box"><div class="num">${pts.length}</div><div class="lbl">séances</div></div>
       ${loaded?`<div class="stat-box"><div class="num">${pr.maxWeight||"–"}</div><div class="lbl">record (kg)</div></div>
       <div class="stat-box"><div class="num">${pr.best1rm?fmtDec(pr.best1rm):"–"}</div><div class="lbl">1RM estimé</div></div>`
-      :`<div class="stat-box"><div class="num">${Math.max(...pts.map(p=>p.best))}</div><div class="lbl">meilleure série</div></div>
-      <div class="stat-box"><div class="num">${fmtNum(pts.reduce((t,p)=>t+p.reps,0))}</div><div class="lbl">reps au total</div></div>`}
+      :`<div class="stat-box"><div class="num">${Math.max(...pts.map(p=>p.best))}${isTimed(def)?" s":""}</div><div class="lbl">meilleure série</div></div>
+      <div class="stat-box"><div class="num">${isTimed(def) ? fmtDuration(pts.reduce((t,p)=>t+p.reps,0)) : fmtNum(pts.reduce((t,p)=>t+p.reps,0))}</div><div class="lbl">${isTimed(def)?"tenus au total":"reps au total"}</div></div>`}
     </div>
     <div class="chart-card">
-      <div class="cc-h"><div class="cc-t">${loaded?"1RM estimé":"Meilleure série"}</div><div class="cc-s">${loaded?"formule d'Epley, meilleure série de chaque séance":"répétitions de ta meilleure série"}</div></div>
+      <div class="cc-h"><div class="cc-t">${loaded?"1RM estimé":"Meilleure série"}</div><div class="cc-s">${loaded?"formule d'Epley, meilleure série de chaque séance":(isTimed(def) ? "secondes tenues sur ta meilleure série" : "répétitions de ta meilleure série")}</div></div>
       ${main}
     </div>
     <div class="chart-card">

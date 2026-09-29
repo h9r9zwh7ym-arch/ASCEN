@@ -395,9 +395,9 @@ function sessionProgressLines(session){
     const then = best(old.exos.find(e=>e.exoId===ex.exoId), def); if(!then) return;
     const since = `depuis le ${fmtDate(old.date)}`;
     if(kgType(def) && now.w>then.w+0.01) lines.push({ g:(now.w-then.w)/Math.max(1,then.w), t:`${def.n} : ${fmtDec(now.w)} kg, +${fmtDec(now.w-then.w)} kg ${since}` });
-    else if(kgType(def) && Math.abs(now.w-then.w)<0.01 && now.r>then.r) lines.push({ g:(now.r-then.r)/Math.max(1,then.r)*.6, t:`${def.n} : ${now.r} reps à ${fmtDec(now.w)} kg, +${now.r-then.r} ${since}` });
+    else if(kgType(def) && Math.abs(now.w-then.w)<0.01 && now.r>then.r) lines.push({ g:(now.r-then.r)/Math.max(1,then.r)*.6, t:`${def.n} : ${fmtNum(now.r)} reps à ${fmtDec(now.w)} kg, +${fmtNum(now.r-then.r)} ${since}` });
     else if(!kgType(def) && now.r>then.r){ const u = isTimed(def) ? " s" : " reps";
-      lines.push({ g:(now.r-then.r)/Math.max(1,then.r), t:`${def.n} : ${now.r}${u}, +${now.r-then.r}${u} ${since}` }); }
+      lines.push({ g:(now.r-then.r)/Math.max(1,then.r), t:`${def.n} : ${fmtNum(now.r)}${u}, +${fmtDec(now.r-then.r)}${u} ${since}` }); }
   });
   return lines.sort((a,b)=>b.g-a.g).slice(0,2).map(l=>l.t);
 }

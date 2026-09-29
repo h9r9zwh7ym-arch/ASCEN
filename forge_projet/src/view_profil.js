@@ -91,6 +91,11 @@ function renderProfil(){
         <div class="grow"><div class="t">Exercices inclus / exclus</div><div class="s">${S.prefs.excluded.length} exclu${S.prefs.excluded.length>1?"s":""} · ${S.prefs.included.length} privilégié${S.prefs.included.length>1?"s":""}</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
+      <div class="row rest-row">
+        ${sfIcon("stopwatch","teal")}
+        <div class="grow"><div class="t">Temps de repos</div><div class="s">Appliqué à la durée conseillée de chaque exercice</div></div>
+      </div>
+      <div class="rest-seg">${[["court","Court"],["normal","Conseillé"],["long","Long"]].map(([k,l])=>`<button class="chip ${(S.settings.rest||"normal")===k?"on":""}" data-a="setRest" data-v="${k}" aria-pressed="${(S.settings.rest||"normal")===k}">${l}</button>`).join("")}</div>
       <div class="row">
         ${sfIcon("leaf","green")}
         <div class="grow"><div class="t">Étirements en fin de séance</div><div class="s">Ajoutés aux séances proposées par l'app</div></div>
@@ -112,6 +117,11 @@ function renderProfil(){
       <button class="row tap" style="width:100%" data-a="backupData">
         ${sfIcon("download","green")}
         <div class="grow"><div class="t">Sauvegarder mes données</div><div class="s">${backupStatusText()}</div></div>
+        <span class="chev">${icon("chev")}</span>
+      </button>
+      <button class="row tap" style="width:100%" data-a="exportCSV">
+        ${sfIcon("list","teal")}
+        <div class="grow"><div class="t">Exporter l'historique (tableur)</div><div class="s">Toutes les séries, à ouvrir dans Numbers ou Excel</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
       <button class="row tap" style="width:100%" data-a="openStorage">
@@ -178,6 +188,37 @@ function backupDue(){
   if(S.meta.backupSnooze && daysBetween(S.meta.backupSnooze, todayISO())<14) return false;
   if(!S.meta.lastBackup) return true;
   return daysBetween(S.meta.lastBackup, todayISO())>=21 && S.sessions.length-(S.meta.backupSessions||0)>=6;
+}
+// fichier partagé (Fichiers, iCloud, AirDrop…) ou, à défaut, téléchargé
+async function shareOrDownload(payload, name, type, title){
+  try{
+    const file = new File([payload], name, { type });
+    if(navigator.canShare && navigator.canShare({ files:[file] })){ await navigator.share({ files:[file], title }); return true; }
+  }catch(e){ if(e && e.name==="AbortError") return false; }
+  const url = URL.createObjectURL(new Blob([payload], { type }));
+  const a = document.createElement("a"); a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 5000);
+  return true;
+}
+// Historique en tableur (v4.0) : une ligne par série, séparateur « ; » et virgule décimale
+// (Numbers et Excel en français l'ouvrent directement), UTF-8 avec BOM pour les accents.
+function historyCSV(){
+  const q = v=>{ const s = String(v==null?"":v); return /[";\n\r]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; };
+  const dec = v=>v==null||v==="" ? "" : String(v).replace(".", ",");
+  const lines = [["date","séance","exercice","série","répétitions","secondes","charge (kg)","élastique","record","note"].join(";")];
+  S.sessions.forEach(s=>s.exos.forEach(ex=>{
+    const def = EXO_MAP[ex.exoId], name = def ? def.n : ex.exoId, timed = def && isTimed(def), lt = def && loadableTypeOf(def);
+    ex.sets.filter(st=>st.done!==false).forEach((st,i)=>lines.push([s.date, q(sessionTitle(s)), q(name), i+1,
+      timed ? "" : (st.reps||0), timed ? (st.reps||0) : "", lt && lt!=="bands" ? dec(st.weight) : "", lt==="bands" && st.weight ? q(bandLabel(st.weight)) : "",
+      st.pr ? "oui" : "", i===0 ? q(s.note||"") : ""].join(";")));
+  }));
+  return "\ufeff"+lines.join("\r\n");
+}
+async function exportCSV(){
+  if(!S.sessions.length){ toast("Aucune séance à exporter pour l'instant"); return; }
+  const ok = await shareOrDownload(historyCSV(), `ascen-historique-${todayISO()}.csv`, "text/csv", "Historique ASCEN");
+  if(ok){ sfx("set"); toast(`Historique exporté : ${S.sessions.length} séance${S.sessions.length>1?"s":""}`, "check"); }
 }
 async function backupData(){
   persistNow();
@@ -378,6 +419,7 @@ Object.assign(ACT, {
       </div>`);
     setTimeout(()=>{ const i=qs("#nameInput"); if(i) i.focus(); }, 80);
   },
+  setRest(d){ if(!REST_SCALE[d.v]) return; S.settings.rest = d.v; save(); changed(); toast(d.v==="normal" ? "Repos conseillés" : d.v==="court" ? "Repos plus courts (≈ −30 %)" : "Repos plus longs (≈ +35 %)", "timer"); },
   editWhy(){
     openModal(`<div style="font-weight:700;font-size:calc(17rem/17);margin-bottom:6px">Ton pourquoi</div>
       <div class="hr-note" style="margin-bottom:12px">Ce qui te pousse à t'entraîner. ASCEN te le rappelle quand tu reviens après quelques jours sans séance.</div>
@@ -391,7 +433,7 @@ Object.assign(ACT, {
   saveWhy(){ S.settings.why = ((qs("#whyInput")||{}).value||"").trim().slice(0,120); closeSheet(); save(); changed(); },
   saveName(){ S.settings.name = ((qs("#nameInput")||{}).value||"").trim(); closeSheet(); save(); changed(); },
   openEquip, openGoals, openExoPrefs, openExportImport, openAppearance, openAbout,
-  backupData(){ backupData(); }, restoreData(){ restoreData(); }, openInstall(){ openInstall(); },
+  backupData(){ backupData(); }, exportCSV(){ exportCSV(); }, restoreData(){ restoreData(); }, openInstall(){ openInstall(); },
   backupLater(){ S.meta.backupSnooze = todayISO(); save(); const c = qs(".backup-nudge"); if(c){ c.classList.add("leaving"); setTimeout(()=>changed(), 250); } else changed(); },
   toggleEquip(d){ S.equipment.owned[d.id] = !S.equipment.owned[d.id]; save(); refreshEquip(); regenerateDraftIfIdle(); },
   addWeight(d){

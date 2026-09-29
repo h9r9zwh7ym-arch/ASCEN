@@ -377,6 +377,14 @@ function applyStretchSetting(){
   if(S.settings.stretching) d.exos.push(...stretchBlock(d));
 }
 
+// Séance express (v4.0) : les jours sans envie, 3 exercices variés (tout le corps) × 2 séries,
+// repos de 45 s au plus : une dizaine de minutes pour garder l'habitude (et la série de semaines).
+function buildExpressSession(){
+  let exos = pickExosForSession(3, poolForType("full"), undefined, "full");
+  if(exos.length<3) exos = engineExos().filter(e=>!isStretch(e)).slice(0,3);
+  return { id: uid(), date: todayISO(), source:"engine", type:"auto", resolvedType:"full", name:"Séance express", express:true,
+    startedAt:null, completedAt:null, exos: exos.map(exo=>sessionEntryFor(exo, 2)) };
+}
 function buildCustomSession(entries, name){
   return {
     id: uid(), date: todayISO(), source:"custom", name: name||null, startedAt:null, completedAt:null,

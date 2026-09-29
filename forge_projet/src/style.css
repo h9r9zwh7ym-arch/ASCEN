@@ -1941,3 +1941,25 @@ body.live-focus #restbar{bottom:calc(14px + var(--sab))}
 .view.active{animation:none}
 .tabbar{view-transition-name:none}
 .pick-row{content-visibility:auto;contain-intrinsic-size:auto 60px}
+/* corriger les séries faites (v4.0) */
+button.set-dots{display:flex;margin-left:auto;margin-right:auto;padding:6px 10px;border-radius:14px;position:relative}
+button.set-dots:active{background:var(--fill2)}
+button.fc-recap{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;width:100%;border-radius:14px}
+button.fc-recap:active{background:var(--fill2)}
+.ds-row{gap:10px;min-height:56px}
+.ds-n{width:26px;height:26px;border-radius:13px;background:var(--fill);display:grid;place-items:center;font-weight:700;font-size:var(--fs-foot);flex:none;font-variant-numeric:tabular-nums}
+.ds-f{display:flex;flex-direction:column;align-items:center;gap:2px}
+.ds-f small{font-size:var(--fs-cap2);color:var(--label2)}
+.ds-pr{color:var(--tint-ink);display:grid;place-items:center}
+.ds-undo{margin-left:auto}
+.rest-row{padding-bottom:4px}
+.rest-seg{display:flex;gap:8px;padding:0 16px 12px 58px;flex-wrap:wrap}
+.rest-seg .chip{flex:1;justify-content:center;min-width:0}
+/* séance express (v4.0) */
+.hero-express{align-self:center;margin-top:10px;min-height:36px;padding:0 12px;display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-foot);font-weight:600;color:rgba(244,243,241,.78);border-radius:18px;position:relative}
+.hero-express svg{width:15px;height:15px}
+.hero-express:active{background:rgba(255,255,255,.08)}
+.hero-express::before{content:"";position:absolute;left:0;right:0;top:50%;height:44px;transform:translateY(-50%)}
+.why-go{margin-top:12px;width:auto;padding:0 16px}
+.why-go svg{width:16px;height:16px}
+button.set-dots::before{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:44px;transform:translate(-50%,-50%)}

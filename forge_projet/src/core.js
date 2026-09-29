@@ -23,7 +23,7 @@ function defaultState(){
     targets: [],            // objectifs chiffrés [{id, exoId, kind:"reps"|"kg"|"sec", value, start, createdAt, doneAt}]
     body: [],               // pesées facultatives [{d:"AAAA-MM-JJ", kg}]
     medals: {},            // {familleId: {t: palier atteint 0-4, d: {1: iso, 2: iso…}}}
-    settings: { theme:"auto", unit:"kg", todayTab:"custom", name:"", why:"", sound:true, stretching:false }, // why : « ton pourquoi »
+    settings: { theme:"auto", unit:"kg", todayTab:"custom", name:"", why:"", sound:true, stretching:false, rest:"normal" }, // why : « ton pourquoi »
     meta: { createdAt: new Date().toISOString(), prCount:0 },
   };
 }
@@ -406,6 +406,9 @@ function dayNum(iso){
   return n;
 }
 function daysBetween(a,b){ return dayNum(b)-dayNum(a); }
+// durée de repos : réglage global (Profil) appliqué à la durée conseillée de chaque exercice
+const REST_SCALE = { court:.7, normal:1, long:1.35 };
+function restFor(def){ return Math.max(20, Math.round((def.restSec||90)*(REST_SCALE[S.settings.rest]||1)/5)*5); }
 function daysSinceLastSession(){ const s = S.sessions[S.sessions.length-1]; return s ? daysBetween(s.date, todayISO()) : null; }
 // « ton pourquoi » rappelé quand on revient après quelques jours sans séance
 const WHY_AFTER_DAYS = 4;
