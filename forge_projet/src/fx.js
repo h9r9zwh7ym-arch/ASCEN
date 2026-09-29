@@ -108,7 +108,7 @@ function showLaunch(session){
         <div class="la-line">${esc(line)}</div>
       </div>
     </div>
-    <div class="la-skip">Touchez pour passer</div>`;
+    <div class="la-skip">Touche pour passer</div>`;
   document.body.appendChild(el);
   let gone = false;
   const timers = [];

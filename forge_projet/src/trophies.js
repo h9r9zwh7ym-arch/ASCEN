@@ -313,7 +313,7 @@ function showMedalModal2D(id){
   openModal(`<div class="medal-modal">
     ${medalHTML(m, p.t, "big")}
     <div class="mm-name">${esc(m.n)}</div>
-    <div class="mm-tier">${p.t ? "Palier "+TIERS[p.t].n.toLowerCase() : "Pas encore débloquée"}</div>
+    <div class="mm-tier">${p.t ? "Palier "+TIERS[p.t].n.toLowerCase() : "Pas encore débloqué"}</div>
     <div class="mm-desc">${esc(m.desc || ("Nombre de "+m.unit+"."))}</div>
     ${p.next!=null ? `<div class="mm-prog"><div class="mc-bar big"><span style="width:${Math.round(p.pct*100)}%"></span></div>
       <div class="mm-prog-txt">${fmtMedalVal(m,p.v)} / ${fmtMedalVal(m,p.next)} ${esc(medalUnit(m,p.next))} pour le palier ${TIERS[p.t+1].n.toLowerCase()}</div></div>` : `<div class="mm-prog-txt">Palier diamant atteint : bravo !</div>`}

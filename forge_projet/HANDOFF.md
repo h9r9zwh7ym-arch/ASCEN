@@ -580,6 +580,16 @@ Constat : les poses étaient des positions d'articulations animées en ligne dro
   - Une fusion du CSS dupliqué (csso) ne ferait gagner que 6 %, au prix de réordonner la cascade : écartée.
 - **Tests** : `tests/v36.js` (synchronisation entre onglets, changement en attente conservé, feuille ouverte, réinitialisation propagée).
 
+## 9 quinvicies. Version 3.7.1 : relecture des textes
+
+- Relecture de tous les textes affichés : environ 1 850 fragments (interface, fiches d'exercices, trophées, Rewind).
+- Corrections :
+  - Kettlebell toujours au féminin (« la kettlebell », « tenue »).
+  - Tutoiement partout : « Touche pour passer », « vers toi », « devant toi », « Prévois ».
+  - Accords : « Mollets unilatéraux », trophée « Pas encore débloqué ».
+  - Espaces typographiques : « 100 % », « ≈ 20 min ».
+  - Tournures : « tricher en fin de série », « monte et descends », « redescends lentement, sans à-coups », phrases nominales complétées dans trois consignes.
+
 ## 10. Cahier des charges d'origine (résumé)
 
 Voir le fichier `4a3df5ee-cahier-des-charges-forge.md` fourni au lancement du projet pour le texte complet. Points clés déjà couverts en v1.0 : matériel personnalisable et extensible, bibliothèque d'exercices filtrée, inclusion/exclusion d'exercices, objectifs personnalisés, suivi détaillé de séance (éditable, timer de repos, coche rapide), moteur de suggestion 100% local avec export/import IA, graphiques de progression, PR, streaks/régularité, trophées, écran d'accueil = séance du jour, thème clair/sombre automatique, page À propos avec copyright.
