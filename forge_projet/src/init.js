@@ -7,7 +7,25 @@ function applyTheme(){
   if(t==="light") document.documentElement.setAttribute("data-theme","light");
   else if(t==="dark") document.documentElement.setAttribute("data-theme","dark");
   else document.documentElement.removeAttribute("data-theme");
+  syncStatusBar();
 }
+// Barre d'état (heure, batterie) : sur iPhone, l'app installée la colore avec theme-color. Elle
+// prend exactement le fond de l'app (thème choisi dans l'app compris, pas seulement celui du
+// système) et s'assombrit comme la page quand une feuille est ouverte (voile noir à 40 %) : plus de
+// bande claire « coupée » au-dessus de l'app.
+let statusDim = false;
+function syncStatusBar(dim){
+  if(dim!==undefined) statusDim = dim;
+  try{
+    let m = document.querySelector('meta[name="theme-color"]:not([media])');
+    if(!m){ document.querySelectorAll('meta[name="theme-color"]').forEach(x=>x.remove()); m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
+    const c = getComputedStyle(document.body).backgroundColor.match(/[\d.]+/g);
+    if(!c) return;
+    const k = statusDim ? .6 : 1, hex = c.slice(0,3).map(v=>Math.round(+v*k).toString(16).padStart(2,"0")).join("");
+    if(m.content!=="#"+hex) m.content = "#"+hex;
+  }catch(e){}
+}
+if(window.matchMedia) try{ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ()=>syncStatusBar()); }catch(e){}
 
 // ---------- animation de lancement ----------
 // Le mot ASCEN apparaît en balayage, puis la barre du A monte de mi-hauteur à sa place :

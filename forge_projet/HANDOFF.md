@@ -681,6 +681,12 @@ Mesures (`tests/tab_perf.js`, processeur ×4, 3 ans d'historique) :
 - **Export de l'historique en CSV** (Profil › Mes données) : `historyCSV()` écrit une ligne par série, avec séparateur « ; », virgule décimale, BOM UTF-8 et guillemets échappés. Partage ou téléchargement via `shareOrDownload()`, mis en commun avec la sauvegarde.
 - Unités : les exercices tenus affichent des secondes (record, meilleure série, total tenu, derniers records), et les progrès de fin de séance utilisent des décimales à la française.
 
+**Retouches (toujours 4.0)** :
+- Exercices inclus / exclus :
+  - Les catégories ne listent plus que les exercices faisables avec le matériel déclaré, tous au même aspect ; avant, les autres y étaient mélangés et grisés.
+  - Les autres sont regroupés à la fin dans une section repliable « Sans ton matériel », avec le matériel manquant (`exoPrefRow`, `missingEquipLabel`). La section reste ouverte après un réglage (`refreshExoPrefs`).
+- Barre d'état : `syncStatusBar()` (`init.js`) règle un `theme-color` unique sur le fond réel de l'app, y compris le thème choisi dans l'app. Il est assombri comme le voile (×0,6) quand une feuille est ouverte (`showOverlay`/`closeSheet`) : plus de bande claire au-dessus de l'app.
+
 **Vérifications** :
 - Tour visuel de 27 écrans en clair et en sombre (`tests/tour.js` + `tests/montage.js`) ; audit d'accessibilité repassé (`tests/ux_audit.js`).
 - Test du singe (`tests/monkey.js`) : environ 3 000 touchers aléatoires sur Chromium et WebKit, sans erreur. Une version courte est ajoutée à `run.sh`.

@@ -376,6 +376,7 @@ function showOverlay(inner, kind){
   hideTip();
   ov.innerHTML = `<div class="scrim" data-a="dismisssheet"></div>${inner}`;
   ov.classList.add("open");
+  if(typeof syncStatusBar==="function") syncStatusBar(true);
   ov.dataset.kind = kind;
   requestAnimationFrame(()=>requestAnimationFrame(()=>{ if(gen===overlayGen) ov.classList.add("show"); }));
 }
@@ -417,6 +418,7 @@ function closeSheet(){
   const ov = qs("#overlay");
   if(!ov.classList.contains("open")) return;
   ov.classList.remove("show");
+  if(typeof syncStatusBar==="function") syncStatusBar(false);
   sheetStack = []; sheetRestore = null; sheetOnBack = null;
   const gen = overlayGen;
   setTimeout(()=>{

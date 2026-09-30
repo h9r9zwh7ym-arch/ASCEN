@@ -353,26 +353,48 @@ function openGoals(){
 function refreshGoals(){ const b=qs(".sheet-body"); if(b) b.innerHTML = goalsBodyHTML(); }
 
 // ---------- Exercices inclus / exclus ----------
+// Exercices inclus / exclus : chaque catégorie ne liste que ce que ton matériel permet (tous au
+// même aspect) ; ceux qui demandent un équipement que tu n'as pas sont regroupés à la fin, repliés,
+// avec le matériel manquant indiqué (avant : mélangés et grisés, ce qui semblait incohérent).
+function exoPrefRow(e, missing){
+  const excl = isExcluded(e.id), incl = isIncluded(e.id);
+  const sub = missing ? `Il manque : ${esc(missing)}` : e.muscles.map(m=>MUSCLE_MAP[m].n).join(" · ")+(e.equip.includes("bench")?" · banc":"");
+  return `<div class="row">
+    <button class="row-main" data-a="showExoInfo" data-id="${e.id}" style="flex:1">${exoIcon(e)}<div class="grow"><div class="t">${esc(e.n)}</div><div class="s">${sub}</div></div></button>
+    <button class="chip ${incl?"on":""}" aria-label="Privilégier ${esc(e.n)}" aria-pressed="${incl}" data-a="toggleIncluded" data-id="${e.id}">${ii("star")}</button>
+    <button class="chip ${excl?"excl":""}" aria-pressed="${excl}" data-a="toggleExcluded" data-id="${e.id}">Exclure</button>
+  </div>`;
+}
+function missingEquipLabel(e){
+  return e.equip.filter(id=>!id.split("|").some(x=>ownsEquip(S.equipment, x)))
+    .map(id=>id.split("|").map(x=>EQUIP_MAP[x] ? EQUIP_MAP[x].n : x).join(" ou ")).join(", ");
+}
 function exoPrefsBodyHTML(){
   const muscleOrder = {}; MUSCLES.forEach((m,i)=>muscleOrder[m.id]=i);
-  return `<p class="hr-note" style="margin:0 20px 4px">${ii("star","star")} = à privilégier dans les propositions · Exclure = ne jamais le proposer (blessure, goût…). Les exercices grisés demandent du matériel que tu n'as pas renseigné.</p>` +
-  EXO_CATS.map(c=>{
-    const list = EXOS.filter(e=>exoCategory(e)===c.id).sort((a,b)=>muscleOrder[a.muscles[0]]-muscleOrder[b.muscles[0]] || a.n.localeCompare(b.n,"fr"));
-    const rows = list.map(e=>{
-      const excl = isExcluded(e.id), incl = isIncluded(e.id), avail = hasEquip(S.equipment, e.equip);
-      return `<div class="row ${avail?"":"unavail"}">
-        <button class="row-main" data-a="showExoInfo" data-id="${e.id}" style="flex:1">${exoIcon(e)}<div class="grow"><div class="t">${esc(e.n)}</div><div class="s">${e.muscles.map(m=>MUSCLE_MAP[m].n).join(" · ")}${e.equip.includes("bench")?" · banc":""}</div></div></button>
-        <button class="chip ${incl?"on":""}" aria-label="Privilégier" data-a="toggleIncluded" data-id="${e.id}">${ii("star")}</button>
-        <button class="chip ${excl?"excl":""}" data-a="toggleExcluded" data-id="${e.id}">Exclure</button>
-      </div>`;
-    }).join("");
-    return `<h2 class="sh"><span class="sh-ico">${sfIcon(EQUIP_GLYPH[c.id]||"wrench", EQUIP_COLOR[c.id]||"gray","sm")}${esc(c.n)}</span><span class="more" style="color:var(--label2)">${list.length}</span></h2><div class="group">${rows}</div>`;
+  const sortFn = (a,b)=>muscleOrder[a.muscles[0]]-muscleOrder[b.muscles[0]] || a.n.localeCompare(b.n,"fr");
+  const unavail = [];
+  const cats = EXO_CATS.map(c=>{
+    const all = EXOS.filter(e=>exoCategory(e)===c.id).sort(sortFn);
+    const list = all.filter(e=>hasEquip(S.equipment, e.equip));
+    all.forEach(e=>{ if(!list.includes(e)) unavail.push(e); });
+    if(!list.length) return "";
+    return `<h2 class="sh"><span class="sh-ico">${sfIcon(EQUIP_GLYPH[c.id]||"wrench", EQUIP_COLOR[c.id]||"gray","sm")}${esc(c.n)}</span><span class="more" style="color:var(--label2)">${list.length}</span></h2><div class="group">${list.map(e=>exoPrefRow(e)).join("")}</div>`;
   }).join("");
+  const more = unavail.length ? `<details class="pref-more"><summary class="sh"><span>Sans ton matériel</span><span class="more">${unavail.length} ${icon("chev")}</span></summary>
+      <p class="hr-note" style="margin:0 20px 8px">Jamais proposés tant que le matériel manque. Tu peux déjà les exclure ou les privilégier pour plus tard.</p>
+      <div class="group">${unavail.sort(sortFn).map(e=>exoPrefRow(e, missingEquipLabel(e))).join("")}</div></details>` : "";
+  return `<p class="hr-note" style="margin:0 20px 4px">${ii("star","star")} = à privilégier dans les propositions · Exclure = ne jamais le proposer (blessure, goût…).</p>` + cats + more;
 }
 function openExoPrefs(){
   openSheet(`<div class="sheet-hd"><span class="t">Exercices</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body">${exoPrefsBodyHTML()}</div>`);
 }
-function refreshExoPrefs(){ const b=qs(".sheet-body"); if(b) b.innerHTML = exoPrefsBodyHTML(); }
+function refreshExoPrefs(){
+  const b = qs(".sheet-body"); if(!b) return;
+  const open = !!qs(".pref-more[open]", b), top = b.scrollTop; // la section repliée reste comme elle était
+  b.innerHTML = exoPrefsBodyHTML();
+  if(open){ const d = qs(".pref-more", b); if(d) d.open = true; }
+  b.scrollTop = top;
+}
 
 // ---------- Export / import IA ----------
 function exportImportBodyHTML(){

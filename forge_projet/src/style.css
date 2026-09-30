@@ -1962,3 +1962,10 @@ button.fc-recap:active{background:var(--fill2)}
 .why-go{margin-top:12px;width:auto;padding:0 16px}
 .why-go svg{width:16px;height:16px}
 button.set-dots::before{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:44px;transform:translate(-50%,-50%)}
+/* exercices inclus / exclus : section repliable « Sans ton matériel » */
+.pref-more>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.pref-more>summary::-webkit-details-marker{display:none}
+.pref-more>summary .more{display:inline-flex;align-items:center;gap:4px;color:var(--label2);font-size:var(--fs-sub);font-weight:600}
+.pref-more>summary svg{width:14px;height:14px;transform:rotate(90deg);transition:transform .2s}
+.pref-more[open]>summary svg{transform:rotate(-90deg)}
+.pref-more>summary.sh{font-family:var(--display);font-size:var(--fs-t3);font-weight:700;letter-spacing:-.02em;margin:32px 20px 10px;min-height:44px}
