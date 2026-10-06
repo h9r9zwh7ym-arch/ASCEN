@@ -59,61 +59,77 @@ function heroPicts(ids){
   const more = defs.length>5 ? `<button class="hp-more" data-a="heroShowAll" aria-label="Voir les ${defs.length} exercices">+${defs.length-5}</button>` : "";
   return `<div class="hero-picts">${defs.slice(0,5).map((d,i)=>`<button class="hp" style="--k:${i}" data-a="showExoInfo" data-id="${d.id}" aria-label="${esc(d.n)} : voir la fiche">${exoPicto(d)}</button>`).join("")}${more}</div>`;
 }
-// « Ensuite : jeu. · Jambes » — la prochaine séance planifiée, pour voir sa semaine d'un coup d'œil
-function nextPlannedLine(){
-  const n = nextPlanned();
-  if(!n) return "";
-  const when = n.k===1 ? "demain" : JOURS[(weekdayIdx(n.iso)+1)%7];
-  return `<span class="hero-next">Ensuite ${n.k===1?"":"le "}${when} · ${esc(n.t.n)}</span>`;
-}
-function heroHTML(draft){
-  const today = sessionsToday();
-  if(today.length){
-    const s = today[today.length-1];
-    return `<button class="hero done stagger" style="--i:2" data-a="openSessionDetail" data-id="${s.id}">
-      <span class="hero-badge">${icon("check")}</span>
-      <span class="hero-eyebrow">Séance du jour faite</span>
+// Séance du jour déjà faite : une ligne d'état compacte (le détail est à un toucher)
+function doneCardHTML(){
+  const today = sessionsToday(); if(!today.length) return "";
+  const s = today[today.length-1];
+  return `<button class="hero done stagger" style="--i:2" data-a="openSessionDetail" data-id="${s.id}" aria-label="Séance du jour faite : ${esc(sessionTitle(s))}, voir le détail">
+    <span class="hero-badge">${icon("check")}</span>
+    <span class="hd-main"><span class="hero-eyebrow">Séance du jour faite</span>
       <span class="hero-title">${esc(sessionTitle(s))}</span>
-      <span class="hero-meta"><span>${fmtDuration(s.durationSec||0)}</span><span>${nb(sessionSetCount(s),"série")}</span><span>${sessionVolume(s) ? fmtKg(sessionVolume(s)) : sessionReps(s)+" reps"}</span></span>
-      <span class="hero-foot">Récupère bien — voir le détail ${icon("chev")}</span>
-      ${nextPlannedLine()}
-    </button>`;
+      <span class="hero-meta"><span>${fmtDuration(s.durationSec||0)}</span><span>${nb(sessionSetCount(s),"série")}</span><span>${sessionVolume(s) ? fmtKg(sessionVolume(s)) : sessionReps(s)+" reps"}</span></span></span>
+    <span class="chev">${icon("chev")}</span>
+  </button>`;
+}
+// La carte principale : d'abord TA séance (composée, prévue ou à composer) ; la proposition
+// de l'app n'y apparaît que si on l'a choisie (« Proposée par l'app »). Un seul bouton fort.
+function heroKind(mode, draft){
+  if(sessionsToday().length) return "done";
+  if(mode==="proposal") return draft.exos.length ? "proposal" : "";
+  if(S.custom.exos.length) return "custom";
+  return plannedTemplate() ? "planned" : "compose";
+}
+function heroHTML(mode, draft){
+  const kind = heroKind(mode, draft);
+  if(kind==="done") return doneCardHTML();
+  if(kind==="compose"){
+    const pend = S.custom.pendingDays && S.custom.pendingDays.length;
+    return `<div class="hero compose stagger" style="--i:2">
+      <span class="hero-eyebrow">Ma séance</span>
+      <span class="hero-title">Compose ta séance</span>
+      <span class="hero-sub">${pend ? `Pour le ${pendingDaysLabel()} : choisis tes exercices, puis enregistre-la.` : "Choisis tes exercices : séries, charges et repos sont calculés pour toi."}</span>
+      <button class="hero-go" data-a="customAddOpen"><span class="hg-ico">${icon("plus")}</span>Choisir mes exercices</button>
+      <button class="hero-alt" data-a="customFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Ou laisse l'app choisir</button>
+    </div>`;
   }
+  let eyebrow, title, meta, ids, act, extra = "";
   const planned = plannedTemplate();
-  let kind, eyebrow, title, meta, ids, act, region;
-  if(planned){
-    kind = "planned"; eyebrow = "Prévu aujourd'hui"; title = esc(planned.n);
-    ids = planned.exos.map(e=>e.exoId); region = tplRegion(planned);
-    const sets = planned.exos.reduce((a,e)=>a+e.sets,0);
-    meta = [`${planned.exos.length} exercices`, `${sets} séries`, `≈ ${tplMinutes(planned)} min`];
+  if(kind==="planned"){
+    eyebrow = "Prévu aujourd'hui"; title = esc(planned.n);
+    ids = planned.exos.map(e=>e.exoId);
+    meta = [nb(planned.exos.length, "exercice"), nb(planned.exos.reduce((a,e)=>a+e.sets,0), "série"), `≈ ${tplMinutes(planned)} min`];
     act = `data-a="startTemplate" data-id="${planned.id}"`;
-  } else if(S.settings.todayTab!=="proposal" && S.custom.exos.length){
-    kind = "custom"; eyebrow = "Ma séance est prête"; title = esc(S.custom.name||"Ma séance");
+  } else if(kind==="custom"){
+    eyebrow = planned && S.custom.tplId===planned.id ? "Prévu aujourd'hui" : "Prête à démarrer";
+    title = esc(S.custom.name||"Ma séance");
     ids = S.custom.exos.map(e=>e.exoId);
-    const sets = S.custom.exos.reduce((a,e)=>a+e.sets,0);
-    meta = [`${ids.length} exercices`, `${sets} séries`, `≈ ${estimateMinutes({ exos:S.custom.exos.map(e=>({ exoId:e.exoId, sets:new Array(e.sets).fill(0) })) })} min`];
+    meta = [nb(ids.length, "exercice"), nb(S.custom.exos.reduce((a,e)=>a+e.sets,0), "série"), `≈ ${estimateMinutes({ exos:S.custom.exos.map(e=>({ exoId:e.exoId, sets:new Array(e.sets).fill(0) })) })} min`];
     act = `data-a="startCustom"`;
   } else {
-    if(!draft.exos.length) return "";
-    kind = "proposal";
     const t = SESSION_TYPE_MAP[draft.type]||SESSION_TYPES[0], rt = SESSION_TYPE_MAP[draft.resolvedType];
     const lastS = S.sessions[S.sessions.length-1], away = lastS ? daysBetween(lastS.date, todayISO()) : 0;
-    eyebrow = draft.source==="imported" ? "Programme importé" : away>=10 ? "Bon retour !" : draft.type==="auto" ? "Choisie pour toi" : "Séance proposée";
+    eyebrow = draft.source==="imported" ? "Programme importé" : away>=10 ? "Bon retour !" : "Proposée par l'app";
     title = draft.source==="imported" ? esc(draft.name||"Séance importée") : draft.type==="auto" && rt ? rt.n : t.n;
     ids = draft.exos.map(e=>e.exoId);
-    meta = [`${ids.length} exercices`, `${draft.exos.reduce((t,e)=>t+e.sets.length,0)} séries`, `≈ ${estimateMinutes(draft)} min`];
+    meta = [nb(ids.length, "exercice"), nb(draft.exos.reduce((t,e)=>t+e.sets.length,0), "série"), `≈ ${estimateMinutes(draft)} min`];
     act = `data-a="startSession"`;
+    extra = `<button class="hero-alt" data-a="startExpress">${icon("timer")} Pas le temps ? Express · 10 min</button>`;
   }
   return `<div class="hero ${kind} stagger" style="--i:2">
-    <span class="hero-sheen" aria-hidden="true"></span>
     <span class="hero-eyebrow">${eyebrow}</span>
     <span class="hero-title">${title}</span>
     <span class="hero-meta">${meta.map(m=>`<span>${m}</span>`).join("")}</span>
     ${heroPicts(ids)}
     <button class="hero-go" ${act}><span class="hg-ico">${icon("play")}</span>C'est parti</button>
-    <button class="hero-express" data-a="startExpress">${icon("timer")} Pas le temps ? Séance express · 10 min</button>
-    ${nextPlannedLine()}
+    ${extra}
   </div>`;
+}
+// Un seul rappel à la fois, en bas de l'accueil : la sauvegarde d'abord, sinon le Rewind du mois écoulé
+function nudgeHTML(){
+  if(backupDue()) return `<div class="backup-nudge stagger" style="--i:7">${sfIcon("download","green")}<div class="grow"><div class="t">Sauvegarde conseillée</div><div class="s">${S.sessions.length} séances sont stockées uniquement sur ce téléphone.</div></div><div class="bn-act"><button data-a="backupData">Sauvegarder</button><button class="later" data-a="backupLater">Plus tard</button></div></div>`;
+  const rk = recapNudgeKey();
+  if(rk) return `<div class="backup-nudge rc-nudge stagger" style="--i:7">${sfIcon("sparkles","orange")}<div class="grow"><div class="t">Ton Rewind de ${MOIS_LONG[parseISO(rk+"-01").getMonth()]} est prêt</div><div class="s">Revis ton mois en une minute.</div></div><div class="bn-act"><button data-a="openRewind" data-kind="month" data-key="${rk}">Lancer</button><button class="later" data-a="recapLater">Plus tard</button></div></div>`;
+  return "";
 }
 
 // ---------- aperçu ----------
@@ -125,13 +141,11 @@ function renderTodayPreview(draft){
       <h1 class="lt">${greeting()}</h1>
     </div>
     ${statPillsHTML()}
-    ${whyReminder() ? `<div class="why-card stagger" style="--i:2"><div class="why-k">${ii("flame")} Ton pourquoi</div><div class="why-t">« ${esc(whyReminder())} »</div><div class="why-s">${daysSinceLastSession()} jours sans séance : une seule suffit pour reprendre le fil.</div><button class="btn secondary sm why-go" data-a="startExpress">${icon("timer")} Séance express · 10 min</button></div>` : ""}
-    ${heroHTML(draft)}
-    ${recapNudgeKey() ? `<div class="backup-nudge rc-nudge stagger" style="--i:3">${sfIcon("sparkles","orange")}<div class="grow"><div class="t">Ton Rewind de ${MOIS_LONG[parseISO(recapNudgeKey()+"-01").getMonth()]} est prêt</div><div class="s">Revis ton mois en une minute.</div></div><div class="bn-act"><button data-a="openRewind" data-kind="month" data-key="${recapNudgeKey()}">Lancer</button><button class="later" data-a="recapLater">Plus tard</button></div></div>` : ""}
-    ${backupDue() ? `<div class="backup-nudge stagger" style="--i:3">${sfIcon("download","green")}<div class="grow"><div class="t">Sauvegarde conseillée</div><div class="s">${S.sessions.length} séances sont stockées uniquement sur ce téléphone.</div></div><div class="bn-act"><button data-a="backupData">Sauvegarder</button><button class="later" data-a="backupLater">Plus tard</button></div></div>` : ""}
-    <div class="home-sep stagger" style="--i:3"><span>Préparer une séance</span></div>
-    ${segHTML("today", [["custom","Ma séance"],["proposal","Proposée par l'app"]], mode, "todayMode")}
-    <div class="seg-pane ${mode} ${paneDir?"from-"+paneDir:""}">${mode==="custom" ? customPaneHTML() : proposalPaneHTML(draft)}</div>
+    ${whyReminder() && !sessionsToday().length ? `<div class="why-card stagger" style="--i:2"><div class="why-k">${ii("flame")} Ton pourquoi</div><div class="why-t">« ${esc(whyReminder())} »</div><div class="why-s">${daysSinceLastSession()} jours sans séance : une seule suffit pour reprendre le fil.</div><button class="btn secondary sm why-go" data-a="startExpress">${icon("timer")} Séance express · 10 min</button></div>` : ""}
+    ${sessionsToday().length ? doneCardHTML() : ""}
+    <div class="home-seg stagger" style="--i:2">${segHTML("today", [["custom","Ma séance"],["proposal","Proposée par l'app"]], mode, "todayMode")}</div>
+    <div class="seg-pane ${mode} ${paneDir?"from-"+paneDir:""}">${sessionsToday().length ? "" : heroHTML(mode, draft)}${mode==="custom" ? customPaneHTML() : proposalPaneHTML(draft)}</div>
+    ${nudgeHTML()}
   </div>`;
 }
 
@@ -150,7 +164,7 @@ function catLabel(def){ const c = EXO_CATS.find(c=>c.id===exoCategory(def)); ret
 
 function proposalPaneHTML(draft){
   const imported = draft.source==="imported";
-  const heroShown = !sessionsToday().length && !plannedTemplate();
+  const heroShown = !sessionsToday().length; // sinon la carte principale porte déjà le « C'est parti »
   const typeChips = SESSION_TYPES.map(t=>`<button class="type-chip ${!imported&&draft.type===t.id?"on":""}" data-a="setType" data-v="${t.id}">${t.n}</button>`).join("");
   let hero;
   if(imported){
@@ -199,7 +213,7 @@ function proposalPaneHTML(draft){
       <button class="btn tertiary sm" data-a="addExoOpen">${icon("plus")} Ajouter</button>
       ${imported?"":`<button class="btn tertiary sm" data-a="regenSession">${icon("repeat")} Autre proposition</button>`}
     </div>
-    <div class="btnrow"><button class="btn ${heroShown?"secondary":"big"}" data-a="startSession">${icon("play")} Commencer cette séance</button></div>`;
+    ${heroShown ? "" : `<div class="btnrow"><button class="btn big" data-a="startSession">${icon("play")} Commencer cette séance</button></div>`}`;
 }
 
 // ---------- séances enregistrées & planning ----------
@@ -335,11 +349,15 @@ function saveRowHTML(){
 function customPaneHTML(){
   const c = S.custom.exos;
   const tail = templatesHTML() + weekPlanHTML();
+  const done = sessionsToday().length;
   if(!c.length){
+    // la carte « Compose ta séance » est la carte principale ; ici seulement si une autre l'occupe
+    if(!done && !plannedTemplate()) return tail;
+    const pend = S.custom.pendingDays && S.custom.pendingDays.length;
     return `<div class="builder-empty stagger" style="--i:4">
       <div class="be-row"><div class="be-ico">${sfIcon("pencil","orange","lg")}</div>
-      <div><div class="be-t">Compose ta séance</div>
-      <div class="be-s">${S.custom.pendingDays && S.custom.pendingDays.length ? `Pour le ${pendingDaysLabel()} : choisis tes exercices, puis enregistre-la.` : "Choisis tes exercices ou laisse l'app te proposer une base."}</div></div></div>
+      <div><div class="be-t">${pend ? "Compose ta séance" : done ? "Encore une séance ?" : "Autre chose en tête ?"}</div>
+      <div class="be-s">${pend ? `Pour le ${pendingDaysLabel()} : choisis tes exercices, puis enregistre-la.` : "Choisis tes exercices ou laisse l'app te proposer une base."}</div></div></div>
       <div class="be-actions">
         <button class="btn secondary sm" data-a="customAddOpen">${icon("plus")} Choisir</button>
         <button class="btn tertiary sm" data-a="customFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> L'app choisit</button>
@@ -357,21 +375,19 @@ function customPaneHTML(){
     return exoRowHTML(def, `${catLabel(def)} · ${MUSCLE_MAP[def.muscles[0]].n}`, i, actions, e.app);
   }).join("");
   freshIds = new Set();
+  // la carte principale montre déjà nom, durée et « C'est parti » : ici, seulement la liste à éditer
+  const inHero = !done;
   const sets = c.reduce((t,e)=>t+e.sets,0);
   const preview = { exos: c.map(e=>({ exoId:e.exoId, sets:new Array(e.sets).fill(0) })) };
-  const regions = {}; c.forEach(e=>{ const d=EXO_MAP[e.exoId]; if(d) regions[regionOf(d)]=(regions[regionOf(d)]||0)+e.sets; });
-  const balance = Object.keys(REGIONS).filter(r=>regions[r]).map(r=>`<span class="rb r-${r}" style="flex:${regions[r]}" title="${REGIONS[r].n} : ${regions[r]} séries"></span>`).join("");
-  return `<h2 class="sh"><span class="sh-t">${esc(S.custom.name||"Ma séance")}</span><span class="sh-actions">${reorderMode?`<button class="more danger" data-a="customClear">Vider</button><button class="more strong" data-a="toggleReorder">OK</button>`:`<button class="more" data-a="toggleReorder">Modifier</button>`}</span></h2>
-    <div class="sh-sub">${c.length} exercice${c.length>1?"s":""} · ${sets} séries · ≈ ${estimateMinutes(preview)} min</div>
-    <div class="region-bar" aria-hidden="true">${balance}</div>
-    <div class="region-legend">${Object.keys(REGIONS).filter(r=>regions[r]).map(r=>`<span><i class="r-${r}"></i>${REGIONS[r].n}</span>`).join("")}</div>
+  return `<h2 class="sh"><span class="sh-t">${inHero ? "Exercices" : esc(S.custom.name||"Ma séance")}</span><span class="sh-actions">${reorderMode?`<button class="more danger" data-a="customClear">Vider</button><button class="more strong" data-a="toggleReorder">OK</button>`:`<button class="more" data-a="toggleReorder">Modifier</button>`}</span></h2>
+    ${inHero ? "" : `<div class="sh-sub">${nb(c.length, "exercice")} · ${nb(sets, "série")} · ≈ ${estimateMinutes(preview)} min</div>`}
     <div class="group builder ${reorderMode?"reorder":""}">${rows}</div>
     <div class="btnrow">
       <button class="btn tertiary sm" data-a="customAddOpen">${icon("plus")} Ajouter</button>
       <button class="btn tertiary sm" data-a="customFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Compléter</button>
     </div>
     ${saveRowHTML()}
-    <div class="btnrow"><button class="btn ${sessionsToday().length||plannedTemplate()?"big":"secondary"}" data-a="startCustom">${icon("play")} Commencer ma séance</button></div>
+    ${inHero ? "" : `<div class="btnrow"><button class="btn big" data-a="startCustom">${icon("play")} Commencer ma séance</button></div>`}
     ${tail}`;
 }
 

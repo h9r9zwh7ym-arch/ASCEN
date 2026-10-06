@@ -87,16 +87,16 @@ function nextWeight(exo, current){
 // servent à moduler : « 0 en réserve » = on consolide, « 3+ en réserve » = on accélère.
 // Variante plus difficile pour les exercices au poids du corps (pas de charge à ajouter).
 const HARDER = {
-  pompes_genoux:["pompes"], pompes_surelevees:["pompes"], pompes:["pompes_declinees","pompes_archer"],
-  pompes_larges:["pompes_declinees","pompes_archer"], pompes_declinees:["pompes_archer"], pompes_diamant:["pompes_archer"],
-  squat_pdc:["squat_bulgare_pdc","squat_saute"], fentes_avant:["fentes_sautees"], fentes_arriere:["squat_bulgare_pdc","fentes_sautees"],
+  pompes_mur:["pompes_genoux"], pompes_genoux:["pompes"], pompes_surelevees:["pompes"], pompes:["pompes_declinees"],
+  pompes_larges:["pompes_declinees"], pompes_diamant:["pompes_declinees"],
+  squat_pdc:["squat_bulgare_pdc","squat_saute"], fentes_avant:["squat_bulgare_pdc"], fentes_arriere:["squat_bulgare_pdc"], fente_croisee:["squat_bulgare_pdc"],
   pont_fessier:["pont_fessier_uni"], tractions_negatives:["tractions"], releve_genoux_suspendu:["releve_jambes_suspendu"],
-  mollets_pdc:["mollets_uni_pdc"], crunch:["releve_jambes"], planche:["planche_commando"],
-  dips_chaise:["dips_banc","dips_barres"], extension_triceps_sol:["pompes_diamant"], montees_chaise:["squat_bulgare_pdc"], pont_fessier_uni:["nordic_curl"],
+  crunch:["releve_jambes"], planche:["planche_commando"], enroule_pilates:["teaser_pilates"],
+  dips_chaise:["dips_barres"], montees_chaise:["squat_bulgare_pdc"],
 };
 function harderVariant(exo){
   const list = HARDER[exo.id]; if(!list) return null;
-  const id = list.find(x=>EXO_MAP[x] && hasEquip(S.equipment, EXO_MAP[x].equip) && !S.prefs.excluded.includes(x));
+  const id = list.find(x=>EXO_MAP[x] && !EXO_RETIRED.has(x) && hasEquip(S.equipment, EXO_MAP[x].equip) && !S.prefs.excluded.includes(x));
   return id ? EXO_MAP[id] : null;
 }
 // ressenti d'une performance : 1 = facile (3+ en réserve), 2 = correct, 3 = à fond ; 0 = non renseigné
@@ -244,6 +244,7 @@ const SESSION_TYPES = [
   { id:"pull", n:"Tirage", muscles:["dos","biceps","avantbras"] },
   { id:"bras", n:"Bras", muscles:["biceps","triceps","avantbras"] },
   { id:"core", n:"Gainage & cardio", muscles:["abdos","cardio"] },
+  { id:"pilates", n:"Pilates & sol", muscles:["abdos","fessiers","dos"], floor:true },
 ];
 const SESSION_TYPE_MAP = {}; SESSION_TYPES.forEach(t=>SESSION_TYPE_MAP[t.id]=t);
 
@@ -262,6 +263,8 @@ function poolForType(typeId){
   const t = SESSION_TYPE_MAP[typeId];
   const base = engineExos();
   if(!t || !t.muscles) return base;
+  // Pilates & sol : au poids du corps, sur un tapis, sans sauts ni cardio
+  if(t.floor) return base.filter(e=>e.equip.every(q=>q==="bodyweight") && !e.muscles.includes("cardio") && ["core","hinge","lunge"].includes(e.pattern) && t.muscles.includes(e.muscles[0]));
   const primary = base.filter(e=>t.muscles.includes(e.muscles[0]));
   if(primary.length>=3) return primary;
   return base.filter(e=>e.muscles.some(m=>t.muscles.includes(m)));
@@ -291,6 +294,8 @@ const SESSION_PLANS = {
           {p:["pull","core"],m:["avantbras"]}, {p:["hinge"]}, {p:["core"]} ],
   bras: [ {m:["biceps"]}, {m:["triceps"]}, {m:["biceps"]}, {m:["triceps"]}, {m:["avantbras"]}, {m:["biceps"]}, {m:["triceps"]}, {p:["core"]} ],
   core: [ {p:["core"],m:["abdos"]}, {p:["core"],m:["cardio"]}, {p:["core"],m:["abdos"]}, {p:["core"]}, {p:["core"],m:["cardio","abdos"]}, {p:["core"]} ],
+  pilates: [ {p:["core"],m:["abdos"]}, {p:["hinge"],m:["fessiers"]}, {p:["core"],m:["dos"]}, {p:["core"],m:["abdos"]}, {p:["hinge","lunge"],m:["fessiers"]},
+          {p:["core"],m:["abdos"]}, {p:["hinge"]}, {p:["core"]}, {p:["core"],m:["abdos"]}, {p:["hinge"]} ],
 };
 // fin de séance : gainage, mollets (et cardio) passent après les gros mouvements
 const PATTERN_LATE = { core:2, calf:1 };
@@ -328,6 +333,8 @@ function pickExosForSession(n, pool, avoid, typeId){
     take(rest.reduce((b,x)=>adj(x,99)>adj(b,99)?x:b));
   }
   // ordre de la séance : gros mouvements d'abord, gainage et mollets à la fin
+  // (Pilates : on garde l'alternance abdos / fessiers / dos du plan)
+  if(typeId==="pilates") return chosen;
   return chosen.map((e,i)=>({ e, k:(PATTERN_LATE[e.pattern]||0)*100 + i })).sort((a,b)=>a.k-b.k).map(x=>x.e);
 }
 

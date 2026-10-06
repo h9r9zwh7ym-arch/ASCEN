@@ -60,6 +60,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.evaluate(() => { S.draft = null; save(); renderView('today'); }); await wait(300);
 
   // 4. séance express
+  await page.evaluate(() => { S.settings.todayTab = 'proposal'; renderView('today'); }); await wait(300);
   const hasBtn = await page.evaluate(() => !!document.querySelector('.hero [data-a="startExpress"]'));
   await page.click('.hero [data-a="startExpress"]'); await wait(4500); await page.evaluate(() => { const l = document.querySelector('#launch'); if (l) l.click(); }); await wait(500);
   const ex = await page.evaluate(() => ({ n: S.draft.exos.length, sets: S.draft.exos.map(e => e.sets.length), name: S.draft.name, express: S.draft.express, live: !!S.draft.startedAt, uniq: new Set(S.draft.exos.map(e => e.exoId)).size }));

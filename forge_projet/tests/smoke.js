@@ -27,6 +27,7 @@ const path = require('path');
   // Aujourd'hui: check start session flow
   await page.click('.tabbtn[data-id="today"]');
   await page.waitForTimeout(150);
+  { const b = await page.$('[data-a="todayMode"][data-v="proposal"]'); if (b) { await b.click(); await page.waitForTimeout(300); } }
   const startBtn = await page.$('[data-a="startSession"]');
   if (startBtn) {
     await startBtn.click();

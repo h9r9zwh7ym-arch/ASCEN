@@ -39,7 +39,7 @@ init.js
 ```
 
 - **`data_equipment.js`** : catalogue du matériel (`EQUIP_TYPES`), poids réellement possédés (`S.equipment.weights`).
-- **`data_exercises.js`** : bibliothèque d'exercices (`EXOS`, 124 exercices depuis la v1.3). `isTimed(def)` repère les exercices mesurés en secondes (consigne contenant « en secondes »). Les catégories d'affichage par matériel sont dans `data_equipment.js` (`EXO_CATS`, `exoCategory(e)` : l'équipement principal, le banc n'étant qu'un accessoire). Chaque exercice a un `pattern` (squat/hinge/push/pull/lunge/core/calf), des `muscles`, un `equip` requis, des `cues` et une consigne `safety`.
+- **`data_exercises.js`** : bibliothèque d'exercices (`EXOS`, 158 exercices proposés en 4.0 ; `EXOS_ALL` y ajoute les 18 retirés, gardés pour l'historique). `isTimed(def)` repère les exercices mesurés en secondes (consigne contenant « en secondes »). Les catégories d'affichage par matériel sont dans `data_equipment.js` (`EXO_CATS`, `exoCategory(e)` : l'équipement principal, le banc n'étant qu'un accessoire). Chaque exercice a un `pattern` (squat/hinge/push/pull/lunge/core/calf), des `muscles`, un `equip` requis, des `cues` et une consigne `safety`.
 - **`core.js`** : état global `S` (persisté via `save()`/`load()` dans `localStorage`), utilitaires de date, agrégats d'historique (PR, volume, streaks).
 - **`engine.js`** : moteur de suggestion 100% local. `getOrCreateDraft()` génère ou récupère la séance du jour. `generateEngineSession()` fait la rotation des groupes musculaires + progression de charge. `buildExportPrompt()` / `importProgramJSON()` gèrent l'aller-retour avec une IA externe (voir section 5).
 - **`ui_shell.js`** : tabbar, sheets/modals, toast, délégation d'actions par `data-a="nom"` → `ACT.nom(dataset, élément)` (clic) et `data-c="nom"` (changement d'un input).
@@ -687,7 +687,46 @@ Mesures (`tests/tab_perf.js`, processeur ×4, 3 ans d'historique) :
   - Les autres sont regroupés à la fin dans une section repliable « Sans ton matériel », avec le matériel manquant (`exoPrefRow`, `missingEquipLabel`). La section reste ouverte après un réglage (`refreshExoPrefs`).
 - Barre d'état : `syncStatusBar()` (`init.js`) règle un `theme-color` unique sur le fond réel de l'app, y compris le thème choisi dans l'app. Il est assombri comme le voile (×0,6) quand une feuille est ouverte (`showOverlay`/`closeSheet`) : plus de bande claire au-dessus de l'app.
 
+**Retouches, 2e passe (toujours 4.0)** :
+- **Rewind** : `recapDefault()` (`recap.js`) ouvre toujours la période en cours (le mois d'octobre en octobre), et la précédente seulement si la période en cours n'a encore aucune séance. Avant, du 1er au 7 du mois, il ouvrait le mois écoulé. Le rappel de l'accueil (« Ton Rewind de septembre est prêt ») passe toujours son mois explicitement.
+- **Carte des muscles (Progrès)** :
+  - Les deux cartes « Muscles de la semaine » et « Volume par muscle » n'en font plus qu'une (`weekMuscleMapHTML`, `musclemap.js` ; `weekVolumeHTML` est supprimé).
+  - La légende montre les 4 régions avec leurs vraies couleurs (Poussée, Tirage, Jambes, Gainage), au lieu d'une échelle orange qui ne correspondait à aucune zone. L'intensité est expliquée en une phrase sous le titre.
+  - Les barres ont deux colonnes titrées « séries » et « jours » (fini les petits « · 1× »).
+  - « FACE / DOS » ne chevauchent plus les pieds (viewBox agrandie).
+- **Décimales** : `fmtNum`/`fmtDec` et les autres `toLocaleString` utilisent `fr-FR`. Safari iOS écrit « 0.5 » en `fr-CH`, d'où les points vus sur iPhone.
+- **Accueil** (`renderTodayPreview`, `heroKind`, `heroHTML`, `doneCardHTML`, `nudgeHTML`) :
+  - Ordre : en-tête, résumé de la semaine, (pourquoi), (séance du jour faite, en ligne compacte), sélecteur « Ma séance / Proposée par l'app », puis la carte principale du mode choisi et son détail.
+  - En mode « Ma séance », la carte principale est toujours celle de l'utilisateur :
+    - « Compose ta séance » (Choisir mes exercices / Ou laisse l'app choisir) quand rien n'est composé ;
+    - sinon la séance composée (ou prévue aujourd'hui) avec son unique « C'est parti ».
+    La proposition de l'app ne s'affiche plus par défaut quand « Ma séance » est vide.
+  - Supprimés : la ligne « Ensuite jeudi · Bras » (`nextPlannedLine`, le planning la montre déjà), le séparateur « Préparer une séance », le bouton « Commencer » en double sous la liste quand la carte principale l'a déjà, la barre d'équilibre et sa légende sous « Ma séance ».
+  - La séance express n'est plus que dans la carte « Proposée par l'app » et dans la carte « Ton pourquoi ».
+  - Un seul rappel à la fois, en bas de page (la sauvegarde d'abord, sinon le Rewind).
+- **Catalogue** (`data_exercises.js`) :
+  - `EXOS_ALL` contient tout ; `EXOS` (les listes, le moteur, les réglages) exclut `EXO_RETIRED` ; `EXO_MAP` connaît tout, donc l'historique, les records et les séances enregistrées gardent leurs noms et leurs animations.
+  - 18 retraits :
+    - doublons : dips sur banc, mollets unilatéraux, swing à une main, soulevé sumo KB, squeeze press, curl Zottman ;
+    - trop exotiques pour la maison : pompes archer, pompes hindoues, extension sphinx, halo, L-sit, roue debout, nordic curl, fentes sautées, marche de l'ours, squat et roll-out aux sangles, tractions scapulaires.
+  - `EXO_MERGED` : au chargement (`normalizeState`), les séances enregistrées et « Ma séance » passent sur l'exercice gardé, sans doublon dans une même séance. L'historique n'est pas réécrit.
+  - « Dips sur chaise ou banc » est l'unique exercice de dips sans barres.
+  - `HARDER` ne mène plus vers un exercice retiré (`harderVariant` les ignore).
+  - +12 exercices au poids du corps, sur tapis :
+    - le Cent, l'enroulé (roll-up), les cercles de jambe, le teaser (niveau 3) et la nage (Pilates) ;
+    - le coquillage, l'élévation latérale de jambe, le kickback à quatre pattes ;
+    - le crunch vélo, la fente croisée, les pompes contre le mur (niveau débutant), la planche avec touchers d'épaule.
+  - +9 étirements : pigeon, papillon, cou, torsion allongée, chien tête en bas, dorsaux à la chaise, inclinaison latérale, biceps au mur, livre ouvert. Il y a maintenant 21 étirements.
+  - La recherche « pilates » trouve les exercices de Pilates et leurs cousins (`EXO_ALIAS`).
+  - Au total, 158 exercices proposés.
+- **Type de séance « Pilates & sol »** (`SESSION_TYPES`, `poolForType`, `SESSION_PLANS.pilates`) : au poids du corps, sans cardio ni sauts, en alternant abdos, fessiers et dos. L'ordre du plan est gardé (pas de gainage renvoyé en fin de séance).
+- **Animations** (`data_rigs.js`, section 4.0) :
+  - Les 21 nouveaux exercices ont leur squelette. Les exercices allongés sur le côté sont vus de face, hanches et épaules empilées ; la torsion est vue du dessus, sur un tapis.
+  - `tests/anim_sheet.js` accepte `IDS=` pour ne dessiner que certains exercices.
+  - v34 vérifie les appuis, les longueurs d'os et le sol pour les 158 exercices.
+
 **Vérifications** :
+- `tests/v40.js` couvre la 2e passe : Rewind, virgules, carte et légende des muscles, accueil, catalogue, fusion, séance Pilates, recherche.
 - Tour visuel de 27 écrans en clair et en sombre (`tests/tour.js` + `tests/montage.js`) ; audit d'accessibilité repassé (`tests/ux_audit.js`).
 - Test du singe (`tests/monkey.js`) : environ 3 000 touchers aléatoires sur Chromium et WebKit, sans erreur. Une version courte est ajoutée à `run.sh`.
 - `tests/v39.js` couvre toutes les nouveautés.

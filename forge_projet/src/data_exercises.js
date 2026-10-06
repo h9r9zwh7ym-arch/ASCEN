@@ -438,8 +438,8 @@ const EXO_RAW = [
   ["Coudes près du corps, la rotation vient des poignets.","Petits sauts sur l'avant des pieds.","Garde un rythme régulier pendant la durée (en secondes)."],
   "Sur un sol souple de préférence ; réduis la durée si les mollets ou les tibias sont sensibles."],
 // v3.0 : exercices « maison » sans matériel (une chaise, une table ou un rebord suffisent)
-["dips_chaise","Dips sur chaise (pompes inversées)",["triceps","epaules","pect"],["bodyweight"],"push",false,{sets:3,repsMin:8,repsMax:15,restSec:60},
-  ["Mains sur le rebord d'une chaise stable (ou d'un canapé, d'une marche), doigts vers l'avant, jambes devant toi.","Descends en pliant les coudes vers l'arrière jusqu'à ~90°, dos proche du rebord.","Remonte en poussant sur les paumes jusqu'à tendre les bras, sans verrouiller brutalement."],
+["dips_chaise","Dips sur chaise ou banc",["triceps","epaules","pect"],["bodyweight"],"push",false,{sets:3,repsMin:8,repsMax:15,restSec:60},
+  ["Mains sur le rebord d'une chaise stable ou d'un banc (ou d'un canapé, d'une marche), doigts vers l'avant, jambes devant toi.","Descends en pliant les coudes vers l'arrière jusqu'à ~90°, dos proche du rebord.","Remonte en poussant sur les paumes jusqu'à tendre les bras, sans verrouiller brutalement."],
   "Chaise calée contre un mur. Ne descends pas plus bas que 90° au coude si l'avant de l'épaule tire ; genoux pliés = plus facile, jambes tendues = plus dur."],
 ["extension_triceps_sol","Extension triceps au sol (sphinx)",["triceps"],["bodyweight"],"push",false,{sets:3,repsMin:8,repsMax:12,restSec:60},
   ["En appui sur les avant-bras, comme en planche, mains sous les épaules.","Pousse dans les paumes pour décoller les coudes du sol jusqu'à tendre les bras.","Redescends lentement sur les avant-bras en gardant le corps gainé."],
@@ -494,26 +494,106 @@ const EXO_RAW = [
 ["etir_chat_vache","Chat-vache (mobilité du dos)",["dos","abdos"],["bodyweight"],"stretch",false,{sets:1,repsMin:30,repsMax:60,restSec:10},
   ["À quatre pattes, mains sous les épaules, genoux sous les hanches.","Inspire en creusant le dos, regard vers l'avant ; expire en l'arrondissant, menton vers la poitrine.","Enchaîne lentement au rythme de la respiration (durée en secondes)."],
   "Mouvement doux et sans à-coups, dans une amplitude confortable."],
+
+// ---- 4.0 : Pilates et poids du corps (au sol, sans matériel) ----
+["pilates_cent","Le Cent (Pilates)",["abdos"],["bodyweight"],"core",false,{sets:2,repsMin:30,repsMax:60,restSec:30},
+  ["Allongé sur le dos, jambes en table (genoux à 90°), ou tendues à 45° pour plus de difficulté.","Décolle la tête et les épaules, bras tendus le long du corps à quelques centimètres du sol.","Bats des bras par petits mouvements rapides : inspire sur 5 battements, expire sur 5 (durée en secondes)."],
+  "Le bas du dos reste plaqué au sol ; si la nuque tire, repose la tête entre les séries."],
+["enroule_pilates","Enroulé de colonne (roll-up)",["abdos"],["bodyweight"],"core",false,{sets:3,repsMin:6,repsMax:10,restSec:45},
+  ["Allongé sur le dos, jambes tendues, bras tendus au-dessus de la tête.","Expire et enroule la colonne vertèbre par vertèbre jusqu'à t'asseoir, bras vers les pieds.","Redéroule lentement jusqu'au sol en contrôlant la descente."],
+  "Si tu ne montes pas sans élan, plie les genoux ou n'enroule que la moitié du trajet."],
+["cercles_jambe","Cercles de jambe (Pilates)",["abdos","fessiers"],["bodyweight"],"core",true,{sets:2,repsMin:6,repsMax:10,restSec:30},
+  ["Allongé sur le dos, une jambe tendue vers le plafond, l'autre allongée au sol.","Dessine des cercles de la taille d'un ballon avec la jambe levée, bassin immobile.","Fais les cercles dans un sens puis dans l'autre, puis change de jambe."],
+  "Réduis la taille des cercles si le bassin bascule ou si le bas du dos se cambre."],
+["teaser_pilates","Teaser (Pilates)",["abdos"],["bodyweight"],"core",false,{sets:3,repsMin:4,repsMax:8,restSec:45},
+  ["Assis en équilibre sur les ischions, jambes tendues à 45°, bras tendus vers les pieds : le corps forme un V.","Déroule le dos vers le sol en gardant les jambes en l'air.","Remonte en V en expirant, sans à-coup."],
+  "Exercice avancé : commence genoux pliés, pieds posés au sol, et ne déroule qu'à mi-chemin."],
+["nage_pilates","Nage au sol (swimming)",["dos","fessiers"],["bodyweight"],"core",false,{sets:3,repsMin:20,repsMax:30,restSec:30},
+  ["Allongé sur le ventre, bras tendus devant, jambes tendues.","Décolle légèrement les bras, le buste et les jambes, regard vers le sol.","Bats bras et jambes opposés en alternance, par petits mouvements rapides (durée en secondes)."],
+  "Allonge-toi plus que tu ne te cambres : la nuque reste dans le prolongement du dos."],
+["coquillage","Coquillage (clamshell)",["fessiers"],["bodyweight"],"hinge",true,{sets:3,repsMin:12,repsMax:20,restSec:30},
+  ["Allongé sur le côté, genoux pliés à 90°, talons alignés avec les fesses.","Pieds collés, ouvre le genou du dessus comme un coquillage.","Referme lentement sans laisser le bassin rouler en arrière, puis change de côté."],
+  "Bassin bien empilé : s'il bascule en arrière, réduis l'amplitude."],
+["elevation_jambe_cote","Élévation latérale de jambe (allongé)",["fessiers"],["bodyweight"],"hinge",true,{sets:3,repsMin:12,repsMax:20,restSec:30},
+  ["Allongé sur le côté, jambes tendues dans l'alignement du corps, tête posée sur le bras.","Lève la jambe du dessus jusqu'à hauteur de hanche, pointe de pied vers l'avant.","Redescends sans la poser, puis change de côté."],
+  "Ne monte pas trop haut : au-delà, c'est le bas du dos qui travaille."],
+["kickback_quadrupedie","Kickback fessier à quatre pattes",["fessiers","ischios"],["bodyweight"],"hinge",true,{sets:3,repsMin:12,repsMax:20,restSec:30},
+  ["À quatre pattes, mains sous les épaules, genoux sous les hanches.","Garde le genou plié à 90° et pousse le talon vers le plafond.","Redescends sans poser le genou, dos immobile, puis change de côté."],
+  "Ne cambre pas : monte seulement tant que le bas du dos reste neutre."],
+["crunch_velo","Crunch vélo (bicycle)",["abdos"],["bodyweight"],"core",false,{sets:3,repsMin:12,repsMax:20,restSec:45},
+  ["Allongé sur le dos, mains derrière la tête, jambes en table.","Amène un coude vers le genou opposé en tendant l'autre jambe.","Alterne de chaque côté en contrôlant, sans tirer sur la nuque."],
+  "Mouvement lent : la rotation vient du buste, pas des coudes."],
+["fente_croisee","Fente croisée (révérence)",["fessiers","quadriceps"],["bodyweight"],"lunge",true,{sets:3,repsMin:10,repsMax:14,restSec:60},
+  ["Debout, pieds largeur de hanches.","Recule une jambe en diagonale derrière l'autre, comme une révérence, et descends.","Remonte en poussant sur le talon avant, puis change de côté."],
+  "Genou avant dans l'axe du pied : ne le laisse pas rentrer vers l'intérieur."],
+["pompes_mur","Pompes contre le mur",["pect","triceps","epaules"],["bodyweight"],"push",false,{sets:3,repsMin:12,repsMax:20,restSec:45},
+  ["Face au mur, mains à plat à hauteur d'épaules, un peu plus écartées qu'elles.","Recule les pieds pour incliner le corps, gainé de la tête aux talons.","Plie les coudes pour approcher la poitrine du mur, puis repousse en expirant."],
+  "Plus les pieds sont loin du mur, plus c'est difficile : progresse ensuite vers les pompes sur les genoux."],
+["planche_touches","Planche avec touchers d'épaule",["abdos","epaules"],["bodyweight"],"core",false,{sets:3,repsMin:10,repsMax:20,restSec:45},
+  ["En planche bras tendus, mains sous les épaules, pieds écartés largeur de hanches.","Touche l'épaule opposée avec une main, sans faire tourner le bassin.","Repose la main et alterne de chaque côté."],
+  "Écarte davantage les pieds si le bassin bascule d'un côté à l'autre."],
+// ---- 4.0 : étirements ----
+["etir_pigeon","Posture du pigeon (hanches, fessiers)",["fessiers"],["bodyweight"],"stretch",true,{sets:2,repsMin:30,repsMax:45,restSec:10},
+  ["À quatre pattes, avance un genou derrière le poignet du même côté, tibia en diagonale.","Allonge l'autre jambe en arrière, bassin face au sol.","Penche doucement le buste vers l'avant ; maintiens puis change de côté (durée en secondes)."],
+  "Si le genou plié tire, rapproche le pied du bassin ou fais plutôt l'étirement des fessiers en 4, allongé sur le dos."],
+["etir_papillon","Papillon (intérieur des cuisses)",["quadriceps"],["bodyweight"],"stretch",false,{sets:1,repsMin:30,repsMax:45,restSec:10},
+  ["Assis, plantes de pieds collées, genoux ouverts vers l'extérieur.","Tiens tes chevilles, dos long, et penche-toi légèrement vers l'avant.","Laisse les genoux descendre sans forcer, respire lentement (durée en secondes)."],
+  "Ne pousse pas sur les genoux avec les mains ou les coudes."],
+["etir_cou","Étirement du cou (trapèzes)",["dos"],["bodyweight"],"stretch",true,{sets:2,repsMin:20,repsMax:30,restSec:10},
+  ["Assis ou debout, épaules relâchées.","Penche doucement l'oreille vers l'épaule, sans lever celle-ci.","Pour accentuer, pose la main sur la tête sans tirer ; maintiens puis change de côté (durée en secondes)."],
+  "Aucun à-coup sur la nuque : étirement léger seulement."],
+["etir_torsion","Torsion allongée (bas du dos)",["dos","fessiers"],["bodyweight"],"stretch",true,{sets:2,repsMin:30,repsMax:45,restSec:10},
+  ["Allongé sur le dos, bras en croix.","Ramène un genou plié vers la poitrine, puis laisse-le tomber de l'autre côté.","Épaules au sol, tête tournée à l'opposé ; maintiens puis change de côté (durée en secondes)."],
+  "Laisse la gravité faire le travail : ne force pas la rotation."],
+["etir_chien","Chien tête en bas (mollets, ischios)",["ischios","mollets"],["bodyweight"],"stretch",false,{sets:1,repsMin:30,repsMax:45,restSec:10},
+  ["Depuis la position à quatre pattes, tends les jambes et monte le bassin vers le plafond.","Repousse le sol avec les mains, dos long, tête entre les bras.","Pédale doucement en pliant un genou puis l'autre, puis maintiens (durée en secondes)."],
+  "Garde les genoux pliés si l'arrière des cuisses tire trop : le dos long compte plus que les talons au sol."],
+["etir_dorsaux","Étirement des dorsaux (mains sur une chaise)",["dos","epaules"],["bodyweight"],"stretch",false,{sets:1,repsMin:30,repsMax:45,restSec:10},
+  ["Debout face à une chaise ou une table, mains posées sur le dossier.","Recule en pliant les hanches jusqu'à avoir le dos à l'horizontale, bras tendus.","Laisse la poitrine descendre vers le sol et maintiens (durée en secondes)."],
+  "Plie légèrement les genoux pour garder le dos plat."],
+["etir_lateral","Inclinaison latérale (côtés du tronc)",["abdos","dos"],["bodyweight"],"stretch",true,{sets:2,repsMin:20,repsMax:30,restSec:10},
+  ["Debout, pieds largeur de hanches, un bras tendu au-dessus de la tête.","Penche-toi doucement du côté opposé, bassin immobile.","Respire dans le côté étiré ; maintiens puis change de côté (durée en secondes)."],
+  "Reste dans le plan : ne te penche ni en avant ni en arrière."],
+["etir_biceps","Étirement des biceps (main au mur)",["biceps","pect"],["bodyweight"],"stretch",true,{sets:2,repsMin:20,repsMax:30,restSec:10},
+  ["De profil au mur, bras tendu derrière toi, paume contre le mur à hauteur d'épaule.","Tourne doucement le buste à l'opposé du mur.","Maintiens sans verrouiller le coude, puis change de bras (durée en secondes)."],
+  "Arrête si tu ressens une gêne à l'avant de l'épaule."],
+["etir_livre","Ouverture thoracique (livre ouvert)",["dos","pect"],["bodyweight"],"stretch",true,{sets:2,repsMin:30,repsMax:45,restSec:10},
+  ["Allongé sur le côté, genoux pliés à 90°, bras tendus devant toi l'un sur l'autre.","Ouvre le bras du dessus en arc de cercle vers l'autre côté, le regard suit la main.","Reviens lentement et enchaîne, puis change de côté (durée en secondes)."],
+  "Les genoux restent collés au sol : la rotation vient du haut du dos."],
 ];
 
-const EXOS = EXO_RAW.map(([id,n,muscles,equip,pattern,uni,def,cues,safety])=>({
+const EXOS_ALL = EXO_RAW.map(([id,n,muscles,equip,pattern,uni,def,cues,safety])=>({
   id,n,muscles,equip,pattern,uni,
   sets:def.sets,repsMin:def.repsMin,repsMax:def.repsMax,restSec:def.restSec,
   cues,safety
 }));
+// Retirés du catalogue (4.0) : variantes trop proches d'un autre exercice ou trop exotiques pour la
+// maison. Ils ne sont plus proposés ni affichés dans les listes, mais restent connus (EXO_MAP) pour
+// l'historique, les records et les séances enregistrées qui les contiennent encore.
+const EXO_RETIRED = new Set(["dips_banc","mollets_uni_pdc","swing_kb_uni","kb_sumo_deadlift","squeeze_press","curl_zottman",
+  "pompes_archer","pompes_hindoues","extension_triceps_sol","halo_kb","l_sit","roue_abdo_debout","nordic_curl","fentes_sautees",
+  "marche_ours","squat_sangles","fallout_sangles","tractions_scapulaires"]);
+// doublons fusionnés : les séances enregistrées et « Ma séance » passent sur l'exercice gardé
+const EXO_MERGED = { dips_banc:"dips_chaise", mollets_uni_pdc:"mollets_pdc", swing_kb_uni:"swing_kb", kb_sumo_deadlift:"deadlift_kb", squeeze_press:"dc_haltere", curl_zottman:"curl_marteau" };
+const EXOS = EXOS_ALL.filter(e=>!EXO_RETIRED.has(e.id));
 // Niveau technique / de force requis : 1 = accessible aux débutants, 2 = standard, 3 = avancé.
 // Le moteur évite le niveau 3 pour les débutants et privilégie le niveau 1.
-const EXO_LEVEL1 = ["etir_ischios","etir_quadriceps","etir_fessiers","etir_mollets","etir_pectoraux","etir_enfant","etir_epaules","etir_triceps","etir_avantbras","etir_psoas","etir_cobra","etir_chat_vache","dips_chaise","montees_chaise","pompes_genoux","pompes_surelevees","squat_pdc","pont_fessier","planche","bird_dog","dead_bug","crunch","superman","jumping_jacks","chaise_murale","mollets_pdc","squat_gobelet","goblet_squat_kb","marche_fermier","kb_fermier","montees_genoux","corde_a_sauter","tractions_scapulaires","rowing_sangles","curl_sangles","rowing_inverse_barre","tirage_elastique","curl_biceps_elastique","squat_elastique","pont_fessier_elastique","suspension_barre","roue_abdo_genoux","planche_laterale","curl_biceps","elevations_laterales","rowing_uni_haltere","dc_haltere","floor_press_haltere","step_up","shrugs_halteres","mollets_halteres"];
-const EXO_LEVEL3 = ["nordic_curl","pompes_archer","roue_abdo_debout","l_sit","releve_jambes_suspendu","tractions","tractions_suppination","renegade_row","front_squat_barre","good_morning_barre","fentes_sautees","swing_kb_uni","pompes_declinees","dips_barres","squat_sangles"];
-EXOS.forEach(e=>{ e.level = EXO_LEVEL3.includes(e.id) ? 3 : EXO_LEVEL1.includes(e.id) ? 1 : 2; });
-const EXO_MAP = {}; EXOS.forEach(e=>EXO_MAP[e.id]=e);
+const EXO_LEVEL1 = ["pompes_mur","coquillage","elevation_jambe_cote","kickback_quadrupedie","crunch_velo","pilates_cent","cercles_jambe","nage_pilates","etir_pigeon","etir_papillon","etir_cou","etir_torsion","etir_chien","etir_dorsaux","etir_lateral","etir_biceps","etir_livre","etir_ischios","etir_quadriceps","etir_fessiers","etir_mollets","etir_pectoraux","etir_enfant","etir_epaules","etir_triceps","etir_avantbras","etir_psoas","etir_cobra","etir_chat_vache","dips_chaise","montees_chaise","pompes_genoux","pompes_surelevees","squat_pdc","pont_fessier","planche","bird_dog","dead_bug","crunch","superman","jumping_jacks","chaise_murale","mollets_pdc","squat_gobelet","goblet_squat_kb","marche_fermier","kb_fermier","montees_genoux","corde_a_sauter","tractions_scapulaires","rowing_sangles","curl_sangles","rowing_inverse_barre","tirage_elastique","curl_biceps_elastique","squat_elastique","pont_fessier_elastique","suspension_barre","roue_abdo_genoux","planche_laterale","curl_biceps","elevations_laterales","rowing_uni_haltere","dc_haltere","floor_press_haltere","step_up","shrugs_halteres","mollets_halteres"];
+const EXO_LEVEL3 = ["teaser_pilates","nordic_curl","pompes_archer","roue_abdo_debout","l_sit","releve_jambes_suspendu","tractions","tractions_suppination","renegade_row","front_squat_barre","good_morning_barre","fentes_sautees","swing_kb_uni","pompes_declinees","dips_barres","squat_sangles"];
+EXOS_ALL.forEach(e=>{ e.level = EXO_LEVEL3.includes(e.id) ? 3 : EXO_LEVEL1.includes(e.id) ? 1 : 2; });
+const EXO_MAP = {}; EXOS_ALL.forEach(e=>EXO_MAP[e.id]=e);
 // étirement (retour au calme) : ne compte jamais comme du travail de force
 function isStretch(def){ return !!def && def.pattern==="stretch"; }
 // autres noms courants, pour la recherche (on tape souvent le nom anglais ou un nom approximatif)
 const EXO_ALIAS = {
   dips_banc:"pompes inversees bench dips rebord", dips_chaise:"bench dips rebord canape", extension_triceps_sol:"sphinx push-up",
   rowing_table:"australian row tirage australien inverted row", montees_chaise:"step up marche", nordic_curl:"nordique ischio",
-  pompes_hindoues:"hindu push-up dive bomber", pompe_pike:"pike push-up", pompes_diamant:"diamond push-up", pont_fessier:"glute bridge",
+  pompes_hindoues:"hindu push-up dive bomber", pompe_pike:"pike push-up", pompes_diamant:"diamond push-up", 
+  pilates_cent:"hundred pilates", enroule_pilates:"roll up pilates", cercles_jambe:"leg circles pilates", teaser_pilates:"teaser pilates",
+  nage_pilates:"swimming pilates", coquillage:"clamshell clam pilates", elevation_jambe_cote:"side leg lift abduction pilates", kickback_quadrupedie:"donkey kick pilates",
+  crunch_velo:"bicycle crunch obliques", fente_croisee:"curtsy lunge", pompes_mur:"wall push-up debutant", planche_touches:"shoulder taps",
+  dead_bug:"pilates", gainage_creux:"hollow pilates", bird_dog:"pilates", flutter_kicks:"pilates scissors", pont_fessier:"glute bridge pilates", superman:"pilates",
+  etir_pigeon:"pigeon yoga", etir_papillon:"butterfly adducteurs yoga", etir_chien:"downward dog yoga", etir_livre:"open book thoracique", etir_enfant:"child pose yoga", etir_cobra:"yoga",
   hip_thrust_haltere:"hip thrust", squat_bulgare_pdc:"bulgarian split squat", mountain_climbers:"grimpeur", gainage_creux:"hollow",
 };
 // exercices mesurés en secondes plutôt qu'en répétitions (planche, chaise, marche du fermier…)

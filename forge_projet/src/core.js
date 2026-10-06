@@ -256,10 +256,13 @@ function normalizeState(parsed){
     merged.sessions = parsed.sessions.map(markStored);
     // ordre chronologique garanti (les statistiques s'appuient dessus) ; déjà trié en général
     if(merged.sessions.some((x,i,a)=>i && a[i-1].date>x.date)) merged.sessions.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
-    // séances enregistrées, Ma séance, séance en cours : seulement des exercices connus
+    // séances enregistrées, Ma séance, séance en cours : seulement des exercices connus ; un doublon
+    // fusionné (4.0) passe sur l'exercice gardé, sans apparaître deux fois dans la même séance
+    const plan = list=>{ const seen = new Set();
+      return list.filter(known).map(ex=>EXO_MERGED[ex.exoId] ? Object.assign({}, ex, { exoId:EXO_MERGED[ex.exoId] }) : ex).filter(ex=>!seen.has(ex.exoId) && seen.add(ex.exoId)); };
     merged.templates = (Array.isArray(parsed.templates)?parsed.templates:[]).filter(t=>t && t.id && Array.isArray(t.exos))
-      .map(t=>Object.assign({}, t, { n:String(t.n||"Séance"), days:Array.isArray(t.days)?t.days.filter(x=>x>=0 && x<=6):[], exos:t.exos.filter(known) }));
-    merged.custom.exos = (Array.isArray(merged.custom.exos)?merged.custom.exos:[]).filter(known);
+      .map(t=>Object.assign({}, t, { n:String(t.n||"Séance"), days:Array.isArray(t.days)?t.days.filter(x=>x>=0 && x<=6):[], exos:plan(t.exos) }));
+    merged.custom.exos = plan(Array.isArray(merged.custom.exos)?merged.custom.exos:[]);
     if(merged.draft){
       const dr = merged.draft;
       merged.draft = dr && typeof dr==="object" && Array.isArray(dr.exos) ? Object.assign({}, dr, { exos:dr.exos.filter(ex=>okExo(ex) && known(ex)).map(ex=>Object.assign({}, ex, { sets:ex.sets.filter(okSet) })) }) : null;
@@ -451,10 +454,11 @@ function fmtRelative(iso){
 }
 // « 1 série », « 2 séries » (en français, 0 et 1 sont au singulier)
 function nb(n, w){ return `${n} ${w}${Math.abs(n)>=2?"s":""}`; }
-function fmtNum(n){ return Math.round(n).toLocaleString("fr-CH"); }
-function fmtDec(n){ return round1(n).toLocaleString("fr-CH"); }
+// fr-FR et pas fr-CH : Safari iOS écrit « 0.5 » en fr-CH, on veut la virgule partout
+function fmtNum(n){ return Math.round(n).toLocaleString("fr-FR"); }
+function fmtDec(n){ return round1(n).toLocaleString("fr-FR"); }
 function fmtKg(kg){
-  if(kg>=10000) return `${round1(kg/1000).toLocaleString("fr-CH")} t`;
+  if(kg>=10000) return `${round1(kg/1000).toLocaleString("fr-FR")} t`;
   return `${fmtNum(kg)} kg`;
 }
 

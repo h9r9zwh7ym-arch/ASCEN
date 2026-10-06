@@ -35,7 +35,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   log('Default tab is Ma séance:', await page.$eval('.seg button.on', e => e.textContent));
 
   // l'app choisit
-  await page.click('.builder-empty [data-a="customFill"]');
+  await page.click('.hero.compose [data-a="customFill"]');
   await wait(500);
   log('Rows after app fill:', await page.$$eval('#v-today .group .row', e => e.length), 'app badges:', await page.$$eval('.app-badge', e => e.length));
   await shot('05_filled');

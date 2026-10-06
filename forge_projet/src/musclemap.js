@@ -45,9 +45,9 @@ function muscleMapSVG(levels, tips, opts){
     return `<g class="mm-z r-${r} ${v>0 ? "on" : ""}" style="--v:${v.toFixed(2)}"${tip}>${shape}</g>`;
   };
   const side = (k)=>Object.keys(MM_SHAPES[k]).map(id=>zone(id, MM_SHAPES[k][id])).join("");
-  return `<svg class="mm ${opts.cls||""}" viewBox="0 0 120 102" role="img" aria-label="${esc(opts.label||"Carte des muscles")}">
+  return `<svg class="mm ${opts.cls||""}" viewBox="0 0 120 ${opts.caps===false ? 102 : 107}" role="img" aria-label="${esc(opts.label||"Carte des muscles")}">
     <g class="mm-base">${MM_SHAPES.base}</g>${side("front")}${side("back")}
-    ${opts.caps===false ? "" : `<text x="30" y="101.6" class="mm-cap">face</text><text x="90" y="101.6" class="mm-cap">dos</text>`}
+    ${opts.caps===false ? "" : `<text x="30" y="106" class="mm-cap">face</text><text x="90" y="106" class="mm-cap">dos</text>`}
   </svg>`;
 }
 // fiche d'un exercice : muscle principal plein, secondaires atténués
@@ -56,16 +56,25 @@ function exoMuscleMap(def){
   const tips = {}; def.muscles.forEach((m,i)=>{ if(MUSCLE_MAP[m]) tips[m] = MUSCLE_MAP[m].n + (i===0 ? " · principal" : " · secondaire"); });
   return muscleMapSVG(lv, tips, { cls:"mm-exo", label:"Muscles travaillés : "+def.muscles.map(m=>MUSCLE_MAP[m] ? MUSCLE_MAP[m].n : m).join(", ") });
 }
-// Progrès : séries des 7 derniers jours par muscle (repère ≈ goal séries = plein)
+// Progrès : une seule carte « Muscles de la semaine » = silhouette + barres par muscle.
+// La couleur dit la région (même code partout dans l'app), l'intensité dit le volume :
+// une seule légende, celle des régions ; l'intensité est expliquée en une phrase.
 function weekMuscleMapHTML(){
-  const rows = weekVolume(), goal = S.goals.overall==="force" ? 6 : 10;
+  const rows = weekVolume(), goal = S.goals.overall==="force" ? 6 : 10, max = Math.max(goal*1.6, ...rows.map(r=>r.sets));
   const lv = {}, tips = {};
-  rows.forEach(r=>{ lv[r.id] = r.sets ? .18 + .82*Math.min(1, r.sets/goal) : 0; tips[r.id] = `${r.n} : ${fmtDec(r.sets)} série${r.sets>=2?"s":""}${r.freq ? ` · ${r.freq}×` : ""}`; });
-  const low = rows.filter(r=>r.sets<goal/2).map(r=>r.n);
+  rows.forEach(r=>{ lv[r.id] = r.sets ? .18 + .82*Math.min(1, r.sets/goal) : 0; tips[r.id] = `${r.n} : ${fmtDec(r.sets)} série${r.sets>=2?"s":""}${r.freq ? ` · ${nb(r.freq, "jour")}` : ""}`; });
+  const ok = rows.filter(r=>r.sets>=goal).length, low = rows.filter(r=>r.sets<goal/2).map(r=>r.n);
+  const legend = Object.keys(REGIONS).map(r=>`<span class="r-${r}"><i></i>${r==="core" ? "Gainage" : REGIONS[r].n}</span>`).join("");
   return `<div class="chart-card mm-card stagger" style="--i:5">
-    <div class="cc-h"><div class="cc-t">Muscles de la semaine</div><div class="cc-s">7 derniers jours · couleur pleine ≈ ${goal} séries · touche un muscle</div></div>
+    <div class="cc-h"><div class="cc-t">Muscles de la semaine</div><div class="cc-s">7 derniers jours · plus la couleur est pleine, plus le muscle a travaillé</div></div>
     ${muscleMapSVG(lv, tips, { cls:"mm-week", label:"Muscles travaillés cette semaine" })}
-    <div class="mm-legend"><span><i style="--v:.2"></i>peu</span><span><i style="--v:.6"></i>moyen</span><span><i style="--v:1"></i>au repère</span></div>
-    ${low.length && low.length<rows.length ? `<div class="wv-foot">À renforcer : ${low.slice(0,4).map(esc).join(", ")}.</div>` : ""}
+    <div class="mm-legend">${legend}</div>
+    <div class="wv-head"><span>séries</span><span>jours</span></div>
+    <div class="wv-list">${rows.map((r,i)=>`<div class="wv-row" style="--i:${i}">
+      <span class="wv-n">${esc(r.n)}</span>
+      <span class="wv-track"><i class="r-${r.region} ${r.sets>=goal?"ok":""}" style="width:${Math.min(100, r.sets/max*100).toFixed(1)}%"></i><b style="left:${(goal/max*100).toFixed(1)}%"></b></span>
+      <span class="wv-v">${fmtDec(r.sets)}</span><span class="wv-f ${r.freq>=2?"ok":""}">${r.freq||"–"}</span>
+    </div>`).join("")}</div>
+    <div class="wv-foot">${ok}/${rows.length} groupes au repère (le trait, ≈ ${goal} séries)${low.length && low.length<rows.length ? ` · à renforcer : ${low.slice(0,3).map(esc).join(", ")}` : ""}. Idéal : chaque muscle au moins 2 jours par semaine.</div>
   </div>`;
 }

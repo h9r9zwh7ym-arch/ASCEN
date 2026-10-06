@@ -188,7 +188,7 @@ function rwCounts(root){
   const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   qsa("[data-to]", root).forEach(el=>{
     const to = parseFloat(el.dataset.to), dec = +(el.dataset.dec||0);
-    const f = v=>dec ? v.toLocaleString("fr-CH",{ minimumFractionDigits:dec, maximumFractionDigits:dec }) : fmtNum(v);
+    const f = v=>dec ? v.toLocaleString("fr-FR",{ minimumFractionDigits:dec, maximumFractionDigits:dec }) : fmtNum(v);
     if(reduce){ el.textContent = f(to); return; }
     const t0 = performance.now()+260, dur = 1300;
     (function step(t){ const p = Math.max(0, Math.min(1, (t-t0)/dur)), e = 1-Math.pow(1-p, 4); el.textContent = f(to*e); if(p<1 && el.isConnected) requestAnimationFrame(step); })(performance.now());

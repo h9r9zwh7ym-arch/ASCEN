@@ -298,4 +298,38 @@ const RIGS = {
   etir_epaules:    { dur:4.6, A:FRONT(), B:FRONT({ E:6, W:2, E2:60, W2:-40 }) },
   etir_triceps:    { dur:4.6, A:FRONT({ E:-94, W:-92 }), B:FRONT({ E:-78, W:160, E2:-120, W2:10 }) },
   etir_avantbras:  { dur:4, A:stand(12, { E:4, W:2, E2:36, W2:-10 }), B:stand(12, { E:4, W:8, E2:40, W2:-4 }) },
+  // ---------------- 4.0 : Pilates et poids du corps ----------------
+  pilates_cent:    { dur:.8, A:supine(12.4,19.6, { t:200, h:222, K:-90, F:0, E:2, W:0 }), B:supine(12.4,19.6, { t:200, h:222, K:-90, F:0, E:12, W:10 }) },
+  enroule_pilates: { dur:3.2, A:supine(11,19.8, { K:0, F:0, E:184, W:182, pin:{ F:[19.4,20.3] } }), B:{ P:[11,19.8], t:-38, h:-20, face:-1, K:0, F:0, E:-24, W:-18, pin:{ F:[19.4,20.3] } } },
+  cercles_jambe:   { dur:1.6, A:supine(11.6,19.6, { K:-74, F:-74, K2:0, F2:0 }), B:supine(11.6,19.6, { K:-104, F:-104, K2:0, F2:0 }) },
+  teaser_pilates:  { dur:3, A:supine(12.4,19.6, { K:-32, F:-32, E:196, W:194 }), B:{ P:[12.4,19.9], t:-122, h:-110, face:-1, K:-48, F:-48, E:-36, W:-36 } },
+  nage_pilates:    { dur:.9, A:{ P:[12.6,19.1], t:193, h:204, face:-1, K:-3, F:-3, K2:-20, F2:-20, E:212, W:208, E2:188, W2:186 },
+                     B:{ P:[12.6,19.1], t:193, h:204, face:-1, K:-20, F:-20, K2:-3, F2:-3, E:188, W:186, E2:212, W2:208 } },
+  // allongé sur le côté, vu de face (hanches et épaules empilées, tête posée sur le bras du dessous) :
+  // genoux pliés, le genou du dessus s'ouvre vers le plafond, pieds collés
+  coquillage:      { dur:1.6, A:{ front:true, P:[12.4,18.8], t:180, h:184, face:-1, K:4, F:178, K2:2, F2:178, E:180, W:180, E2:6, W2:4 },
+                     B:{ front:true, P:[12.4,18.8], t:180, h:184, face:-1, K:4, F:178, K2:-40, F2:135, E:180, W:180, E2:6, W2:4 } },
+  elevation_jambe_cote:{ dur:1.6, A:{ front:true, P:[11.4,18.8], t:180, h:184, face:-1, K:2, F:0, K2:-2, F2:-2, E:180, W:180, E2:6, W2:4 },
+                     B:{ front:true, P:[11.4,18.8], t:180, h:184, face:-1, K:2, F:0, K2:-32, F2:-32, E:180, W:180, E2:6, W2:4 } },
+  kickback_quadrupedie:{ A:quad({ pin:{ W:[7,G], F:[16.6,20.4] } }), B:quad({ K:-6, F:-96, K2:90, F2:0 }) },
+  crunch_velo:     { dur:1.4, A:supine(12.4,19.6, { t:204, h:226, K:-128, F:-30, K2:-18, F2:-18, E:-118, W:150 }), B:supine(12.4,19.6, { t:204, h:226, K:-18, F:-18, K2:-128, F2:-30, E:-118, W:150 }) },
+  fente_croisee:   { A:FRONT({ E:118, W:30, E2:62, W2:150 }), B:FRONT({ P:[12.6,15.8], E:118, W:30, E2:62, W2:150, pin:{ F:[16.2,G], F2:[11,G] } }) },
+  pompes_mur:      { icon:"A", env:FL+"M5 1.5V21", A:Object.assign(bodyLine([15.6,G], 7.8), { h:-140, E:-170, pin:{ F:[15.6,G], W:[5.3,8.4] } }),
+                     B:Object.assign(bodyLine([15.6,G], 9.4), { h:-120, E:-120, pin:{ F:[15.6,G], W:[5.3,8.4] } }) },
+  planche_touches: { dur:1.4, A:PUSH_A, B:Object.assign({}, PUSH_A, { E2:40, W2:-150, pin:{ F:[20.4,G], W:[7.8,G] } }) },
+  // ---------------- 4.0 : étirements ----------------
+  etir_pigeon:     { dur:5, A:{ P:[12,18.4], t:-104, h:-104, face:-1, K:162, F:12, K2:12, F2:4, E:100, W:80, pin:{ F2:[19.9,20.5] } },
+                     B:{ P:[12,18.4], t:186, h:192, face:-1, K:162, F:12, K2:12, F2:4, E:180, W:180, pin:{ F2:[19.9,20.5] } } },
+  // assis vu de face : genoux ouverts sur les côtés, plantes de pieds jointes devant le bassin
+  etir_papillon:   { dur:2.4, A:FRONT({ P:[12,19.3], K:186, F:22, K2:-6, F2:158, pin:{ W:[11,19.6], W2:[13,19.6] } }),
+                     B:FRONT({ P:[12,19.3], K:178, F:16, K2:2, F2:164, pin:{ W:[11,19.6], W2:[13,19.6] } }) },
+  etir_cou:        { dur:4.6, A:FRONT(), B:FRONT({ h:-58, E2:-40, W2:-150 }) },
+  etir_torsion:    { dur:5, env:"M2.6 3.4h18.8v17.2H2.6z", A:{ front:true, P:[14.4,12.6], t:180, h:180, face:-1, K:12, F:174, K2:-2, F2:0, E:102, W:100, E2:-102, W2:-100 },
+                     B:{ front:true, P:[14.4,12.6], t:180, h:160, face:-1, K:-46, F:118, K2:-2, F2:0, E:102, W:100, E2:-102, W2:-100 } },
+  etir_chien:      { dur:4, icon:"A", A:{ P:[13.4,13.4], t:138, h:118, face:-1, pin:{ F:[17.8,G], W:[5,G] } }, B:{ P:[13.4,13.4], t:138, h:118, face:-1, K:-20, pin:{ F:[16.8,19.6], F2:[17.8,G], W:[5,G] } } },
+  etir_dorsaux:    { env:ENV.chair, dur:5, A:{ P:[8.6,12.8], t:-30, h:-24, pin:{ F:[9,G], W:[19.4,9.8] } }, B:{ P:[9.6,12.9], t:10, h:62, pin:{ F:[9,G], W:[19.4,9.8] } } },
+  etir_lateral:    { dur:4.6, A:FRONT({ E:-96, W:-94, E2:60, W2:150 }), B:FRONT({ t:-72, h:-66, E:-56, W:-30, E2:60, W2:150 }) },
+  etir_biceps:     { env:FL+"M17.6 1.5V21", dur:5, A:stand(12, { h:-90, face:-1, pin:{ F:[12,G], W:[17.2,7.6] } }), B:{ P:[11.8,12.5], t:-96, h:-108, face:-1, pin:{ F:[12,G], W:[17.2,7.6] } } },
+  etir_livre:      { dur:3.6, A:{ front:true, P:[13.4,18.8], t:180, h:184, face:-1, K:4, F:178, K2:2, F2:178, E:180, W:180, E2:60, pin:{ W2:[9.6,20.4] } },
+                     B:{ front:true, P:[13.4,18.8], t:180, h:226, face:-1, K:4, F:178, K2:2, F2:178, E:180, W:180, E2:-112, W2:-120 } },
 };

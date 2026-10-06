@@ -20,10 +20,12 @@ function recapTitle(kind, key){
 }
 function recapDefault(kind){
   const t = todayISO();
-  if(kind==="year") return t.slice(0,4);
-  // en début de mois, le mois précédent est plus parlant que le mois qui commence
-  const cur = t.slice(0,7);
-  return S.sessions.some(s=>s.date.startsWith(cur)) && +t.slice(8)>7 ? cur : recapPrevKey("month", cur);
+  const cur = kind==="year" ? t.slice(0,4) : t.slice(0,7);
+  // toujours la période en cours ; la précédente seulement si celle-ci est encore vide
+  // (le bilan du mois écoulé reste proposé à part, sur l'accueil, en début de mois)
+  if(S.sessions.some(s=>s.date.startsWith(cur))) return cur;
+  const prev = recapPrevKey(kind, cur);
+  return S.sessions.some(s=>s.date.startsWith(prev)) ? prev : cur;
 }
 function recapStats(kind, key){
   const list = S.sessions.filter(s=>s.date.startsWith(key));

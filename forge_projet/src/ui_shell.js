@@ -296,7 +296,7 @@ function animateCounts(root){
   const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   els.forEach(el=>{
     const target = parseFloat(el.dataset.count), dec = +(el.dataset.dec||0), unit = el.dataset.unit;
-    const fmt = v => (dec ? v.toLocaleString("fr-CH",{minimumFractionDigits:dec,maximumFractionDigits:dec}) : fmtNum(v)) + (unit?" "+unit:"");
+    const fmt = v => (dec ? v.toLocaleString("fr-FR",{minimumFractionDigits:dec,maximumFractionDigits:dec}) : fmtNum(v)) + (unit?" "+unit:"");
     if(reduce || !(target>0)){ el.textContent = fmt(target||0); return; }
     const t0 = performance.now(), dur = 800;
     (function step(t){

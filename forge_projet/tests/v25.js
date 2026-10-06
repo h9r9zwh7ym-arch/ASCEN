@@ -58,7 +58,7 @@ const OUT = path.join(OUT_ROOT, 'v25'); fs.mkdirSync(OUT, { recursive: true });
   await shot('01_picker');
   await page.evaluate(() => closeSheet()); await wait(400);
   await page.evaluate(() => { S.settings.todayTab = 'custom'; S.custom = { exos: [] }; S.templates = []; save(); renderView('today'); }); await wait(500);
-  await page.evaluate(() => { const b = document.querySelector('.builder-empty'); if (b) b.scrollIntoView({ block: 'start' }); }); await wait(300);
+  await page.evaluate(() => { const b = document.querySelector('.hero.compose, .builder-empty'); if (b) b.scrollIntoView({ block: 'start' }); }); await wait(300);
   await shot('02_today_icons');
 
   // ---- 3. trophées : rendu 3D, secrets

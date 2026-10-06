@@ -56,6 +56,10 @@ const PICTO_OF = {
   // v3.0
   dips_chaise:"dips", extension_triceps_sol:"plank", pompes_hindoues:"pushup", rowing_table:"row", montees_chaise:"lunge", nordic_curl:"hinge",
   // v3.1 : étirements
+  // 4.0 : Pilates, poids du corps, étirements
+  pilates_cent:"crunch", enroule_pilates:"crunch", cercles_jambe:"crunch", teaser_pilates:"crunch", nage_pilates:"plank", coquillage:"bridge", elevation_jambe_cote:"bridge",
+  kickback_quadrupedie:"plank", crunch_velo:"crunch", fente_croisee:"lunge", pompes_mur:"pushup", planche_touches:"plank",
+  etir_pigeon:"lunge", etir_papillon:"bridge", etir_cou:"raise", etir_torsion:"bridge", etir_chien:"plank", etir_dorsaux:"hinge", etir_lateral:"raise", etir_biceps:"curl", etir_livre:"plank",
   etir_ischios:"hinge", etir_quadriceps:"lunge", etir_fessiers:"bridge", etir_mollets:"calf", etir_pectoraux:"fly", etir_enfant:"plank", etir_epaules:"raise", etir_triceps:"triceps", etir_avantbras:"curl", etir_psoas:"lunge", etir_cobra:"plank", etir_chat_vache:"plank",
 };
 const PICTO_BY_PATTERN = { squat:"squat", hinge:"hinge", push:"pushup", pull:"row", lunge:"lunge", core:"plank", calf:"calf" };

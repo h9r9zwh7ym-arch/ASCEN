@@ -1,6 +1,7 @@
 // Planche de contrôle des animations d'exercices : pose de départ et pose de fin de chaque
 // exercice, groupés par animation de base, pour repérer d'un coup d'œil les silhouettes cassées
 // ou deux exercices qui se ressemblent trop. Usage : node tests/anim_sheet.js dist/forge.html
+// (IDS=pompes,planche : seulement ces exercices ; FAMILIES=pushup,plank : seulement ces familles)
 const OUT_ROOT = process.env.OUT_DIR || require('path').join(__dirname, 'out'); require('fs').mkdirSync(OUT_ROOT, { recursive: true });
 const __pw = require('playwright'); const path = require('path');
 (async () => {
@@ -9,16 +10,16 @@ const __pw = require('playwright'); const path = require('path');
   await page.addInitScript(() => localStorage.setItem('forge.v1', JSON.stringify({ meta: { onboarded: true }, sessions: [] })));
   await page.goto('file://' + path.resolve(process.argv[2]));
   await page.waitForSelector('#splash', { state: 'detached', timeout: 8000 });
-  const groups = (process.env.FAMILIES || '').split(',').filter(Boolean); groups.prefix = process.env.PREFIX || '';
-  await page.evaluate(([list, prefix]) => { const groups = list; groups.prefix = prefix;
+  const groups = (process.env.FAMILIES || '').split(',').filter(Boolean); groups.prefix = process.env.PREFIX || ''; const ids = (process.env.IDS || '').split(',').filter(Boolean);
+  await page.evaluate(([list, prefix, ids]) => { const groups = list; groups.prefix = prefix;
     const frame = (def, P, pose) => { const seg = FOCUS_SEG[def.muscles[0]];
       return `<svg viewBox="0 0 24 24" style="width:96px;height:96px;background:#fff;border-radius:8px"><path d="${pose.env || FLOOR}" fill="none" stroke="#bbb" stroke-width="1.1" stroke-linecap="round"/><path d="${animPath(P)}" fill="none" stroke="#E0663A" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>${seg ? `<path d="${focusPath(P, seg)}" stroke="#7a2f14" stroke-width="2.3" stroke-linecap="round"/>` : ''}<circle cx="${P.H[0]}" cy="${P.H[1]}" r="2.15" fill="#E0663A"/></svg>`; };
-    const by = {}; EXOS.forEach(e => { const k = (ANIM_VARIANT[e.id] && ANIM_VARIANT[e.id].base) || pictoKey(e); (by[k] = by[k] || []).push(e); });
+    const by = {}; (ids.length ? ids.map(id => EXO_MAP[id]).filter(Boolean) : EXOS).forEach(e => { const k = (ANIM_VARIANT[e.id] && ANIM_VARIANT[e.id].base) || pictoKey(e); (by[k] = by[k] || []).push(e); });
     document.body.innerHTML = '<div id="sheet" style="padding:16px;background:#F4F3F1;font:12px system-ui;display:flex;flex-wrap:wrap;gap:10px"></div>';
     const root = document.getElementById('sheet');
     Object.keys(by).filter(k => !groups.length || groups.includes(k)).forEach(k => by[k].filter(e => !groups.prefix || e.id.startsWith(groups.prefix)).forEach(e => { const pose = animRig(e), F = pose.frames;
       root.insertAdjacentHTML('beforeend', `<div style="width:300px"><div style="display:flex;gap:3px">${frame(e, F[0], pose)}${frame(e, F[F.length >> 1], pose)}${frame(e, F[F.length - 1], pose)}</div><div style="margin-top:3px;height:30px;overflow:hidden"><b>${k}</b>${ANIM_VARIANT[e.id] ? ' ✦' : ''} · ${e.n}</div></div>`); }));
-  }, [groups, groups.prefix]);
+  }, [groups, groups.prefix, ids]);
   const h = await page.evaluate(() => document.getElementById('sheet').scrollHeight);
   await page.setViewportSize({ width: 1400, height: h + 20 });
   await page.screenshot({ path: path.join(OUT_ROOT, 'anim_sheet' + (process.env.NAME ? '_' + process.env.NAME : '') + '.png') });

@@ -34,19 +34,6 @@ function weekVolume(){
     return VOL_GROUPS.map(([id,n])=>({ id, n, sets:Math.round((sets[id]||0)*2)/2, freq:days[id] ? days[id].size : 0, region:REGION_OF_MUSCLE[id] }));
   });
 }
-function weekVolumeHTML(){
-  const rows = weekVolume(), goal = S.goals.overall==="force" ? 6 : 10, max = Math.max(goal*1.6, ...rows.map(r=>r.sets));
-  const ok = rows.filter(r=>r.sets>=goal).length, low = rows.filter(r=>r.sets<goal/2).map(r=>r.n);
-  return `<div class="chart-card stagger" style="--i:6">
-    <div class="cc-h"><div class="cc-t">Volume par muscle</div><div class="cc-s">séries des 7 derniers jours · repère ≈ ${goal} par muscle</div></div>
-    <div class="wv-list">${rows.map((r,i)=>`<div class="wv-row" style="--i:${i}">
-      <span class="wv-n">${esc(r.n)}</span>
-      <span class="wv-track"><i class="r-${r.region} ${r.sets>=goal?"ok":""}" style="width:${Math.min(100, r.sets/max*100).toFixed(1)}%"></i><b style="left:${(goal/max*100).toFixed(1)}%"></b></span>
-      <span class="wv-v">${fmtDec(r.sets)}<small class="wv-f">${r.freq?` · ${r.freq}×`:""}</small></span>
-    </div>`).join("")}</div>
-    <div class="wv-foot">${ok}/${rows.length} groupes au repère${low.length && low.length<rows.length ? ` · à renforcer : ${low.slice(0,3).map(esc).join(", ")}` : ""}. Viser chaque muscle au moins 2 fois par semaine (le « × »).</div>
-  </div>`;
-}
 function recentPRs(n){
   const out = [];
   for(let i=S.sessions.length-1;i>=0 && out.length<n;i--){
@@ -89,7 +76,7 @@ function overviewPaneHTML(){
   <div class="stat-strip stagger" style="--i:5;margin-top:10px">
     <div class="stat-box" data-tip="${esc(jokerTip())}" tabindex="0"><div class="num">${currentStreakWeeks()}</div><div class="lbl">sem. d'affilée${streakInfo().recent?" · joker":""}</div></div>
     <div class="stat-box"><div class="num">${maxStreakWeeksEver()}</div><div class="lbl">meilleure série</div></div>
-    <div class="stat-box"><div class="num">${weeklyAverage(8).toLocaleString("fr-CH")}</div><div class="lbl">séances / sem.</div></div>
+    <div class="stat-box"><div class="num">${weeklyAverage(8).toLocaleString("fr-FR")}</div><div class="lbl">séances / sem.</div></div>
   </div>`;
 
   const weeks = weeklyBuckets(12);
@@ -101,7 +88,6 @@ function overviewPaneHTML(){
 
   return `${levelCardHTML()}${targetsHTML()}${challengesHTML()}${kpis}
     ${weekMuscleMapHTML()}
-    ${weekVolumeHTML()}
     <div class="chart-card stagger" style="--i:6">
       <div class="cc-h"><div class="cc-t">Régularité</div><div class="cc-s">18 dernières semaines</div></div>
       ${heatmap(18)}
