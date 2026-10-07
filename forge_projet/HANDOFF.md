@@ -725,6 +725,29 @@ Mesures (`tests/tab_perf.js`, processeur ×4, 3 ans d'historique) :
   - `tests/anim_sheet.js` accepte `IDS=` pour ne dessiner que certains exercices.
   - v34 vérifie les appuis, les longueurs d'os et le sol pour les 158 exercices.
 
+**Motivation (toujours 4.0)** : trois options, toutes actives par défaut et désactivables dans Profil > Motivation (`S.settings.beat`, `nextGoal`, `trend`, action `toggleMotiv`).
+- **Objectif à battre en séance** :
+  - Sous les compteurs, `beatLineHTML` (`view_today.js`) compare la série en cours à la même série (même rang) de la dernière séance de l'exercice (`beatRef`, `core.js`).
+  - Elle affiche ce qu'il faut pour la dépasser (`beatTarget` : une répétition de plus à charge égale ; à une autre charge en kg, le nombre de répétitions qui bat le 1RM estimé, formule d'Epley).
+  - Dès que la saisie dépasse la référence (`beatCmp`), la ligne passe au vert, « Ça bat la dernière fois ». L'animation ne joue qu'au passage (`beatWinKey`).
+  - À la validation, « Mieux que la dernière fois » s'affiche et le téléphone vibre (le record garde son propre retour).
+  - En fin de séance, la fête compte les séries meilleures que la dernière fois (`draft.beats`, calculé dans `finalizeSession` avant l'ajout de la séance).
+  - Pas pour les étirements. Option coupée : l'ancienne ligne « La dernière fois : … ».
+- **Prochain cap sur l'accueil** : `nextGoalHTML`/`nextGoal` affiche une seule ligne sous le résumé de la semaine, dans cet ordre :
+  1. il ne manque qu'une séance pour valider la semaine ;
+  2. le record à battre dans la séance prête (composée ou prévue aujourd'hui), `bestSetEver` ;
+  3. il reste plusieurs séances pour valider la semaine (si les jours restants suffisent) ;
+  4. le trophée le plus avancé, à 60 % ou plus du palier suivant ;
+  5. sinon, le niveau suivant, avec une estimation en séances.
+
+  La ligne mène à la fiche de l'exercice, au trophée ou à l'onglet concerné.
+- **Indice de force et projection** : carte « Indice de force » en tête de Progrès (`strengthCardHTML`, `view_progress.js`).
+  - Calcul : pour chaque exercice fait au moins 3 fois, on prend sa meilleure performance sur 8 semaines glissantes (1RM estimé si chargé en kg, sinon répétitions ou secondes). On la divise par la meilleure de ses 2 premières séances, plafonnée à ×3. L'indice est la moyenne × 100, semaine par semaine sur 12 semaines (`strengthSeries`).
+  - Affichage : la valeur actuelle et l'écart sur 4 semaines, puis la courbe (`lineChart`, avec la bulle au toucher).
+  - Projection de l'indice : la pente des 8 dernières semaines (moindres carrés, `slopeOf`) prolongée sur 2 mois, plafonnée à +15 %. Si la courbe est plate, un conseil la remplace.
+  - Projection d'un exercice : celui qui a été fait au moins 4 fois en 8 semaines (`exoProjection`). Sa charge (ou ses répétitions) est projetée à 8 semaines, plafonnée à +25 %. Le résultat est arrondi aux haltères possédés ou au demi-kilo.
+- Test : `tests/v41.js`.
+
 **Vérifications** :
 - `tests/v40.js` couvre la 2e passe : Rewind, virgules, carte et légende des muscles, accueil, catalogue, fusion, séance Pilates, recherche.
 - Tour visuel de 27 écrans en clair et en sombre (`tests/tour.js` + `tests/montage.js`) ; audit d'accessibilité repassé (`tests/ux_audit.js`).

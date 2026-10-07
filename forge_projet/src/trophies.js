@@ -419,6 +419,7 @@ function showCelebration(session, ups, xpBefore, xpAfter, hits, won){
             : `<div><div class="n" data-count="${reps}">${reps}</div><div class="l">répétitions</div></div>`}
     </div>
     ${prs?`<div class="cel-pr">${ii("bolt")} ${prs} record${prs>1?"s":""} battu${prs>1?"s":""}</div>`:""}
+    ${session.beats ? `<div class="cel-prog cel-beat" style="--i:0">${ii("trendUp")}<span>${session.beats>1 ? `${session.beats} séries mieux que la dernière fois` : "1 série mieux que la dernière fois"}</span></div>` : ""}
     ${sessionProgressLines(session).map((t,i)=>`<div class="cel-prog" style="--i:${i}">${ii("chart")}<span>${esc(t)}</span></div>`).join("")}
     ${(hits||[]).map((t,i)=>`<div class="cel-target" style="--i:${i}">${ii("target")} Objectif atteint : ${esc(EXO_MAP[t.exoId].n)}, ${fmtTarget(t.kind, t.value)}</div>`).join("")}
     ${(won||[]).map((c,i)=>`<div class="cel-target cel-chal" style="--i:${(hits||[]).length+i}">${ii("star")} Défi réussi : ${esc(CHAL_MAP[c.id].n)}</div>`).join("")}

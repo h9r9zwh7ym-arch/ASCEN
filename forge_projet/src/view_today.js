@@ -53,6 +53,46 @@ function statPillsHTML(){
     </button>
   </div>`;
 }
+// ---------- prochain cap (réglage Motivation) ----------
+// Une seule ligne, la plus proche d'être atteinte : on se motive davantage quand l'arrivée est en vue.
+function bestSetEver(exoId, def){
+  return memo("bse:"+exoId, ()=>{ let b = null;
+    for(const s of S.sessions){ const ex = s.exos.find(e=>e.exoId===exoId); if(!ex) continue;
+      for(const st of ex.sets){ if(!st.done || !(st.reps>0)) continue;
+        const sc = kgType(def) && st.weight ? estimated1RM(st.weight, st.reps) : st.reps;
+        if(!b || sc>b.sc) b = { sc, r:st.reps, w:st.weight||0 }; } }
+    return b; });
+}
+function nextGoal(){
+  const goal = S.goals.daysPerWeek||3, done = sessionsThisWeek(), left = goal-done;
+  const daysLeft = 7-weekdayIdx(todayISO()) - (sessionsToday().length ? 1 : 0);
+  const week = left>0 && left<=daysLeft ? { ic:"target", pct:done/goal, act:'data-a="tab" data-id="progress"',
+    t: left===1 ? "Une séance de plus et ta semaine est validée" : `Encore ${nb(left,"séance")} pour valider ta semaine` } : null;
+  if(week && left===1) return week;
+  // le record à battre dans la séance prête (composée ou prévue aujourd'hui)
+  if(!sessionsToday().length){
+    const ids = (S.custom.exos.length ? S.custom.exos : (plannedTemplate()||{exos:[]}).exos).map(e=>e.exoId);
+    for(const id of ids){ const def = EXO_MAP[id]; if(!def || isStretch(def) || !kgType(def)) continue;
+      const b = bestSetEver(id, def); if(!b || !b.w) continue;
+      return { ic:"bolt", pct:null, act:`data-a="showExoInfo" data-id="${id}"`, t:`Record à battre aujourd'hui · ${def.n} : ${b.r} × ${fmtDec(b.w)} kg` }; }
+  }
+  if(week) return week;
+  // un trophée presque gagné (au moins 60 % du chemin vers le palier suivant)
+  let best = null;
+  if(typeof MEDALS!=="undefined") MEDALS.forEach(m=>{ if(m.secret) return; const p = medalProgress(m);
+    if(p.next==null || p.pct<.6 || p.pct>=1) return; if(!best || p.pct>best.p.pct) best = { m, p }; });
+  if(best){ const { m, p } = best, rest = p.next - p.v;
+    return { ic:"trophy", pct:p.pct, act:`data-a="showMedal" data-id="${m.id}"`,
+      t:`${TIERS[p.t+1].n} « ${m.n} » : plus que ${fmtMedalVal(m, rest)} ${medalUnit(m, rest)}` }; }
+  const lv = levelInfo(), toGo = lv.next-lv.xp, perSession = 50 + 2*Math.max(10, Math.round(totalSets()/Math.max(1,S.sessions.length)));
+  return { ic:"star", pct:lv.pct, act:'data-a="tab" data-id="profil"', t:`Niveau ${lv.level+1} dans ${fmtNum(toGo)} XP, environ ${nb(Math.max(1, Math.ceil(toGo/perSession)), "séance")}` };
+}
+function nextGoalHTML(){
+  if(S.settings.nextGoal===false) return "";
+  const g = nextGoal(); if(!g) return "";
+  const ring = g.pct==null ? "" : `<span class="gl-ring" style="--p:${Math.round(g.pct*100)}" aria-hidden="true"></span>`;
+  return `<button class="goal-line stagger" style="--i:1" ${g.act}><span class="gl-ic">${ii(g.ic)}</span><span class="gl-t"><small>Prochain cap</small>${esc(g.t)}</span>${ring}</button>`;
+}
 function heroPicts(ids){
   const defs = ids.map(id=>EXO_MAP[id]).filter(Boolean);
   // chaque pictogramme ouvre la fiche de l'exercice ; « +N » mène à la liste complète
@@ -141,6 +181,7 @@ function renderTodayPreview(draft){
       <h1 class="lt">${greeting()}</h1>
     </div>
     ${statPillsHTML()}
+    ${nextGoalHTML()}
     ${whyReminder() && !sessionsToday().length ? `<div class="why-card stagger" style="--i:2"><div class="why-k">${ii("flame")} Ton pourquoi</div><div class="why-t">« ${esc(whyReminder())} »</div><div class="why-s">${daysSinceLastSession()} jours sans séance : une seule suffit pour reprendre le fil.</div><button class="btn secondary sm why-go" data-a="startExpress">${icon("timer")} Séance express · 10 min</button></div>` : ""}
     ${sessionsToday().length ? doneCardHTML() : ""}
     <div class="home-seg stagger" style="--i:2">${segHTML("today", [["custom","Ma séance"],["proposal","Proposée par l'app"]], mode, "todayMode")}</div>
@@ -692,6 +733,21 @@ function lastTimeHTML(exoId, hasNote){
   return `<div class="fc-last">La dernière fois (${fmtRelative(last.session.date)}) : ${done.map(s=>s.reps).join(" · ")}${loadSuffix(EXO_MAP[exoId], w)}</div>`;
 }
 
+// « À battre » (réglage Motivation) : la cible du jour face à la même série la dernière fois,
+// et un retour immédiat quand la saisie la dépasse
+let beatWinKey = ""; // série déjà annoncée « mieux » : l'animation ne rejoue pas à chaque +/−
+function beatLineHTML(ex, def, si, st){
+  const ref = isStretch(def) ? null : beatRef(ex.exoId, si);
+  if(!ref) return lastTimeHTML(ex.exoId, !!ex.note);
+  const u = isTimed(def) ? " s" : "", refTxt = `${ref.reps}${u}${loadSuffix(def, ref.weight)}`;
+  const key = ex.exoId+":"+si;
+  if(beatCmp(def, st, ref)>0){ const pop = beatWinKey!==key; beatWinKey = key; return `<div class="fc-beat win${pop ? " pop" : ""}">${ii("trendUp")}<span>Ça bat la dernière fois <small>(${refTxt})</small></span></div>`; }
+  if(beatWinKey===key) beatWinKey = "";
+  const tgt = beatTarget(def, st.weight, ref);
+  if(tgt==null) return `<div class="fc-beat">${ii("target")}<span>La dernière fois : <b>${refTxt}</b></span></div>`;
+  const lt = loadableTypeOf(def), at = lt && st.weight ? (lt==="bands" ? ` · ${fmtLoad(def, st.weight)}` : ` à ${fmtDec(st.weight)} kg`) : "";
+  return `<div class="fc-beat">${ii("target")}<span>À battre : <b>${tgt}${isTimed(def) ? " s" : " reps"}</b>${at} <small>(la dernière fois : ${refTxt})</small></span></div>`;
+}
 function renderFocusCard(idx, ex, def){
   const animClass = focusAnimDir==="r" ? "anim-r" : focusAnimDir==="l" ? "anim-l" : "";
   focusAnimDir = null;
@@ -761,7 +817,7 @@ function renderFocusCard(idx, ex, def){
         <button aria-label="Plus" data-a="stepWeight" data-exi="${idx}" data-si="${si}" data-d="1">+</button>
       </div></div>`:""}
     </div>
-    ${lastTimeHTML(ex.exoId, !!ex.note)}
+    ${S.settings.beat===false ? lastTimeHTML(ex.exoId, !!ex.note) : beatLineHTML(ex, def, si, st)}
     ${kgType(def) && (st.weight||0)>=8 && !S.draft.exos.some(e=>e.sets.some(x=>x.done)) ? `<div class="warmup">${ii("flame")} Échauffement : 1 série légère (≈ ${fmtDec(Math.max(1, Math.round((st.weight||0)*0.5)))} kg) de 8 à 10 répétitions avant de commencer.</div>` : ""}
     ${ex.note?`<div class="exo-note" style="margin:0 0 14px">${esc(ex.note)}${ex.harder&&EXO_MAP[ex.harder]&&!ex.sets.some(s=>s.done)?`<button class="note-act" data-a="swapHarder" data-idx="${idx}">Essayer maintenant ${icon("chev")}</button>`:""}</div>`:""}
     ${isTimed(def)
@@ -831,6 +887,9 @@ function finalizeSession(){
   draft.completedAt = new Date().toISOString();
   draft.durationSec = Math.round((Date.parse(draft.completedAt)-Date.parse(draft.startedAt))/1000);
   draft.exos = draft.exos.filter(ex=>ex.sets.some(s=>s.done));
+  // séries meilleures que la même série la dernière fois (comptées avant d'ajouter la séance)
+  if(S.settings.beat!==false) draft.beats = draft.exos.reduce((t,ex)=>{ const def = EXO_MAP[ex.exoId]; if(!def || isStretch(def)) return t;
+    return t + ex.sets.filter((st,si)=>{ if(!st.done || st.pr) return false; const ref = beatRef(ex.exoId, si); return !!ref && beatCmp(def, st, ref)>0; }).length; }, 0);
   // étirements : gardés à part (nom et secondes tenues), hors séries, volume et muscles travaillés
   const cool = draft.exos.filter(isStretchEntry);
   if(cool.length){
@@ -1331,13 +1390,17 @@ Object.assign(ACT, {
       confettiBurst(bx, by, 60);
       floatText(fx0, fy0, "Record !", "pr", "bolt");
     }
+    // mieux que la même série la dernière fois : petit retour immédiat (le record a déjà le sien)
+    const ref = !st.pr && S.settings.beat!==false && !isStretch(def) ? beatRef(ex.exoId, si) : null;
+    const beat = !!ref && beatCmp(def, st, ref)>0;
+    if(beat){ floatText(fx0, fy0, "Mieux que la dernière fois", "beat", "trendUp"); haptic(20); }
     st.done = true;
     { const fin = ex.sets.every(s=>s.done), rest = S.draft.exos.some(e=>e.sets.some(s=>!s.done));
       sfx(!rest ? "complete" : st.pr ? "pr" : fin ? "exo" : "set"); }
     if(navigator.vibrate) try{ navigator.vibrate(18); }catch(e){}
     justDone = { exi, si };
     stripBump = exi;
-    if(!st.pr && !exoFinished0(ex)) floatText(fx0, fy0, `Série ${si+1}`, "", "check");
+    if(!st.pr && !beat && !exoFinished0(ex)) floatText(fx0, fy0, `Série ${si+1}`, "", "check");
     const exoFinished = !ex.sets.some(s=>!s.done);
     const ni = nextUndone(exi);
     if(ni>=0) startRestTimer(S.draft.express ? Math.min(45, restFor(def)) : restFor(def), def.n, exoFinished ? ni : exi, exoFinished, { exi, si });

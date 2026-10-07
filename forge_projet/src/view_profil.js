@@ -103,6 +103,17 @@ function renderProfil(){
       </div>
     </div>
 
+    <h2 class="sh">Motivation</h2>
+    <div class="group">
+      ${[["beat","target","orange","Objectif à battre en séance","Ta série de la dernière fois et ce qu'il faut pour la dépasser"],
+         ["nextGoal","flag","red","Prochain cap sur l'accueil","Le but le plus proche : semaine, record, trophée, niveau"],
+         ["trend","trendUp","green","Indice de force et projection","Ta courbe de progression et où elle mène, dans Progrès"]].map(([k,ic,c,t,sub])=>`<div class="row">
+        ${sfIcon(ic,c)}
+        <div class="grow"><div class="t">${t}</div><div class="s">${sub}</div></div>
+        <button class="switch ${S.settings[k]!==false?"on":""}" aria-label="${t}" aria-pressed="${S.settings[k]!==false}" data-a="toggleMotiv" data-k="${k}"></button>
+      </div>`).join("")}
+    </div>
+
     <h2 class="sh">Suggestion par IA externe</h2>
     <div class="group">
       <button class="row tap" style="width:100%" data-a="openExportImport">
@@ -520,6 +531,11 @@ Object.assign(ACT, {
     S.settings.sound = S.settings.sound===false; save(); el.classList.toggle("on", S.settings.sound);
     const sub = qs(".sub-setting"); if(sub) sub.classList.toggle("off", !S.settings.sound);
     if(S.settings.sound) sfx("set");
+  },
+  toggleMotiv(d, el){
+    if(!["beat","nextGoal","trend"].includes(d.k)) return;
+    S.settings[d.k] = S.settings[d.k]===false; el.classList.toggle("on", S.settings[d.k]); el.setAttribute("aria-pressed", S.settings[d.k]);
+    save();
   },
   toggleStretching(d, el){
     S.settings.stretching = !S.settings.stretching; el.classList.toggle("on", S.settings.stretching);

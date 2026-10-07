@@ -23,7 +23,7 @@ function defaultState(){
     targets: [],            // objectifs chiffrés [{id, exoId, kind:"reps"|"kg"|"sec", value, start, createdAt, doneAt}]
     body: [],               // pesées facultatives [{d:"AAAA-MM-JJ", kg}]
     medals: {},            // {familleId: {t: palier atteint 0-4, d: {1: iso, 2: iso…}}}
-    settings: { theme:"auto", unit:"kg", todayTab:"custom", name:"", why:"", sound:true, stretching:false, rest:"normal" }, // why : « ton pourquoi »
+    settings: { theme:"auto", unit:"kg", todayTab:"custom", name:"", why:"", sound:true, stretching:false, rest:"normal", beat:true, nextGoal:true, trend:true }, // why : « ton pourquoi »
     meta: { createdAt: new Date().toISOString(), prCount:0 },
   };
 }
@@ -478,6 +478,32 @@ function lastPerformance_raw(exoId){
     if(ex && ex.sets.some(st=>st.done)) return {session:s, exo:ex};
   }
   return null;
+}
+// ---------- « à battre » (4.0) : la même série lors de la séance précédente ----------
+// Référence : la série de même rang (ou la dernière) de la dernière séance où l'exercice a été fait.
+function beatRef(exoId, si){
+  const last = lastPerformance(exoId); if(!last) return null;
+  const d = last.exo.sets.filter(s=>s.done && (s.reps||0)>0); if(!d.length) return null;
+  const p = d[Math.min(si, d.length-1)];
+  return { reps:p.reps||0, weight:p.weight||0, date:last.session.date };
+}
+// 1 : mieux que la référence, 0 : égal, -1 : en dessous. Charge en kg différente : 1RM estimé (Epley) ;
+// élastique plus dur à répétitions égales ou plus = mieux.
+function beatCmp(def, st, ref){
+  const r = st.reps||0, w = st.weight||0, same = Math.abs(w-ref.weight)<0.01;
+  const byReps = r>ref.reps ? 1 : r===ref.reps ? 0 : -1;
+  if(same || !loadableTypeOf(def)) return byReps;
+  if(kgType(def)){ const a = estimated1RM(w,r), b = estimated1RM(ref.weight, ref.reps); return a>b+0.01 ? 1 : Math.abs(a-b)<=0.01 ? 0 : -1; }
+  return w>ref.weight ? (r>=ref.reps ? 1 : 0) : (byReps>0 ? 0 : -1);
+}
+// répétitions (ou secondes) à faire, à la charge choisie, pour battre la référence ; null si hors de portée
+function beatTarget(def, w, ref){
+  w = w||0;
+  if(kgType(def) && w && Math.abs(w-ref.weight)>=0.01){
+    const r = Math.floor(30*((estimated1RM(ref.weight, ref.reps)+0.011)/w - 1))+1;
+    return r>40 ? null : Math.max(1, r);
+  }
+  return ref.reps+1;
 }
 function daysSinceTrained(muscleId){ return memo("dst:"+muscleId+todayISO(), ()=>daysSinceTrained_raw(muscleId)); }
 function daysSinceTrained_raw(muscleId){
