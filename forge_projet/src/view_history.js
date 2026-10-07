@@ -18,17 +18,17 @@ function sessionIcon(s){
 // Affichage par paquets : l'historique complet (des centaines de séances après
 // quelques années) prenait plus de 100 ms à dessiner sur téléphone.
 let histLimit = 25;
-let histMetric = "sessions"; // graphique de l'historique : séances, durée ou séries par semaine
-const HIST_METRICS = [["sessions","Séances"],["minutes","Durée"],["sets","Séries"]];
+let histMetric = "sessions"; // graphique de l'historique : séances, durée, séries ou tonnage par semaine
+const HIST_METRICS = [["sessions","Séances"],["minutes","Durée"],["sets","Séries"],["volume","Tonnage"]];
 function histChartHTML(){
   const weeks = memo("histWeeks", ()=>weeklyBuckets(12));
   const m = histMetric, lab = b => fmtDate(b.wk);
-  const val = b => m==="minutes" ? Math.round(b.minutes) : b[m];
-  const fmt = v => m==="minutes" ? fmtDuration(v*60) : `${fmtDec(v)} ${m==="sets"?"série":"séance"}${v>=2?"s":""}`;
+  const val = b => m==="minutes" ? Math.round(b.minutes) : m==="volume" ? Math.round(b.volume) : b[m];
+  const fmt = v => m==="minutes" ? fmtDuration(v*60) : m==="volume" ? fmtKg(v) : `${fmtDec(v)} ${m==="sets"?"série":"séance"}${v>=2?"s":""}`;
   const cur = val(weeks[weeks.length-1]), prev = val(weeks[weeks.length-2]);
   // moyenne à une décimale pour les séances et séries (3 séances en 11 semaines ≠ « 0 séance »)
   const avgRaw = weeks.slice(0,-1).reduce((t,b)=>t+val(b),0)/(weeks.length-1);
-  const avg = m==="minutes" ? Math.round(avgRaw) : round1(avgRaw);
+  const avg = m==="minutes"||m==="volume" ? Math.round(avgRaw) : round1(avgRaw);
   const delta = cur-prev;
   return `<div class="hist-kpi"><div><b>${fmt(cur)}</b><small>cette semaine</small></div>
       <div class="hk-delta ${delta>0?"up":delta<0?"down":""}">${delta>0?"▲":delta<0?"▼":"="} ${delta?fmt(Math.abs(delta)):"stable"}<small>vs semaine passée</small></div></div>

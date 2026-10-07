@@ -55,7 +55,7 @@ function lineChart(points, opts){
   const Y = v => T + (1-(v-y0)/(y1-y0))*(H-T-B);
   const grid = [];
   for(let v=y0; v<=y1+step*0.001; v+=step){
-    grid.push(`<line x1="${L}" x2="${W-R}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" class="lc-grid"/><text x="${L-6}" y="${(Y(v)+3.5).toFixed(1)}" text-anchor="end" class="lc-tick">${fmtTick(round1(v))}</text>`);
+    grid.push(`<line x1="${L}" x2="${W-R}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" class="lc-grid"/><text x="${L-6}" y="${(Y(v)+3.5).toFixed(1)}" text-anchor="end" class="lc-tick">${(opts.tickFmt||fmtTick)(round1(v))}</text>`);
   }
   const pts = points.map((p,i)=>[X(i),Y(p.v)]);
   const line = pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ");
@@ -114,15 +114,6 @@ function heatmap(weeks){
     <div class="hm-grid">${cells.join("")}</div></div>
     <div class="hm-legend">Moins <i class="hm-c l0"></i><i class="hm-c l1"></i><i class="hm-c l2"></i><i class="hm-c l3"></i> Plus</div>
   </div>`;
-}
-
-// barres horizontales (une seule couleur : les catégories n'ont pas d'ordre de valeur)
-function hbarList(items){
-  const max = Math.max(1,...items.map(x=>x.value));
-  return items.map((it,i)=>`<div class="hb-row" data-tip="${esc(it.label+" : "+it.value+" "+(it.unit||""))}">
-    <div class="hb-top"><span>${it.region?`<i class="hb-dot r-${it.region}"></i>`:""}${esc(it.label)}</span><span class="hb-v">${it.value}${it.unit?" "+esc(it.unit):""}</span></div>
-    <div class="hb-track"><div class="hb-fill" style="width:${it.value/max*100}%;--i:${i}"></div></div>
-  </div>`).join("");
 }
 
 // tableau équivalent (accessibilité : toute valeur reste lisible sans survol)

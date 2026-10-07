@@ -9,7 +9,6 @@ function ownedEquipCount(){ return EQUIP_TYPES.filter(e=>!e.always && S.equipmen
 function profileHeroHTML(){
   const lv = levelInfo(), name = (S.settings.name||"").trim();
   const since = firstSessionDate();
-  const c = tierCounts();
   const initial = name ? esc(name[0].toUpperCase()) : `<svg viewBox="0 0 24 24" class="ph-person">${GLYPHS.person.replace(/#fff/g,"currentColor")}</svg>`;
   return `<div class="profile-hero stagger" style="--i:0">
     <button class="ph-avatar" data-a="editName" aria-label="Modifier ton prénom"><span>${initial}</span><em>${lv.level}</em></button>
@@ -20,54 +19,12 @@ function profileHeroHTML(){
       <div class="ph-sub">${since?`Membre actif depuis le ${fmtDate(since)} ${parseISO(since).getFullYear()}`:"Ta première séance t'attend"}</div>
       <button class="ph-why ${S.settings.why?"":"empty"}" data-a="editWhy">${S.settings.why ? `« ${esc(S.settings.why)} »` : "Ajoute ton pourquoi"} ${icon("edit")}</button>
     </div>
-  </div>
-  <div class="ph-medals stagger" style="--i:1">
-    ${[1,2,3,4].map(k=>`<div><span class="pip big t${k}"></span><b data-count="${c[k]}">${c[k]}</b><small>${TIERS[k].n}</small></div>`).join("")}
   </div>`;
 }
-let profMoreOpen = false;
-function profileStatsHTML(){
-  if(!S.sessions.length) return "";
-  const fav = favoriteExercise(), wd = favoriteWeekday(), moment = favoriteMoment(), bw = bestWeek();
-  const avg = Math.round(totalDurationSec()/S.sessions.length);
-  const rows = [
-    [["dumbbell","orange"],"Séances terminées", fmtNum(S.sessions.length), `${sessionsInYear()} cette année`],
-    [["flame","red"],"Semaines d'affilée", currentStreakWeeks(), `record : ${maxStreakWeeksEver()}`],
-    [["star","yellow"],"Exercice favori", fav?`${fav.n}×`:"–", fav?esc(fav.def.n):""],
-    [["calendar","red"],"Jour préféré", wd?JOURS[(wd.i+1)%7]:"–", moment?`plutôt ${moment}`:""],
-    [["stopwatch","teal"],"Durée moyenne", fmtDuration(avg), `${fmtDec(totalDurationSec()/3600)} h au total`],
-    [["trophy","yellow"],"Meilleure semaine", bw?`${bw.n} séance${bw.n>1?"s":""}`:"–", bw?`semaine du ${fmtDate(bw.wk)}`:""],
-    [["mountain","brown"],"Tonnage total", fmtKg(totalVolumeAllTime()), `${fmtNum(totalSets())} séries validées`],
-    [["bolt","purple"],"Records battus", S.meta.prCount||0, `${distinctExosCount()} exercice${distinctExosCount()>1?"s":""} pratiqué${distinctExosCount()>1?"s":""}`],
-  ];
-  const lifts = topLifts(5);
-  return `<h2 class="sh">Mes habitudes<button class="more" data-a="profMore">${profMoreOpen?"Moins":"Plus"}</button></h2>
-    <div class="group habits ${profMoreOpen?"open":""}">${rows.map((r,i)=>`<div class="row stat-row stagger ${i>=4?"extra":""}" style="--i:${i+2}">
-      ${sfIcon(r[0][0], r[0][1])}
-      <div class="grow"><div class="t">${r[1]}</div>${r[3]?`<div class="s">${r[3]}</div>`:""}</div>
-      <div class="val strong">${r[2]}</div>
-    </div>`).join("")}</div>
-    ${lifts.length?`<h2 class="sh">Mes records</h2><div class="group">${lifts.map((l,i)=>`<button class="row tap stagger" style="--i:${i+10}" data-a="openExoChart" data-id="${l.def.id}">
-      <div class="rank">${i+1}</div>
-      <div class="grow"><div class="t">${esc(l.def.n)}</div><div class="s">${l.r} ${isTimed(l.def)?"s":"reps"} · ${fmtRelative(l.date)}</div></div>
-      <div class="val strong">${fmtDec(l.w)} kg</div><span class="chev">${icon("chev")}</span>
-    </button>`).join("")}</div>`:""}`;
-}
-
-Object.assign(ACT, {
-  profMore(d, el){
-    profMoreOpen = !profMoreOpen;
-    const g = qs("#v-profil .group.habits");
-    if(el) el.textContent = profMoreOpen ? "Moins" : "Plus";
-    if(!g) return changed();
-    morphHeight(g, ()=>{ g.classList.toggle("open", profMoreOpen); g.classList.remove("clp-in"); if(profMoreOpen){ void g.offsetWidth; g.classList.add("clp-in"); } });
-  },
-});
 function renderProfil(){
   return `<div class="navbar"><div class="nb-title">Profil</div></div><div class="content">
     <h1 class="lt">Profil</h1>
     ${profileHeroHTML()}
-    ${profileStatsHTML()}
 
     <h2 class="sh">Entraînement</h2>
     <div class="group">
@@ -88,7 +45,7 @@ function renderProfil(){
       </button>
       <button class="row tap" style="width:100%" data-a="openExoPrefs">
         ${sfIcon("list","blue")}
-        <div class="grow"><div class="t">Exercices inclus / exclus</div><div class="s">${S.prefs.excluded.length} exclu${S.prefs.excluded.length>1?"s":""} · ${S.prefs.included.length} privilégié${S.prefs.included.length>1?"s":""}</div></div>
+        <div class="grow"><div class="t">Mes exercices</div><div class="s">${nb(S.prefs.included.length,"favori")} · ${nb(S.prefs.excluded.length,"exclu")}</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
       <div class="row rest-row">
@@ -107,24 +64,20 @@ function renderProfil(){
     <div class="group">
       ${[["beat","target","orange","Objectif à battre en séance","Ta série de la dernière fois et ce qu'il faut pour la dépasser"],
          ["nextGoal","flag","red","Prochain cap sur l'accueil","Le but le plus proche : semaine, record, trophée, niveau"],
-         ["trend","trendUp","green","Indice de force et projection","Ta courbe de progression et où elle mène, dans Progrès"]].map(([k,ic,c,t,sub])=>`<div class="row">
+         ["trend","trendUp","green","Progression de force","Ta courbe depuis tes débuts, ton statut et les alertes de pause"]].map(([k,ic,c,t,sub])=>`<div class="row">
         ${sfIcon(ic,c)}
         <div class="grow"><div class="t">${t}</div><div class="s">${sub}</div></div>
         <button class="switch ${S.settings[k]!==false?"on":""}" aria-label="${t}" aria-pressed="${S.settings[k]!==false}" data-a="toggleMotiv" data-k="${k}"></button>
       </div>`).join("")}
     </div>
 
-    <h2 class="sh">Suggestion par IA externe</h2>
+    <h2 class="sh">Mes données</h2>
     <div class="group">
       <button class="row tap" style="width:100%" data-a="openExportImport">
         ${sfIcon("sparkles","purple")}
         <div class="grow"><div class="t">Exporter / importer un programme</div><div class="s">${S.importedProgram.length? S.importedProgram.length+" séance(s) importée(s) en attente" : "Aucun programme importé"}</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
-    </div>
-
-    <h2 class="sh">Mes données</h2>
-    <div class="group">
       <button class="row tap" style="width:100%" data-a="backupData">
         ${sfIcon("download","green")}
         <div class="grow"><div class="t">Sauvegarder mes données</div><div class="s">${backupStatusText()}</div></div>
@@ -150,9 +103,14 @@ function renderProfil(){
         <div class="grow"><div class="t">Installer sur l'écran d'accueil</div><div class="s">Plein écran, hors ligne, données protégées</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>`}
+      <button class="row tap" style="width:100%" data-a="confirmReset">
+        ${sfIcon("trash","red")}
+        <div class="grow"><div class="t">Réinitialiser toutes les données</div></div>
+        <span class="chev">${icon("chev")}</span>
+      </button>
     </div>
 
-    <h2 class="sh">Réglages</h2>
+    <h2 class="sh">Apparence et sons</h2>
     <div class="group">
       <button class="row tap" style="width:100%" data-a="openAppearance">
         ${sfIcon("contrast","indigo")}
@@ -169,11 +127,7 @@ function renderProfil(){
         <div class="grow"><div class="t">Clics de l'interface</div><div class="s">Petit « toc » sur les sélections et les +/−</div></div>
         <button class="switch ${S.settings.uiSound!==false?"on":""}" aria-label="Clics de l'interface" data-a="toggleUiSound"></button>
       </div>
-      <button class="row tap" style="width:100%" data-a="confirmReset">
-        ${sfIcon("trash","red")}
-        <div class="grow"><div class="t">Réinitialiser toutes les données</div></div>
-        <span class="chev">${icon("chev")}</span>
-      </button>
+
       <button class="row tap" style="width:100%" data-a="openAbout">
         ${sfIcon("info","gray")}
         <div class="grow"><div class="t">À propos</div></div>
@@ -365,7 +319,7 @@ function openGoals(){
 }
 function refreshGoals(){ const b=qs(".sheet-body"); if(b) b.innerHTML = goalsBodyHTML(); }
 
-// ---------- Exercices inclus / exclus ----------
+// ---------- Mes exercices : favoris et exclus ----------
 // Exercices inclus / exclus : chaque catégorie ne liste que ce que ton matériel permet (tous au
 // même aspect) ; ceux qui demandent un équipement que tu n'as pas sont regroupés à la fin, repliés,
 // avec le matériel manquant indiqué (avant : mélangés et grisés, ce qui semblait incohérent).
@@ -374,7 +328,7 @@ function exoPrefRow(e, missing){
   const sub = missing ? `Il manque : ${esc(missing)}` : e.muscles.map(m=>MUSCLE_MAP[m].n).join(" · ")+(e.equip.includes("bench")?" · banc":"");
   return `<div class="row">
     <button class="row-main" data-a="showExoInfo" data-id="${e.id}" style="flex:1">${exoIcon(e)}<div class="grow"><div class="t">${esc(e.n)}</div><div class="s">${sub}</div></div></button>
-    <button class="chip ${incl?"on":""}" aria-label="Privilégier ${esc(e.n)}" aria-pressed="${incl}" data-a="toggleIncluded" data-id="${e.id}">${ii("star")}</button>
+    <button class="chip fav ${incl?"on":""}" aria-label="${incl?"Retirer des favoris":"Ajouter aux favoris"} : ${esc(e.n)}" aria-pressed="${incl}" data-a="toggleIncluded" data-id="${e.id}">${ii("star")}</button>
     <button class="chip ${excl?"excl":""}" aria-pressed="${excl}" data-a="toggleExcluded" data-id="${e.id}">Exclure</button>
   </div>`;
 }
@@ -394,12 +348,14 @@ function exoPrefsBodyHTML(){
     return `<h2 class="sh"><span class="sh-ico">${sfIcon(EQUIP_GLYPH[c.id]||"wrench", EQUIP_COLOR[c.id]||"gray","sm")}${esc(c.n)}</span><span class="more" style="color:var(--label2)">${list.length}</span></h2><div class="group">${list.map(e=>exoPrefRow(e)).join("")}</div>`;
   }).join("");
   const more = unavail.length ? `<details class="pref-more"><summary class="sh"><span>Sans ton matériel</span><span class="more">${unavail.length} ${icon("chev")}</span></summary>
-      <p class="hr-note" style="margin:0 20px 8px">Jamais proposés tant que le matériel manque. Tu peux déjà les exclure ou les privilégier pour plus tard.</p>
+      <p class="hr-note" style="margin:0 20px 8px">Jamais proposés tant que le matériel manque. Tu peux déjà les exclure ou les mettre en favori pour plus tard.</p>
       <div class="group">${unavail.sort(sortFn).map(e=>exoPrefRow(e, missingEquipLabel(e))).join("")}</div></details>` : "";
-  return `<p class="hr-note" style="margin:0 20px 4px">${ii("star","star")} = à privilégier dans les propositions · Exclure = ne jamais le proposer (blessure, goût…).</p>` + cats + more;
+  const favs = S.prefs.included.map(id=>EXO_MAP[id]).filter(Boolean).sort(sortFn);
+  return `<p class="hr-note" style="margin:0 20px 4px">${ii("star","star")} Favori : en tête du choix d'exercices et privilégié par l'app · Exclure : jamais proposé (blessure, goût…).</p>`
+    + (favs.length ? `<h2 class="sh"><span class="sh-ico">${sfIcon("star","yellow","sm")}Favoris</span><span class="more" style="color:var(--label2)">${favs.length}</span></h2><div class="group">${favs.map(e=>exoPrefRow(e)).join("")}</div>` : "") + cats + more;
 }
 function openExoPrefs(){
-  openSheet(`<div class="sheet-hd"><span class="t">Exercices</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body">${exoPrefsBodyHTML()}</div>`);
+  openSheet(`<div class="sheet-hd"><span class="t">Mes exercices</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body">${exoPrefsBodyHTML()}</div>`);
 }
 function refreshExoPrefs(){
   const b = qs(".sheet-body"); if(!b) return;
@@ -513,11 +469,7 @@ Object.assign(ACT, {
     if(i>=0) S.prefs.excluded.splice(i,1); else { S.prefs.excluded.push(d.id); S.prefs.included = S.prefs.included.filter(x=>x!==d.id); }
     save(); refreshExoPrefs();
   },
-  toggleIncluded(d){
-    const i = S.prefs.included.indexOf(d.id);
-    if(i>=0) S.prefs.included.splice(i,1); else { S.prefs.included.push(d.id); S.prefs.excluded = S.prefs.excluded.filter(x=>x!==d.id); }
-    save(); refreshExoPrefs();
-  },
+  toggleIncluded(d){ toggleFavorite(d.id); refreshExoPrefs(); },
 
   copyPrompt(){
     const text = buildExportPrompt();

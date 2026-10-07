@@ -56,25 +56,33 @@ function exoMuscleMap(def){
   const tips = {}; def.muscles.forEach((m,i)=>{ if(MUSCLE_MAP[m]) tips[m] = MUSCLE_MAP[m].n + (i===0 ? " · principal" : " · secondaire"); });
   return muscleMapSVG(lv, tips, { cls:"mm-exo", label:"Muscles travaillés : "+def.muscles.map(m=>MUSCLE_MAP[m] ? MUSCLE_MAP[m].n : m).join(", ") });
 }
-// Progrès : une seule carte « Muscles de la semaine » = silhouette + barres par muscle.
-// La couleur dit la région (même code partout dans l'app), l'intensité dit le volume :
-// une seule légende, celle des régions ; l'intensité est expliquée en une phrase.
+// Progrès > Muscles : la carte de la semaine (couleur = région, intensité = séries de la semaine,
+// pleine à 10 séries pondérées), puis le stimulus de chaque muscle face aux repères sourcés
 function weekMuscleMapHTML(){
-  const rows = weekVolume(), goal = S.goals.overall==="force" ? 6 : 10, max = Math.max(goal*1.6, ...rows.map(r=>r.sets));
-  const lv = {}, tips = {};
-  rows.forEach(r=>{ lv[r.id] = r.sets ? .18 + .82*Math.min(1, r.sets/goal) : 0; tips[r.id] = `${r.n} : ${fmtDec(r.sets)} série${r.sets>=2?"s":""}${r.freq ? ` · ${nb(r.freq, "jour")}` : ""}`; });
-  const ok = rows.filter(r=>r.sets>=goal).length, low = rows.filter(r=>r.sets<goal/2).map(r=>r.n);
+  const rows = weekVolume(), month = muscleVolume(28), lv = {}, tips = {};
+  rows.forEach(r=>{ lv[r.id] = r.sets ? .18 + .82*Math.min(1, r.sets/STIM.high) : 0; tips[r.id] = `${r.n} : ${fmtDec(r.sets)} série${r.sets>=2?"s":""}${r.freq ? ` · ${nb(r.freq, "jour")}` : ""}`; });
   const legend = Object.keys(REGIONS).map(r=>`<span class="r-${r}"><i></i>${r==="core" ? "Gainage" : REGIONS[r].n}</span>`).join("");
-  return `<div class="chart-card mm-card stagger" style="--i:5">
+  const max = Math.max(STIM.high*1.4, ...rows.map(r=>r.sets)), avg = id=>round1(month.find(m=>m.id===id).sets/4);
+  const zones = { none:0, low:0, ok:0, high:0 }; rows.forEach(r=>zones[stimZone(r.sets)]++);
+  const under = rows.filter(r=>r.sets<STIM.min).map(r=>r.n), twice = rows.filter(r=>r.freq>=2).length;
+  return `<div class="chart-card mm-card stagger" style="--i:1">
     <div class="cc-h"><div class="cc-t">Muscles de la semaine</div><div class="cc-s">7 derniers jours · plus la couleur est pleine, plus le muscle a travaillé</div></div>
     ${muscleMapSVG(lv, tips, { cls:"mm-week", label:"Muscles travaillés cette semaine" })}
     <div class="mm-legend">${legend}</div>
-    <div class="wv-head"><span>séries</span><span>jours</span></div>
+  </div>
+  <div class="chart-card stim-card stagger" style="--i:2">
+    <div class="cc-h"><div class="cc-t">Stimulus par muscle</div><div class="cc-s">séries de la semaine : 1 par série du muscle principal, ½ quand il aide</div></div>
+    <div class="stim-sum">
+      <span class="sz-ok"><b>${zones.ok+zones.high}</b> en zone de progrès</span>
+      <span class="sz-low"><b>${zones.low+zones.none}</b> sous le seuil</span>
+    </div>
+    <div class="wv-head"><span>7 j</span><span>moy. 4 s.</span></div>
     <div class="wv-list">${rows.map((r,i)=>`<div class="wv-row" style="--i:${i}">
       <span class="wv-n">${esc(r.n)}</span>
-      <span class="wv-track"><i class="r-${r.region} ${r.sets>=goal?"ok":""}" style="width:${Math.min(100, r.sets/max*100).toFixed(1)}%"></i><b style="left:${(goal/max*100).toFixed(1)}%"></b></span>
-      <span class="wv-v">${fmtDec(r.sets)}</span><span class="wv-f ${r.freq>=2?"ok":""}">${r.freq||"–"}</span>
+      <span class="wv-track"><i class="r-${r.region} z-${stimZone(r.sets)}" style="width:${Math.min(100, r.sets/max*100).toFixed(1)}%"></i><b style="left:${(STIM.min/max*100).toFixed(1)}%"></b><b class="hi" style="left:${(STIM.high/max*100).toFixed(1)}%"></b></span>
+      <span class="wv-v">${fmtDec(r.sets)}</span><span class="wv-f">${fmtDec(avg(r.id))}</span>
     </div>`).join("")}</div>
-    <div class="wv-foot">${ok}/${rows.length} groupes au repère (le trait, ≈ ${goal} séries)${low.length && low.length<rows.length ? ` · à renforcer : ${low.slice(0,3).map(esc).join(", ")}` : ""}. Idéal : chaque muscle au moins 2 jours par semaine.</div>
+    <div class="wv-foot">Traits : <b>${STIM.min} séries</b>, seuil d'un gain de muscle mesurable ; <b>${STIM.high}</b>, au-delà le gain continue mais ralentit. Pour la force seule, ~3 séries par semaine suffisent.${under.length && under.length<rows.length ? ` À renforcer : ${under.slice(0,3).map(esc).join(", ")}.` : ""} ${twice}/${rows.length} muscles travaillés au moins 2 jours sur 7.</div>
+    <div class="wv-src">Repères : méta-régression de Pelland et al. (67 études). Ce sont des tendances moyennes : la réponse varie beaucoup d'une personne à l'autre (Hubal 2005).</div>
   </div>`;
 }

@@ -41,7 +41,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   log('Exercise map:', JSON.stringify(mm), '| broken maps:', all.length); if (!mm.main || !mm.sec || all.length) fail('carte des muscles de la fiche');
   await page.evaluate(() => closeSheet()); await wait(300);
   // 2. carte de la semaine : séries de la semaine, bulle au toucher
-  await page.evaluate(() => switchTab('progress')); await wait(800);
+  await page.evaluate(() => { switchTab('progress'); ACT.progressTab({ v: 'muscles' }); }); await wait(800);
   const week = await page.evaluate(() => { const rows = weekVolume(), pec = rows.find(r => r.id === 'pect'), z = document.querySelector(`.mm-week .mm-z[data-tip^="${MUSCLE_MAP.pect.n}"]`);
     z.querySelector('ellipse,path').dispatchEvent(new MouseEvent('click', { bubbles: true }));
     return { on: z.classList.contains('on'), sets: pec.sets, tip: z.dataset.tip, legend: !!document.querySelector('.mm-card .mm-legend') }; });
@@ -49,6 +49,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   log('Week map:', JSON.stringify(week), '| tip:', tipShown); if (!week.on || !tipShown || !(week.sets > 0) || !week.legend || !/série/.test(week.tip)) fail('carte des muscles de la semaine');
 
   // 3. défis : lancer depuis la feuille, trois au plus
+  await page.evaluate(() => ACT.progressTab({ v: 'medals' })); await wait(500);
   await page.click('[data-a="openChallenges"]'); await wait(700); await shot('02_catalog');
   await page.click('[data-a="startChallenge"][data-id="pompes100"]'); await wait(600);
   const started = await page.evaluate(() => ({ n: S.challenges.length, start: S.challenges[0].start === todayISO(), row: !!document.querySelector('.ch-row'), toast: document.getElementById('toast').textContent }));
@@ -72,7 +73,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const kept = await page.evaluate(() => ({ n: S.challenges.length, done: challengesDone(), act: activeChallenges().length }));
   log('After reload:', JSON.stringify(kept)); if (kept.n !== 3 || kept.done !== 1 || kept.act !== 2) fail('défis conservés au rechargement');
   // 6. délai dépassé : marqué manqué à l'affichage, plus en cours, relançable
-  await page.evaluate(() => { const c = S.challenges.find(x => x.id === 'corps7'); c.start = addDaysISO(todayISO(), -9); switchTab('progress'); renderView('progress'); }); await wait(600);
+  await page.evaluate(() => { const c = S.challenges.find(x => x.id === 'corps7'); c.start = addDaysISO(todayISO(), -9); progressTab = 'medals'; switchTab('progress'); renderView('progress'); }); await wait(600);
   const missed = await page.evaluate(() => ({ m: S.challenges.find(x => x.id === 'corps7').missedAt === todayISO(), act: activeChallenges().map(c => c.id), rows: document.querySelectorAll('.ch-row').length }));
   log('Expired:', JSON.stringify(missed)); if (!missed.m || missed.act.includes('corps7') || missed.rows !== 1) fail('défi expiré');
   // 7. abandon (confirmation) : retiré, feuille relançable
@@ -101,7 +102,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     const p = await open(st);
     const r = await p.evaluate(async () => { const out = [], w = ms => new Promise(r => setTimeout(r, ms));
       for (const t of ['today', 'history', 'progress', 'profil']) { switchTab(t); await w(300); if (document.querySelector(`#v-${t} .view-err`)) out.push(t); }
-      for (const v of ['exos', 'medals']) { ACT.progressTab({ v }); await w(300); if (document.querySelector('.view-err')) out.push(v); }
+      for (const v of ['muscles', 'exos', 'medals']) { ACT.progressTab({ v }); await w(300); if (document.querySelector('.view-err')) out.push(v); }
       ACT.openChallenges(); await w(300); closeSheet();
       return { out, ch: S.challenges.every(c => c && typeof c.id === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(c.start)) }; });
     log('Damaged state', name + ':', JSON.stringify(r)); if (r.out.length || !r.ch) fail('état abîmé ' + name + ' : ' + r.out.join());

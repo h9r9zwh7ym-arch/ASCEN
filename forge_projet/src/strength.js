@@ -158,12 +158,14 @@ function detrainAlerts(){
     .map(m=>({ m, label:MUSCLE_MAP[m.id].n, losing:m.days>DETRAIN.grace, left:DETRAIN.grace-m.days, pct:Math.round((1-m.f)*100) }));
 }
 
+// l'indice vaut 100 au départ (rapport ×100) ; affiché en % de progression : 0 % au départ
+function pctTxt(v){ const p = Math.round(v-100); return (p>0?"+":p<0?"−":"")+Math.abs(p)+"\u202f%"; }
 function strengthCardHTML(){
   if(S.settings.trend===false || !S.sessions.length) return "";
   const pts = strengthSeries(12);
-  const head = `<div class="cc-h tr-h"><div><div class="cc-t">Indice de force</div><div class="cc-s">100 = ton niveau de départ, muscle par muscle</div></div>
-    <button class="tr-how" data-a="strengthHow" aria-label="Comment l'indice est calculé">i</button></div>`;
-  if(pts.length<2) return `<div class="chart-card trend-card stagger" style="--i:1">${head}<div class="chart-empty">Ton indice apparaît dès que tu as fait 3 fois le même exercice.</div></div>`;
+  const head = `<div class="cc-h tr-h"><div><div class="cc-t">Progression de force</div><div class="cc-s">depuis tes débuts, muscle par muscle · 0 % = ton niveau de départ</div></div>
+    <button class="tr-how" data-a="strengthHow" aria-label="Comment la progression est calculée">i</button></div>`;
+  if(pts.length<2) return `<div class="chart-card trend-card stagger" style="--i:1">${head}<div class="chart-empty">Ta progression apparaît dès que tu as fait 3 fois le même exercice.</div></div>`;
   const last = pts[pts.length-1], ref = pts[Math.max(0, pts.length-5)], d = last.v-ref.v, wk = Math.round(daysBetween(ref.wk, last.wk)/7);
   const status = STATUS[trainingStatus()], L = trainingLoad();
   const lines = [];
@@ -171,7 +173,7 @@ function strengthCardHTML(){
     ? `${ii("warn")}<span><b>${esc(a.label)}</b> : ${a.m.days} jours sans travail, force estimée −${a.pct} %. Une séance suffit à arrêter la baisse.</span>`
     : `${ii("clock")}<span><b>${esc(a.label)}</b> : ${a.m.days} jours sans travail. Encore ${nb(a.left,"jour")} et l'estimation commence à baisser.</span>`));
   const recent = pts.slice(-8), slope = slopeOf(recent.map((p,i)=>[i, p.v]));
-  if(slope>0.2) lines.push(`${ii("trendUp")}<span>À ce rythme : environ <b>${Math.round(Math.min(last.v+slope*8, last.v*1.15))}</b> dans 2 mois.</span>`); // estimation prudente : +15 % au plus
+  if(slope>0.2) lines.push(`${ii("trendUp")}<span>À ce rythme : environ <b>${pctTxt(Math.round(Math.min(last.v+slope*8, last.v*1.15)))}</b> dans 2 mois.</span>`); // estimation prudente : indice ×1,15 au plus
   else if(!lines.length) lines.push(`${ii("target")}<span>Stable ces dernières semaines : une répétition ou un cran de charge en plus relance la courbe.</span>`);
   const pj = exoProjection();
   if(pj && !pj.flat){ const u = v=>kgType(pj.def) ? `${fmtDec(v)} kg` : `${fmtNum(v)}${isTimed(pj.def) ? " s" : " reps"}`;
@@ -180,11 +182,11 @@ function strengthCardHTML(){
   const st = strengthAt(todayISO()), reg = {};
   if(st) st.muscles.forEach(m=>{ const r = REGION_OF_MUSCLE[m.id]||"core"; (reg[r] = reg[r] || []).push(m); });
   const regions = Object.keys(REGIONS).filter(r=>reg[r]).map(r=>{ const l = reg[r], v = Math.round(100*l.reduce((a,m)=>a+m.ratio,0)/l.length), down = l.some(m=>m.f<1);
-    return `<div class="tr-reg r-${r}"><i></i><span>${r==="core" ? "Gainage" : REGIONS[r].n}</span><b>${v}</b>${down ? `<em>${ii("warn")}</em>` : ""}</div>`; }).join("");
+    return `<div class="tr-reg r-${r}"><i></i><span>${r==="core" ? "Gainage" : REGIONS[r].n}</span><b>${pctTxt(v)}</b>${down ? `<em>${ii("warn")}</em>` : ""}</div>`; }).join("");
   return `<div class="chart-card trend-card stagger" style="--i:1">${head}
-    <div class="tr-hero"><span class="tr-v">${last.v}</span>${wk>0 ? `<span class="tr-d ${d>0?"up":d<0?"down":""}">${d>0?"+":d<0?"−":"±"}${Math.abs(d)} en ${nb(wk,"semaine")}</span>` : ""}</div>
+    <div class="tr-hero"><span class="tr-v">${pctTxt(last.v)}</span>${wk>0 ? `<span class="tr-d ${d>0?"up":d<0?"down":""}">${d>0?"+":d<0?"−":"±"}${Math.abs(d)} pts en ${nb(wk,"semaine")}</span>` : ""}</div>
     <button class="tr-status st-${status.c}" data-a="strengthHow" aria-label="Statut : ${status.n}. Voir comment il est calculé"><span class="tr-dot"></span><span><b>${status.n}</b> · ${fmtDec(round1(L.acute))} série${round1(L.acute)>=2?"s":""} difficile${round1(L.acute)>=2?"s":""} sur 7 jours (habituel : ${fmtDec(round1(L.chronic))})</span></button>
-    ${lineChart(pts.map(p=>({ label:fmtDate(p.wk), v:p.v, tip:`Semaine du ${fmtDate(p.wk)} : ${p.v} (${nb(p.n,"muscle")})` })), { aria:"Indice de force par semaine", fmt:v=>String(v) })}
+    ${lineChart(pts.map(p=>({ label:fmtDate(p.wk), v:p.v-100, tip:`Semaine du ${fmtDate(p.wk)} : ${pctTxt(p.v)} (${nb(p.n,"muscle")})` })), { aria:"Progression de force par semaine", fmt:v=>pctTxt(v+100), tickFmt:v=>(v>0?"+":v<0?"−":"")+Math.abs(v)+"\u202f%" })}
     ${regions ? `<div class="tr-regs">${regions}</div>` : ""}
     ${lines.map(l=>`<div class="tr-line">${l}</div>`).join("")}
   </div>`;
@@ -210,8 +212,8 @@ Object.assign(ACT, {
       <div class="how-st st-${st.c}"><span class="tr-dot"></span><div><b>${st.n}</b><p>${st.d}</p></div></div>
       <h3>1. Ta force sur chaque exercice</h3>
       <p>Le 1RM estimé de ta meilleure série (formules d'Epley et de Brzycki, fiables jusqu'à 10 répétitions). Si tu indiques les répétitions que tu aurais pu faire en plus, elles sont ajoutées. Pour les pompes, la charge est la part du poids du corps qu'elles soulèvent (64 % au sol, 49 % sur les genoux) : ajoute une pesée dans Profil pour qu'elles comptent en kg. Les autres exercices au poids du corps comptent en répétitions, les gainages en secondes.</p>
-      <h3>2. L'indice</h3>
-      <p>Pour chaque muscle : ta force actuelle (meilleure des 8 dernières semaines) divisée par celle de tes 2 premières séances. L'indice est la moyenne des muscles, ×100. 100 = ton départ.</p>
+      <h3>2. La progression</h3>
+      <p>Pour chaque muscle : ta force actuelle (meilleure des 8 dernières semaines) comparée à celle de tes 2 premières séances. La progression est la moyenne des muscles : 0 % = ton niveau de départ, +20 % = 20 % plus fort.</p>
       <h3>3. Quand tu t'arrêtes</h3>
       <p>Rien ne bouge pendant 21 jours sans travailler un muscle : les études montrent que la force reste quasi intacte pendant 3 à 4 semaines. Ensuite, l'estimation baisse de ${S.goals.senior ? "4,5" : "3"}&nbsp;% par semaine${S.goals.senior ? " (plus vite à partir de 65 ans)" : ""}, jusqu'à −30&nbsp;%. Une séance qui travaille le muscle arrête la baisse, et tes vraies performances remplacent l'estimation : la force revient vite à la reprise.</p>
       <h3>4. Le statut</h3>

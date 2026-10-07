@@ -151,11 +151,13 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.evaluate(() => document.querySelector('#v-progress').scrollTo(0, 1200));
   await wait(300);
   await shot('13_progress_charts2');
-  // tooltip
+  // bulle d'un graphique en colonnes (les graphiques par semaine sont dans l'Historique depuis la 4.0)
+  await page.click('.tabbtn[data-id="history"]'); await wait(700);
   const col = await page.$('.cc-col >> nth=-1');
   await col.click(); await wait(200);
   log('Tooltip text:', await page.textContent('#charttip'), 'visible:', await page.$eval('#charttip', e => e.classList.contains('show')));
   await shot('14_tooltip');
+  await page.click('.tabbtn[data-id="progress"]'); await wait(700);
 
   await page.click('[data-a="progressTab"][data-v="exos"]');
   await wait(800);

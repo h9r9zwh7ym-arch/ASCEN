@@ -6,34 +6,28 @@ function trainedExoIds(){
   S.sessions.forEach(s=>s.exos.forEach(ex=>{ if(ex.sets.some(st=>st.done)) last[ex.exoId] = s.date; }));
   return Object.keys(last).sort((a,b)=>last[b].localeCompare(last[a]));
 }
-function muscleSets(days){
-  const cutoff = addDaysISO(todayISO(), -days);
-  const counts = {};
-  S.sessions.filter(s=>s.date>cutoff).forEach(s=>s.exos.forEach(ex=>{
-    const def = EXO_MAP[ex.exoId]; if(!def) return;
-    const n = ex.sets.filter(st=>st.done).length;
-    if(n) counts[def.muscles[0]] = (counts[def.muscles[0]]||0)+n;
-  }));
-  return MUSCLES.map(m=>({ label:m.n, value:counts[m.id]||0, unit:"séries", region:REGION_OF_MUSCLE[m.id] })).filter(x=>x.value>0).sort((a,b)=>b.value-a.value);
-}
-// Volume hebdomadaire par muscle (7 derniers jours) : muscle principal = 1 série,
-// muscles secondaires = ½ série (comptage fractionné). Repères ACSM 2026 :
-// ~10 séries par muscle et par semaine pour la prise de muscle, chaque groupe ≥ 2 fois par semaine.
+// Stimulus par muscle : séries « pondérées » (muscle principal = 1 série, muscle secondaire = ½),
+// la méthode de comptage de la méta-régression de Pelland et al. (67 études, 2 058 participants).
 const VOL_GROUPS = [["pect","Pectoraux"],["dos","Dos"],["epaules","Épaules"],["biceps","Biceps"],["triceps","Triceps"],["quadriceps","Quadriceps"],["ischios","Ischios"],["fessiers","Fessiers"],["mollets","Mollets"],["abdos","Abdos"]];
-function weekVolume(){
-  return memo("weekVol"+todayISO(), ()=>{
-    const cutoff = addDaysISO(todayISO(), -7), sets = {}, days = {};
+// repères (Pelland et al.) : ~4 séries pondérées par semaine pour un gain de muscle mesurable ;
+// au-delà le gain continue mais ralentit (pas de plafond net) ; la force plafonne vers ~3 séries
+const STIM = { min:4, high:10 };
+function muscleVolume(days){
+  return memo("muscleVol"+days+todayISO(), ()=>{
+    const cutoff = addDaysISO(todayISO(), -days), sets = {}, dset = {};
     for(let i=S.sessions.length-1;i>=0;i--){
       const s = S.sessions[i]; if(s.date<=cutoff) break;
       for(const ex of s.exos){
-        const def = EXO_MAP[ex.exoId]; if(!def) continue;
+        const def = EXO_MAP[ex.exoId]; if(!def || isStretch(def)) continue;
         const n = ex.sets.filter(st=>st.done).length; if(!n) continue;
-        def.muscles.forEach((m,k)=>{ sets[m] = (sets[m]||0) + (k===0 ? n : n/2); (days[m] = days[m]||new Set()).add(s.date); });
+        def.muscles.forEach((m,k)=>{ sets[m] = (sets[m]||0) + (k===0 ? n : n/2); (dset[m] = dset[m]||new Set()).add(s.date); });
       }
     }
-    return VOL_GROUPS.map(([id,n])=>({ id, n, sets:Math.round((sets[id]||0)*2)/2, freq:days[id] ? days[id].size : 0, region:REGION_OF_MUSCLE[id] }));
+    return VOL_GROUPS.map(([id,n])=>({ id, n, sets:Math.round((sets[id]||0)*2)/2, freq:dset[id] ? dset[id].size : 0, region:REGION_OF_MUSCLE[id] }));
   });
 }
+function weekVolume(){ return muscleVolume(7); }
+function stimZone(v){ return v>=STIM.high ? "high" : v>=STIM.min ? "ok" : v>0 ? "low" : "none"; }
 function recentPRs(n){
   const out = [];
   for(let i=S.sessions.length-1;i>=0 && out.length<n;i--){
@@ -44,8 +38,10 @@ function recentPRs(n){
 }
 
 function renderProgress(){
-  const seg = segHTML("progress", [["overview","Résumé"],["exos","Exercices"],["medals","Trophées"]], progressTab, "progressTab");
-  const pane = progressTab==="exos" ? exosPaneHTML() : progressTab==="medals" ? medalsPaneHTML() : overviewPaneHTML();
+  // quatre onglets, une question chacun : où j'en suis (Résumé), quels muscles je travaille (Muscles),
+  // chaque exercice (Exercices), ce que je vise et ce que j'ai gagné (Objectifs : niveau, objectifs, défis, trophées)
+  const seg = segHTML("progress", [["overview","Résumé"],["muscles","Muscles"],["exos","Exercices"],["medals","Objectifs"]], progressTab, "progressTab");
+  const pane = progressTab==="exos" ? exosPaneHTML() : progressTab==="medals" ? goalsPaneHTML() : progressTab==="muscles" ? musclesPaneHTML() : overviewPaneHTML();
   return `<div class="navbar"><div class="nb-title">Progrès</div></div><div class="content">
     <h1 class="lt">Progrès</h1>${seg}<div class="seg-pane">${pane}</div></div>`;
 }
@@ -101,53 +97,47 @@ function levelCardHTML(){
 
 function overviewPaneHTML(){
   if(!S.sessions.length){
-    return `${levelCardHTML()}${targetsHTML()}${challengesHTML()}<div class="empty-state"><span class="em">${sfIcon("chart","orange","lg")}</span>Tes statistiques apparaîtront ici après ta première séance : régularité, tonnage, répartition musculaire, records…</div>`;
+    return `<div class="empty-state"><span class="em">${sfIcon("chart","orange","lg")}</span>Tes statistiques apparaîtront ici après ta première séance : progression de force, régularité, tonnage, records…</div>`;
   }
   const vol = totalVolumeAllTime(), hours = totalDurationSec()/3600;
   const kpis = `<div class="kpi-grid">
-    <div class="kpi stagger" style="--i:1"><div class="kpi-l">Séances</div><div class="kpi-v" data-count="${S.sessions.length}">${S.sessions.length}</div><div class="kpi-s">${sessionsInMonth()} ce mois-ci</div></div>
-    <div class="kpi stagger" style="--i:2"><div class="kpi-l">Tonnage total</div><div class="kpi-v" ${vol>=10000?`data-count="${round1(vol/1000)}" data-dec="1" data-unit="t"`:`data-count="${Math.round(vol)}" data-unit="kg"`}>${fmtKg(vol)}</div><div class="kpi-s">record : ${fmtKg(bestSessionVolume())} / séance</div></div>
-    <div class="kpi stagger" style="--i:3"><div class="kpi-l">Temps d'entraînement</div><div class="kpi-v" data-count="${round1(hours)}" data-dec="1" data-unit="h">${fmtDec(hours)} h</div><div class="kpi-s">${fmtDuration(Math.round(totalDurationSec()/S.sessions.length))} en moyenne</div></div>
-    <div class="kpi stagger" style="--i:4"><div class="kpi-l">Séries validées</div><div class="kpi-v" data-count="${totalSets()}">${fmtNum(totalSets())}</div><div class="kpi-s">${S.meta.prCount||0} records battus</div></div>
-  </div>
-  <div class="stat-strip stagger" style="--i:5;margin-top:10px">
-    <div class="stat-box" data-tip="${esc(jokerTip())}" tabindex="0"><div class="num">${currentStreakWeeks()}</div><div class="lbl">sem. d'affilée${streakInfo().recent?" · joker":""}</div></div>
-    <div class="stat-box"><div class="num">${maxStreakWeeksEver()}</div><div class="lbl">meilleure série</div></div>
-    <div class="stat-box"><div class="num">${weeklyAverage(8).toLocaleString("fr-FR")}</div><div class="lbl">séances / sem.</div></div>
+    <div class="kpi stagger" style="--i:2"><div class="kpi-l">Séances</div><div class="kpi-v" data-count="${S.sessions.length}">${S.sessions.length}</div><div class="kpi-s">${sessionsInMonth()} ce mois-ci</div></div>
+    <div class="kpi stagger" style="--i:3"><div class="kpi-l">Tonnage total</div><div class="kpi-v" ${vol>=10000?`data-count="${round1(vol/1000)}" data-dec="1" data-unit="t"`:`data-count="${Math.round(vol)}" data-unit="kg"`}>${fmtKg(vol)}</div><div class="kpi-s">record : ${fmtKg(bestSessionVolume())} / séance</div></div>
+    <div class="kpi stagger" style="--i:4"><div class="kpi-l">Temps d'entraînement</div><div class="kpi-v" data-count="${round1(hours)}" data-dec="1" data-unit="h">${fmtDec(hours)} h</div><div class="kpi-s">${fmtDuration(Math.round(totalDurationSec()/S.sessions.length))} en moyenne</div></div>
+    <div class="kpi stagger" style="--i:5"><div class="kpi-l">Séries validées</div><div class="kpi-v" data-count="${totalSets()}">${fmtNum(totalSets())}</div><div class="kpi-s">${S.meta.prCount||0} records battus</div></div>
   </div>`;
-
-  const weeks = weeklyBuckets(12);
-  const wlabel = b => fmtDate(b.wk);
-  const sessCols = columnChart(weeks.map(b=>({ label:wlabel(b), v:b.sessions, tip:`Semaine du ${wlabel(b)} : ${b.sessions} séance${b.sessions>1?"s":""}` })), { goal:S.goals.daysPerWeek });
-  const volCols = columnChart(weeks.map(b=>({ label:wlabel(b), v:Math.round(b.volume), tip:`Semaine du ${wlabel(b)} : ${fmtKg(b.volume)}` })), { fmt:v=>fmtKg(v) });
-  const musc = muscleSets(30);
-  const prs = recentPRs(5);
-
-  return `${levelCardHTML()}${strengthCardHTML()}${targetsHTML()}${challengesHTML()}${kpis}
-    ${weekMuscleMapHTML()}
+  return `${strengthCardHTML()}${kpis}
     <div class="chart-card stagger" style="--i:6">
-      <div class="cc-h"><div class="cc-t">Régularité</div><div class="cc-s">18 dernières semaines</div></div>
+      <div class="cc-h"><div class="cc-t">Régularité</div><div class="cc-s">18 dernières semaines · ${currentStreakWeeks()} sem. d'affilée, record ${maxStreakWeeksEver()}</div></div>
       ${heatmap(18)}
     </div>
-    <div class="chart-card stagger" style="--i:7">
-      <div class="cc-h"><div class="cc-t">Séances par semaine</div><div class="cc-s">objectif : ${S.goals.daysPerWeek} par semaine</div></div>
-      ${sessCols}
-      ${dataTable(["Semaine du","Séances"], weeks.map(b=>[wlabel(b), b.sessions]))}
-    </div>
-    <div class="chart-card stagger" style="--i:8">
-      <div class="cc-h"><div class="cc-t">Tonnage par semaine</div><div class="cc-s">charge × répétitions</div></div>
-      ${volCols}
-      ${dataTable(["Semaine du","Tonnage"], weeks.map(b=>[wlabel(b), fmtKg(b.volume)]))}
-    </div>
-    ${musc.length?`<div class="chart-card stagger" style="--i:9">
-      <div class="cc-h"><div class="cc-t">Répartition musculaire</div><div class="cc-s">séries des 30 derniers jours, par muscle principal</div></div>
-      <div class="hbars">${hbarList(musc)}</div>
-    </div>`:""}
-    ${prs.length?`<h2 class="sh">Derniers records</h2><div class="group">${prs.map((p,i)=>`<button class="row tap stagger" style="--i:${10+i}" data-a="openExoChart" data-id="${p.def.id}">
-      ${sfIcon("bolt","orange")}
-      <div class="grow"><div class="t">${esc(p.def.n)}</div><div class="s">${p.st.reps} ${isTimed(p.def)?"s":"reps"}${loadSuffix(p.def, p.st.weight)} · ${fmtRelative(p.s.date)}</div></div>
-      <span class="chev">${icon("chev")}</span></button>`).join("")}</div>`:""}`;
+    ${habitsHTML()}`;
 }
+// tes habitudes (anciennement dans Profil) : ce qui te caractérise, sans répéter les chiffres du haut
+let habitsOpen = false;
+function habitsHTML(){
+  const fav = favoriteExercise(), wd = favoriteWeekday(), moment = favoriteMoment(), bw = bestWeek();
+  const rows = [
+    [["star","yellow"],"Exercice le plus fait", fav?`${fav.n}×`:"–", fav?esc(fav.def.n):""],
+    [["calendar","red"],"Jour préféré", wd?JOURS[(wd.i+1)%7]:"–", moment?`plutôt ${moment}`:""],
+    [["trophy","yellow"],"Meilleure semaine", bw?`${bw.n} séance${bw.n>1?"s":""}`:"–", bw?`semaine du ${fmtDate(bw.wk)}`:""],
+    [["chart","blue"],"Rythme moyen", `${weeklyAverage(8).toLocaleString("fr-FR")} / sem.`, "sur les 8 dernières semaines"],
+    [["dumbbell","orange"],"Exercices pratiqués", distinctExosCount(), `${sessionsInYear()} séances cette année`],
+  ];
+  return `<h2 class="sh">Tes habitudes</h2>
+    <div class="group habits">${rows.map((r,i)=>`<div class="row stat-row stagger" style="--i:${i+7}">
+      ${sfIcon(r[0][0], r[0][1])}
+      <div class="grow"><div class="t">${r[1]}</div>${r[3]?`<div class="s">${r[3]}</div>`:""}</div>
+      <div class="val strong">${r[2]}</div>
+    </div>`).join("")}</div>`;
+}
+// Muscles : la carte de la semaine et le stimulus de chaque muscle (séries pondérées, repères sourcés)
+function musclesPaneHTML(){
+  if(!S.sessions.length) return `<div class="empty-state"><span class="em">${sfIcon("person","orange","lg")}</span>Après ta première séance, tu verras ici quels muscles tu travailles, et assez ou non.</div>`;
+  return weekMuscleMapHTML();
+}
+// Objectifs : niveau, objectifs chiffrés, défis, puis les trophées
+function goalsPaneHTML(){ return `${levelCardHTML()}${targetsHTML()}${challengesHTML()}${medalsPaneHTML()}`; }
 
 function exoSeries(id){
   const def = EXO_MAP[id], loaded = !!kgType(def), pts = [];
@@ -170,7 +160,13 @@ function exoSeries(id){
 function exosPaneHTML(){
   const ids = trainedExoIds();
   if(!ids.length) return `<div class="empty-state"><span class="em">${sfIcon("dumbbell","orange","lg")}</span>Termine des séances pour suivre ta progression exercice par exercice.</div>`;
-  return `<div class="sh-sub" style="margin-top:4px">Courbe : ${"1RM estimé"} pour les exercices chargés, meilleure série pour le poids du corps.</div>
+  const prs = recentPRs(4);
+  return `${prs.length?`<h2 class="sh">Derniers records</h2><div class="group">${prs.map((p,i)=>`<button class="row tap stagger" style="--i:${i}" data-a="openExoChart" data-id="${p.def.id}">
+      ${sfIcon("bolt","orange")}
+      <div class="grow"><div class="t">${esc(p.def.n)}</div><div class="s">${p.st.reps} ${isTimed(p.def)?"s":"reps"}${loadSuffix(p.def, p.st.weight)} · ${fmtRelative(p.s.date)}</div></div>
+      <span class="chev">${icon("chev")}</span></button>`).join("")}</div>`:""}
+    <h2 class="sh">Tous mes exercices</h2>
+    <div class="sh-sub">Courbe : 1RM estimé pour les exercices chargés, meilleure série pour le poids du corps.</div>
     <div class="group">${ids.map((id,i)=>{
     const { def, loaded, pts } = exoSeries(id);
     if(!def) return "";

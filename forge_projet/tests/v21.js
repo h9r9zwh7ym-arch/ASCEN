@@ -56,7 +56,7 @@ fs.mkdirSync(OUT, { recursive: true });
   log('Wake lock released:', await page.evaluate(() => window.__wl));
   // ---- volume par muscle
   await page.evaluate(() => { const pad = n => String(n).padStart(2, '0'); for (let k = 1; k < 7; k += 2) S.sessions.push({ id: 'v' + k, date: addDaysISO(todayISO(), -k), source: 'custom', exos: [{ exoId: 'dc_haltere', sets: [1, 2, 3, 4].map(() => ({ reps: 10, weight: 10, done: true })) }, { exoId: 'squat_gobelet', sets: [1, 2, 3].map(() => ({ reps: 10, weight: 10, done: true })) }] }); S.sessions.sort((a, b) => a.date < b.date ? -1 : 1); save(); });
-  await page.click('.tabbtn[data-id="progress"]'); await wait(900);
+  await page.click('.tabbtn[data-id="progress"]'); await wait(500); await page.click('[data-a="progressTab"][data-v="muscles"]'); await wait(600);
   log('Volume card rows:', await page.$$eval('.wv-row', e => e.length), '| pect:', await page.$eval('.wv-row .wv-v', e => e.textContent), '| foot:', await page.textContent('.wv-foot'));
   await shot('03_volume');
   // ---- sauvegarde / restauration

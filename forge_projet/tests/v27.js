@@ -35,7 +35,8 @@ const OUT = path.join(OUT_ROOT, 'v27'); fs.mkdirSync(OUT, { recursive: true });
   // opacité : vue de dos, le centre est plein (pas de transparence)
   const backPx = await page.evaluate(() => { const c = T3D.ctx; c.running = false; c.medal.rotation.set(0, Math.PI, 0); c.renderer.render(c.scene, c.camera); const g = c.renderer.getContext(); const px = new Uint8Array(4); g.readPixels(g.drawingBufferWidth >> 1, g.drawingBufferHeight >> 1, 1, 1, g.RGBA, g.UNSIGNED_BYTE, px); t3dStart(); return Array.from(px); });
   log('Back center pixel:', JSON.stringify(backPx)); if (backPx[3] < 250) fail('dos transparent');
-  // vignettes 3D de la grille
+  // vignettes 3D de la grille (dessinées quand elles approchent de l'écran ; la grille est sous les objectifs et les défis)
+  await page.evaluate(() => { const g = document.querySelector('.medal-grid'); if (g) g.scrollIntoView({ block: 'start' }); });
   await page.waitForFunction(() => document.querySelectorAll('.medal.m3d-on img.medal-3d').length >= 5, null, { timeout: 60000 }).catch(() => {});
   const thumbs = await page.evaluate(() => document.querySelectorAll('.medal.m3d-on img.medal-3d').length); log('3D thumbnails shown:', thumbs);
   if (thumbs < 5) fail('vignettes 3D');

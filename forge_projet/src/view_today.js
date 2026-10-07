@@ -304,7 +304,8 @@ function weekPlanBodyHTML(){
         ${done?`<span class="wp-check">${icon("check")}</span>`:missed?`<span class="wp-miss" title="Séance prévue non faite"></span>`:""}
       </button>`;
     }).join("")}</div>
-    <div class="wp-foot">${S.templates.length ? "Touche un jour pour y placer une séance enregistrée." : "Enregistre une séance, puis place-la sur un ou plusieurs jours."}</div>`;
+    <div class="wp-foot">${S.templates.length ? "Touche un jour pour y placer une séance enregistrée." : "Enregistre une séance, puis place-la sur un ou plusieurs jours."}</div>
+    ${S.templates.length ? `<button class="tpl-add wp-wizard" data-a="weekWizard"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg><span>Programme de la semaine</span></button>` : ""}`;
 }
 function weekPlanHTML(){
   const nxt = nextPlanned();
@@ -312,7 +313,7 @@ function weekPlanHTML(){
   const todayT = plannedTemplate();
   const summary = todayT ? `Aujourd'hui : ${esc(todayT.n)}` : nxt ? `Prochaine : ${JOURS_COURTS[weekdayIdx(nxt.iso)].toLowerCase()}. · ${esc(nxt.t.n)}` : (S.templates.length ? "Aucun jour planifié" : "");
   return `<div class="week-plan stagger" style="--i:6">
-    ${sectionHead(`${icon("clock")}<span>Mon planning</span>`, "planOpen", summary?`<span class="sec-sum">${summary}</span>`:"")}
+    ${sectionHead(`${icon("clock")}<span>Ma semaine</span>`, "planOpen", summary?`<span class="sec-sum">${summary}</span>`:"")}
     <div class="clp">${open ? weekPlanBodyHTML() : ""}</div>
   </div>`;
 }
@@ -349,14 +350,7 @@ function tplListHTML(){
   const hidden = S.templates.length - list.length;
   return `<div class="tpl-list">${list.map(tplCardHTML).join("")}</div>
       ${hidden>0 ? `<button class="show-more" data-a="tplShowAll">Afficher les ${hidden} autre${hidden>1?"s":""} ${icon("chev")}</button>`
-        : S.templates.length>3 ? `<button class="show-more up" data-a="tplShowAll">Afficher moins ${icon("chev")}</button>` : ""}
-      ${tplAddRowHTML()}`;
-}
-function tplAddRowHTML(){
-  // une seule façon de créer une séance : « Compose ta séance », puis « Enregistrer »
-  return `<div class="tpl-add-row one">
-    <button class="tpl-add" data-a="weekWizard"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg><span>Programme de la semaine</span></button>
-  </div>`;
+        : S.templates.length>3 ? `<button class="show-more up" data-a="tplShowAll">Afficher moins ${icon("chev")}</button>` : ""}`;
 }
 function templatesHTML(){
   if(!S.templates.length){
@@ -393,7 +387,7 @@ function saveRowHTML(){
 }
 function customPaneHTML(){
   const c = S.custom.exos;
-  const tail = templatesHTML() + weekPlanHTML();
+  const tail = weekPlanHTML() + templatesHTML();
   const done = sessionsToday().length;
   if(!c.length){
     // la carte « Compose ta séance » est la carte principale ; ici seulement si une autre l'occupe
@@ -444,7 +438,8 @@ function openPicker(opts){
 }
 function renderPickerSheet(){
   const owned = new Set(availableExos().map(exoCategory));
-  const cats = [["","Tout le matériel"]].concat(EXO_CATS.filter(c=>owned.has(c.id)).map(c=>[c.id, c.n])).map(([id,n])=>`<button class="chip cat ${(picker.cat||"")===id?"on":""}" data-a="pickerCat" data-v="${id}">${esc(n)}</button>`).join("");
+  const favN = S.prefs.included.filter(id=>EXO_MAP[id] && !EXO_RETIRED.has(id)).length;
+  const cats = [["","Tout le matériel"]].concat(favN ? [["fav","Favoris"]] : []).concat(EXO_CATS.filter(c=>owned.has(c.id)).map(c=>[c.id, c.n])).map(([id,n])=>`<button class="chip cat ${id==="fav"?"fav":""} ${(picker.cat||"")===id?"on":""}" data-a="pickerCat" data-v="${id}">${id==="fav"?ii("star"):""}${esc(n)}</button>`).join("");
   const chips = [["","Tous les muscles"]].concat(MUSCLES.map(m=>[m.id,m.n])).map(([id,n])=>`<button class="chip ${(picker.muscle||"")===id?"on":""}" data-a="pickerMuscle" data-v="${id}">${esc(n)}</button>`).join("");
   openSheet(`<div class="sheet-hd">${picker.onCancel?`<button class="te-cancel" data-a="pickerCancel">${icon("chev")}<span>Retour</span></button>`:""}<span class="t">${esc(picker.title)}</span>${picker.onCancel?`<span class="te-spacer"></span>`:`<button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button>`}</div>
     <div class="picker-top">
@@ -490,28 +485,35 @@ function exoDose(e){ const [a,b] = repRangeForGoal(e); return `${e.sets} × ${a}
 function pickerListHTML(){
   const q = normName(picker.q);
   const muscleOrder = {}; MUSCLES.forEach((m,i)=>muscleOrder[m.id]=i);
+  const favOnly = picker.cat==="fav";
   const pool = availableExos().filter(e=>!picker.exclude.has(e.id)
     && (!picker.muscle || e.muscles.includes(picker.muscle))
-    && (!picker.cat || exoCategory(e)===picker.cat)
+    && (!picker.cat || (favOnly ? isIncluded(e.id) : exoCategory(e)===picker.cat))
     && (!q || normName(e.n+" "+(EXO_ALIAS[e.id]||"")).includes(q) || e.muscles.some(m=>normName(MUSCLE_MAP[m].n).includes(q))));
   if(!pool.length) return `<div class="empty-state"><span class="em">${sfIcon("search","gray","lg")}</span>Aucun exercice ne correspond.</div>`;
-  return EXO_CATS.map(c=>{
+  // favoris en tête (sans recherche ni filtre de matériel) : ils restent aussi dans leur catégorie
+  const favs = favOnly || picker.cat ? [] : pool.filter(e=>isIncluded(e.id)).sort((a,b)=>a.n.localeCompare(b.n,"fr"));
+  const favBlock = favs.length ? `<div class="pick-h fav">${sfIcon("star","yellow","sm")} Favoris <span class="pick-n">${favs.length}</span></div><div class="group">${favs.map(e=>pickRowHTML(e)).join("")}</div>` : "";
+  return favBlock + EXO_CATS.map(c=>{
     const list = pool.filter(e=>exoCategory(e)===c.id).sort((a,b)=>muscleOrder[a.muscles[0]]-muscleOrder[b.muscles[0]] || a.n.localeCompare(b.n,"fr"));
     if(!list.length) return "";
     let lastM = null;
     return `<div class="pick-h">${sfIcon(EQUIP_GLYPH[c.id]||"wrench", EQUIP_COLOR[c.id]||"gray","sm")} ${esc(c.n)} <span class="pick-n">${list.length}</span></div><div class="group">${list.map(e=>{
-      const on = picker.selected.includes(e.id);
       const m = e.muscles[0], sub = m!==lastM ? `<div class="pick-m">${esc(MUSCLE_MAP[m].n)}</div>` : ""; lastM = m;
-      return `${sub}<div class="row pick-row ${on?"on":""}" data-id="${e.id}">
-        <button class="row-main" data-a="pickerTap" data-id="${e.id}">
-          ${exoIcon(e)}
-          <div class="grow"><div class="t">${esc(e.n)}</div><div class="s"><b class="dose">${exoDose(e)}</b> · ${musclesLabel(e)}</div></div>
-        </button>
-        <button class="info-btn" aria-label="Fiche de ${esc(e.n)}" data-a="pickerInfo" data-id="${e.id}">i</button>
-        ${picker.multi?`<button class="pick-check" aria-label="Sélectionner" data-a="pickerTap" data-id="${e.id}">${on?icon("check"):""}</button>`:""}
-      </div>`;
+      return sub + pickRowHTML(e);
     }).join("")}</div>`;
   }).join("");
+}
+function pickRowHTML(e){
+  const on = picker.selected.includes(e.id), fav = isIncluded(e.id);
+  return `<div class="row pick-row ${on?"on":""}" data-id="${e.id}">
+    <button class="row-main" data-a="pickerTap" data-id="${e.id}">
+      ${exoIcon(e)}
+      <div class="grow"><div class="t">${fav?`<span class="fav-mark" aria-label="Favori">${ii("star")}</span>`:""}${esc(e.n)}</div><div class="s"><b class="dose">${exoDose(e)}</b> · ${musclesLabel(e)}</div></div>
+    </button>
+    <button class="info-btn" aria-label="Fiche de ${esc(e.n)}" data-a="pickerInfo" data-id="${e.id}">i</button>
+    ${picker.multi?`<button class="pick-check" aria-label="Sélectionner" data-a="pickerTap" data-id="${e.id}">${on?icon("check"):""}</button>`:""}
+  </div>`;
 }
 function refreshPickerFooter(){
   const b = qs("#pickerDone"); if(!b) return;
@@ -739,6 +741,10 @@ function lastTimeHTML(exoId, hasNote){
 
 // « À battre » (réglage Motivation) : la cible du jour face à la même série la dernière fois,
 // et un retour immédiat quand la saisie la dépasse
+// un toucher dans un menu (modale centrée) le referme ; l'étoile d'une fiche, non
+function closeModalIfMenu(){ const o = qs("#overlay"); if(o && o.dataset.kind==="modal" && qs("#overlay .menu-list")) closeSheet(); }
+// la note « une répétition de plus que la dernière fois » double la ligne « à battre » : une seule suffit
+function noteIsBeat(ex){ return S.settings.beat!==false && /^Objectif( du jour)? : (une répétition de plus|\+\d+ (s|répétitions?) )/.test(ex.note||""); }
 let beatWinKey = ""; // série déjà annoncée « mieux » : l'animation ne rejoue pas à chaque +/−
 function beatLineHTML(ex, def, si, st){
   const ref = isStretch(def) ? null : beatRef(ex.exoId, si);
@@ -825,7 +831,7 @@ function renderFocusCard(idx, ex, def){
     </div>
     ${S.settings.beat===false ? lastTimeHTML(ex.exoId, !!ex.note) : beatLineHTML(ex, def, si, st)}
     ${kgType(def) && (st.weight||0)>=8 && !S.draft.exos.some(e=>e.sets.some(x=>x.done)) ? `<div class="warmup">${ii("flame")} Échauffement : 1 série légère (≈ ${fmtDec(Math.max(1, Math.round((st.weight||0)*0.5)))} kg) de 8 à 10 répétitions avant de commencer.</div>` : ""}
-    ${ex.note?`<div class="exo-note" style="margin:0 0 14px">${esc(ex.note)}${ex.harder&&EXO_MAP[ex.harder]&&!ex.sets.some(s=>s.done)?`<button class="note-act" data-a="swapHarder" data-idx="${idx}">Essayer maintenant ${icon("chev")}</button>`:""}</div>`:""}
+    ${ex.note && !noteIsBeat(ex) ?`<div class="exo-note" style="margin:0 0 14px">${esc(ex.note)}${ex.harder&&EXO_MAP[ex.harder]&&!ex.sets.some(s=>s.done)?`<button class="note-act" data-a="swapHarder" data-idx="${idx}">Essayer maintenant ${icon("chev")}</button>`:""}</div>`:""}
     ${isTimed(def)
       ? `<button class="btn big validate hold-go ${rr?"ready":""}" data-a="holdStart" data-exi="${idx}" data-si="${si}">${icon("timer")} Lancer le chrono · ${st.reps||30} s</button>
          <button class="btn ghost sm hold-skip" data-a="validateSet" data-exi="${idx}">Valider sans chrono</button>`
@@ -1306,11 +1312,19 @@ Object.assign(ACT, {
     toast(circuitMode() ? "Après chaque repos : exercice suivant" : "Toutes les séries d'un exercice, puis le suivant");
     refreshFocusRegion();
   },
+  favToggle(d, el){
+    const on = toggleFavorite(d.id), n = EXO_MAP[d.id] ? EXO_MAP[d.id].n : "Exercice";
+    if(el && el.classList.contains("fav-toggle")){ el.classList.toggle("on", on); el.setAttribute("aria-pressed", on); el.setAttribute("aria-label", on ? "Retirer des favoris" : "Ajouter aux favoris"); }
+    haptic(10); closeModalIfMenu();
+    toast(on ? `${n} ajouté aux favoris` : `${n} retiré des favoris`, "star");
+    if(picker){ const l = qs("#pickerList"); if(l) l.innerHTML = pickerListHTML(); }
+  },
   focusMenu(d){
     const i = +d.idx, def = EXO_MAP[S.draft.exos[i].exoId];
     openModal(`<div class="tm-head r-${regionOf(def)}">${exoIcon(def,"sm")}<div><div style="font-weight:700;font-size:calc(17rem/17)">${esc(def.n)}</div></div></div>
       <div class="menu-list">
         <button data-a="showExoInfo" data-id="${def.id}">${icon("search")}<span>Fiche et technique</span></button>
+        <button data-a="favToggle" data-id="${def.id}">${icon("star")}<span>${isIncluded(def.id) ? "Retirer des favoris" : "Ajouter aux favoris"}</span></button>
         <button data-a="swapExoOpen" data-idx="${i}">${icon("swap")}<span>Remplacer l'exercice</span></button>
         <button data-a="addSetFocus" data-exi="${i}">${icon("plus")}<span>Ajouter une série</span></button>
         ${S.draft.exos[i].sets.some(s=>s.done) ? `<button data-a="editDoneSets" data-exi="${i}">${icon("edit")}<span>Corriger les séries faites</span></button>` : ""}
@@ -1428,8 +1442,10 @@ Object.assign(ACT, {
     // le contexte se lit après l'empilement : on ouvre d'abord, puis on dessine le contenu
     openSheet(`<div class="sheet-hd"><span class="t">Fiche exercice</span></div><div class="sheet-body"></div>`, { child:true, restore:opener });
     const ctx = infoContext(), canBack = sheetCanGoBack();
-    const hd = canBack ? `<button class="te-cancel" data-a="sheetBack">${icon("chev")}<span>Retour</span></button><span class="t">Fiche exercice</span><span class="te-spacer"></span>`
-      : `<span class="t">Fiche exercice</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button>`;
+    // l'étoile des favoris, toujours au même endroit : en haut à droite de la fiche
+    const favBtn = `<button class="icon-btn fav-toggle ${isIncluded(e.id)?"on":""}" data-a="favToggle" data-id="${e.id}" aria-pressed="${isIncluded(e.id)}" aria-label="${isIncluded(e.id)?"Retirer des favoris":"Ajouter aux favoris"}">${ii("star")}</button>`;
+    const hd = canBack ? `<button class="te-cancel" data-a="sheetBack">${icon("chev")}<span>Retour</span></button><span class="t">Fiche exercice</span><span class="hd-acts">${favBtn}</span>`
+      : `<span class="t">Fiche exercice</span><span class="hd-acts">${favBtn}<button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></span>`;
     const pr = exoPRs(e.id), last = lastPerformance(e.id);
     const live = S.draft && S.draft.startedAt;
     const cat = EXO_CATS.find(c=>c.id===exoCategory(e));

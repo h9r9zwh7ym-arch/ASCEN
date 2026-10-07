@@ -188,7 +188,7 @@ p.body{margin:0 20px;color:var(--label2);font-size:var(--fs-sub)}
 @media (prefers-reduced-motion:reduce){
   .view.active,.focus-card,.celebrate-ring,.fc-done-badge{animation:none!important}
   .btn:active,.icon-btn:active,.chip:active,.medal-card:active,.type-chip:active{transform:none}
-  .enter .stagger,.enter .seg-pane,.enter .cc-bar,.sheet .cc-bar,.enter .hb-fill,.sheet .linechart,.medal.t3::after,.medal.t4::after,.sd.just,.cel-medal,.xpbar span{animation:none!important;transition:none!important}
+  .enter .stagger,.enter .seg-pane,.enter .cc-bar,.sheet .cc-bar,.sheet .linechart,.medal.t3::after,.medal.t4::after,.sd.just,.cel-medal,.xpbar span{animation:none!important;transition:none!important}
 }
 
 /* ---- mode focus : séance en cours ---- */
@@ -416,13 +416,7 @@ h2.sh button.more{font-size:var(--fs-sub);font-weight:500;color:var(--tint-ink)}
 .enter .hm-grid{animation:fadeUp .6s cubic-bezier(.2,.8,.2,1) .2s both}
 
 /* barres horizontales */
-.hb-row{padding:6px 0}
-.hb-top{display:flex;justify-content:space-between;font-size:var(--fs-foot);margin-bottom:5px}
-.hb-v{color:var(--label2);font-variant-numeric:tabular-nums}
-.hb-track{height:8px;border-radius:4px;background:var(--fill)}
-.hb-fill{height:100%;border-radius:4px;background:var(--tint);transform-origin:0 50%}
 @keyframes hbGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
-.enter .hb-fill{animation:hbGrow .7s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0) * 50ms + 200ms)}
 
 /* tableau équivalent */
 .dtable{margin-top:10px;font-size:var(--fs-foot)}
@@ -509,7 +503,6 @@ h2.sh button.more{font-size:var(--fs-sub);font-weight:500;color:var(--tint-ink)}
 .app-badge{font-size:12px;vertical-align:1px}
 .row.unavail{opacity:.45}
 .stat-row .val.strong,.row .val.strong{color:var(--label);font-weight:700;font-size:var(--fs-sub);max-width:48%;overflow:hidden;text-overflow:ellipsis}
-.rank{width:28px;height:28px;border-radius:14px;background:var(--tint-bg);color:var(--tint-ink);display:grid;place-items:center;font-weight:700;font-size:var(--fs-sub);flex:none}
 
 /* ---- planning de la semaine ---- */
 .week-plan{margin:0 16px 14px;padding:12px 12px 10px;border-radius:18px;background:var(--bg2)}
@@ -578,10 +571,6 @@ h2.sh button.more{font-size:var(--fs-sub);font-weight:500;color:var(--tint-ink)}
 .ph-name svg{width:15px;height:15px;color:var(--label3);flex:none}
 .ph-title{font-size:var(--fs-foot);color:var(--tint-ink);font-weight:700;margin-top:1px}
 .ph-sub{font-size:var(--fs-cap);color:var(--label2);margin-top:6px}
-.ph-medals{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 16px 0;padding:10px 6px;border-radius:16px;background:var(--bg2)}
-.ph-medals div{display:flex;flex-direction:column;align-items:center;gap:2px}
-.ph-medals b{font-size:var(--fs-body)}
-.ph-medals small{font-size:var(--fs-cap2);color:var(--label2)}
 
 /* ---- lancement ---- */
 .splash{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(120% 80% at 50% 45%,#2a1508 0%,#0c0705 60%,#000 100%);color:#fff;transition:opacity .45s ease,transform .45s ease}
@@ -713,7 +702,6 @@ h2.sh button.more{font-size:var(--fs-sub);font-weight:500;color:var(--tint-ink)}
 @media (prefers-reduced-motion:reduce){
   .xico,.wp-days,.tc-list,.exo-hero .xico,.group.builder.reorder .row{animation:none!important;transition:none!important}
 }
-.hb-dot{display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--rc);margin-right:7px;vertical-align:1px}
 
 /* ================= v1.5 : accueil,hiérarchie,animations ================= */
 /* --- en-tête --- */
@@ -959,9 +947,6 @@ h2.sh button.more{font-size:var(--fs-sub);font-weight:500;color:var(--tint-ink)}
 .mini-step button{color:var(--label2)}
 .type-chip{height:34px;padding:0 14px;box-shadow:none;background:var(--fill2);font-weight:600;color:var(--label2)}
 .type-chip.on{background:var(--label);color:var(--bg2)}
-.group.habits .row.extra{display:none}
-.group.habits.open .row.extra{display:flex}
-.group.habits.clp-in .row.extra{animation:clpIn .4s cubic-bezier(.2,.8,.2,1) both}
 .ov-row.done .ls-ring{background:var(--green)}
 .ov-row.done .ls-ring>span{background:var(--green);color:#fff}
 .ov-row.done .ls-ring svg{color:#fff}
@@ -2027,3 +2012,30 @@ button.set-dots::before{content:"";position:absolute;left:50%;top:50%;width:max(
 .how-src li{margin:6px 0}
 .how-src a{color:var(--tint-ink)}
 .how-body .hr-note{margin:16px 20px 24px}
+/* Progrès > Muscles : stimulus par muscle (repères de Pelland et al.) */
+.wv-track i.z-low{opacity:.4} .wv-track i.z-ok{opacity:.85} .wv-track i.z-high{opacity:1}
+.wv-track b.hi{background:var(--label3,var(--label2));opacity:.7}
+.stim-sum{display:flex;gap:8px;flex-wrap:wrap;margin:-2px 0 4px}
+.stim-sum span{font-size:var(--fs-foot);color:var(--label2);padding:4px 10px;border-radius:999px;background:var(--fill)}
+.stim-sum b{color:var(--label);font-family:var(--num)}
+.stim-sum .sz-ok{background:color-mix(in srgb,var(--green) 15%,transparent)}
+.wv-src{margin-top:8px;font-size:var(--fs-cap);color:var(--label2);line-height:1.4}
+.stim-card .wv-head{margin-top:10px;border-top:0;padding-top:0}
+.stim-card .wv-row,.stim-card .wv-head{grid-template-columns:78px 1fr 30px 50px}
+/* Favoris (4.0) : une étoile, au même endroit partout */
+:root{--fav:#C98A00}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){--fav:#FFD60A} }
+:root[data-theme="dark"]{--fav:#FFD60A}
+.hd-acts{display:flex;align-items:center;gap:4px;margin-left:auto;flex:none}
+.fav-toggle .ii{width:21px;height:21px;color:var(--label2);opacity:.8;transition:transform .2s,color .2s,opacity .2s}
+.fav-toggle.on .ii{color:var(--fav);opacity:1;transform:scale(1.08)}
+.fav-mark{display:inline-flex;vertical-align:-.1em;margin-right:5px}
+.fav-mark .ii{width:14px;height:14px;color:var(--fav)}
+.chip.fav .ii{width:14px;height:14px;margin-right:4px;vertical-align:-.12em;color:var(--fav)}
+.chip.fav.on .ii{color:currentColor}
+.pick-h.fav{color:var(--label)}
+.row .chip.fav{min-width:44px;justify-content:center}
+.row .chip.fav .ii{margin:0;color:var(--label2)}
+.row .chip.fav.on{background:color-mix(in srgb,var(--fav) 18%,transparent);color:var(--fav)}
+.row .chip.fav.on .ii{color:var(--fav)}
+.wp-wizard{width:100%;margin-top:12px}

@@ -90,6 +90,8 @@ const W = +(process.env.W || 375), DARK = process.env.DARK === '1', wk = process
   await page.click('#v-history [data-a="openSessionDetail"]'); await page.waitForTimeout(400); await page.click('[data-a="histEdit"]'); await audit('history_edit'); await close();
   await page.click('[data-a="openRecap"]'); await audit('recap'); await close();
   await page.click('.tabbtn[data-id="progress"]'); await wait(900); await audit('progress');
+  await page.click('[data-a="progressTab"][data-v="muscles"]'); await audit('progress_muscles');
+  await page.click('[data-a="progressTab"][data-v="medals"]'); await wait(500);
   await page.click('[data-a="newTarget"]'); await wait(500); await page.click('.pick-row [data-a="pickerTap"]'); await audit('target_new'); await close();
   await page.evaluate(() => document.querySelector('#v-progress').scrollTo(0, 99999)); await audit('progress_bottom');
   await page.click('[data-a="progressTab"][data-v="exos"]'); await audit('progress_exos');

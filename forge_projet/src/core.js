@@ -464,7 +464,13 @@ function fmtKg(kg){
 
 // ---------- exercices disponibles ----------
 function isExcluded(id){ return S.prefs.excluded.includes(id); }
+// favori (S.prefs.included) : en tête du choix d'exercices et privilégié par l'app ; jamais exclu en même temps
 function isIncluded(id){ return S.prefs.included.includes(id); }
+function toggleFavorite(id){
+  const i = S.prefs.included.indexOf(id), on = i<0;
+  if(on){ S.prefs.included.push(id); S.prefs.excluded = S.prefs.excluded.filter(x=>x!==id); } else S.prefs.included.splice(i,1);
+  save(); return on;
+}
 function availableExos(){
   return EXOS.filter(e=>hasEquip(S.equipment, e.equip) && !isExcluded(e.id));
 }
@@ -787,16 +793,6 @@ function bestWeek_raw(){
   S.sessions.forEach(s=>{ const k=weekKey(s.date); per[k]=(per[k]||0)+1; });
   const k = Object.keys(per).sort((a,b)=>per[b]-per[a])[0];
   return k ? { wk:k, n:per[k] } : null;
-}
-function topLifts(n){ return memo("tl:"+n, ()=>topLifts_raw(n)); }
-function topLifts_raw(n){
-  const best = {};
-  S.sessions.forEach(s=>s.exos.forEach(ex=>ex.sets.forEach(st=>{
-    if(!st.done || !st.weight) return;
-    const b = best[ex.exoId];
-    if(!b || st.weight>b.w || (st.weight===b.w && st.reps>b.r)) best[ex.exoId] = { w:st.weight, r:st.reps, date:s.date };
-  })));
-  return Object.keys(best).filter(id=>EXO_MAP[id]).map(id=>Object.assign({ def:EXO_MAP[id] }, best[id])).sort((a,b)=>b.w-a.w).slice(0,n);
 }
 function firstSessionDate(){ return memo("firstSessionDate", firstSessionDate_raw); }
 function firstSessionDate_raw(){ return S.sessions.length ? S.sessions.reduce((m,s)=>s.date<m?s.date:m, S.sessions[0].date) : null; }

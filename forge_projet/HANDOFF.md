@@ -761,6 +761,31 @@ Mesures (`tests/tab_perf.js`, processeur ×4, 3 ans d'historique) :
   - Projections inchangées : la pente des 8 dernières semaines, +15 % au plus pour l'indice ; l'exercice le plus pratiqué (`exoProjection`), +25 % au plus.
 - Tests : `tests/v41.js`, `tests/v42.js` (modèle de force).
 
+**Réorganisation, favoris, stimulus (toujours 4.0)** :
+- **Progrès en 4 onglets**, une question chacun (`renderProgress`) :
+  - **Résumé** (`overviewPaneHTML`) : progression de force, 4 chiffres clés, régularité (avec la série de semaines et le record), « Tes habitudes » (`habitsHTML`, venues de Profil) ;
+  - **Muscles** (`musclesPaneHTML` → `weekMuscleMapHTML`) : la carte de la semaine, puis la carte « Stimulus par muscle » ;
+  - **Exercices** : derniers records (venus du Résumé), puis tous les exercices ;
+  - **Objectifs** (`goalsPaneHTML`, identifiant interne `medals`) : niveau, objectifs chiffrés, défis, trophées.
+  - Les graphiques « Séances par semaine » et « Tonnage par semaine » faisaient doublon avec l'Historique : supprimés. L'Historique gagne un 4e choix, « Tonnage » (`HIST_METRICS`).
+  - « Répartition musculaire 30 jours » est remplacée par la moyenne sur 4 semaines du stimulus. `hbarList` et `muscleSets` sont supprimés.
+- **Progression de force en %** : l'indice interne reste un rapport ×100 (`strengthAt`), mais l'affichage (`pctTxt`) part de 0 % = niveau de départ (+20 % = 20 % plus fort). Les écarts sont en points (« +20 pts en 4 semaines »). Les axes du graphique sont en % (option `tickFmt` de `lineChart`).
+- **Stimulus par muscle** (`muscleVolume(days)`, `STIM`, `stimZone`) :
+  - séries « pondérées » : 1 par série du muscle principal, ½ quand il est secondaire, sans les étirements ; c'est le comptage de Pelland et al. (méta-régression, 67 études) ;
+  - repères : 4 séries par semaine (gain de muscle mesurable) et 10 (au-delà, le gain continue mais ralentit) ; la force plafonne vers ~3 séries ;
+  - affichage : zones par muscle (barre pâle sous 4, pleine au-delà de 10), la semaine et la moyenne sur 4 semaines, les muscles sous le seuil, la fréquence (2 jours par semaine) ;
+  - la note rappelle la variabilité individuelle (Hubal 2005) ; aucune estimation de masse musculaire, faute de mesure fiable.
+- **Profil = identité + réglages** :
+  - retirés : la rangée de trophées du héros, « Mes habitudes » (→ Progrès > Résumé) et « Mes records » (→ Progrès > Exercices) ;
+  - sections : Entraînement, Motivation, Mes données (avec l'export / import de programme IA, et « Réinitialiser » en dernier), Apparence et sons.
+- **Accueil** : la section « Mon planning » devient « Ma semaine » et passe avant « Mes séances » ; le bouton « Programme de la semaine » est dans « Ma semaine ».
+- **Séance** : la note du moteur « une répétition de plus / +N s que la dernière fois » est masquée quand la ligne « à battre » est active (`noteIsBeat`), pour éviter de dire deux fois la même chose.
+- **Favoris** :
+  - ils fusionnent avec l'ancien « Privilégier » (`S.prefs.included`, `toggleFavorite`) : un favori est en tête partout et privilégié par l'app ;
+  - on l'ajoute ou le retire par l'étoile de la fiche exercice (en haut à droite, `favToggle`), par le menu ••• de la séance, ou dans Profil > « Mes exercices » (section Favoris en tête) ;
+  - dans le choix d'exercices : un filtre « Favoris », une section Favoris en tête et une étoile devant le nom (`pickRowHTML`).
+- Test : `tests/v43.js`.
+
 **Vérifications** :
 - `tests/v40.js` couvre la 2e passe : Rewind, virgules, carte et légende des muscles, accueil, catalogue, fusion, séance Pilates, recherche.
 - Tour visuel de 27 écrans en clair et en sombre (`tests/tour.js` + `tests/montage.js`) ; audit d'accessibilité repassé (`tests/ux_audit.js`).

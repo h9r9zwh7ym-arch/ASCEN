@@ -53,7 +53,7 @@ const OUT = path.join(OUT_ROOT, 'v24'); fs.mkdirSync(OUT, { recursive: true });
   await page.evaluate(() => closeSheet()); await wait(400);
 
   // ---- 2. objectifs chiffrés
-  await page.evaluate(() => switchTab('progress')); await wait(500);
+  await page.evaluate(() => { switchTab('progress'); ACT.progressTab({ v: 'medals' }); }); await wait(500);
   await shot('04_progress_targets_empty');
   await page.click('[data-a="newTarget"]'); await wait(500);
   await page.click('[data-a="pickerTap"][data-id="dc_haltere"]'); await wait(500);
@@ -79,7 +79,7 @@ const OUT = path.join(OUT_ROOT, 'v24'); fs.mkdirSync(OUT, { recursive: true });
   const done = await page.evaluate(() => S.targets.filter(t => t.doneAt).length); if (done !== 1) fail('objectif non marqué atteint');
   await page.evaluate(() => closeSheet()); await wait(400);
   // relever la barre d'un objectif atteint le rouvre
-  await page.evaluate(() => switchTab('progress')); await wait(500);
+  await page.evaluate(() => { progressTab = 'medals'; switchTab('progress'); renderView('progress'); }); await wait(500);
   await page.click('.tg-row.done'); await wait(400);
   await page.click('[data-a="tgStep"]:not([data-d^="-"])'); await wait(150);
   const reopen = await page.evaluate(() => S.targets[0]); log('Raised:', JSON.stringify(reopen));

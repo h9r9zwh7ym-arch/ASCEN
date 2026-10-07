@@ -39,16 +39,16 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   // 2. décimales à la française (Safari écrit « 0.5 » en fr-CH) ; carte des muscles unique, légende = régions
   const dec = await page.evaluate(() => [fmtDec(0.5), fmtDec(3.5), fmtDec(12), fmtNum(12345).replace(/\s/g, ' ')]);
   log('Decimals:', JSON.stringify(dec)); if (dec[0] !== '0,5' || dec[1] !== '3,5' || dec[2] !== '12' || !/^12.345$/.test(dec[3])) fail('décimales à virgule');
-  await page.click('.tabbtn[data-id="progress"]'); await wait(800);
+  await page.click('.tabbtn[data-id="progress"]'); await wait(500); await page.click('[data-a="progressTab"][data-v="muscles"]'); await wait(600);
   const mm = await page.evaluate(() => {
     const card = document.querySelector('.mm-card'), legend = [...card.querySelectorAll('.mm-legend span')];
     const swatch = legend.map(s => ({ cls: s.className, c: getComputedStyle(s.querySelector('i')).backgroundColor }));
     const zones = {}; card.querySelectorAll('.mm-z.on').forEach(z => { zones[z.getAttribute('class').match(/r-(\w+)/)[1]] = getComputedStyle(z).fill; });
-    return { cards: document.querySelectorAll('.mm-card').length, rows: card.querySelectorAll('.wv-row').length, head: !!card.querySelector('.wv-head'), swatch, zones,
-      vals: [...card.querySelectorAll('.wv-v')].map(e => e.textContent), titles: [...document.querySelectorAll('#v-progress .cc-t')].map(e => e.textContent) };
+    return { cards: document.querySelectorAll('.mm-card').length, rows: card.querySelectorAll('.wv-row').length, stimRows: document.querySelectorAll('.stim-card .wv-row').length, head: !!document.querySelector('.stim-card .wv-head'), swatch, zones,
+      vals: [...document.querySelectorAll('.stim-card .wv-v, .stim-card .wv-f')].map(e => e.textContent), titles: [...document.querySelectorAll('#v-progress .cc-t')].map(e => e.textContent) };
   });
   log('Muscle card:', JSON.stringify({ cards: mm.cards, rows: mm.rows, head: mm.head, legend: mm.swatch.map(s => s.cls), vals: mm.vals.slice(0, 5) }));
-  if (mm.cards !== 1 || !mm.rows || !mm.head || mm.titles.includes('Volume par muscle')) fail('une seule carte « Muscles de la semaine »');
+  if (mm.cards !== 1 || mm.rows || !mm.stimRows || !mm.head || mm.titles.includes('Volume par muscle')) fail('carte des muscles puis stimulus par muscle');
   const regions = ['r-push', 'r-pull', 'r-legs', 'r-core'];
   if (mm.swatch.map(s => s.cls).join() !== regions.join() || new Set(mm.swatch.map(s => s.c)).size !== 4) fail('légende aux couleurs des régions');
   Object.entries(mm.zones).forEach(([r, c]) => { const sw = mm.swatch.find(s => s.cls === 'r-' + r); if (!sw || sw.c !== c) fail('zone ' + r + ' de la couleur de sa légende'); });
