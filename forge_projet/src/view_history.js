@@ -18,22 +18,63 @@ function sessionIcon(s){
 // Affichage par paquets : l'historique complet (des centaines de séances après
 // quelques années) prenait plus de 100 ms à dessiner sur téléphone.
 let histLimit = 25;
-let histMetric = "sessions"; // graphique de l'historique : séances, durée, séries ou tonnage par semaine
+let histMetric = "sessions"; // graphique de l'historique : séances, durée, séries ou tonnage
 const HIST_METRICS = [["sessions","Séances"],["minutes","Durée"],["sets","Séries"],["volume","Tonnage"]];
+// période du graphique : barres par jour (7 j, 1 mois), par semaine (3 et 6 mois), par mois (1 an) ;
+// « Total » s'adapte à l'ancienneté : semaines jusqu'à 3 mois, mois jusqu'à 3 ans, années au-delà
+let histRange = "all";
+const HIST_RANGES = [["w","7 j"],["m","1 mois"],["3m","3 mois"],["6m","6 mois"],["y","1 an"],["all","Total"]];
+const HIST_RANGE_TXT = { w:"sur 7 jours", m:"sur 30 jours", "3m":"sur 3 mois", "6m":"sur 6 mois", y:"sur 12 mois", all:"au total" };
+function monthKeyAdd(k, n){ const d = parseISO(k+"-01"); d.setMonth(d.getMonth()+n); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); }
+function histBuckets(r){
+  return memo("histB_"+r, ()=>{
+    const today = todayISO(), keys = [];
+    const first = S.sessions.reduce((m,s)=>s.date<m ? s.date : m, today);
+    let unit = r==="w"||r==="m" ? "day" : r==="3m"||r==="6m" ? "week" : "month";
+    if(r==="all"){ const days = daysBetween(first, today); unit = days<=91 ? "week" : days<=3*366 ? "month" : "year"; }
+    if(unit==="day"){ const n = r==="w" ? 7 : 30; for(let i=n-1;i>=0;i--) keys.push(addDaysISO(today,-i)); }
+    else if(unit==="week"){ const cur = weekKey(today), n = r==="3m" ? 13 : r==="6m" ? 26 : Math.max(2, Math.floor(daysBetween(weekKey(first), cur)/7)+1);
+      for(let i=n-1;i>=0;i--) keys.push(addDaysISO(cur,-7*i)); }
+    else if(unit==="month"){ const cur = today.slice(0,7); let n = 12;
+      if(r==="all"){ n = 1; while(monthKeyAdd(cur, -(n)) >= first.slice(0,7)) n++; n = Math.max(n, 2); }
+      for(let i=n-1;i>=0;i--) keys.push(monthKeyAdd(cur,-i)); }
+    else { const y = +today.slice(0,4); for(let k=+first.slice(0,4); k<=y; k++) keys.push(String(k)); }
+    const keyOf = unit==="day" ? d=>d : unit==="week" ? weekKey : unit==="month" ? d=>d.slice(0,7) : d=>d.slice(0,4);
+    const out = keys.map(k=>({ k, sessions:0, volume:0, sets:0, minutes:0 })), idx = {}; keys.forEach((k,i)=>idx[k]=i);
+    const start = unit==="day" ? keys[0] : unit==="week" ? keys[0] : unit==="month" ? keys[0]+"-01" : keys[0]+"-01-01";
+    // même durée juste avant, pour l'écart (pas pour « Total »)
+    const span = daysBetween(start, today)+1, prevStart = addDaysISO(start, -span), prev = { sessions:0, volume:0, sets:0, minutes:0 };
+    S.sessions.forEach(s=>{
+      const i = idx[keyOf(s.date)];
+      const b = i!==undefined ? out[i] : (s.date>=prevStart && s.date<start ? prev : null);
+      if(!b) return;
+      b.sessions++; b.volume += sessionVolume(s); b.sets += sessionSetCount(s); b.minutes += (s.durationSec||0)/60;
+    });
+    return { unit, out, prev, span, start };
+  });
+}
+function histLabel(unit, k, long){
+  if(unit==="day"){ const d = parseISO(k); return long ? fmtDate(k,"short") : (histRange==="w" ? JOURS[d.getDay()].slice(0,3) : fmtDate(k)); }
+  if(unit==="week") return long ? "Semaine du "+fmtDate(k) : fmtDate(k);
+  if(unit==="month"){ const d = parseISO(k+"-01"), m = MOIS[d.getMonth()]; return long ? MOIS_LONG[d.getMonth()].replace(/^./,c=>c.toUpperCase())+" "+d.getFullYear() : (d.getMonth()===0 ? m+" "+String(d.getFullYear()).slice(2) : m); }
+  return k;
+}
 function histChartHTML(){
-  const weeks = memo("histWeeks", ()=>weeklyBuckets(12));
-  const m = histMetric, lab = b => fmtDate(b.wk);
+  const { unit, out, prev, span } = histBuckets(histRange);
+  const m = histMetric;
   const val = b => m==="minutes" ? Math.round(b.minutes) : m==="volume" ? Math.round(b.volume) : b[m];
   const fmt = v => m==="minutes" ? fmtDuration(v*60) : m==="volume" ? fmtKg(v) : `${fmtDec(v)} ${m==="sets"?"série":"séance"}${v>=2?"s":""}`;
-  const cur = val(weeks[weeks.length-1]), prev = val(weeks[weeks.length-2]);
-  // moyenne à une décimale pour les séances et séries (3 séances en 11 semaines ≠ « 0 séance »)
-  const avgRaw = weeks.slice(0,-1).reduce((t,b)=>t+val(b),0)/(weeks.length-1);
+  const total = out.reduce((t,b)=>t+val(b),0), delta = total-val(prev), all = histRange==="all";
+  // moyenne par semaine jusqu'à 6 mois, par mois au-delà ; jours actifs sur 7 jours
+  const perMonth = histRange==="y" || (all && unit!=="week");
+  const avgRaw = perMonth ? total/(span/30.44) : total/(span/7);
   const avg = m==="minutes"||m==="volume" ? Math.round(avgRaw) : round1(avgRaw);
-  const delta = cur-prev;
-  return `<div class="hist-kpi"><div><b>${fmt(cur)}</b><small>cette semaine</small></div>
-      <div class="hk-delta ${delta>0?"up":delta<0?"down":""}">${delta>0?"▲":delta<0?"▼":"="} ${delta?fmt(Math.abs(delta)):"stable"}<small>vs semaine passée</small></div></div>
-    ${columnChart(weeks.map(b=>({ label:lab(b), v:val(b), tip:`Semaine du ${lab(b)} : ${fmt(val(b))}` })), { goal: m==="sessions" ? S.goals.daysPerWeek : 0, fmt })}
-    <div class="hist-avg">Moyenne sur 11 semaines : ${fmt(avg)}</div>`;
+  const foot = histRange==="w" ? `${nb(out.filter(b=>b.sessions).length,"jour")} actif${out.filter(b=>b.sessions).length>1?"s":""} sur 7`
+    : `Moyenne : ${fmt(avg)} par ${perMonth ? "mois" : "semaine"}`;
+  return `<div class="hist-kpi"><div><b>${fmt(total)}</b><small>${HIST_RANGE_TXT[histRange]}</small></div>
+      ${all ? "" : `<div class="hk-delta ${delta>0?"up":delta<0?"down":""}">${delta>0?"▲":delta<0?"▼":"="} ${delta?fmt(Math.abs(delta)):"stable"}<small>vs période précédente</small></div>`}</div>
+    ${columnChart(out.map(b=>({ label:histLabel(unit,b.k), v:val(b), tip:`${histLabel(unit,b.k,true)} : ${fmt(val(b))}` })), { goal: m==="sessions" && unit==="week" ? S.goals.daysPerWeek : 0, fmt })}
+    <div class="hist-avg">${foot}</div>`;
 }
 // écart avec le mois précédent (pas pour le mois en cours, encore incomplet)
 function monthDeltaHTML(key, perMonth, curMonth, firstMonth){
@@ -85,8 +126,8 @@ function renderHistory(){
     <h1 class="lt">Historique</h1>
     <div class="sh-sub" style="margin-top:-4px">${all.length} séance${all.length>1?"s":""} au total${totalVolumeAllTime()?" · "+fmtKg(totalVolumeAllTime())+" soulevés":""}</div>
     <div class="chart-card hist-chart stagger" style="--i:0">
-      <div class="cc-h"><div class="cc-t">12 dernières semaines</div></div>
       ${segHTML("histMetric", HIST_METRICS, histMetric, "histMetric")}
+      ${segHTML("histRange", HIST_RANGES, histRange, "histRange").replace('class="seg"','class="seg sm"')}
       <div id="histChart">${histChartHTML()}</div>
     </div>
     <div class="group rc-entry stagger" style="--i:1"><button class="row tap" style="width:100%" data-a="openRecap">${sfIcon("sparkles","orange")}<div class="grow"><div class="t">Rewind</div><div class="s">Revis ton mois ou ton année en animation</div></div><span class="chev">${icon("chev")}</span></button></div>
@@ -96,15 +137,17 @@ function renderHistory(){
 }
 
 Object.assign(ACT, {
-  histMetric(d, el){
-    if(histMetric===d.v) return;
-    histMetric = d.v;
-    const seg = el && el.closest(".seg");
-    if(seg){ seg.dataset.cur = HIST_METRICS.findIndex(x=>x[0]===d.v); qsa("button", seg).forEach(b=>{ const on = b.dataset.v===d.v; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); }); settleSegs(seg.parentElement); }
-    const box = qs("#histChart");
-    if(box){ box.classList.remove("swap"); box.innerHTML = histChartHTML(); void box.offsetWidth; box.classList.add("swap"); }
-  },
+  histMetric(d, el){ histSwitch("histMetric", HIST_METRICS, d.v, el); },
+  histRange(d, el){ histSwitch("histRange", HIST_RANGES, d.v, el); },
 });
+function histSwitch(key, opts, v, el){
+  if((key==="histMetric" ? histMetric : histRange)===v) return;
+  if(key==="histMetric") histMetric = v; else histRange = v;
+  const seg = el && el.closest(".seg");
+  if(seg){ seg.dataset.cur = opts.findIndex(x=>x[0]===v); qsa("button", seg).forEach(b=>{ const on = b.dataset.v===v; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); }); settleSegs(seg.parentElement); }
+  const box = qs("#histChart");
+  if(box){ box.classList.remove("swap"); box.innerHTML = histChartHTML(); void box.offsetWidth; box.classList.add("swap"); }
+}
 function sessionDetailHTML(s){
   const rows = s.exos.map(ex=>{
     const def = EXO_MAP[ex.exoId];

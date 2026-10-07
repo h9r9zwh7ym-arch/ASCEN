@@ -786,6 +786,33 @@ Mesures (`tests/tab_perf.js`, processeur ×4, 3 ans d'historique) :
   - dans le choix d'exercices : un filtre « Favoris », une section Favoris en tête et une étoile devant le nom (`pickRowHTML`).
 - Test : `tests/v43.js`.
 
+**Retours sur la réorganisation (toujours 4.0)** :
+- **Catalogue** : la roue abdominale debout (`roue_abdo_debout`) n'est plus retirée.
+- **Rangées de filtres** (`.chip-scroll`, `.type-scroll`) : `overflow-y:hidden`, `touch-action:pan-x`. Avant, sur iPhone, un glissé latéral puis vers le bas faisait descendre les puces dans leur rangée.
+- **En-têtes avec « Retour »** (fiche exercice empilée, sélecteur avec `onCancel`) : grille `te-hd` à 3 colonnes. Le titre est centré et ne colle plus au bouton.
+- **Carte des muscles** :
+  - le gainage passe du gris au violet (`--r-core`) dans toute l'app ;
+  - un muscle travaillé a au moins 40 % d'opacité (`mmLevel`), et les muscles non travaillés sont cerclés ;
+  - la légende des régions est sur 2 colonnes, avec une échelle d'intensité « Rien → 10+ séries ».
+- **Stimulus par muscle** :
+  - une phrase de description courte ;
+  - les repères 4 et 10 sont écrits au-dessus des traits ;
+  - colonnes « Sem. » et « Moy. », avec une légende (`.stim-key`) ;
+  - les explications, la fréquence, les muscles à renforcer et les sources sont dans « À propos » (`ACT.stimHow`, bouton i).
+- **Historique** :
+  - une période au choix (`HIST_RANGES`, `histBuckets`) : 7 j et 1 mois en jours, 3 et 6 mois en semaines, 1 an en mois ;
+  - « Total », par défaut, s'adapte : semaines jusqu'à 3 mois d'ancienneté, mois jusqu'à 3 ans, années au-delà ;
+  - le chiffre clé est le total de la période, comparé à la période précédente de même durée ; la moyenne est par semaine, ou par mois sur 1 an et plus ;
+  - `weeklyBuckets` a été supprimé.
+- **Réglage « Suggestions de l'app »** (`S.settings.appPicks`, `appPicksOn()`, Profil > Entraînement) :
+  - désactivé, il retire « Ou laisse l'app choisir », « L'app choisit », « Compléter » (Ma séance et éditeur) et « Programme de la semaine » ;
+  - l'onglet « Proposée par l'app » reste.
+- **Sections repliées** (`swapCollapse` dans fx.js) :
+  - l'ancien contenu s'efface, la hauteur glisse, puis le nouveau contenu entre en cascade ;
+  - « Mes séances » repliée liste toutes les séances (couleur, nom, jours : `tplMiniHTML`) ; toucher une séance rouvre la section sur elle (`tplMiniOpen`) ;
+  - « Ma semaine » repliée garde ses 7 jours en compact (`weekPlanBodyHTML(true)`).
+- Test : `tests/v44.js`.
+
 **Vérifications** :
 - `tests/v40.js` couvre la 2e passe : Rewind, virgules, carte et légende des muscles, accueil, catalogue, fusion, séance Pilates, recherche.
 - Tour visuel de 27 écrans en clair et en sombre (`tests/tour.js` + `tests/montage.js`) ; audit d'accessibilité repassé (`tests/ux_audit.js`).

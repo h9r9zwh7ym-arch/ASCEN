@@ -571,7 +571,7 @@ const EXOS_ALL = EXO_RAW.map(([id,n,muscles,equip,pattern,uni,def,cues,safety])=
 // maison. Ils ne sont plus proposés ni affichés dans les listes, mais restent connus (EXO_MAP) pour
 // l'historique, les records et les séances enregistrées qui les contiennent encore.
 const EXO_RETIRED = new Set(["dips_banc","mollets_uni_pdc","swing_kb_uni","kb_sumo_deadlift","squeeze_press","curl_zottman",
-  "pompes_archer","pompes_hindoues","extension_triceps_sol","halo_kb","l_sit","roue_abdo_debout","nordic_curl","fentes_sautees",
+  "pompes_archer","pompes_hindoues","extension_triceps_sol","halo_kb","l_sit","nordic_curl","fentes_sautees",
   "marche_ours","squat_sangles","fallout_sangles","tractions_scapulaires"]);
 // doublons fusionnés : les séances enregistrées et « Ma séance » passent sur l'exercice gardé
 const EXO_MERGED = { dips_banc:"dips_chaise", mollets_uni_pdc:"mollets_pdc", swing_kb_uni:"swing_kb", kb_sumo_deadlift:"deadlift_kb", squeeze_press:"dc_haltere", curl_zottman:"curl_marteau" };

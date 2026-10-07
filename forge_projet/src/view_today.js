@@ -133,7 +133,7 @@ function heroHTML(mode, draft){
       <span class="hero-title">Compose ta séance</span>
       <span class="hero-sub">${pend ? `Pour le ${pendingDaysLabel()} : choisis tes exercices, puis enregistre-la.` : "Choisis tes exercices : séries, charges et repos sont calculés pour toi."}</span>
       <button class="hero-go" data-a="customAddOpen"><span class="hg-ico">${icon("plus")}</span>Choisir mes exercices</button>
-      <button class="hero-alt" data-a="customFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Ou laisse l'app choisir</button>
+      ${appPicksOn() ? `<button class="hero-alt" data-a="customFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Ou laisse l'app choisir</button>` : ""}
     </div>`;
   }
   let eyebrow, title, meta, ids, act, extra = "";
@@ -290,10 +290,11 @@ function sectionHead(title, key, extra){
   </button>`;
 }
 
-function weekPlanBodyHTML(){
+// mini : la semaine repliée garde ses 7 jours (couleur de la séance prévue, fait ou manqué), sans les noms
+function weekPlanBodyHTML(mini){
   const today = todayISO(), monday = weekKey(today);
   const doneDays = new Set(S.sessions.map(s=>s.date));
-  return `<div class="wp-days">${JOURS_COURTS.map((j,i)=>{
+  const days = `<div class="wp-days${mini?" mini":""}">${JOURS_COURTS.map((j,i)=>{
       const iso = addDaysISO(monday,i);
       const t = S.templates.find(t=>(t.days||[]).includes(i));
       // « manquée » seulement si la séance était déjà prévue ce jour-là (pas pour un programme créé après)
@@ -303,9 +304,11 @@ function weekPlanBodyHTML(){
         <span class="wp-t">${t?esc(t.n):"—"}</span>
         ${done?`<span class="wp-check">${icon("check")}</span>`:missed?`<span class="wp-miss" title="Séance prévue non faite"></span>`:""}
       </button>`;
-    }).join("")}</div>
+    }).join("")}</div>`;
+  if(mini) return days;
+  return `${days}
     <div class="wp-foot">${S.templates.length ? "Touche un jour pour y placer une séance enregistrée." : "Enregistre une séance, puis place-la sur un ou plusieurs jours."}</div>
-    ${S.templates.length ? `<button class="tpl-add wp-wizard" data-a="weekWizard"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg><span>Programme de la semaine</span></button>` : ""}`;
+    ${S.templates.length && appPicksOn() ? `<button class="tpl-add wp-wizard" data-a="weekWizard"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg><span>Programme de la semaine</span></button>` : ""}`;
 }
 function weekPlanHTML(){
   const nxt = nextPlanned();
@@ -314,7 +317,7 @@ function weekPlanHTML(){
   const summary = todayT ? `Aujourd'hui : ${esc(todayT.n)}` : nxt ? `Prochaine : ${JOURS_COURTS[weekdayIdx(nxt.iso)].toLowerCase()}. · ${esc(nxt.t.n)}` : (S.templates.length ? "Aucun jour planifié" : "");
   return `<div class="week-plan stagger" style="--i:6">
     ${sectionHead(`${icon("clock")}<span>Ma semaine</span>`, "planOpen", summary?`<span class="sec-sum">${summary}</span>`:"")}
-    <div class="clp">${open ? weekPlanBodyHTML() : ""}</div>
+    <div class="clp">${weekPlanBodyHTML(!open)}</div>
   </div>`;
 }
 
@@ -345,6 +348,14 @@ function tplBodyHTML(t){
     </div>`;
 }
 
+// Mes séances repliées : toutes les séances (pas seulement les 3 premières), réduites à leur
+// couleur, leurs jours et leur nom ; un toucher rouvre la section sur cette séance
+function tplMiniHTML(){
+  return `<div class="ts-mini">${S.templates.map((t,i)=>`<button class="ts-row r-${tplRegion(t)}" style="--i:${Math.min(i,10)}" data-a="tplMiniOpen" data-id="${t.id}">
+      <span class="tc-bar-s"></span><span class="ts-n">${esc(t.n)}</span>
+      <span class="ts-d">${(t.days||[]).length ? t.days.slice().sort().map(d=>JOURS_COURTS[d]).join(" · ") : "—"}</span>
+    </button>`).join("")}</div>`;
+}
 function tplListHTML(){
   const list = showAllTpls ? S.templates : S.templates.slice(0,3);
   const hidden = S.templates.length - list.length;
@@ -359,7 +370,7 @@ function templatesHTML(){
         <div class="te-ico">${sfIcon("calPlan","red","lg")}</div>
         <div class="te-t">Tes séances de la semaine</div>
         <div class="te-s">Compose une séance ci-dessus, puis enregistre-la et choisis ses jours : elle s'affichera toute seule le jour venu.</div>
-        <button class="btn secondary sm" data-a="weekWizard"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Programme de la semaine</button>
+        ${appPicksOn() ? `<button class="btn secondary sm" data-a="weekWizard"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Programme de la semaine</button>` : ""}
       </div>
     </div>`;
   }
@@ -368,7 +379,7 @@ function templatesHTML(){
     <div class="sec-row">
       ${sectionHead(`${icon("bookmark")}<span>Mes séances</span><span class="sec-count">${S.templates.length}</span>`, "tplOpen")}
     </div>
-    <div class="clp">${open ? tplListHTML() : ""}</div>
+    <div class="clp">${open ? tplListHTML() : tplMiniHTML()}</div>
   </div>`;
 }
 
@@ -396,10 +407,10 @@ function customPaneHTML(){
     return `<div class="builder-empty stagger" style="--i:4">
       <div class="be-row"><div class="be-ico">${sfIcon("pencil","orange","lg")}</div>
       <div><div class="be-t">${pend ? "Compose ta séance" : done ? "Encore une séance ?" : "Autre chose en tête ?"}</div>
-      <div class="be-s">${pend ? `Pour le ${pendingDaysLabel()} : choisis tes exercices, puis enregistre-la.` : "Choisis tes exercices ou laisse l'app te proposer une base."}</div></div></div>
+      <div class="be-s">${pend ? `Pour le ${pendingDaysLabel()} : choisis tes exercices, puis enregistre-la.` : (appPicksOn() ? "Choisis tes exercices ou laisse l'app te proposer une base." : "Choisis tes exercices : séries, charges et repos sont calculés pour toi.")}</div></div></div>
       <div class="be-actions">
         <button class="btn secondary sm" data-a="customAddOpen">${icon("plus")} Choisir</button>
-        <button class="btn tertiary sm" data-a="customFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> L'app choisit</button>
+        ${appPicksOn() ? `<button class="btn tertiary sm" data-a="customFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> L'app choisit</button>` : ""}
       </div>
     </div>${tail}`;
   }
@@ -423,7 +434,7 @@ function customPaneHTML(){
     <div class="group builder ${reorderMode?"reorder":""}">${rows}</div>
     <div class="btnrow">
       <button class="btn tertiary sm" data-a="customAddOpen">${icon("plus")} Ajouter</button>
-      <button class="btn tertiary sm" data-a="customFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Compléter</button>
+      ${appPicksOn() ? `<button class="btn tertiary sm" data-a="customFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Compléter</button>` : ""}
     </div>
     ${saveRowHTML()}
     ${inHero ? "" : `<div class="btnrow"><button class="btn big" data-a="startCustom">${icon("play")} Commencer ma séance</button></div>`}
@@ -441,7 +452,7 @@ function renderPickerSheet(){
   const favN = S.prefs.included.filter(id=>EXO_MAP[id] && !EXO_RETIRED.has(id)).length;
   const cats = [["","Tout le matériel"]].concat(favN ? [["fav","Favoris"]] : []).concat(EXO_CATS.filter(c=>owned.has(c.id)).map(c=>[c.id, c.n])).map(([id,n])=>`<button class="chip cat ${id==="fav"?"fav":""} ${(picker.cat||"")===id?"on":""}" data-a="pickerCat" data-v="${id}">${id==="fav"?ii("star"):""}${esc(n)}</button>`).join("");
   const chips = [["","Tous les muscles"]].concat(MUSCLES.map(m=>[m.id,m.n])).map(([id,n])=>`<button class="chip ${(picker.muscle||"")===id?"on":""}" data-a="pickerMuscle" data-v="${id}">${esc(n)}</button>`).join("");
-  openSheet(`<div class="sheet-hd">${picker.onCancel?`<button class="te-cancel" data-a="pickerCancel">${icon("chev")}<span>Retour</span></button>`:""}<span class="t">${esc(picker.title)}</span>${picker.onCancel?`<span class="te-spacer"></span>`:`<button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button>`}</div>
+  openSheet(`<div class="sheet-hd${picker.onCancel?" te-hd":""}">${picker.onCancel?`<button class="te-cancel" data-a="pickerCancel">${icon("chev")}<span>Retour</span></button>`:""}<span class="t">${esc(picker.title)}</span>${picker.onCancel?`<span class="te-spacer"></span>`:`<button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button>`}</div>
     <div class="picker-top">
       <label class="search">${icon("search")}<input id="pickerSearch" type="search" placeholder="Rechercher un exercice" autocomplete="off"></label>
       <div class="chip-scroll" id="pickerCats">${cats}</div>
@@ -1065,7 +1076,17 @@ Object.assign(ACT, {
     if(!clp) return changed();
     el.setAttribute("aria-expanded", u[d.k]);
     const ch = el.querySelector(".sec-chev"); if(ch) ch.classList.toggle("open", u[d.k]);
-    animateCollapse(clp, u[d.k], u[d.k] ? (d.k==="planOpen" ? weekPlanBodyHTML() : tplListHTML()) : null);
+    swapCollapse(clp, u[d.k], d.k==="planOpen" ? weekPlanBodyHTML(!u[d.k]) : u[d.k] ? tplListHTML() : tplMiniHTML());
+  },
+  tplMiniOpen(d, el){
+    const u = uiState(), sec = el && el.closest(".tpl-section"), clp = sec && sec.querySelector(":scope > .clp");
+    u.tplOpen = true; openTpls.add(d.id);
+    if(S.templates.findIndex(t=>t.id===d.id)>=3) showAllTpls = true;
+    save();
+    if(!clp) return changed();
+    const h = sec.querySelector('[data-a="toggleSection"]'); h.setAttribute("aria-expanded", true);
+    const ch = h.querySelector(".sec-chev"); if(ch) ch.classList.add("open");
+    swapCollapse(clp, true, tplListHTML());
   },
   toggleTpl(d, el){
     const open = !openTpls.has(d.id);
@@ -1461,7 +1482,7 @@ Object.assign(ACT, {
         ${liveIdx>=0 && ctx!=="picker" ? `<button class="chip" data-a="swapFromInfo" data-idx="${liveIdx}" data-id="${x.id}">Remplacer</button>` : infoAddButton(x.id, true)}
       </div>`).join("")}</div>` : "";
     const sheetEl = qs("#overlay .sheet");
-    sheetEl.innerHTML = `<div class="sheet-grab"></div><div class="sheet-hd">${hd}</div>
+    sheetEl.innerHTML = `<div class="sheet-grab"></div><div class="sheet-hd${canBack?" te-hd":""}">${hd}</div>
       <div class="sheet-body">
       <div class="exo-hero r-${region}">
         <div class="exo-stage r-${region}">${exoAnimSVG(e)}</div>

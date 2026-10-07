@@ -89,6 +89,20 @@ function animateCollapse(el, open, html){
   }
 }
 
+// Section repliable qui garde un résumé replié (Mes séances, Ma semaine) : l'ancien contenu
+// s'efface, puis la hauteur glisse vers le nouveau qui entre en cascade
+function swapCollapse(el, open, html){
+  if(!el) return;
+  sfx(open ? "open" : "close");
+  clearTimeout(el._swapT);
+  if(reducedMotion()){ el.innerHTML = html; return; }
+  el.classList.add("clp-out");
+  el._swapT = setTimeout(()=>{ el._swapT = 0; el.classList.remove("clp-out");
+    morphHeight(el, ()=>{ el.innerHTML = html; el.classList.remove("clp-in"); void el.offsetWidth; el.classList.add("clp-in"); },
+      ()=>setTimeout(()=>el.classList.remove("clp-in"), 500));
+  }, 120);
+}
+
 // ---------- lancement de séance ----------
 const LAUNCH_LINES = [
   "Chaque série compte.",

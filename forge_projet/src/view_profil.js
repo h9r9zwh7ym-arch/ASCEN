@@ -58,6 +58,11 @@ function renderProfil(){
         <div class="grow"><div class="t">Étirements en fin de séance</div><div class="s">Ajoutés aux séances proposées par l'app</div></div>
         <button class="switch ${S.settings.stretching?"on":""}" aria-label="Étirements en fin de séance" data-a="toggleStretching"></button>
       </div>
+      <div class="row">
+        ${sfIcon("sparkles","purple")}
+        <div class="grow"><div class="t">Suggestions de l'app</div><div class="s">Dans Ma séance : « laisse l'app choisir », « Compléter » et le programme de la semaine</div></div>
+        <button class="switch ${appPicksOn()?"on":""}" aria-label="Suggestions de l'app dans Ma séance" aria-pressed="${appPicksOn()}" data-a="toggleAppPicks"></button>
+      </div>
     </div>
 
     <h2 class="sh">Motivation</h2>
@@ -491,6 +496,10 @@ Object.assign(ACT, {
     if(!["beat","nextGoal","trend"].includes(d.k)) return;
     S.settings[d.k] = S.settings[d.k]===false; el.classList.toggle("on", S.settings[d.k]); el.setAttribute("aria-pressed", S.settings[d.k]);
     save();
+  },
+  toggleAppPicks(d, el){
+    S.settings.appPicks = !appPicksOn(); el.classList.toggle("on", S.settings.appPicks); el.setAttribute("aria-pressed", S.settings.appPicks);
+    save(); renderView("today");
   },
   toggleStretching(d, el){
     S.settings.stretching = !S.settings.stretching; el.classList.toggle("on", S.settings.stretching);

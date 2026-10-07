@@ -61,6 +61,7 @@ const OUT = path.join(OUT_ROOT, 'v31'); fs.mkdirSync(OUT, { recursive: true });
   log('Calendar export present:', cal); if (cal) fail('export Calendrier retiré');
   // 6. bulle des graphiques : dans le graphique, jamais sur le titre et les onglets au-dessus
   await page.evaluate(() => switchTab('history')); await wait(700);
+  await page.click('[data-a="histRange"][data-v="3m"]'); await wait(500); // 13 semaines
   const tips = [];
   for (const i of [0, 7, 11]) {
     await page.evaluate(i => { const c = document.querySelectorAll('#v-history .cc-col')[i]; c.scrollIntoView({ block: 'center' }); }, i); await wait(450);

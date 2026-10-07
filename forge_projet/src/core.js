@@ -23,7 +23,7 @@ function defaultState(){
     targets: [],            // objectifs chiffrés [{id, exoId, kind:"reps"|"kg"|"sec", value, start, createdAt, doneAt}]
     body: [],               // pesées facultatives [{d:"AAAA-MM-JJ", kg}]
     medals: {},            // {familleId: {t: palier atteint 0-4, d: {1: iso, 2: iso…}}}
-    settings: { theme:"auto", unit:"kg", todayTab:"custom", name:"", why:"", sound:true, stretching:false, rest:"normal", beat:true, nextGoal:true, trend:true }, // why : « ton pourquoi »
+    settings: { theme:"auto", unit:"kg", todayTab:"custom", name:"", why:"", sound:true, stretching:false, rest:"normal", beat:true, nextGoal:true, trend:true, appPicks:true }, // why : « ton pourquoi »
     meta: { createdAt: new Date().toISOString(), prCount:0 },
   };
 }
@@ -709,24 +709,10 @@ function weeklyAverage(weeks){
   const cutoff = addDaysISO(todayISO(), -weeks*7);
   return round1(S.sessions.filter(s=>s.date>cutoff).length/weeks);
 }
+// suggestions de l'app dans « Ma séance » (« laisse l'app choisir », « Compléter », programme de la semaine)
+function appPicksOn(){ return S.settings.appPicks!==false; }
 function sessionsToday(){ return S.sessions.filter(s=>s.date===todayISO()); }
 
-// n dernières semaines (la plus ancienne d'abord)
-function weeklyBuckets(n){
-  const cur = weekKey(todayISO()), out = [];
-  for(let i=n-1;i>=0;i--){
-    const wk = addDaysISO(cur,-7*i);
-    out.push({ wk, sessions:0, volume:0, sets:0, minutes:0 });
-  }
-  const idx = {}; out.forEach((b,i)=>idx[b.wk]=i);
-  S.sessions.forEach(s=>{
-    const i = idx[weekKey(s.date)];
-    if(i===undefined) return;
-    const b = out[i];
-    b.sessions++; b.volume += sessionVolume(s); b.sets += sessionSetCount(s); b.minutes += (s.durationSec||0)/60;
-  });
-  return out;
-}
 function dayMap(){ return memo("dayMap", dayMap_raw); }
 function dayMap_raw(){
   const m = {};
