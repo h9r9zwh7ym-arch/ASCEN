@@ -39,8 +39,8 @@ require('fs').mkdirSync(OUT, { recursive: true });
   log('Plan summary:', await page.$eval('.week-plan .sec-sum', e => e.textContent).catch(() => '-'));
   log('Missed markers:', await page.$$eval('.wp-miss', e => e.length));
   log('Saved cards shown / total:', await page.$$eval('.tpl-card2', e => e.length), '/ 4');
-  await tap('[data-a="tplShowAll"]'); await wait(250);
-  log('After "afficher les autres":', await page.$$eval('.tpl-card2', e => e.length));
+  if (await page.$('[data-a="tplShowAll"]')) errors.push('ASSERT: plus de bouton « afficher plus / moins »');
+  // 4.0 : plus de « Afficher les autres » ni « Afficher moins » : toutes les séances sont listées
   await tap('.tpl-card2 >> nth=0 >> .tc-head'); await wait(350);
   log('Expanded list rows:', await page.$$eval('.tpl-card2.open .tc-exo', e => e.length));
   await shot('02_tpl_open');

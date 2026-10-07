@@ -59,13 +59,16 @@ function exoMuscleMap(def){
 // Progrès > Muscles : la carte de la semaine (couleur = région, intensité = séries de la semaine,
 // pleine à 10 séries pondérées ; tout muscle travaillé reste bien visible), puis le stimulus de chaque
 // muscle face aux repères sourcés. Les explications détaillées sont dans « À propos » (ACT.stimHow).
+const STIM_ZONE_TXT = { none:"pas travaillé", low:"sous le seuil de progrès", ok:"zone de progrès", high:"zone haute" };
 function mmLevel(sets){ return sets>0 ? .4 + .6*Math.min(1, sets/STIM.high) : 0; }
 function weekMuscleMapHTML(){
   const rows = weekVolume(), month = muscleVolume(28), lv = {}, tips = {};
+  // moyenne sur 4 semaines, ou depuis la 1re séance si elle est plus récente (sinon on sous-estime)
+  const first = S.sessions.length ? S.sessions[0].date : todayISO(), avgWeeks = Math.max(1, Math.min(28, daysBetween(first, todayISO())+1)/7);
   rows.forEach(r=>{ lv[r.id] = mmLevel(r.sets); tips[r.id] = `${r.n} : ${fmtDec(r.sets)} série${r.sets>=2?"s":""}${r.freq ? ` · ${nb(r.freq, "jour")}` : ""}`; });
   const legend = Object.keys(REGIONS).map(r=>`<span class="r-${r}"><i></i>${r==="core" ? "Gainage" : REGIONS[r].n}</span>`).join("");
   const scale = [0, 1, 4, STIM.high].map(v=>`<i style="--o:${mmLevel(v).toFixed(2)}"></i>`).join("");
-  const max = Math.max(STIM.high*1.4, ...rows.map(r=>r.sets)), avg = id=>round1(month.find(m=>m.id===id).sets/4);
+  const max = Math.max(STIM.high*1.4, ...rows.map(r=>r.sets)), avg = id=>round1(month.find(m=>m.id===id).sets/avgWeeks);
   const pos = v=>(v/max*100).toFixed(1);
   const zones = { none:0, low:0, ok:0, high:0 }; rows.forEach(r=>zones[stimZone(r.sets)]++);
   return `<div class="chart-card mm-card stagger" style="--i:1">
@@ -75,24 +78,25 @@ function weekMuscleMapHTML(){
     <div class="mm-scale"><span>Rien</span><span class="sc">${scale}</span><span>${STIM.high}+ séries</span></div>
   </div>
   <div class="chart-card stim-card stagger" style="--i:2">
-    <div class="cc-h tr-h"><div><div class="cc-t">Stimulus par muscle</div><div class="cc-s">Séries de la semaine face aux repères de progrès</div></div>
+    <div class="cc-h tr-h"><div><div class="cc-t">Stimulus par muscle</div><div class="cc-s">Séries des 7 derniers jours, par muscle</div></div>
       <button class="tr-how" data-a="stimHow" aria-label="À propos du stimulus par muscle">i</button></div>
     <div class="stim-sum">
       <span class="sz-ok"><b>${zones.ok+zones.high}</b> en zone de progrès</span>
       <span class="sz-low"><b>${zones.low+zones.none}</b> sous le seuil</span>
     </div>
-    <div class="wv-head" aria-hidden="true"><span></span><span class="wv-ticks"><em style="left:${pos(STIM.min)}%">${STIM.min}</em><em class="hi" style="left:${pos(STIM.high)}%">${STIM.high}</em></span><span>Sem.</span><span>Moy.</span></div>
-    <div class="wv-list">${rows.map((r,i)=>`<div class="wv-row z-${stimZone(r.sets)}" style="--i:${i}">
+    <div class="wv-list" style="--a:${pos(STIM.min)}%;--b:${pos(STIM.high)}%">${rows.map((r,i)=>{ const z = stimZone(r.sets), a = avg(r.id);
+      return `<div class="wv-row z-${z}" style="--i:${i}" tabindex="0" data-tip="${esc(r.n)} : ${fmtDec(r.sets)} série${r.sets>=2?"s":""} en 7 jours · moyenne ${fmtDec(a)} par semaine (4 sem.) · ${STIM_ZONE_TXT[z]}">
       <span class="wv-n">${esc(r.n)}</span>
-      <span class="wv-track"><i class="r-${r.region} z-${stimZone(r.sets)}" style="width:${Math.min(100, r.sets/max*100).toFixed(1)}%"></i><b style="left:${pos(STIM.min)}%"></b><b class="hi" style="left:${pos(STIM.high)}%"></b></span>
-      <span class="wv-v">${fmtDec(r.sets)}</span><span class="wv-f">${fmtDec(avg(r.id))}</span>
-    </div>`).join("")}</div>
-    <dl class="stim-key">
-      <div><dt>Sem.</dt><dd>séries des 7 derniers jours</dd></div>
-      <div><dt>Moy.</dt><dd>moyenne par semaine sur 4 semaines</dd></div>
-      <div><dt><i class="tk"></i>${STIM.min}</dt><dd>seuil de progrès</dd></div>
-      <div><dt><i class="tk hi"></i>${STIM.high}</dt><dd>zone haute</dd></div>
-    </dl>
+      <span class="wv-track"><i class="r-${r.region}" style="width:${Math.min(100, r.sets/max*100).toFixed(1)}%"></i>${a>0 ? `<u style="left:${Math.min(100, a/max*100).toFixed(1)}%"></u>` : ""}</span>
+      <span class="wv-v">${fmtDec(r.sets)}</span>
+    </div>`; }).join("")}</div>
+    <div class="wv-axis" aria-hidden="true" style="--a:${pos(STIM.min)}%;--b:${pos(STIM.high)}%"><span></span><span class="wv-ticks"><em>0</em><em style="left:var(--a)">${STIM.min}</em><em style="left:var(--b)">${STIM.high}</em></span><span>séries</span></div>
+    <div class="stim-key">
+      <span><i class="k-low"></i>Sous le seuil</span>
+      <span><i class="k-ok"></i>Zone de progrès</span>
+      <span><i class="k-high"></i>Zone haute</span>
+      <span><i class="k-avg"></i>Ta moyenne (4 sem.)</span>
+    </div>
   </div>`;
 }
 Object.assign(ACT, {
@@ -100,7 +104,7 @@ Object.assign(ACT, {
     const rows = weekVolume(), under = rows.filter(r=>r.sets<STIM.min).map(r=>r.n), twice = rows.filter(r=>r.freq>=2).length;
     openSheet(`<div class="sheet-hd"><span class="t">Stimulus par muscle</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body how-body">
       <h3>Ce qui est compté</h3>
-      <p>Chaque série terminée compte pour <b>1</b> pour le muscle principal de l'exercice et pour <b>½</b> pour chaque muscle qui aide (par exemple les triceps au développé couché). Les étirements ne comptent pas.</p>
+      <p>Chaque série terminée compte pour <b>1</b> pour le muscle principal de l'exercice et pour <b>½</b> pour chaque muscle qui aide (par exemple les triceps au développé couché). Une série facile (3 répétitions ou plus en réserve) compte moitié moins : loin de l'échec, elle stimule moins. Les étirements ne comptent pas. Le losange montre ta moyenne par semaine sur les 4 dernières semaines.</p>
       <h3>Les repères</h3>
       <p><b>${STIM.min} séries</b> par semaine : le seuil à partir duquel un gain de muscle devient mesurable. <b>${STIM.high} séries</b> et plus : le gain continue, mais de plus en plus lentement. Pour gagner seulement en force, environ 3 séries par semaine suffisent.</p>
       <h3>Ta semaine</h3>
@@ -108,6 +112,7 @@ Object.assign(ACT, {
       <h3>Sources</h3>
       <ul class="how-src">
         <li><a href="https://sportrxiv.org/index.php/server/preprint/view/460" target="_blank" rel="noopener">Pelland et al. 2024 : volume, fréquence et gains de force et de muscle (méta-régression, 67 études)</a></li>
+        <li><a href="https://rke.abertay.ac.uk/en/publications/exploring-the-dose-response-relationship-between-estimated-resist/" target="_blank" rel="noopener">Robinson et al. 2024, Sports Medicine : plus on s'arrête loin de l'échec, moins le muscle grossit (méta-régression)</a></li>
         <li><a href="https://pubmed.ncbi.nlm.nih.gov/15947721/" target="_blank" rel="noopener">Hubal et al. 2005, Med Sci Sports Exerc : la réponse à l'entraînement varie beaucoup d'une personne à l'autre</a></li>
       </ul>
       <p class="hr-note">Ce sont des tendances moyennes, pas des règles : ta réponse peut être plus forte ou plus faible.</p>

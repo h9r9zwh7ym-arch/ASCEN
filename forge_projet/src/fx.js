@@ -69,9 +69,9 @@ function morphHeight(el, mutate, done){
   setTimeout(end, 480);
 }
 // ouvre (contenu déjà inséré) ou ferme (contenu retiré à la fin) un bloc .clp
-function animateCollapse(el, open, html){
+function animateCollapse(el, open, html, quiet){
   if(!el) return;
-  sfx(open ? "open" : "close");
+  if(!quiet) sfx(open ? "open" : "close");
   // un repli encore en cours (double toucher rapide) ne doit pas vider le contenu qu'on rouvre
   if(el._clpT){ clearTimeout(el._clpT); el._clpT = 0; el.classList.remove("clp-out"); el.style.height = el.style.overflow = el.style.transition = ""; }
   if(open){
@@ -87,20 +87,6 @@ function animateCollapse(el, open, html){
     el.style.height = "0px";
     el._clpT = setTimeout(()=>{ el._clpT = 0; el.innerHTML = ""; el.classList.remove("clp-out"); el.style.height = el.style.overflow = el.style.transition = ""; }, 320);
   }
-}
-
-// Section repliable qui garde un résumé replié (Mes séances, Ma semaine) : l'ancien contenu
-// s'efface, puis la hauteur glisse vers le nouveau qui entre en cascade
-function swapCollapse(el, open, html){
-  if(!el) return;
-  sfx(open ? "open" : "close");
-  clearTimeout(el._swapT);
-  if(reducedMotion()){ el.innerHTML = html; return; }
-  el.classList.add("clp-out");
-  el._swapT = setTimeout(()=>{ el._swapT = 0; el.classList.remove("clp-out");
-    morphHeight(el, ()=>{ el.innerHTML = html; el.classList.remove("clp-in"); void el.offsetWidth; el.classList.add("clp-in"); },
-      ()=>setTimeout(()=>el.classList.remove("clp-in"), 500));
-  }, 120);
 }
 
 // ---------- lancement de séance ----------

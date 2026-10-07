@@ -43,7 +43,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
 
   // 3. carte des muscles : un muscle travaillé est bien visible (gainage en violet), légende lisible
   await page.click('.tabbtn[data-id="progress"]'); await wait(600);
-  await page.evaluate(() => ACT.progressTab({ v: 'muscles' })); await wait(600);
+  await page.evaluate(() => ACT.progressTab({ v: 'muscles' })); await wait(1300); // zones allumées en fondu
   const mm = await page.evaluate(() => { const z = document.querySelector('.mm-week .mm-z.r-core.on'), cs = z && getComputedStyle(z);
     const off = getComputedStyle(document.querySelector('.mm-week .mm-z:not(.on)'));
     return { abs: !!z, op: z ? +cs.fillOpacity : 0, fill: cs && cs.fill, stroke: off.stroke !== 'none', legend: [...document.querySelectorAll('.mm-legend span')].map(e => e.textContent.trim()), scale: document.querySelectorAll('.mm-scale .sc i').length }; });
@@ -51,10 +51,11 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const [r, g, b] = (mm.fill || '').match(/\d+/g) || [];
   if (!mm.abs || mm.op < 0.45 || Math.abs(r - g) < 30 || !mm.stroke || mm.legend.join() !== 'Poussée,Tirage,Jambes,Gainage' || mm.scale !== 4) fail('carte des muscles contrastée et légende');
   await shot('02_muscle_map');
-  // stimulus : explications dans « À propos », légende des chiffres et des repères
-  const st = await page.evaluate(() => ({ foot: !!document.querySelector('.wv-foot, .wv-src'), key: [...document.querySelectorAll('.stim-key dt')].map(e => e.textContent.trim()), ticks: [...document.querySelectorAll('.wv-ticks em')].map(e => e.textContent), head: [...document.querySelectorAll('.stim-card .wv-head > span:not(.wv-ticks)')].map(e => e.textContent.trim()).filter(Boolean), sub: document.querySelector('.stim-card .cc-s').textContent }));
+  // stimulus : zones en fond de piste, losange de la moyenne, légende, explications dans « À propos »
+  const st = await page.evaluate(() => ({ foot: !!document.querySelector('.wv-foot, .wv-src'), key: [...document.querySelectorAll('.stim-key span')].map(e => e.textContent.trim()), ticks: [...document.querySelectorAll('.wv-ticks em')].map(e => e.textContent),
+    tips: [...document.querySelectorAll('.stim-card .wv-row')].filter(r => r.dataset.tip).length, avg: document.querySelectorAll('.stim-card .wv-track u').length, sub: document.querySelector('.stim-card .cc-s').textContent }));
   log('Stimulus:', JSON.stringify(st));
-  if (st.foot || st.key.join() !== 'Sem.,Moy.,4,10' || st.ticks.join() !== '4,10' || st.head.join() !== 'Sem.,Moy.' || st.sub.length > 60) fail('stimulus épuré avec légende');
+  if (st.foot || st.key.join() !== 'Sous le seuil,Zone de progrès,Zone haute,Ta moyenne (4 sem.)' || st.ticks.join() !== '0,4,10' || st.tips !== 10 || st.avg < 1 || st.sub.length > 60) fail('stimulus lisible avec légende');
   await page.evaluate(() => { const c = document.querySelector('.stim-card'); document.querySelector('#v-progress').scrollTop = c.offsetTop - 70; }); await wait(300); await shot('03_stimulus');
   await page.click('.stim-card [data-a="stimHow"]'); await wait(600);
   const about = await page.evaluate(() => ({ t: document.querySelector('#overlay .sheet-hd .t').textContent, h: [...document.querySelectorAll('#overlay .how-body h3')].map(e => e.textContent), src: document.querySelectorAll('#overlay .how-src a[href^="https://"]').length }));
@@ -73,20 +74,22 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.click('[data-a="histRange"][data-v="6m"]'); await wait(500); await shot('05_history_6m');
   await page.click('[data-a="histRange"][data-v="all"]'); await wait(300);
 
-  // 5. Mes séances et Ma semaine repliées : résumé compact animé, toutes les séances visibles
+  // 5. Mes séances et Ma semaine repliées : les mêmes cartes se resserrent (rien n'est reconstruit), toutes visibles
   await page.click('.tabbtn[data-id="today"]'); await wait(500);
+  const nodes = await page.evaluate(() => { window.__cards = [...document.querySelectorAll('.tpl-card2')]; return window.__cards.length; });
   await page.click('[data-a="toggleSection"][data-k="tplOpen"]'); await wait(700);
   await page.click('[data-a="toggleSection"][data-k="planOpen"]'); await wait(700);
-  const mini = await page.evaluate(() => ({ rows: [...document.querySelectorAll('.ts-row')].map(r => r.querySelector('.ts-n').textContent + ':' + r.querySelector('.ts-d').textContent), cards: document.querySelectorAll('.tpl-card2').length,
-    days: document.querySelectorAll('.week-plan .wp-days.mini .wp-day').length, names: [...document.querySelectorAll('.week-plan .wp-t')].filter(e => e.offsetParent).length, colored: document.querySelectorAll('.week-plan .wp-day.has').length }));
-  log('Collapsed:', JSON.stringify(mini));
-  if (mini.rows.length !== 5 || mini.cards || !/^Bras:—$/.test(mini.rows[4]) || mini.rows[0] !== 'Haut du corps:Lun' || mini.days !== 7 || mini.names || mini.colored !== 4) fail('sections repliées en résumé');
+  const mini = await page.evaluate(() => ({ same: [...document.querySelectorAll('.tpl-card2')].every((c, i) => c === window.__cards[i]), cards: document.querySelectorAll('.tpl-card2').length,
+    rows: [...document.querySelectorAll('.tpl-card2')].map(c => c.querySelector('.tc-name').textContent + ':' + c.querySelector('.tc-dmini').textContent), more: Math.max(...[...document.querySelectorAll('.tc-more')].map(e => e.offsetHeight)),
+    days: document.querySelectorAll('.week-plan.mini .wp-day').length, names: Math.max(...[...document.querySelectorAll('.week-plan .wp-t')].map(e => e.offsetHeight)), extra: document.querySelector('.wp-extra').offsetHeight, colored: document.querySelectorAll('.week-plan .wp-day.has').length, showMore: !!document.querySelector('[data-a="tplShowAll"]') }));
+  log('Collapsed:', nodes, JSON.stringify(mini));
+  if (!mini.same || mini.cards !== 5 || mini.rows[0] !== 'Haut du corps:Lun' || mini.rows[4] !== 'Bras:—' || mini.more > 1 || mini.days !== 7 || mini.names > 1 || mini.extra > 1 || mini.colored !== 4 || mini.showMore) fail('sections repliées en résumé, sans re-rendu');
   await page.evaluate(() => { const s = document.querySelector('.week-plan'); document.querySelector('#v-today').scrollTop = s.offsetTop - 80; }); await wait(300); await shot('06_home_collapsed');
-  await page.click('.ts-row[data-id="t5"]'); await wait(800);
-  const re = await page.evaluate(() => ({ open: S.settings.ui.tplOpen, cards: document.querySelectorAll('.tpl-card2').length, t5: !!document.querySelector('.tpl-card2.open[data-id="t5"]') }));
-  log('Reopen on a session:', JSON.stringify(re)); if (!re.open || re.cards !== 5 || !re.t5) fail('toucher une séance repliée rouvre sur elle');
+  await page.click('.tpl-card2[data-id="t5"] .tc-head'); await wait(800);
+  const re = await page.evaluate(() => ({ open: S.settings.ui.tplOpen, mini: document.querySelector('.tpl-section').classList.contains('mini'), t5: !!document.querySelector('.tpl-card2.open[data-id="t5"]') }));
+  log('Reopen on a session:', JSON.stringify(re)); if (!re.open || re.mini || !re.t5) fail('toucher une séance repliée rouvre sur elle');
   await page.click('[data-a="toggleSection"][data-k="planOpen"]'); await wait(700);
-  if (!(await page.$('.week-plan .wp-foot'))) fail('semaine rouverte');
+  if (!(await page.evaluate(() => document.querySelector('.wp-extra').offsetHeight > 10))) fail('semaine rouverte');
 
   // 6. suggestions de l'app désactivées : plus de « laisse l'app choisir », « Compléter », programme de la semaine
   const before = await page.evaluate(() => document.querySelectorAll('#v-today [data-a="customFill"], #v-today [data-a="weekWizard"]').length);

@@ -37,7 +37,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   });
   log('Formulas:', JSON.stringify(f));
   if (f.one !== 10 || f.five !== 11.46 || f.twelve !== 14 || !(f.rir3 > f.rir12 && f.rir12 > f.fail) || f.unk !== f.fail) fail('1RM estimé et répétitions en réserve');
-  if (f.noBody.v !== 15 || f.withBody !== Math.round(((51.2 * (1 + 10 / 30)) + 51.2 * 36 / 27) / 2 * 100) / 100) fail('pompes : répétitions sans pesée, 64 % du poids du corps avec');
+  if (f.noBody.v !== 1.5 || f.withBody !== Math.round(((51.2 * (1 + 10 / 30)) + 51.2 * 36 / 27) / 2 * 100) / 100) fail('pompes : 1RM relatif sans pesée (1 + 15/30), 64 % du poids du corps avec');
 
   // 2. désentraînement : rien jusqu'à 21 jours, −3 %/sem ensuite, ×1,5 à 65 ans et plus, −30 % au plus
   const d = await page.evaluate(() => { const r = x => Math.round(x * 1000) / 1000;

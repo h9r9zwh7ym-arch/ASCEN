@@ -125,6 +125,62 @@ function rwSlides(kind, key){
 }
 function sessionsPRs(list){ return list.reduce((t,s)=>t+sessionPRCount(s), 0); }
 
+// ---------- sons (synthétisés, calés sur les animations CSS de chaque diapo) ----------
+// Chaque diapo joue sur son propre bus : passer à la suivante coupe net les sons prévus de la
+// précédente. Les délais reprennent ceux du CSS (.rw-cal, .rw-plates, .rw-ring…) et des compteurs.
+const RW_PENTA = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.7, 1318.5, 1568, 1760];
+function rwMute(){
+  if(!rw || !rw.bus) return;
+  const b = rw.bus; rw.bus = null;
+  try{ b.gain.setTargetAtTime(0.0001, AC.currentTime, 0.03); setTimeout(()=>{ try{ b.disconnect(); }catch(e){} }, 400); }catch(e){}
+}
+function rwSound(fn){
+  rwMute();
+  if(!rw || !soundOn() || document.hidden || !audioReady()) return;
+  const r = rw, run = ()=>{
+    if(rw!==r) return;
+    try{ const bus = AC.createGain(); bus.connect(SFX_OUT); r.bus = bus; SFX_BUS = bus; fn(); }catch(e){} finally{ SFX_BUS = null; }
+  };
+  if(AC.state==="running") run(); else AC.resume().then(run).catch(()=>{});
+}
+// pincement doux (triangle court) et « tic » de compteur
+function rwPluck(f, t, g){ tone(f, t, 0.32, { gain:g||0.07, type:"triangle", att:0.004 }); tone(f*2, t, 0.12, { gain:(g||0.07)*0.3 }); }
+function rwThud(t, g){ tone(150, t, 0.16, { gain:g||0.22, to:70, att:0.003 }); tok(t, 120, 0.6); }
+// compteur : un tic à chaque cran, de plus en plus espacés (même courbe que le chiffre), puis une cloche
+function rwCountTicks(t0, dur){
+  const N = 16;
+  for(let k=1;k<=N;k++){ const p = 1-Math.pow(1-k/N, 1/4); tone(520*Math.pow(2, k/N), t0+p*dur, 0.05, { gain:0.045, type:"triangle", att:0.002 }); }
+  bell(NT.E6, t0+dur, 0.7, 0.09); bell(NT.A6, t0+dur+0.06, 0.6, 0.06);
+}
+// la bande qui se rembobine : souffle qui accélère puis ralentit, crans de lecture, puis le « clac » d'arrêt
+function rwTapeSound(delay, dur){
+  if(!dur){ bell(NT.C6, delay, 0.6, 0.1); return; }
+  whoosh(delay, dur, 600, 3200, 0.06);
+  tone(420, delay, dur, { gain:0.018, type:"sawtooth", to:180, att:0.2 });
+  const N = Math.round(10+dur/90);
+  for(let k=1;k<N;k++){ const e = k/N, p = e<.5 ? Math.sqrt(e/2) : 1-Math.sqrt((1-e)/2); tok(delay+p*dur, 230+e*120, 0.35); }
+  const end = delay+dur;
+  rwThud(end, 0.18); bell(NT.C6, end+0.05, 0.9, 0.1); bell(NT.G6, end+0.12, 0.8, 0.07);
+}
+function rwSlideSounds(sl, n){
+  const reduce = reducedMotion();
+  rwSound(()=>{
+    if(sl.outro){ SFX.complete(); return; }
+    whoosh(0, 0.34, 450, 2600, 0.1); tone(196, 0, 0.3, { gain:0.05, type:"sine", att:0.02 });
+    if(reduce) return;
+    if(qs("[data-to]", n)) rwCountTicks(0.26, 1.3);
+    qsa(".rw-cal i.on", n).forEach((d,i)=>rwPluck(RW_PENTA[i%RW_PENTA.length], 0.6+(+d.style.getPropertyValue("--k"))*0.035, 0.05));
+    qsa(".rw-bars span", n).forEach(b=>{ const h = parseFloat(b.style.getPropertyValue("--h"))||0, k = +b.style.getPropertyValue("--k"); if(h) rwPluck(RW_PENTA[Math.min(9, Math.round(h/12))], 0.5+k*0.06, 0.05); });
+    if(qs(".rw-ring", n)){ tone(260, 0.4, 1.6, { gain:0.05, type:"sine", to:780, att:0.3 }); bell(NT.G6, 2.0, 0.8, 0.08); }
+    qsa(".rw-plates i", n).forEach((x,k)=>rwThud(0.6+k*0.09+0.2, 0.16+k*0.012));
+    if(qs(".rw-bolt", n)){ tone(1900, 0.3, 0.28, { gain:0.04, type:"sawtooth", to:180 }); whoosh(0.3, 0.3, 4000, 900, 0.08); [NT.C7, NT.G6, NT.E6].forEach((f,i)=>tone(f, 0.9+i*0.06, 0.25, { gain:0.05, type:"triangle" })); }
+    if(qs(".rw-stage", n)) [NT.C5, NT.E5, NT.G5].forEach((f,i)=>tone(f, 0.15+i*0.05, 1.2, { gain:0.05, type:"triangle", att:0.05 }));
+    qsa(".rw-list div", n).forEach((x,k)=>rwPluck(RW_PENTA[2+k*2], 0.9+k*0.12, 0.05));
+    qsa(".rw-habits div", n).forEach((x,k)=>rwPluck([NT.C5, NT.E5, NT.G5, NT.C6][k%4], 0.35+k*0.18+0.1, 0.06));
+    qsa(".rw-medals div", n).forEach((x,k)=>bell([NT.G5, NT.C6, NT.E6, NT.G6, NT.C7][k%5], 0.5+k*0.12+0.25, 0.8, 0.08));
+  });
+}
+
 // ---------- lecteur ----------
 function openRewind(kind, key){
   kind = kind||"month"; key = key||recapDefault(kind);
@@ -160,8 +216,8 @@ function rwGo(i){
   requestAnimationFrame(()=>n.classList.add("in"));
   rwCounts(n);
   if(sl.intro) rwRewindDate(n);
-  if(sl.outro){ const img = qs("#rwImg", n); if(img){ img.src = drawRecap(rw.kind, rw.key).toDataURL("image/png"); } sfx("medal"); confettiBurst(null, innerHeight*0.25, 90); }
-  if(i>0 && !sl.outro) sfx("seg");
+  if(sl.outro){ const img = qs("#rwImg", n); if(img){ img.src = drawRecap(rw.kind, rw.key).toDataURL("image/png"); } confettiBurst(null, innerHeight*0.25, 90); }
+  if(!sl.intro) rwSlideSounds(sl, n);
 }
 function rwTick(now){
   if(!rw) return;
@@ -179,6 +235,7 @@ function rwTick(now){
 function closeRewind(){
   if(!rw) return;
   cancelAnimationFrame(rw.raf);
+  rwMute();
   const el = rw.el; rw = null;
   el.classList.remove("show"); el.classList.add("closing");
   setTimeout(()=>el.remove(), 350);
@@ -202,6 +259,7 @@ function rwRewindDate(root){
   const total = Math.max(1, daysBetween(end, start)), t0 = performance.now()+350, dur = reduce ? 0 : Math.min(2200, 900+total*6);
   const kind = rw.kind, key = rw.key, name = S.settings.name;
   root.classList.add("rewinding");
+  rwSound(()=>{ whoosh(0, 0.5, 300, 1800, 0.08); rwTapeSound(0.35, dur/1000); });
   (function step(t){
     if(!dateEl.isConnected) return;
     const p = dur ? Math.max(0, Math.min(1, (t-t0)/dur)) : 1, e = p<.5 ? 2*p*p : 1-Math.pow(-2*p+2, 2)/2;

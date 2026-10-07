@@ -5,6 +5,9 @@
 // avant cela, et si les sons sont coupés dans le Profil, sfx() ne fait rien.
 
 let AC = null, SFX_OUT = null, NOISE = null;
+// bus de sortie temporaire (le Rewind y joue les sons d'une diapo pour pouvoir les couper net)
+let SFX_BUS = null;
+function sfxDest(){ return SFX_BUS || SFX_OUT; }
 // iOS : les sons d'ASCEN se mélangent à la musique au lieu de l'interrompre (et ne sont
 // plus coupés quand une autre app reprend la main sur l'audio).
 try{ if(navigator.audioSession) navigator.audioSession.type = "ambient"; }catch(e){}
@@ -75,8 +78,8 @@ function tone(f, t, dur, o){
   g.gain.exponentialRampToValueAtTime(peak, t0+att);
   g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
   osc.connect(g);
-  if(o.pan && AC.createStereoPanner){ const p = AC.createStereoPanner(); p.pan.value = o.pan; g.connect(p); p.connect(SFX_OUT); }
-  else g.connect(SFX_OUT);
+  if(o.pan && AC.createStereoPanner){ const p = AC.createStereoPanner(); p.pan.value = o.pan; g.connect(p); p.connect(sfxDest()); }
+  else g.connect(sfxDest());
   osc.start(t0); osc.stop(t0+dur+0.05);
 }
 // cloche : fondamentale + partiels inharmoniques qui s'éteignent plus vite
@@ -96,7 +99,7 @@ function whoosh(t, dur, from, to, gain){
   src.buffer = NOISE; f.type = "bandpass"; f.Q.value = 1.2;
   f.frequency.setValueAtTime(from, t0); f.frequency.exponentialRampToValueAtTime(to, t0+dur);
   g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(gain||0.2, t0+dur*0.4); g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
-  src.connect(f); f.connect(g); g.connect(SFX_OUT);
+  src.connect(f); f.connect(g); g.connect(sfxDest());
   src.start(t0); src.stop(t0+dur+0.05);
 }
 
@@ -112,7 +115,7 @@ function tok(t, body, gain){
   const src = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain();
   src.buffer = NOISE; f.type = "bandpass"; f.frequency.value = 2600*v; f.Q.value = 0.9;
   g.gain.setValueAtTime(0.16*g0, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0+0.014);
-  src.connect(f); f.connect(g); g.connect(SFX_OUT);
+  src.connect(f); f.connect(g); g.connect(sfxDest());
   src.start(t0, Math.random()*0.5); src.stop(t0+0.03);
   tone((body||190)*v, t, 0.045, { gain:0.22*g0, to:(body||190)*0.6*v, att:0.002 });
 }

@@ -142,7 +142,7 @@ function buildShell(){
       requestAnimationFrame(()=>{
         pending = false;
         const y = v.scrollTop;
-        v.classList.toggle("scrolled", y>4);
+        if(v.classList.contains("scrolled")!==(y>4)){ v.classList.toggle("scrolled", y>4); if(v.id==="v-"+currentTab && !statusDim) syncStatusBar(); }
         const lt = v.querySelector(".lt");
         if(lt){ const k = Math.max(0, Math.min(1, y/70)); lt.style.opacity = (1-k*0.9).toFixed(2); lt.style.transform = k ? `translateY(${(k*6).toFixed(1)}px) scale(${(1-k*0.06).toFixed(3)})` : ""; }
       });
@@ -194,6 +194,7 @@ function switchTabNow(id){
   }
   if(typeof renderRestBar==="function") renderRestBar();
   syncLiveChrome();
+  if(typeof syncStatusBar==="function" && !statusDim) syncStatusBar();
   prerenderStaleViews();
 }
 // Onglets déjà visités dont les données ont changé : reconstruits pendant les temps morts (un à la

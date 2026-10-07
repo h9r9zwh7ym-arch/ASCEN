@@ -264,7 +264,6 @@ function proposalPaneHTML(draft){
 // ---------- séances enregistrées & planning ----------
 function uiState(){ return S.settings.ui || (S.settings.ui = { planOpen:true, tplOpen:true }); }
 let openTpls = new Set();   // séances enregistrées dépliées
-let showAllTpls = false;
 let reorderMode = false;
 
 function tplRegion(t){
@@ -283,6 +282,16 @@ function nextPlanned(){
   return null;
 }
 
+// replier / déplier Mes séances ou Ma semaine : les mêmes éléments se resserrent en CSS (classe
+// « mini »), sans reconstruire la liste ; les cartes ouvertes se referment d'abord
+function setSectionOpen(sec, head, open){
+  sfx(open ? "open" : "close");
+  if(head){ head.setAttribute("aria-expanded", open); const ch = head.querySelector(".sec-chev"); if(ch) ch.classList.toggle("open", open); }
+  if(!open && sec.classList.contains("tpl-section")){
+    qsa(".tpl-card2.open", sec).forEach(c=>{ openTpls.delete(c.dataset.id); c.classList.remove("open"); const h = qs(".tc-head", c); h.setAttribute("aria-expanded", false); qs(".sec-chev", h).classList.remove("open"); animateCollapse(qs(".clp", c), false, null, true); });
+  }
+  sec.classList.toggle("mini", !open);
+}
 function sectionHead(title, key, extra){
   const open = uiState()[key];
   return `<button class="sec-h" data-a="toggleSection" data-k="${key}" aria-expanded="${open}">
@@ -290,11 +299,12 @@ function sectionHead(title, key, extra){
   </button>`;
 }
 
-// mini : la semaine repliée garde ses 7 jours (couleur de la séance prévue, fait ou manqué), sans les noms
-function weekPlanBodyHTML(mini){
+// repliée (classe « mini » sur .week-plan), la semaine garde ses 7 jours (couleur, fait, manqué) :
+// seuls les noms et le bas se resserrent, en CSS, sans reconstruire la liste
+function weekPlanBodyHTML(){
   const today = todayISO(), monday = weekKey(today);
   const doneDays = new Set(S.sessions.map(s=>s.date));
-  const days = `<div class="wp-days${mini?" mini":""}">${JOURS_COURTS.map((j,i)=>{
+  return `<div class="wp-days">${JOURS_COURTS.map((j,i)=>{
       const iso = addDaysISO(monday,i);
       const t = S.templates.find(t=>(t.days||[]).includes(i));
       // « manquée » seulement si la séance était déjà prévue ce jour-là (pas pour un programme créé après)
@@ -304,20 +314,20 @@ function weekPlanBodyHTML(mini){
         <span class="wp-t">${t?esc(t.n):"—"}</span>
         ${done?`<span class="wp-check">${icon("check")}</span>`:missed?`<span class="wp-miss" title="Séance prévue non faite"></span>`:""}
       </button>`;
-    }).join("")}</div>`;
-  if(mini) return days;
-  return `${days}
+    }).join("")}</div>
+    <div class="wp-extra"><div>
     <div class="wp-foot">${S.templates.length ? "Touche un jour pour y placer une séance enregistrée." : "Enregistre une séance, puis place-la sur un ou plusieurs jours."}</div>
-    ${S.templates.length && appPicksOn() ? `<button class="tpl-add wp-wizard" data-a="weekWizard"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg><span>Programme de la semaine</span></button>` : ""}`;
+    ${S.templates.length && appPicksOn() ? `<button class="tpl-add wp-wizard" data-a="weekWizard"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg><span>Programme de la semaine</span></button>` : ""}
+    </div></div>`;
 }
 function weekPlanHTML(){
   const nxt = nextPlanned();
   const open = uiState().planOpen;
   const todayT = plannedTemplate();
   const summary = todayT ? `Aujourd'hui : ${esc(todayT.n)}` : nxt ? `Prochaine : ${JOURS_COURTS[weekdayIdx(nxt.iso)].toLowerCase()}. · ${esc(nxt.t.n)}` : (S.templates.length ? "Aucun jour planifié" : "");
-  return `<div class="week-plan stagger" style="--i:6">
+  return `<div class="week-plan ${open?"":"mini"} stagger" style="--i:6">
     ${sectionHead(`${icon("clock")}<span>Ma semaine</span>`, "planOpen", summary?`<span class="sec-sum">${summary}</span>`:"")}
-    <div class="clp">${weekPlanBodyHTML(!open)}</div>
+    <div class="clp">${weekPlanBodyHTML()}</div>
   </div>`;
 }
 
@@ -330,9 +340,12 @@ function tplCardHTML(t, i){
       <span class="tc-bar"></span>
       <span class="tc-main">
         <span class="tc-name">${esc(t.n)}${loaded?' <span class="tc-tag">chargée</span>':""}</span>
-        <span class="tc-meta">${t.exos.length} exercice${t.exos.length>1?"s":""} · ${sets} séries · ≈ ${tplMinutes(t)} min</span>
-        <span class="tc-days">${(t.days||[]).length ? (t.days||[]).slice().sort().map(d=>`<span>${JOURS_COURTS[d]}</span>`).join("") : `<em>pas de jour fixe</em>`}</span>
+        <span class="tc-more"><span>
+          <span class="tc-meta">${t.exos.length} exercice${t.exos.length>1?"s":""} · ${sets} séries · ≈ ${tplMinutes(t)} min</span>
+          <span class="tc-days">${(t.days||[]).length ? (t.days||[]).slice().sort().map(d=>`<span>${JOURS_COURTS[d]}</span>`).join("") : `<em>pas de jour fixe</em>`}</span>
+        </span></span>
       </span>
+      <span class="tc-dmini">${(t.days||[]).length ? (t.days||[]).slice().sort().map(d=>JOURS_COURTS[d]).join(" · ") : "—"}</span>
       <span class="tc-picts">${t.exos.slice(0,3).map(e=>EXO_MAP[e.exoId]?exoIcon(EXO_MAP[e.exoId],"xs"):"").join("")}</span>
       <span class="sec-chev ${open?"open":""}">${icon("chev")}</span>
     </button>
@@ -348,21 +361,9 @@ function tplBodyHTML(t){
     </div>`;
 }
 
-// Mes séances repliées : toutes les séances (pas seulement les 3 premières), réduites à leur
-// couleur, leurs jours et leur nom ; un toucher rouvre la section sur cette séance
-function tplMiniHTML(){
-  return `<div class="ts-mini">${S.templates.map((t,i)=>`<button class="ts-row r-${tplRegion(t)}" style="--i:${Math.min(i,10)}" data-a="tplMiniOpen" data-id="${t.id}">
-      <span class="tc-bar-s"></span><span class="ts-n">${esc(t.n)}</span>
-      <span class="ts-d">${(t.days||[]).length ? t.days.slice().sort().map(d=>JOURS_COURTS[d]).join(" · ") : "—"}</span>
-    </button>`).join("")}</div>`;
-}
-function tplListHTML(){
-  const list = showAllTpls ? S.templates : S.templates.slice(0,3);
-  const hidden = S.templates.length - list.length;
-  return `<div class="tpl-list">${list.map(tplCardHTML).join("")}</div>
-      ${hidden>0 ? `<button class="show-more" data-a="tplShowAll">Afficher les ${hidden} autre${hidden>1?"s":""} ${icon("chev")}</button>`
-        : S.templates.length>3 ? `<button class="show-more up" data-a="tplShowAll">Afficher moins ${icon("chev")}</button>` : ""}`;
-}
+// toutes les séances, toujours : repliée (classe « mini »), la section les réduit à leur couleur,
+// leur nom et leurs jours ; dépliée, chaque carte montre son détail
+function tplListHTML(){ return `<div class="tpl-list">${S.templates.map(tplCardHTML).join("")}</div>`; }
 function templatesHTML(){
   if(!S.templates.length){
     return `<div class="tpl-section stagger" style="--i:5">
@@ -375,11 +376,11 @@ function templatesHTML(){
     </div>`;
   }
   const open = uiState().tplOpen;
-  return `<div class="tpl-section stagger" style="--i:5">
+  return `<div class="tpl-section ${open?"":"mini"} stagger" style="--i:5">
     <div class="sec-row">
       ${sectionHead(`${icon("bookmark")}<span>Mes séances</span><span class="sec-count">${S.templates.length}</span>`, "tplOpen")}
     </div>
-    <div class="clp">${open ? tplListHTML() : tplMiniHTML()}</div>
+    <div class="clp">${tplListHTML()}</div>
   </div>`;
 }
 
@@ -1072,23 +1073,18 @@ Object.assign(ACT, {
   },
   toggleSection(d, el){
     const u = uiState(); u[d.k] = !u[d.k]; save();
-    const sec = el && el.closest(".tpl-section, .week-plan"), clp = sec && sec.querySelector(":scope > .clp");
-    if(!clp) return changed();
-    el.setAttribute("aria-expanded", u[d.k]);
-    const ch = el.querySelector(".sec-chev"); if(ch) ch.classList.toggle("open", u[d.k]);
-    swapCollapse(clp, u[d.k], d.k==="planOpen" ? weekPlanBodyHTML(!u[d.k]) : u[d.k] ? tplListHTML() : tplMiniHTML());
-  },
-  tplMiniOpen(d, el){
-    const u = uiState(), sec = el && el.closest(".tpl-section"), clp = sec && sec.querySelector(":scope > .clp");
-    u.tplOpen = true; openTpls.add(d.id);
-    if(S.templates.findIndex(t=>t.id===d.id)>=3) showAllTpls = true;
-    save();
-    if(!clp) return changed();
-    const h = sec.querySelector('[data-a="toggleSection"]'); h.setAttribute("aria-expanded", true);
-    const ch = h.querySelector(".sec-chev"); if(ch) ch.classList.add("open");
-    swapCollapse(clp, true, tplListHTML());
+    const sec = el && el.closest(".tpl-section, .week-plan");
+    if(!sec) return changed();
+    setSectionOpen(sec, el, u[d.k]);
   },
   toggleTpl(d, el){
+    // section repliée : toucher une séance rouvre la section et déplie cette séance
+    const sec = el && el.closest(".tpl-section");
+    if(sec && sec.classList.contains("mini")){
+      uiState().tplOpen = true; save();
+      setSectionOpen(sec, sec.querySelector('[data-a="toggleSection"]'), true);
+      if(openTpls.has(d.id)) return;
+    }
     const open = !openTpls.has(d.id);
     if(open) openTpls.add(d.id); else openTpls.delete(d.id);
     const card = el && el.closest(".tpl-card2"), t = S.templates.find(x=>x.id===d.id);
@@ -1097,16 +1093,6 @@ Object.assign(ACT, {
     el.setAttribute("aria-expanded", open);
     const ch = el.querySelector(".sec-chev"); if(ch) ch.classList.toggle("open", open);
     animateCollapse(qs(".clp", card), open, open ? tplBodyHTML(t) : null);
-  },
-  tplShowAll(d, el){
-    showAllTpls = !showAllTpls;
-    const clp = el && el.closest(".clp");
-    if(!clp) return changed();
-    const before = qsa(".tpl-card2", clp).length;
-    morphHeight(clp, ()=>{
-      clp.innerHTML = tplListHTML();
-      qsa(".tpl-card2", clp).forEach((c,i)=>{ if(i>=before){ c.classList.add("pop-in"); c.style.setProperty("--k", i-before); } });
-    });
   },
   toggleReorder(){ reorderMode = !reorderMode; changed(); },
   customMove(d){
@@ -1335,8 +1321,9 @@ Object.assign(ACT, {
   },
   favToggle(d, el){
     const on = toggleFavorite(d.id), n = EXO_MAP[d.id] ? EXO_MAP[d.id].n : "Exercice";
-    if(el && el.classList.contains("fav-toggle")){ el.classList.toggle("on", on); el.setAttribute("aria-pressed", on); el.setAttribute("aria-label", on ? "Retirer des favoris" : "Ajouter aux favoris"); }
-    haptic(10); closeModalIfMenu();
+    if(el && el.classList.contains("fav-toggle")){ el.classList.toggle("on", on); el.setAttribute("aria-pressed", on); el.setAttribute("aria-label", on ? "Retirer des favoris" : "Ajouter aux favoris");
+      el.classList.remove("pop"); if(on){ void el.offsetWidth; el.classList.add("pop"); } }
+    haptic(10); sfx(on ? "tick" : "close"); closeModalIfMenu();
     toast(on ? `${n} ajouté aux favoris` : `${n} retiré des favoris`, "star");
     if(picker){ const l = qs("#pickerList"); if(l) l.innerHTML = pickerListHTML(); }
   },

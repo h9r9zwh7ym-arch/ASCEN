@@ -10,9 +10,9 @@ function applyTheme(){
   syncStatusBar();
 }
 // Barre d'état (heure, batterie) : sur iPhone, l'app installée la colore avec theme-color. Elle
-// prend exactement le fond de l'app (thème choisi dans l'app compris, pas seulement celui du
-// système) et s'assombrit comme la page quand une feuille est ouverte (voile noir à 40 %) : plus de
-// bande claire « coupée » au-dessus de l'app.
+// prend exactement la couleur de ce qui est juste dessous : le fond de l'app en haut de page, la
+// barre de navigation (translucide, composée sur le fond) dès qu'on a défilé, et le voile noir à
+// 40 % quand une feuille est ouverte. Plus de bande « coupée » au-dessus de l'app.
 let statusDim = false;
 function syncStatusBar(dim){
   if(dim!==undefined) statusDim = dim;
@@ -21,7 +21,13 @@ function syncStatusBar(dim){
     if(!m){ document.querySelectorAll('meta[name="theme-color"]').forEach(x=>x.remove()); m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
     const c = getComputedStyle(document.body).backgroundColor.match(/[\d.]+/g);
     if(!c) return;
-    const k = statusDim ? .6 : 1, hex = c.slice(0,3).map(v=>Math.round(+v*k).toString(16).padStart(2,"0")).join("");
+    let rgb = c.slice(0,3).map(Number);
+    const v = typeof currentTab!=="undefined" && document.getElementById("v-"+currentTab);
+    if(v && v.classList.contains("scrolled")){
+      const b = getComputedStyle(document.documentElement).getPropertyValue("--bar").match(/[\d.]+/g);
+      if(b && b.length>=4) rgb = rgb.map((x,i)=>+b[i]*+b[3] + x*(1-+b[3]));
+    }
+    const k = statusDim ? .6 : 1, hex = rgb.map(x=>Math.round(x*k).toString(16).padStart(2,"0")).join("");
     if(m.content!=="#"+hex) m.content = "#"+hex;
   }catch(e){}
 }

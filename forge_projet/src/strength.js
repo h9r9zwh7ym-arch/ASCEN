@@ -7,7 +7,10 @@
 //    Zourdos/Helms 2016 ; on prend la borne basse, car on sous-estime d'environ 1 rep sa marge (Halperin 2022).
 // 2. Pompes : la charge réelle est un pourcentage du poids du corps mesuré au sol (Ebben 2011 : 64 % ;
 //    genoux 49 % ; mains surélevées 55 % ; pieds surélevés 70 %). Avec une pesée, elles comptent en kg.
-//    Les autres exercices au poids du corps et les exercices tenus comptent en répétitions ou secondes.
+//    Sans pesée, et pour les autres exercices au poids du corps, la même formule s'applique à charge
+//    constante (1RM relatif = 1 + reps/30, moyenné avec Brzycki) : la charge s'annule dans le rapport
+//    actuel / départ. Passer de 10 à 20 répétitions compte donc +25 %, pas +100 %. Exercices tenus :
+//    1 répétition ≈ 3 s sous tension (tempo classique), puis la même formule.
 // 3. Indice = moyenne, muscle par muscle, du rapport entre la force actuelle et celle de tes 2 premières
 //    séances de l'exercice (100 = ton départ). Le muscle compte, pas l'exercice : 5 curls ne pèsent
 //    pas plus que les jambes (même logique que les scores par muscle de Fitbod).
@@ -16,7 +19,7 @@
 //    Ogasawara 2013 : des pauses de 3 semaines ne coûtent rien). Ensuite −3 % par semaine
 //    (McMaster 2013 : −14,5 % après 7,2 semaines ; 2 à 3 % par semaine une fois la perte lancée),
 //    ×1,5 à partir de 65 ans (Bosquet 2013 : effet plus fort chez les plus âgés), 30 % au plus.
-//    Une seule séance qui travaille le muscle remet le compteur à zéro : 1 séance par semaine suffit
+//    Une seule séance qui travaille le muscle (en principal ou en secondaire) remet le compteur à zéro : 1 séance par semaine suffit
 //    à maintenir la force tant que l'intensité est là (Spiering 2021). Et la force revient vite à la
 //    reprise (Staron 1991 ; Bruusgaard 2010 : les noyaux musculaires restent) : dès que tu refais
 //    tes charges, la mesure réelle remplace l'estimation.
@@ -49,7 +52,8 @@ function sessionPerf(def, ex, date){
     let v, c = 1;
     if(kg){ if(!st.weight) continue; v = e1rmOf(st.weight, reps); c = reps>10 ? .6 : 1; }
     else if(bw){ v = e1rmOf(bw*bwFrac, reps); c = reps>10 ? .6 : 1; }
-    else { v = reps; c = .8; }
+    // charge constante (poids du corps sans pesée, élastique) : 1RM relatif, la charge s'annule dans le rapport
+    else { v = e1rmOf(1, timed ? reps/3 : reps); c = timed ? .8 : reps>10 ? .6 : 1; }
     if(v>best){ best = v; conf = c; }
   }
   return best ? { v:best, conf } : null;
@@ -60,7 +64,8 @@ function strengthData(){
     const exos = {}, muscleDays = {};
     for(const s of S.sessions) for(const ex of s.exos){
       const def = EXO_MAP[ex.exoId]; if(!def || isStretch(def)) continue;
-      if(ex.sets.some(st=>st.done && st.reps>0)){ const m = def.muscles[0]; (muscleDays[m] = muscleDays[m] || []).push(s.date); }
+      // le muscle est « travaillé » ce jour-là, qu'il soit principal ou secondaire (arrête le désentraînement)
+      if(ex.sets.some(st=>st.done && st.reps>0)) def.muscles.forEach(m=>{ const a = muscleDays[m] || (muscleDays[m] = []); if(a[a.length-1]!==s.date) a.push(s.date); });
       const p = sessionPerf(def, ex, s.date); if(!p) continue;
       (exos[ex.exoId] = exos[ex.exoId] || []).push({ date:s.date, v:p.v, conf:p.conf });
     }
@@ -165,7 +170,15 @@ function strengthCardHTML(){
   const pts = strengthSeries(12);
   const head = `<div class="cc-h tr-h"><div><div class="cc-t">Progression de force</div><div class="cc-s">depuis tes débuts, muscle par muscle · 0 % = ton niveau de départ</div></div>
     <button class="tr-how" data-a="strengthHow" aria-label="Comment la progression est calculée">i</button></div>`;
-  if(pts.length<2) return `<div class="chart-card trend-card stagger" style="--i:1">${head}<div class="chart-empty">Ta progression apparaît dès que tu as fait 3 fois le même exercice.</div></div>`;
+  if(pts.length<2){
+    // avant la courbe : où on en est (3 séances du même exercice), en trois pastilles qui se remplissent
+    const cnt = {}; S.sessions.forEach(s=>new Set(s.exos.filter(e=>e.sets.some(x=>x.done)).map(e=>e.exoId)).forEach(id=>cnt[id]=(cnt[id]||0)+1));
+    const n = Math.min(2, Math.max(0, ...Object.values(cnt)));
+    return `<div class="chart-card trend-card stagger" style="--i:1">${head}<div class="tr-empty">
+      <div class="tr-dots" aria-hidden="true">${[0,1,2].map(i=>`<i class="${i<n?"on":""}" style="--k:${i}"></i>`).join("")}</div>
+      <div><b>${n ? `Encore ${nb(3-n,"séance")} avec un même exercice` : "Fais 3 séances avec un même exercice"}</b><span>et ta courbe de force apparaît.</span></div>
+    </div></div>`;
+  }
   const last = pts[pts.length-1], ref = pts[Math.max(0, pts.length-5)], d = last.v-ref.v, wk = Math.round(daysBetween(ref.wk, last.wk)/7);
   const status = STATUS[trainingStatus()], L = trainingLoad();
   const lines = [];
@@ -211,11 +224,11 @@ Object.assign(ACT, {
     openSheet(`<div class="sheet-hd"><span class="t">Comment c'est calculé</span></div><div class="sheet-body how-body">
       <div class="how-st st-${st.c}"><span class="tr-dot"></span><div><b>${st.n}</b><p>${st.d}</p></div></div>
       <h3>1. Ta force sur chaque exercice</h3>
-      <p>Le 1RM estimé de ta meilleure série (formules d'Epley et de Brzycki, fiables jusqu'à 10 répétitions). Si tu indiques les répétitions que tu aurais pu faire en plus, elles sont ajoutées. Pour les pompes, la charge est la part du poids du corps qu'elles soulèvent (64 % au sol, 49 % sur les genoux) : ajoute une pesée dans Profil pour qu'elles comptent en kg. Les autres exercices au poids du corps comptent en répétitions, les gainages en secondes.</p>
+      <p>Le 1RM estimé de ta meilleure série (formules d'Epley et de Brzycki, fiables jusqu'à 10 répétitions). Si tu indiques les répétitions que tu aurais pu faire en plus, elles sont ajoutées. Pour les pompes, la charge est la part du poids du corps qu'elles soulèvent (64 % au sol, 49 % sur les genoux) : ajoute une pesée dans Profil pour qu'elles comptent en kg. Sans pesée, et pour les autres exercices au poids du corps, la même formule s'applique à charge constante : passer de 10 à 20 répétitions compte +25 %, pas +100 %. Pour les gainages, 1 répétition ≈ 3 secondes sous tension.</p>
       <h3>2. La progression</h3>
       <p>Pour chaque muscle : ta force actuelle (meilleure des 8 dernières semaines) comparée à celle de tes 2 premières séances. La progression est la moyenne des muscles : 0 % = ton niveau de départ, +20 % = 20 % plus fort.</p>
       <h3>3. Quand tu t'arrêtes</h3>
-      <p>Rien ne bouge pendant 21 jours sans travailler un muscle : les études montrent que la force reste quasi intacte pendant 3 à 4 semaines. Ensuite, l'estimation baisse de ${S.goals.senior ? "4,5" : "3"}&nbsp;% par semaine${S.goals.senior ? " (plus vite à partir de 65 ans)" : ""}, jusqu'à −30&nbsp;%. Une séance qui travaille le muscle arrête la baisse, et tes vraies performances remplacent l'estimation : la force revient vite à la reprise.</p>
+      <p>Rien ne bouge pendant 21 jours sans travailler un muscle (en principal ou en secondaire) : les études montrent que la force reste quasi intacte pendant 3 à 4 semaines. Ensuite, l'estimation baisse de ${S.goals.senior ? "4,5" : "3"}&nbsp;% par semaine${S.goals.senior ? " (plus vite à partir de 65 ans)" : ""}, jusqu'à −30&nbsp;%. Une séance qui travaille le muscle arrête la baisse, et tes vraies performances remplacent l'estimation : la force revient vite à la reprise.</p>
       <h3>4. Le statut</h3>
       <p>Comme sur une montre de sport : ta charge des 7 derniers jours (${fmtDec(round1(L.acute))} séries difficiles) comparée à ton habitude sur 28 jours (${fmtDec(round1(L.chronic))}), et l'évolution de l'indice sur 4 semaines. Ce rapport décrit ta charge ; il ne prédit pas les blessures.</p>
       <h3>Sources</h3>

@@ -203,7 +203,7 @@ Object.assign(ACT, {
     });
     if(!made){ toast("Pas assez d'exercices avec ton matériel"); return; }
     S.goals.daysPerWeek = wizardN;
-    uiState().tplOpen = true; uiState().planOpen = true; showAllTpls = true;
+    uiState().tplOpen = true; uiState().planOpen = true;
     if(!(S.draft && S.draft.startedAt)) applyPlannedSession(true);
     closeSheet(); save(); renderViewAnimated("today"); sfx("exo");
     toast(`${made} séances créées et placées dans ta semaine`, "sparkle");

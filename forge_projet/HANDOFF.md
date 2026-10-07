@@ -813,6 +813,42 @@ Mesures (`tests/tab_perf.js`, processeur ×4, 3 ans d'historique) :
   - « Ma semaine » repliée garde ses 7 jours en compact (`weekPlanBodyHTML(true)`).
 - Test : `tests/v44.js`.
 
+**Animations, sons du Rewind, justesse des calculs (toujours 4.0)** :
+- **Barre d'état** (`syncStatusBar`) : elle prend la couleur de ce qui est dessous :
+  - le fond de l'app en haut de page ;
+  - la barre de navigation (`--bar` composée sur le fond) dès qu'on a défilé ;
+  - le voile, quand une feuille est ouverte.
+  Elle se met à jour au changement d'onglet et quand la vue passe à l'état « défilé ».
+- **Progrès > Résumé** :
+  - la grille des chiffres clés a une marge haute : la carte de force ne colle plus dessus ;
+  - avant la courbe, la carte de force montre 3 pastilles (« Encore N séances avec un même exercice »).
+- **Mes séances / Ma semaine repliées** :
+  - classe `mini` sur la section : les mêmes éléments se resserrent en CSS (`grid-template-rows` 1fr → 0fr, `max-width`, `padding`), avec une légère cascade ;
+  - aucune reconstruction, donc plus d'effet de rechargement ; `swapCollapse`, `tplMiniHTML` et `ts-*` sont supprimés ;
+  - toutes les séances sont listées, ouvert comme fermé : « Afficher les N autres » et « Afficher moins » ne sont plus là (`showAllTpls` et `tplShowAll` supprimés) ;
+  - toucher une séance repliée rouvre la section sur elle (`toggleTpl` → `setSectionOpen`).
+- **Historique** : en changeant de mesure, chaque barre glisse de son ancienne hauteur à la nouvelle (`histSwitch`, WAAPI `scaleY`) ; en changeant de période, elles repoussent en cascade (cascade plafonnée à 16 barres).
+- **Petits détails** :
+  - l'étoile des favoris rebondit, avec une auréole et un son ;
+  - la courbe de force se trace à l'arrivée ;
+  - son dernier point respire deux fois ;
+  - les zones de la carte des muscles s'allument en fondu.
+- **Performance** : le dégradé de la carte Rewind dérive par `transform`, au lieu de `background-position` qui repeignait à chaque image. Les halos flous du Rewind sont en `will-change:transform`.
+- **Sons du Rewind** (`rwSound`, `rwSlideSounds`, `rwTapeSound`) :
+  - chaque diapo joue sur son propre bus (`SFX_BUS`, `sfxDest()` dans sfx.js), coupé net au changement de diapo ou à la fermeture (`rwMute`) ;
+  - les sons sont calés sur les délais du CSS : bande qui se rembobine (souffle, crans, « clac » d'arrêt), compteurs (un tic par cran, puis une cloche), jours du calendrier, barres, anneau, disques, éclair, listes, habitudes, trophées ;
+  - la fin joue `complete`.
+- **Stimulus par muscle** :
+  - la piste montre les zones en fond (sous le seuil, progrès, zone haute), la barre de la semaine par-dessus et un losange pour la moyenne par semaine sur 4 semaines ;
+  - un seul chiffre par muscle, axe 0 / 4 / 10 séries, légende des couleurs ;
+  - toucher une ligne affiche le détail (`data-tip`).
+- **Calculs vérifiés et corrigés** :
+  - poids du corps sans pesée, élastiques : 1RM relatif `e1rmOf(1, reps)`. La charge constante s'annule dans le rapport : 10 → 20 répétitions = +25 % (avant, +100 %). Gainages : 1 répétition ≈ 3 s ;
+  - désentraînement : un muscle travaillé en secondaire arrête aussi la baisse ;
+  - stimulus : une série facile (3 répétitions ou plus en réserve) compte ½ (Robinson 2024, ajouté aux sources) ;
+  - la moyenne sur 4 semaines est divisée par le nombre de semaines réellement écoulées depuis la 1re séance.
+- Test : `tests/v45.js`.
+
 **Vérifications** :
 - `tests/v40.js` couvre la 2e passe : Rewind, virgules, carte et légende des muscles, accueil, catalogue, fusion, séance Pilates, recherche.
 - Tour visuel de 27 écrans en clair et en sombre (`tests/tour.js` + `tests/montage.js`) ; audit d'accessibilité repassé (`tests/ux_audit.js`).

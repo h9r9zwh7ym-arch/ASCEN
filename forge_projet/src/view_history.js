@@ -146,7 +146,17 @@ function histSwitch(key, opts, v, el){
   const seg = el && el.closest(".seg");
   if(seg){ seg.dataset.cur = opts.findIndex(x=>x[0]===v); qsa("button", seg).forEach(b=>{ const on = b.dataset.v===v; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); }); settleSegs(seg.parentElement); }
   const box = qs("#histChart");
-  if(box){ box.classList.remove("swap"); box.innerHTML = histChartHTML(); void box.offsetWidth; box.classList.add("swap"); }
+  if(!box) return;
+  // même nombre de barres (autre mesure) : chaque barre glisse de son ancienne hauteur à la nouvelle ;
+  // sinon (autre période) elles repoussent en cascade
+  const old = qsa(".cc-bar", box).map(b=>parseFloat(b.style.height)||0);
+  box.classList.remove("swap","morph"); box.innerHTML = histChartHTML();
+  const bars = qsa(".cc-bar", box);
+  if(old.length===bars.length && !reducedMotion() && bars[0] && bars[0].animate){
+    box.classList.add("morph");
+    bars.forEach((b,i)=>{ const h = parseFloat(b.style.height)||0; if(!h) return;
+      try{ b.animate([{ transform:`scaleY(${Math.min(4, old[i]/h).toFixed(3)})` }, { transform:"scaleY(1)" }], { duration:460, easing:"cubic-bezier(.32,.72,0,1)", delay:Math.min(i,20)*10 }); }catch(e){} });
+  } else { void box.offsetWidth; box.classList.add("swap"); }
 }
 function sessionDetailHTML(s){
   const rows = s.exos.map(ex=>{

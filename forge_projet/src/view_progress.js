@@ -19,7 +19,8 @@ function muscleVolume(days){
       const s = S.sessions[i]; if(s.date<=cutoff) break;
       for(const ex of s.exos){
         const def = EXO_MAP[ex.exoId]; if(!def || isStretch(def)) continue;
-        const n = ex.sets.filter(st=>st.done).length; if(!n) continue;
+        // une série facile (3 répétitions ou plus en réserve) compte ½ : loin de l'échec, elle stimule moins
+        const n = ex.sets.reduce((t,st)=>t+(st.done ? (st.effort===1 ? .5 : 1) : 0), 0); if(!n) continue;
         def.muscles.forEach((m,k)=>{ sets[m] = (sets[m]||0) + (k===0 ? n : n/2); (dset[m] = dset[m]||new Set()).add(s.date); });
       }
     }

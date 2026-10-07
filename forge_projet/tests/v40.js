@@ -44,7 +44,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     const card = document.querySelector('.mm-card'), legend = [...card.querySelectorAll('.mm-legend span')];
     const swatch = legend.map(s => ({ cls: s.className, c: getComputedStyle(s.querySelector('i')).backgroundColor }));
     const zones = {}; card.querySelectorAll('.mm-z.on').forEach(z => { zones[z.getAttribute('class').match(/r-(\w+)/)[1]] = getComputedStyle(z).fill; });
-    return { cards: document.querySelectorAll('.mm-card').length, rows: card.querySelectorAll('.wv-row').length, stimRows: document.querySelectorAll('.stim-card .wv-row').length, head: !!document.querySelector('.stim-card .wv-head'), swatch, zones,
+    return { cards: document.querySelectorAll('.mm-card').length, rows: card.querySelectorAll('.wv-row').length, stimRows: document.querySelectorAll('.stim-card .wv-row').length, head: !!document.querySelector('.stim-card .wv-axis'), swatch, zones,
       vals: [...document.querySelectorAll('.stim-card .wv-v, .stim-card .wv-f')].map(e => e.textContent), titles: [...document.querySelectorAll('#v-progress .cc-t')].map(e => e.textContent) };
   });
   log('Muscle card:', JSON.stringify({ cards: mm.cards, rows: mm.rows, head: mm.head, legend: mm.swatch.map(s => s.cls), vals: mm.vals.slice(0, 5) }));
