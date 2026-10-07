@@ -13,7 +13,7 @@ function defaultState(){
     v:1,
     equipment: defaultEquipment(),
     prefs: { excluded:[], included:[] },
-    goals: { overall:"hypertrophie", emphasis:{}, daysPerWeek:3, sessionLength:"moyen", level:"intermediaire", exoCount:0 },
+    goals: { overall:"hypertrophie", emphasis:{}, daysPerWeek:3, sessionLength:"moyen", level:"intermediaire", exoCount:0, senior:false },
     sessions: [],
     draft: null,
     custom: { exos:[] },   // « Ma séance » : [{exoId, sets}]

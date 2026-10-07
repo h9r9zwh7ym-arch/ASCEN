@@ -50,10 +50,7 @@ function renderProgress(){
     <h1 class="lt">Progrès</h1>${seg}<div class="seg-pane">${pane}</div></div>`;
 }
 
-// ---------- indice de force et tendance (réglage Motivation, 4.0) ----------
-// Pour chaque exercice pratiqué au moins 3 fois : sa meilleure performance des 8 dernières semaines
-// (1RM estimé si chargé en kg, sinon répétitions ou secondes) rapportée à ses 2 premières séances.
-// L'indice est la moyenne de ces rapports × 100 : 100 = ton niveau de départ, 120 = 20 % plus fort.
+// ---------- projection d'un exercice (réglage Motivation, 4.0) ; l'indice de force est dans strength.js ----------
 function exoMetric(def, ex, kgOnly){
   let m = 0;
   for(const st of ex.sets){ if(!st.done || !(st.reps>0)) continue;
@@ -66,20 +63,6 @@ function exoHistory(kgOnly){
     for(const s of S.sessions) for(const ex of s.exos){ const def = EXO_MAP[ex.exoId]; if(!def || isStretch(def)) continue;
       const v = exoMetric(def, ex, kgOnly); if(v>0) (h[ex.exoId] = h[ex.exoId] || []).push({ date:s.date, v }); }
     return h; });
-}
-function strengthSeries(weeks){
-  return memo("strength"+weeks+todayISO(), ()=>{
-    const hist = exoHistory(false), ids = Object.keys(hist).filter(id=>hist[id].length>=3), out = [];
-    const end0 = addDaysISO(weekKey(todayISO()), 6);
-    for(let k=weeks-1;k>=0;k--){
-      const end = addDaysISO(end0, -7*k), start = addDaysISO(end, -56), ratios = [];
-      ids.forEach(id=>{ const upto = hist[id].filter(x=>x.date<=end); if(upto.length<3) return;
-        const win = upto.filter(x=>x.date>start); if(!win.length) return;
-        ratios.push(Math.min(3, Math.max(...win.map(x=>x.v))/Math.max(upto[0].v, upto[1].v))); });
-      if(ratios.length) out.push({ wk:addDaysISO(end, -6), v:Math.round(100*ratios.reduce((a,b)=>a+b,0)/ratios.length), n:ratios.length });
-    }
-    return out;
-  });
 }
 // pente des moindres carrés (unité de y par unité de x)
 function slopeOf(pts){
@@ -103,25 +86,6 @@ function exoProjection(){
     if(proj<=cur) return { def, cur, flat:true };
     return { def, cur, proj, date:addDaysISO(todayISO(), 56) };
   });
-}
-function strengthCardHTML(){
-  if(S.settings.trend===false || !S.sessions.length) return "";
-  const pts = strengthSeries(12);
-  const head = `<div class="cc-h"><div class="cc-t">Indice de force</div><div class="cc-s">100 = ton niveau de départ sur chaque exercice</div></div>`;
-  if(pts.length<2) return `<div class="chart-card trend-card stagger" style="--i:1">${head}<div class="chart-empty">Ton indice apparaît dès que tu as fait 3 fois le même exercice.</div></div>`;
-  const last = pts[pts.length-1], ref = pts[Math.max(0, pts.length-5)], d = last.v-ref.v, wk = Math.round(daysBetween(ref.wk, last.wk)/7);
-  const recent = pts.slice(-8), slope = slopeOf(recent.map((p,i)=>[i, p.v]));
-  const lines = [];
-  if(slope>0.2) lines.push(`${ii("trendUp")}<span>À ce rythme : environ <b>${Math.round(Math.min(last.v+slope*8, last.v*1.15))}</b> dans 2 mois.</span>`); // estimation prudente : +15 % au plus
-  else lines.push(`${ii("target")}<span>Stable ces dernières semaines : une répétition ou un cran de charge en plus relance la courbe.</span>`);
-  const pj = exoProjection();
-  if(pj && !pj.flat){ const u = v=>kgType(pj.def) ? `${fmtDec(v)} kg` : `${fmtNum(v)}${isTimed(pj.def) ? " s" : " reps"}`;
-    lines.push(`${ii("target")}<span>${esc(pj.def.n)} : de ${u(pj.cur)} à environ <b>${u(pj.proj)}</b> vers le ${fmtDate(pj.date)}, si tu gardes ce rythme.</span>`); }
-  return `<div class="chart-card trend-card stagger" style="--i:1">${head}
-    <div class="tr-hero"><span class="tr-v">${last.v}</span>${wk>0 ? `<span class="tr-d ${d>0?"up":d<0?"down":""}">${d>0?"+":d<0?"−":"±"}${Math.abs(d)} en ${nb(wk,"semaine")}</span>` : ""}</div>
-    ${lineChart(pts.map(p=>({ label:fmtDate(p.wk), v:p.v, tip:`Semaine du ${fmtDate(p.wk)} : ${p.v} (${nb(p.n,"exercice")})` })), { aria:"Indice de force par semaine", fmt:v=>String(v) })}
-    ${lines.map(l=>`<div class="tr-line">${l}</div>`).join("")}
-  </div>`;
 }
 function levelCardHTML(){
   const lv = levelInfo();

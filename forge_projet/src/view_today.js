@@ -69,6 +69,10 @@ function nextGoal(){
   const week = left>0 && left<=daysLeft ? { ic:"target", pct:done/goal, act:'data-a="tab" data-id="progress"',
     t: left===1 ? "Une séance de plus et ta semaine est validée" : `Encore ${nb(left,"séance")} pour valider ta semaine` } : null;
   if(week && left===1) return week;
+  // un muscle délaissé : l'indice de force va baisser (ou baisse déjà), comme l'alerte d'une montre de sport
+  if(S.settings.trend!==false && typeof detrainAlerts==="function"){ const a = detrainAlerts()[0];
+    if(a) return { ic:a.losing ? "warn" : "clock", pct:null, warn:a.losing, act:'data-a="tab" data-id="progress"',
+      t: a.losing ? `${a.label} : ${a.m.days} jours sans séance, force estimée −${a.pct} %` : `${a.label} : ${a.m.days} jours sans séance, l'indice baisse dans ${nb(a.left,"jour")}` }; }
   // le record à battre dans la séance prête (composée ou prévue aujourd'hui)
   if(!sessionsToday().length){
     const ids = (S.custom.exos.length ? S.custom.exos : (plannedTemplate()||{exos:[]}).exos).map(e=>e.exoId);
@@ -91,7 +95,7 @@ function nextGoalHTML(){
   if(S.settings.nextGoal===false) return "";
   const g = nextGoal(); if(!g) return "";
   const ring = g.pct==null ? "" : `<span class="gl-ring" style="--p:${Math.round(g.pct*100)}" aria-hidden="true"></span>`;
-  return `<button class="goal-line stagger" style="--i:1" ${g.act}><span class="gl-ic">${ii(g.ic)}</span><span class="gl-t"><small>Prochain cap</small>${esc(g.t)}</span>${ring}</button>`;
+  return `<button class="goal-line ${g.warn?"warn":""} stagger" style="--i:1" ${g.act}><span class="gl-ic">${ii(g.ic)}</span><span class="gl-t"><small>${g.warn ? "À surveiller" : "Prochain cap"}</small>${esc(g.t)}</span>${ring}</button>`;
 }
 function heroPicts(ids){
   const defs = ids.map(id=>EXO_MAP[id]).filter(Boolean);
@@ -740,7 +744,9 @@ function beatLineHTML(ex, def, si, st){
   const ref = isStretch(def) ? null : beatRef(ex.exoId, si);
   if(!ref) return lastTimeHTML(ex.exoId, !!ex.note);
   const u = isTimed(def) ? " s" : "", refTxt = `${ref.reps}${u}${loadSuffix(def, ref.weight)}`;
-  const key = ex.exoId+":"+si;
+  const key = ex.exoId+":"+si, gap = daysBetween(ref.date, todayISO());
+  // après 3 semaines sans l'exercice, on ne cherche pas à battre : on retrouve son niveau (la force revient vite)
+  if(gap>=21) return `<div class="fc-beat">${ii("repeat")}<span>Reprise après ${gap} jours : retrouve tes sensations <small>(la dernière fois : ${refTxt})</small></span></div>`;
   if(beatCmp(def, st, ref)>0){ const pop = beatWinKey!==key; beatWinKey = key; return `<div class="fc-beat win${pop ? " pop" : ""}">${ii("trendUp")}<span>Ça bat la dernière fois <small>(${refTxt})</small></span></div>`; }
   if(beatWinKey===key) beatWinKey = "";
   const tgt = beatTarget(def, st.weight, ref);
@@ -889,7 +895,7 @@ function finalizeSession(){
   draft.exos = draft.exos.filter(ex=>ex.sets.some(s=>s.done));
   // séries meilleures que la même série la dernière fois (comptées avant d'ajouter la séance)
   if(S.settings.beat!==false) draft.beats = draft.exos.reduce((t,ex)=>{ const def = EXO_MAP[ex.exoId]; if(!def || isStretch(def)) return t;
-    return t + ex.sets.filter((st,si)=>{ if(!st.done || st.pr) return false; const ref = beatRef(ex.exoId, si); return !!ref && beatCmp(def, st, ref)>0; }).length; }, 0);
+    return t + ex.sets.filter((st,si)=>{ if(!st.done || st.pr) return false; const ref = beatRef(ex.exoId, si); return !!ref && daysBetween(ref.date, todayISO())<21 && beatCmp(def, st, ref)>0; }).length; }, 0);
   // étirements : gardés à part (nom et secondes tenues), hors séries, volume et muscles travaillés
   const cool = draft.exos.filter(isStretchEntry);
   if(cool.length){
@@ -1392,7 +1398,7 @@ Object.assign(ACT, {
     }
     // mieux que la même série la dernière fois : petit retour immédiat (le record a déjà le sien)
     const ref = !st.pr && S.settings.beat!==false && !isStretch(def) ? beatRef(ex.exoId, si) : null;
-    const beat = !!ref && beatCmp(def, st, ref)>0;
+    const beat = !!ref && daysBetween(ref.date, todayISO())<21 && beatCmp(def, st, ref)>0;
     if(beat){ floatText(fx0, fy0, "Mieux que la dernière fois", "beat", "trendUp"); haptic(20); }
     st.done = true;
     { const fin = ex.sets.every(s=>s.done), rest = S.draft.exos.some(e=>e.sets.some(s=>!s.done));

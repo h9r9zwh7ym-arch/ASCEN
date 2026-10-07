@@ -72,6 +72,8 @@ function morphHeight(el, mutate, done){
 function animateCollapse(el, open, html){
   if(!el) return;
   sfx(open ? "open" : "close");
+  // un repli encore en cours (double toucher rapide) ne doit pas vider le contenu qu'on rouvre
+  if(el._clpT){ clearTimeout(el._clpT); el._clpT = 0; el.classList.remove("clp-out"); el.style.height = el.style.overflow = el.style.transition = ""; }
   if(open){
     morphHeight(el, ()=>{ el.innerHTML = html||""; el.classList.remove("clp-in"); void el.offsetWidth; el.classList.add("clp-in"); },
       ()=>setTimeout(()=>el.classList.remove("clp-in"), 500));
@@ -83,7 +85,7 @@ function animateCollapse(el, open, html){
     void el.offsetHeight;
     el.style.transition = "height .3s cubic-bezier(.32,.72,0,1)";
     el.style.height = "0px";
-    setTimeout(()=>{ el.innerHTML = ""; el.classList.remove("clp-out"); el.style.height = el.style.overflow = el.style.transition = ""; }, 320);
+    el._clpT = setTimeout(()=>{ el._clpT = 0; el.innerHTML = ""; el.classList.remove("clp-out"); el.style.height = el.style.overflow = el.style.transition = ""; }, 320);
   }
 }
 

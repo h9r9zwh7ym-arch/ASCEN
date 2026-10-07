@@ -348,6 +348,8 @@ function goalsBodyHTML(){
     </div></div>
     <h2 class="sh">Niveau</h2><div class="chips">${Object.keys(LEVEL_LABELS).map(k=>`<button class="chip ${(S.goals.level||"intermediaire")===k?"on":""}" data-a="setLevel" data-v="${k}">${LEVEL_LABELS[k]}</button>`).join("")}</div>
     <p class="hr-note">${LEVEL_HINTS[S.goals.level||"intermediaire"]}</p>
+    <h2 class="sh">Âge</h2><div class="chips">${[[false,"Moins de 65 ans"],[true,"65 ans et plus"]].map(([v,l])=>`<button class="chip ${!!S.goals.senior===v?"on":""}" data-a="setSenior" data-v="${v?1:0}" aria-pressed="${!!S.goals.senior===v}">${l}</button>`).join("")}</div>
+    <p class="hr-note">Sert à l'indice de force : à partir de 65 ans, la force baisse plus vite quand on s'arrête (méta-analyse de Bosquet, 2013).</p>
     <h2 class="sh">Durée de séance</h2><div class="chips">${lenChips}</div>
     <h2 class="sh">Exercices par séance proposée</h2>
     <div class="field" style="padding:10px 14px"><div class="stepper">
@@ -496,6 +498,7 @@ Object.assign(ACT, {
 
   setGoalOverall(d){ S.goals.overall = d.v; save(); refreshGoals(); },
   setSessionLength(d){ S.goals.sessionLength = d.v; S.goals.exoCount = 0; save(); refreshGoals(); regenerateDraftIfIdle(); },
+  setSenior(d){ S.goals.senior = d.v==="1"; save(); refreshGoals(); },
   setLevel(d){ S.goals.level = d.v; save(); refreshGoals(); regenerateDraftIfIdle(); },
   stepExoCount(d){ S.goals.exoCount = Math.max(2, Math.min(10, sessionSize()+parseInt(d.d,10))); save(); refreshGoals(); regenerateDraftIfIdle(); },
   stepDays(d){ S.goals.daysPerWeek = Math.max(2,Math.min(6, S.goals.daysPerWeek+parseInt(d.d,10))); save(); refreshGoals(); },

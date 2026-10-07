@@ -741,12 +741,25 @@ Mesures (`tests/tab_perf.js`, processeur ×4, 3 ans d'historique) :
   5. sinon, le niveau suivant, avec une estimation en séances.
 
   La ligne mène à la fiche de l'exercice, au trophée ou à l'onglet concerné.
-- **Indice de force et projection** : carte « Indice de force » en tête de Progrès (`strengthCardHTML`, `view_progress.js`).
-  - Calcul : pour chaque exercice fait au moins 3 fois, on prend sa meilleure performance sur 8 semaines glissantes (1RM estimé si chargé en kg, sinon répétitions ou secondes). On la divise par la meilleure de ses 2 premières séances, plafonnée à ×3. L'indice est la moyenne × 100, semaine par semaine sur 12 semaines (`strengthSeries`).
-  - Affichage : la valeur actuelle et l'écart sur 4 semaines, puis la courbe (`lineChart`, avec la bulle au toucher).
-  - Projection de l'indice : la pente des 8 dernières semaines (moindres carrés, `slopeOf`) prolongée sur 2 mois, plafonnée à +15 %. Si la courbe est plate, un conseil la remplace.
-  - Projection d'un exercice : celui qui a été fait au moins 4 fois en 8 semaines (`exoProjection`). Sa charge (ou ses répétitions) est projetée à 8 semaines, plafonnée à +25 %. Le résultat est arrondi aux haltères possédés ou au demi-kilo.
-- Test : `tests/v41.js`.
+- **Indice de force et projection** : carte « Indice de force » en tête de Progrès. Le modèle est dans `strength.js` (voir l'en-tête du fichier et la feuille « Comment c'est calculé », `ACT.strengthHow`, qui liste les sources).
+  - **Force d'un exercice** (`sessionPerf`) : 1RM estimé de la meilleure série, moyenne Epley/Brzycki jusqu'à 10 reps, Epley seul au-delà avec une confiance moindre (LeSuer 1997, Mayhew 2008).
+    - Les répétitions en réserve déclarées s'ajoutent, borne basse (`RIR_OF_EFFORT`, échelle RIR de Zourdos/Helms 2016 ; on sous-estime sa marge d'environ 1 rep, Halperin 2022).
+    - Pompes : charge = part du poids du corps (`BW_FRACTION`, Ebben 2011), si une pesée existe.
+    - Autres exercices au poids du corps : répétitions ; exercices tenus : secondes.
+  - **Indice** (`strengthAt`) : pour chaque muscle principal, la force des 8 dernières semaines de pratique de l'exercice divisée par ses 2 premières séances, pondérée par le nombre de séances et la confiance. Moyenne des muscles × 100 (`strengthSeries` : une valeur par semaine sur 12 semaines).
+  - **Désentraînement** (`detrainFactor`, `DETRAIN`), muscle par muscle :
+    - rien jusqu'à 21 jours (Bosquet 2013, McMaster 2013, Ogasawara 2013) ;
+    - ensuite −3 % par semaine (McMaster 2013 : −14,5 % en 7,2 semaines), ×1,5 à 65 ans et plus (`S.goals.senior`, réglage Âge dans Objectifs ; Bosquet 2013), −30 % au plus ;
+    - une séance qui travaille le muscle remet le compteur à zéro (Spiering 2021), et les vraies performances remplacent l'estimation à la reprise (Staron 1991).
+  - **Statut d'entraînement** (`trainingStatus`, `STATUS`), façon Garmin : charge aiguë sur 7 jours et chronique sur 28 jours, en séries difficiles, en moyennes exponentielles (`trainingLoad`, Williams 2017), plus la tendance de l'indice sur 4 semaines.
+    - Statuts : Désentraînement, Surcharge, Productif, Maintien, Récupération, Improductif, En calibrage.
+    - Le rapport des charges n'est pas présenté comme un prédicteur de blessure (Impellizzeri 2020-2021).
+  - **Alertes** (`detrainAlerts`) :
+    - à partir de 14 jours sans travailler un muscle, sur la carte et en tête du « Prochain cap », étiqueté « À surveiller » une fois la baisse lancée ;
+    - par région, la carte montre la valeur de Poussée, Tirage, Jambes et Gainage, avec un triangle quand un muscle baisse.
+  - **Reprise** : après 21 jours sans un exercice, la ligne « à battre » devient « Reprise après N jours : retrouve tes sensations » (pas d'annonce « mieux que la dernière fois »).
+  - Projections inchangées : la pente des 8 dernières semaines, +15 % au plus pour l'indice ; l'exercice le plus pratiqué (`exoProjection`), +25 % au plus.
+- Tests : `tests/v41.js`, `tests/v42.js` (modèle de force).
 
 **Vérifications** :
 - `tests/v40.js` couvre la 2e passe : Rewind, virgules, carte et légende des muscles, accueil, catalogue, fusion, séance Pilates, recherche.

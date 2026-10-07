@@ -1,0 +1,224 @@
+// ================= INDICE DE FORCE (modèle 4.0, sourcé) =================
+// Ce que fait l'app, et sur quoi elle s'appuie (détails et liens dans la feuille « Comment c'est calculé ») :
+// 1. Force par exercice = 1RM estimé de la meilleure série. Moyenne des formules d'Epley et de Brzycki
+//    (Brzycki est celle de Fitbod) jusqu'à 10 répétitions ; au-delà, Epley seul et une confiance moindre
+//    (LeSuer 1997 ; Mayhew 2008 : précision moindre au-delà de ~10 reps). Les répétitions en réserve
+//    déclarées (« 0 », « 1–2 », « 3 ou + ») sont ajoutées aux répétitions faites : échelle RIR de
+//    Zourdos/Helms 2016 ; on prend la borne basse, car on sous-estime d'environ 1 rep sa marge (Halperin 2022).
+// 2. Pompes : la charge réelle est un pourcentage du poids du corps mesuré au sol (Ebben 2011 : 64 % ;
+//    genoux 49 % ; mains surélevées 55 % ; pieds surélevés 70 %). Avec une pesée, elles comptent en kg.
+//    Les autres exercices au poids du corps et les exercices tenus comptent en répétitions ou secondes.
+// 3. Indice = moyenne, muscle par muscle, du rapport entre la force actuelle et celle de tes 2 premières
+//    séances de l'exercice (100 = ton départ). Le muscle compte, pas l'exercice : 5 curls ne pèsent
+//    pas plus que les jambes (même logique que les scores par muscle de Fitbod).
+// 4. Désentraînement, muscle par muscle : rien pendant 21 jours sans le travailler (Bosquet 2013 :
+//    force max quasi intacte jusqu'à 28 jours ; McMaster 2013 : maintenue jusqu'à 3 semaines ;
+//    Ogasawara 2013 : des pauses de 3 semaines ne coûtent rien). Ensuite −3 % par semaine
+//    (McMaster 2013 : −14,5 % après 7,2 semaines ; 2 à 3 % par semaine une fois la perte lancée),
+//    ×1,5 à partir de 65 ans (Bosquet 2013 : effet plus fort chez les plus âgés), 30 % au plus.
+//    Une seule séance qui travaille le muscle remet le compteur à zéro : 1 séance par semaine suffit
+//    à maintenir la force tant que l'intensité est là (Spiering 2021). Et la force revient vite à la
+//    reprise (Staron 1991 ; Bruusgaard 2010 : les noyaux musculaires restent) : dès que tu refais
+//    tes charges, la mesure réelle remplace l'estimation.
+// 5. Statut d'entraînement, à la manière de Garmin : charge aiguë (7 jours) et chronique (28 jours) en
+//    moyennes à pondération exponentielle (Williams 2017), en séries difficiles. Le rapport des deux
+//    décrit l'évolution de ta charge ; il ne prédit pas les blessures (Impellizzeri 2020-2021).
+
+const RIR_OF_EFFORT = { 3:0, 2:1, 1:3 };        // « à fond », « 1–2 », « 3 ou + » : borne basse
+const BW_FRACTION = { pompes:.64, pompes_larges:.64, pompes_diamant:.64, pompes_genoux:.49, pompes_surelevees:.55, pompes_mur:.3, pompes_declinees:.70 };
+const DETRAIN = { grace:21, perWeek:.03, senior:1.5, maxLoss:.30 };
+
+function e1rmOf(w, reps){
+  if(!w || !reps) return 0;
+  if(reps<=1) return w;
+  const ep = w*(1+reps/30);
+  return reps<=10 ? (ep + w*36/(37-reps))/2 : ep;
+}
+// pesée la plus proche avant (ou, à défaut, après) une date
+function bodyKgAt(iso){
+  const b = S.body; if(!b || !b.length) return 0;
+  let k = b[0].kg; for(const e of b){ if(e.d<=iso) k = e.kg; else break; } return k;
+}
+// meilleure performance d'un exercice dans une séance : { v, conf } (v en kg de 1RM estimé, ou en reps / secondes)
+function sessionPerf(def, ex, date){
+  let best = 0, conf = 1;
+  const bwFrac = BW_FRACTION[def.id], bw = bwFrac ? bodyKgAt(date) : 0, timed = isTimed(def), kg = kgType(def);
+  for(const st of ex.sets){
+    if(!st.done || !(st.reps>0)) continue;
+    const reps = st.reps + (timed ? 0 : (RIR_OF_EFFORT[st.effort]||0));
+    let v, c = 1;
+    if(kg){ if(!st.weight) continue; v = e1rmOf(st.weight, reps); c = reps>10 ? .6 : 1; }
+    else if(bw){ v = e1rmOf(bw*bwFrac, reps); c = reps>10 ? .6 : 1; }
+    else { v = reps; c = .8; }
+    if(v>best){ best = v; conf = c; }
+  }
+  return best ? { v:best, conf } : null;
+}
+// historique utile, calculé une fois par version des données
+function strengthData(){
+  return memo("strengthData", ()=>{
+    const exos = {}, muscleDays = {};
+    for(const s of S.sessions) for(const ex of s.exos){
+      const def = EXO_MAP[ex.exoId]; if(!def || isStretch(def)) continue;
+      if(ex.sets.some(st=>st.done && st.reps>0)){ const m = def.muscles[0]; (muscleDays[m] = muscleDays[m] || []).push(s.date); }
+      const p = sessionPerf(def, ex, s.date); if(!p) continue;
+      (exos[ex.exoId] = exos[ex.exoId] || []).push({ date:s.date, v:p.v, conf:p.conf });
+    }
+    return { exos, muscleDays };
+  });
+}
+function lastBefore(dates, iso){ for(let i=dates.length-1;i>=0;i--) if(dates[i]<=iso) return dates[i]; return null; }
+function detrainFactor(days){
+  if(days==null || days<=DETRAIN.grace) return 1;
+  const rate = DETRAIN.perWeek * (S.goals.senior ? DETRAIN.senior : 1);
+  return Math.max(1-DETRAIN.maxLoss, 1 - rate*(days-DETRAIN.grace)/7);
+}
+// état du modèle à une date : indice, muscles (rapport, jours sans travail, perte estimée)
+function strengthAt(iso){ return memo("strengthAt"+iso+(S.goals.senior?1:0), ()=>strengthAt_raw(iso)); }
+function strengthAt_raw(iso){
+  const { exos, muscleDays } = strengthData(), byMuscle = {};
+  Object.keys(exos).forEach(id=>{
+    // historique trié : on remonte depuis la fin (les dates demandées sont récentes), sans copie
+    const all = exos[id]; let k = all.length; while(k>0 && all[k-1].date>iso) k--;
+    if(k<3) return;
+    const def = EXO_MAP[id], m = def.muscles[0], h = all;
+    const base = Math.max(h[0].v, h[1].v), lastE = h[k-1], from = addDaysISO(lastE.date, -56);
+    let best = 0; for(let j=k-1; j>=0 && h[j].date>from; j--) if(h[j].v>best) best = h[j].v;
+    const lastM = lastBefore(muscleDays[m]||[], iso), days = lastM ? daysBetween(lastM, iso) : null;
+    const f = detrainFactor(days), w = Math.min(1, k/6) * (lastE.conf||1);
+    (byMuscle[m] = byMuscle[m] || { sum:0, w:0, days, f, n:0 });
+    byMuscle[m].sum += Math.min(3, best/base) * f * w; byMuscle[m].w += w; byMuscle[m].n++;
+  });
+  const muscles = Object.keys(byMuscle).map(m=>({ id:m, ratio:byMuscle[m].sum/byMuscle[m].w, days:byMuscle[m].days, f:byMuscle[m].f, n:byMuscle[m].n }));
+  if(!muscles.length) return null;
+  return { index:Math.round(100*muscles.reduce((a,m)=>a+m.ratio,0)/muscles.length), muscles };
+}
+// une valeur par semaine (fin de semaine, ou aujourd'hui pour la semaine en cours)
+function strengthSeries(weeks){
+  return memo("strengthSeries"+weeks+todayISO(), ()=>{
+    const out = [], today = todayISO(), end0 = addDaysISO(weekKey(today), 6);
+    for(let k=weeks-1;k>=0;k--){
+      const end = addDaysISO(end0, -7*k), at = end>today ? today : end, st = strengthAt(at);
+      if(st) out.push({ wk:addDaysISO(end, -6), v:st.index, n:st.muscles.length });
+    }
+    return out;
+  });
+}
+// ---------- charge d'entraînement et statut ----------
+// séries « difficiles » du jour : une série faite compte 1, une série avec 3 reps ou plus en réserve 0,5
+function dailyHardSets(){
+  return memo("hardSets", ()=>{ const d = {};
+    for(const s of S.sessions){ let n = 0;
+      for(const ex of s.exos){ const def = EXO_MAP[ex.exoId]; if(!def || isStretch(def)) continue;
+        for(const st of ex.sets) if(st.done) n += st.effort===1 ? .5 : 1; }
+      if(n) d[s.date] = (d[s.date]||0) + n; }
+    return d; });
+}
+// moyennes à pondération exponentielle (Williams 2017), λ = 2/(N+1), en séries par semaine
+function trainingLoad(iso){
+  iso = iso || todayISO();
+  return memo("load"+iso, ()=>{
+    const d = dailyHardSets(), first = S.sessions.length ? S.sessions[0].date : iso;
+    const dayN = x=>Math.round(Date.UTC(+x.slice(0,4), +x.slice(5,7)-1, +x.slice(8,10))/864e5), t0 = dayN(first), t1 = dayN(iso);
+    const byN = {}; Object.keys(d).forEach(k=>{ byN[dayN(k)] = d[k]; });
+    const la = 2/(7+1), lc = 2/(28+1); let a = 0, c = 0;
+    // au-delà de 120 jours, le poids d'une séance dans la moyenne est inférieur à 0,03 %
+    for(let n = Math.max(t0, t1-120); n<=t1; n++){ const x = byN[n]||0; a = la*x + (1-la)*a; c = lc*x + (1-lc)*c; }
+    return { acute:a*7, chronic:c*7, ratio:c>0.01 ? a/c : 0, span:t1-t0 };
+  });
+}
+function lastSessionGap(){ const l = S.sessions[S.sessions.length-1]; return l ? daysBetween(l.date, todayISO()) : null; }
+// statut façon Garmin : charge (aiguë / chronique) + tendance de l'indice sur 4 semaines
+const STATUS = {
+  detraining:{ n:"Désentraînement", c:"red",    d:"Tu t'entraînes nettement moins que d'habitude depuis une semaine ou plus. Au-delà de 3 semaines sans travailler un muscle, l'estimation de sa force baisse." },
+  overreach: { n:"Surcharge",       c:"orange", d:"Ta charge des 7 derniers jours dépasse de loin ton habitude. Une séance plus légère aidera à récupérer." },
+  productive:{ n:"Productif",       c:"green",  d:"Ta charge est régulière et ton indice monte : continue comme ça." },
+  maintain:  { n:"Maintien",        c:"blue",   d:"Ta charge suffit à maintenir ta force. Pour progresser : une répétition ou un cran de charge en plus." },
+  recovery:  { n:"Récupération",    c:"teal",   d:"Charge plus légère que d'habitude : utile après des semaines chargées, à condition de reprendre vite." },
+  unproductive:{ n:"Improductif",   c:"orange", d:"Tu t'entraînes autant, mais ton indice baisse : sommeil, récupération ou exercices à varier ?" },
+  starting:  { n:"En calibrage",    c:"gray",   d:"Il faut environ 3 semaines de séances pour établir ta charge habituelle et ton statut." },
+};
+function trainingStatus(){
+  return memo("status"+todayISO(), ()=>{
+    const L = trainingLoad(), gap = lastSessionGap();
+    if(!S.sessions.length || L.span<21) return "starting";
+    if(gap>=7 && L.ratio<0.6) return "detraining";
+    if(L.ratio>1.5) return "overreach";
+    const pts = strengthSeries(12).slice(-5), d = pts.length>=2 ? pts[pts.length-1].v - pts[0].v : 0;
+    if(L.ratio<0.8) return "recovery";
+    if(d>=2) return "productive";
+    if(d<=-3) return "unproductive";
+    return "maintain";
+  });
+}
+// muscles en baisse ou sur le point de l'être (pour l'accueil et la carte)
+function detrainAlerts(){
+  const st = strengthAt(todayISO()); if(!st) return [];
+  return st.muscles.filter(m=>m.days!=null && m.days>=14).sort((a,b)=>b.days-a.days)
+    .map(m=>({ m, label:MUSCLE_MAP[m.id].n, losing:m.days>DETRAIN.grace, left:DETRAIN.grace-m.days, pct:Math.round((1-m.f)*100) }));
+}
+
+function strengthCardHTML(){
+  if(S.settings.trend===false || !S.sessions.length) return "";
+  const pts = strengthSeries(12);
+  const head = `<div class="cc-h tr-h"><div><div class="cc-t">Indice de force</div><div class="cc-s">100 = ton niveau de départ, muscle par muscle</div></div>
+    <button class="tr-how" data-a="strengthHow" aria-label="Comment l'indice est calculé">i</button></div>`;
+  if(pts.length<2) return `<div class="chart-card trend-card stagger" style="--i:1">${head}<div class="chart-empty">Ton indice apparaît dès que tu as fait 3 fois le même exercice.</div></div>`;
+  const last = pts[pts.length-1], ref = pts[Math.max(0, pts.length-5)], d = last.v-ref.v, wk = Math.round(daysBetween(ref.wk, last.wk)/7);
+  const status = STATUS[trainingStatus()], L = trainingLoad();
+  const lines = [];
+  detrainAlerts().slice(0,2).forEach(a=>lines.push(a.losing
+    ? `${ii("warn")}<span><b>${esc(a.label)}</b> : ${a.m.days} jours sans travail, force estimée −${a.pct} %. Une séance suffit à arrêter la baisse.</span>`
+    : `${ii("clock")}<span><b>${esc(a.label)}</b> : ${a.m.days} jours sans travail. Encore ${nb(a.left,"jour")} et l'estimation commence à baisser.</span>`));
+  const recent = pts.slice(-8), slope = slopeOf(recent.map((p,i)=>[i, p.v]));
+  if(slope>0.2) lines.push(`${ii("trendUp")}<span>À ce rythme : environ <b>${Math.round(Math.min(last.v+slope*8, last.v*1.15))}</b> dans 2 mois.</span>`); // estimation prudente : +15 % au plus
+  else if(!lines.length) lines.push(`${ii("target")}<span>Stable ces dernières semaines : une répétition ou un cran de charge en plus relance la courbe.</span>`);
+  const pj = exoProjection();
+  if(pj && !pj.flat){ const u = v=>kgType(pj.def) ? `${fmtDec(v)} kg` : `${fmtNum(v)}${isTimed(pj.def) ? " s" : " reps"}`;
+    lines.push(`${ii("target")}<span>${esc(pj.def.n)} : de ${u(pj.cur)} à environ <b>${u(pj.proj)}</b> vers le ${fmtDate(pj.date)}, si tu gardes ce rythme.</span>`); }
+  // par région : la moyenne des muscles de la région
+  const st = strengthAt(todayISO()), reg = {};
+  if(st) st.muscles.forEach(m=>{ const r = REGION_OF_MUSCLE[m.id]||"core"; (reg[r] = reg[r] || []).push(m); });
+  const regions = Object.keys(REGIONS).filter(r=>reg[r]).map(r=>{ const l = reg[r], v = Math.round(100*l.reduce((a,m)=>a+m.ratio,0)/l.length), down = l.some(m=>m.f<1);
+    return `<div class="tr-reg r-${r}"><i></i><span>${r==="core" ? "Gainage" : REGIONS[r].n}</span><b>${v}</b>${down ? `<em>${ii("warn")}</em>` : ""}</div>`; }).join("");
+  return `<div class="chart-card trend-card stagger" style="--i:1">${head}
+    <div class="tr-hero"><span class="tr-v">${last.v}</span>${wk>0 ? `<span class="tr-d ${d>0?"up":d<0?"down":""}">${d>0?"+":d<0?"−":"±"}${Math.abs(d)} en ${nb(wk,"semaine")}</span>` : ""}</div>
+    <button class="tr-status st-${status.c}" data-a="strengthHow" aria-label="Statut : ${status.n}. Voir comment il est calculé"><span class="tr-dot"></span><span><b>${status.n}</b> · ${fmtDec(round1(L.acute))} série${round1(L.acute)>=2?"s":""} difficile${round1(L.acute)>=2?"s":""} sur 7 jours (habituel : ${fmtDec(round1(L.chronic))})</span></button>
+    ${lineChart(pts.map(p=>({ label:fmtDate(p.wk), v:p.v, tip:`Semaine du ${fmtDate(p.wk)} : ${p.v} (${nb(p.n,"muscle")})` })), { aria:"Indice de force par semaine", fmt:v=>String(v) })}
+    ${regions ? `<div class="tr-regs">${regions}</div>` : ""}
+    ${lines.map(l=>`<div class="tr-line">${l}</div>`).join("")}
+  </div>`;
+}
+// la méthode, en clair, avec ses sources
+const STRENGTH_SOURCES = [
+  ["Bosquet et al. 2013, Scand J Med Sci Sports : arrêt de l'entraînement et force (méta-analyse)", "https://onlinelibrary.wiley.com/doi/10.1111/sms.12047"],
+  ["McMaster et al. 2013, Sports Medicine : développement, maintien et perte de la force", "https://link.springer.com/article/10.1007/s40279-013-0031-3"],
+  ["Spiering et al. 2021, J Strength Cond Res : la dose minimale pour maintenir sa force", "https://pubmed.ncbi.nlm.nih.gov/33629972/"],
+  ["Ogasawara et al. 2013, Eur J Appl Physiol : entraînement continu ou avec pauses de 3 semaines", "https://paulogentil.com/pdf/Comparison%20of%20muscle%20hypertrophy%20following%206-month%20of%20continuous%20and%20periodic%20strength%20training.pdf"],
+  ["Staron et al. 1991, J Appl Physiol : désentraînement puis reprise", "https://pubmed.ncbi.nlm.nih.gov/1827108/"],
+  ["Zourdos et al. 2016, J Strength Cond Res : échelle des répétitions en réserve (RIR)", "https://openrepository.aut.ac.nz/items/efef3b25-6701-4fb5-bb82-55fcd2a26027/full"],
+  ["Halperin et al. 2022, Sports Medicine : précision des répétitions en réserve", "https://cris.iucc.ac.il/en/publications/accuracy-in-predicting-repetitions-to-task-failure-in-resistance-/"],
+  ["LeSuer et al. 1997, J Strength Cond Res : précision des formules de 1RM", "https://pubmed.ncbi.nlm.nih.gov/?term=LeSuer+accuracy+of+prediction+equations+for+predicting+1-RM+performance"],
+  ["Ebben et al. 2011, J Strength Cond Res : part du poids du corps dans les pompes", "https://pubmed.ncbi.nlm.nih.gov/?term=Ebben+kinetic+analysis+of+several+variations+of+push-ups"],
+  ["Williams et al. 2017, Br J Sports Med : charge aiguë et chronique en moyennes exponentielles", "https://research.usq.edu.au/item/q4385/calculating-acute-chronic-workload-ratios-using-exponentially-weighted-moving-averages-provides-a-more-sensitive-indicator-of-injury-likelihood-than-rolling-averages"],
+  ["Impellizzeri et al. 2021, Sports Medicine : limites du rapport charge aiguë / chronique", "https://iris.univr.it/retrieve/e34cfb98-e922-4c2f-aab5-18583ab7e31b/Impellizzeri_What%20Role%20Do%20Chronic%20Workloads%20Play_SportMed_2021.pdf"],
+];
+Object.assign(ACT, {
+  strengthHow(){
+    const st = STATUS[trainingStatus()], L = trainingLoad();
+    openSheet(`<div class="sheet-hd"><span class="t">Comment c'est calculé</span></div><div class="sheet-body how-body">
+      <div class="how-st st-${st.c}"><span class="tr-dot"></span><div><b>${st.n}</b><p>${st.d}</p></div></div>
+      <h3>1. Ta force sur chaque exercice</h3>
+      <p>Le 1RM estimé de ta meilleure série (formules d'Epley et de Brzycki, fiables jusqu'à 10 répétitions). Si tu indiques les répétitions que tu aurais pu faire en plus, elles sont ajoutées. Pour les pompes, la charge est la part du poids du corps qu'elles soulèvent (64 % au sol, 49 % sur les genoux) : ajoute une pesée dans Profil pour qu'elles comptent en kg. Les autres exercices au poids du corps comptent en répétitions, les gainages en secondes.</p>
+      <h3>2. L'indice</h3>
+      <p>Pour chaque muscle : ta force actuelle (meilleure des 8 dernières semaines) divisée par celle de tes 2 premières séances. L'indice est la moyenne des muscles, ×100. 100 = ton départ.</p>
+      <h3>3. Quand tu t'arrêtes</h3>
+      <p>Rien ne bouge pendant 21 jours sans travailler un muscle : les études montrent que la force reste quasi intacte pendant 3 à 4 semaines. Ensuite, l'estimation baisse de ${S.goals.senior ? "4,5" : "3"}&nbsp;% par semaine${S.goals.senior ? " (plus vite à partir de 65 ans)" : ""}, jusqu'à −30&nbsp;%. Une séance qui travaille le muscle arrête la baisse, et tes vraies performances remplacent l'estimation : la force revient vite à la reprise.</p>
+      <h3>4. Le statut</h3>
+      <p>Comme sur une montre de sport : ta charge des 7 derniers jours (${fmtDec(round1(L.acute))} séries difficiles) comparée à ton habitude sur 28 jours (${fmtDec(round1(L.chronic))}), et l'évolution de l'indice sur 4 semaines. Ce rapport décrit ta charge ; il ne prédit pas les blessures.</p>
+      <h3>Sources</h3>
+      <ul class="how-src">${STRENGTH_SOURCES.map(([t,u])=>`<li><a href="${u}" target="_blank" rel="noopener">${esc(t)}</a></li>`).join("")}</ul>
+      <p class="hr-note">Ce sont des estimations à partir de tes séances, pas un test de 1RM ni un avis médical.</p>
+    </div>`, { tall:true });
+  },
+});

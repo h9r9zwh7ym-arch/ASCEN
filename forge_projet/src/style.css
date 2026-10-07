@@ -2002,3 +2002,28 @@ button.set-dots::before{content:"";position:absolute;left:50%;top:50%;width:max(
 .tr-line{display:flex;align-items:flex-start;gap:8px;margin-top:10px;font-size:var(--fs-sub);line-height:1.35;color:var(--label2)}
 .tr-line .ii{flex:none;width:17px;height:17px;margin-top:1px;color:var(--tint-ink)}
 .tr-line b{color:var(--label)}
+/* Indice de force 4.0 : statut, régions, méthode */
+.tr-h{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.tr-how{position:relative;flex:none;width:28px;height:28px;border-radius:50%;background:var(--fill);color:var(--label2);font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:15px}
+.tr-how::before{content:"";position:absolute;inset:-8px}
+.tr-status{display:flex;align-items:center;gap:8px;width:100%;margin:2px 0 8px;padding:8px 12px;border-radius:12px;background:var(--fill2);font-size:var(--fs-foot);color:var(--label2);text-align:left}
+.tr-status b{color:var(--label);font-weight:700}
+.tr-dot{width:10px;height:10px;flex:none;border-radius:50%;background:var(--sc,var(--label3))}
+.st-green{--sc:var(--green)} .st-red{--sc:var(--red)} .st-orange{--sc:var(--orange)} .st-blue{--sc:var(--blue)} .st-teal{--sc:#30B0C7} .st-gray{--sc:#8E8E93}
+.tr-regs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px;margin-top:10px}
+.tr-reg{display:flex;align-items:center;gap:7px;font-size:var(--fs-foot);color:var(--label2);min-width:0}
+.tr-reg i{width:10px;height:10px;flex:none;border-radius:3px;background:var(--rc)}
+.tr-reg span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tr-reg b{font-family:var(--num);font-weight:700;color:var(--label)}
+.tr-reg em{display:grid;color:var(--red)} .tr-reg em .ii{width:14px;height:14px}
+.tr-line .ii[class]{color:var(--tint-ink)}
+.goal-line.warn .gl-ic{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}
+.how-body h3{font-size:var(--fs-callout);font-weight:700;margin:18px 20px 6px}
+.how-body p{margin:0 20px;font-size:var(--fs-sub);line-height:1.45;color:var(--label2)}
+.how-st{display:flex;gap:12px;align-items:flex-start;margin:4px 16px 0;padding:14px;border-radius:var(--r-card);background:var(--bg2)}
+.how-st .tr-dot{margin-top:5px}
+.how-st p{margin:4px 0 0}
+.how-src{margin:4px 20px 0;padding-left:18px;font-size:var(--fs-foot);line-height:1.45;color:var(--label2)}
+.how-src li{margin:6px 0}
+.how-src a{color:var(--tint-ink)}
+.how-body .hr-note{margin:16px 20px 24px}
