@@ -52,7 +52,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.evaluate(() => { const l = document.querySelector('#launch'); if (l) l.click(); }); await wait(500);
   await page.evaluate(() => { const e = S.draft.exos; e[0].sets[0].weight = 14; e[0].sets[0].reps = 10; e[1].sets[0].reps = 15; e[2].sets[0].reps = 40;
     e.forEach(x => x.sets.forEach(s => { s.done = true; })); finalizeSession(); }); await wait(1600);
-  const prog = await page.evaluate(() => [...document.querySelectorAll('.cel-prog:not(.cel-beat)')].map(e => e.textContent.trim()));
+  const prog = await page.evaluate(() => [...document.querySelectorAll('.cel-prog:not(.cel-beat):not(.cel-win)')].map(e => e.textContent.trim()));
   await shot('01_celebration');
   log('Progress lines:', JSON.stringify(prog));
   if (prog.length !== 2 || !/Développé couché haltères : 14 kg, \+4 kg depuis le/.test(prog.join('|')) || !/Pompes : 15 reps, \+3 reps/.test(prog.join('|'))) fail('lignes de progrès (charge +4 kg, pompes +3)');
