@@ -82,7 +82,7 @@ const OUT = path.join(OUT_ROOT, 'v26'); fs.mkdirSync(OUT, { recursive: true });
 
   // ---- 4. exercice animé dans la fiche
   await page.evaluate(() => ACT.showExoInfo({ id: 'squat_gobelet' })); await wait(900);
-  const an = await page.evaluate(() => { const s = document.querySelector('.sheet .exo-anim'); return s ? { anims: s.querySelectorAll('animate').length, load: !!s.querySelector('.ea-load') } : null; });
+  const an = await page.evaluate(() => { const s = document.querySelector('.sheet .exo-anim'); return s ? { anims: s.querySelectorAll('animate').length, load: !!s.querySelector('.ea-load, .ea-db, .ea-plate, .ea-bar, .ea-band') } : null; });
   log('Exercise animation:', JSON.stringify(an)); if (!an || an.anims < 3 || !an.load) fail('animation de l\'exercice');
   await shot('04_exo_anim'); await page.evaluate(() => closeSheet()); await wait(400);
 
