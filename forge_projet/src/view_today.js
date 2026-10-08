@@ -68,6 +68,7 @@ function nextGoal(){
   const daysLeft = 7-weekdayIdx(todayISO()) - (sessionsToday().length ? 1 : 0);
   const week = left>0 && left<=daysLeft ? { ic:"target", pct:done/goal, act:'data-a="tab" data-id="progress"',
     t: left===1 ? "Une séance de plus et ta semaine est validée" : `Encore ${nb(left,"séance")} pour valider ta semaine` } : null;
+  // l'avant-dernière séance de la semaine seulement : avant, la pastille « 1/3 cette semaine » le dit déjà
   if(week && left===1) return week;
   // un muscle délaissé : l'indice de force va baisser (ou baisse déjà), comme l'alerte d'une montre de sport
   if(S.settings.trend!==false && typeof detrainAlerts==="function"){ const a = detrainAlerts()[0];
@@ -80,7 +81,6 @@ function nextGoal(){
       const b = bestSetEver(id, def); if(!b || !b.w) continue;
       return { ic:"bolt", pct:null, act:`data-a="showExoInfo" data-id="${id}"`, t:`Record à battre aujourd'hui · ${def.n} : ${b.r} × ${fmtDec(b.w)} kg` }; }
   }
-  if(week) return week;
   // un trophée presque gagné (au moins 60 % du chemin vers le palier suivant)
   let best = null;
   if(typeof MEDALS!=="undefined") MEDALS.forEach(m=>{ if(m.secret) return; const p = medalProgress(m);
@@ -199,11 +199,12 @@ function renderTodayPreview(draft){
     ${statPillsHTML()}
     ${deloadCardHTML() || missedCardHTML()}
     ${nextGoalHTML()}
-    ${thenNowCardHTML()}
+    ${sessionsToday().length ? thenNowCardHTML() : ""}
     ${whyReminder() && !sessionsToday().length ? `<div class="why-card stagger" style="--i:2"><div class="why-k">${ii("flame")} Ton pourquoi</div><div class="why-t">« ${esc(whyReminder())} »</div><div class="why-s">${daysSinceLastSession()} jours sans séance : une seule suffit pour reprendre le fil.</div><button class="btn secondary sm why-go" data-a="startExpress">${icon("timer")} Séance express · 10 min</button></div>` : ""}
     ${sessionsToday().length ? doneCardHTML() : ""}
     <div class="home-seg stagger" style="--i:2">${segHTML("today", [["custom","Ma séance"],["proposal","Proposée par l'app"]], mode, "todayMode")}</div>
     <div class="seg-pane ${mode} ${paneDir?"from-"+paneDir:""}">${sessionsToday().length ? "" : heroHTML(mode, draft)}${mode==="custom" ? customPaneHTML() : proposalPaneHTML(draft)}</div>
+    ${sessionsToday().length ? "" : thenNowCardHTML()}
     ${nudgeHTML()}
   </div>`;
 }
@@ -961,6 +962,27 @@ function finalizeSession(){
 
 // changer d'écran (aperçu ↔ séance en cours) repart du haut de la page
 function scrollTodayTop(){ const v = qs("#v-today"); if(v) v.scrollTop = 0; }
+// Accueil après une action (nouvelle proposition, séance chargée, vidée ou enregistrée…) : l'écran
+// est reconstruit mais seul le bloc sous le sélecteur s'anime — sa hauteur suit et le nouveau
+// contenu arrive en fondu (glissé du côté de la section quand elle change). Le reste de l'accueil
+// ne bouge pas. Avant : toute la cascade d'entrée se rejouait, comme un rechargement de la page.
+function renderTodaySoft(){
+  const v = qs("#v-today");
+  if(!v || !v.firstChild || currentTab!=="today" || reducedMotion()){ renderView("today"); return; }
+  const modeOf = p=>p ? (p.classList.contains("custom") ? "custom" : "proposal") : "";
+  const old = qs(".seg-pane", v), h0 = old ? old.offsetHeight : 0, m0 = modeOf(old);
+  renderView("today");
+  const pane = qs(".seg-pane", v); if(!pane || !pane.animate) return;
+  const m1 = modeOf(pane), dx = m0 && m0!==m1 ? (m1==="proposal" ? 28 : -28) : 0, h1 = pane.offsetHeight;
+  try{
+    pane.animate([{ opacity:0, transform:dx ? `translateX(${dx}px)` : "translateY(8px)" }, { opacity:1, transform:"none" }], { duration:320, easing:"cubic-bezier(.2,.8,.2,1)" });
+    if(old && Math.abs(h1-h0)>2){
+      pane.style.overflow = "hidden";
+      const a = pane.animate([{ height:h0+"px" }, { height:h1+"px" }], { duration:380, easing:"cubic-bezier(.32,.72,0,1)" });
+      a.onfinish = a.oncancel = ()=>{ pane.style.overflow = ""; };
+    }
+  }catch(e){}
+}
 function centerOf(sel){
   const el = qs(sel); if(!el) return [null,null];
   const r = el.getBoundingClientRect();
@@ -1154,7 +1176,7 @@ Object.assign(ACT, {
     if(S.custom.tplId || !S.custom.exos.length) S.custom = { exos:[], pendingDays:[day] };
     else S.custom.pendingDays = [day];
     S.settings.todayTab = "custom"; reorderMode = false;
-    closeSheet(); save(); scrollTodayTop(); renderViewAnimated("today");
+    closeSheet(); save(); scrollTodayTop(); renderTodaySoft();
     toast(`Compose ta séance, puis enregistre-la pour le ${JOURS[(day+1)%7]}`);
   },
   pickerInfo(d){ const l = qs("#pickerList"); if(picker && l) picker.scroll = l.scrollTop; ACT.showExoInfo({ id:d.id }); },
@@ -1180,11 +1202,15 @@ Object.assign(ACT, {
     S.goals.exoCount = mainExos(S.draft).length; // retenu pour les prochaines propositions
     sfx("step", dir>0); save(); renderView("today");
   },
-  setType(d){ regenerateDraft(d.v); renderViewAnimated("today"); },
+  setType(d){ regenerateDraft(d.v); renderTodaySoft(); },
   startSession(){ if(!S.draft.exos.length) return; S.draft.startedAt = new Date().toISOString(); liveFocusIdx = 0; completeShown = false; save(); scrollTodayTop(); renderViewAnimated("today"); showLaunch(S.draft); },
-  regenSession(){ regenerateDraft(); renderViewAnimated("today"); toast("Nouvelle proposition"); },
+  regenSession(){ regenerateDraft(); renderTodaySoft(); toast("Nouvelle proposition");
+    // l'icône du bouton fait un tour : on voit que c'est bien une autre proposition
+    const ic = qs('#v-today [data-a="regenSession"] svg');
+    if(ic && ic.animate && !reducedMotion()) try{ ic.animate([{ transform:"rotate(-360deg)" }, { transform:"none" }], { duration:600, easing:"cubic-bezier(.32,.72,0,1)" }); }catch(e){}
+  },
   dropImported(){
-    confirmSheet({ title:"Revenir à la suggestion automatique ?", html:"Le programme importé restera disponible pour une prochaine séance.", ok:"Revenir à l'auto", onOk:()=>{ S.draft = generateEngineSession(); liveFocusIdx=0; save(); renderViewAnimated("today"); } });
+    confirmSheet({ title:"Revenir à la suggestion automatique ?", html:"Le programme importé restera disponible pour une prochaine séance.", ok:"Revenir à l'auto", onOk:()=>{ S.draft = generateEngineSession(); liveFocusIdx=0; save(); renderTodaySoft(); } });
   },
   removeExo(d, el){
     sfx("remove");
@@ -1263,7 +1289,7 @@ Object.assign(ACT, {
   },
   customClear(){
     confirmSheet({ title:"Vider ma séance ?", html:"Les exercices choisis seront retirés. Tes séances enregistrées ne changent pas.", ok:"Vider", danger:true,
-      onOk:()=>{ S.custom = { exos:[] }; save(); renderViewAnimated("today"); } });
+      onOk:()=>{ S.custom = { exos:[] }; save(); renderTodaySoft(); } });
   },
   startExpress(){
     if(S.draft && S.draft.startedAt) return;
@@ -1293,14 +1319,14 @@ Object.assign(ACT, {
     const t = S.templates.find(x=>x.id===d.id); if(!t) return;
     S.custom = { exos: clone(t.exos), name: t.n, tplId: t.id, planDate: todayISO() };
     S.settings.todayTab = "custom"; t.exos.forEach(e=>freshIds.add(e.exoId));
-    save(); renderViewAnimated("today"); toast(`« ${t.n} » chargée : en route pour le rattrapage`, "repeat");
+    save(); renderTodaySoft(); toast(`« ${t.n} » chargée : en route pour le rattrapage`, "repeat");
   },
   missSkip(d){ S.meta.missSkip = d.iso+":"+d.id; save(); changed(); },
   loadTemplate(d){
     const t = S.templates.find(x=>x.id===d.id); if(!t) return;
     S.custom = { exos: clone(t.exos), name: t.n, tplId: t.id };
     t.exos.forEach(e=>freshIds.add(e.exoId));
-    closeSheet(); save(); renderViewAnimated("today"); toast(`« ${t.n} » chargée dans Ma séance`);
+    closeSheet(); save(); renderTodaySoft(); toast(`« ${t.n} » chargée dans Ma séance`);
     setTimeout(()=>{ const g = qs("#v-today .group.builder"); if(g) g.scrollIntoView({ behavior:"smooth", block:"center" }); }, 260);
   },
   deleteTemplate(d){
@@ -1363,7 +1389,7 @@ Object.assign(ACT, {
     const on = toggleFavorite(d.id), n = EXO_MAP[d.id] ? EXO_MAP[d.id].n : "Exercice";
     if(el && el.classList.contains("fav-toggle")){ el.classList.toggle("on", on); el.setAttribute("aria-pressed", on); el.setAttribute("aria-label", on ? "Retirer des favoris" : "Ajouter aux favoris");
       el.classList.remove("pop"); if(on){ void el.offsetWidth; el.classList.add("pop"); } }
-    haptic(10); sfx(on ? "tick" : "close"); closeModalIfMenu();
+    haptic(10); sfx(on ? "fav" : "close"); closeModalIfMenu();
     toast(on ? `${n} ajouté aux favoris` : `${n} retiré des favoris`, "star");
     if(picker){ const l = qs("#pickerList"); if(l) l.innerHTML = pickerListHTML(); }
   },

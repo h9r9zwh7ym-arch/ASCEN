@@ -934,6 +934,35 @@ Mesures (`tests/tab_perf.js`, processeur ×4, 3 ans d'historique) :
   - réglage Motivation `thenNow`.
 - Test : `tests/v48.js`.
 
+**Passe qualité (toujours 4.0) : animations, sons, détails** :
+- **Rewind** : `rwGo` fait sortir *toutes* les diapos encore affichées (avant, seulement la première du conteneur, qui pouvait déjà être en train de partir : après des touchers rapides, deux ou trois écrans se superposaient) ; toucher la diapo déjà affichée ne fait rien.
+- **Cascade d'entrée** : un minuteur par écran (`markEnter`, `el._enterT`). Avec un minuteur partagé, deux onglets visités coup sur coup laissaient le premier en `.enter` pour de bon, et chacun de ses rendus suivants (séance modifiée, « Afficher plus »…) rejouait toute la cascade.
+- **Accueil après une action** (`renderTodaySoft`) : « Autre proposition », type de séance, séance chargée, vidée, rattrapée, créée par l'assistant, planifiée… L'écran est reconstruit, mais seul le bloc sous le sélecteur s'anime (hauteur qui suit, contenu en fondu, glissé de côté si la section change). Avant : toute la cascade d'entrée se rejouait, comme un rechargement. `renderViewAnimated` reste pour les vrais changements d'écran (début et fin de séance, onboarding, restauration).
+- **Historique** (`histSwitch`) : changer de période *transforme* le graphique. Chaque nouvelle barre part de la hauteur qu'avait l'ancien graphique au même endroit, puis glisse vers sa valeur. Le total défile de l'ancienne valeur à la nouvelle (classe `tween`), les axes se fondent. Avant, toutes les barres repoussaient depuis zéro. Les classes `morph`/`swap` sont retirées après 1 s.
+- **Progrès** : courbe, carte des muscles et barres de stimulus se dessinent au premier affichage de chaque sous-onglet pour ces données (`paneSeen`, classe `pane-in`). Un aller-retour Résumé ↔ Muscles ne rejoue rien. Avant, ces animations étaient liées à `.seg-pane` et se rejouaient à chaque rendu.
+- **Détails** :
+  - séance enregistrée depuis la dernière visite de l'historique : sa ligne s'éclaire une fois, à l'ouverture de l'onglet (`markFreshHistory`, comparée aux séances déjà vues : supprimer la dernière n'éclaire pas la précédente) ;
+  - l'indicateur des sélecteurs s'étire un peu en glissant (`settleSegs`) ;
+  - l'icône « Autre proposition » fait un tour ;
+  - les séances créées par l'assistant apparaissent l'une après l'autre ;
+  - « Afficher plus » dans l'historique : les séances révélées arrivent en cascade, les premières ne bougent pas ;
+  - en sombre, le curseur des sélecteurs est plus clair que son rail (comme iOS), au lieu de paraître creusé.
+- **Accueil recentré sur la séance** :
+  - « Prochain cap » ne montre l'objectif de la semaine qu'à une séance du but (la pastille dit déjà « 1/3 ») ;
+  - « Toi, il y a 3 mois » passe sous la séance tant qu'elle n'est pas faite, et au-dessus une fois faite (ce qu'on a gagné) ;
+  - « Pourquoi ? » de la semaine allégée devient un bouton ⓘ dans le coin (une ligne de moins).
+- **Sons** (`sfx.js`) :
+  - réverbération douce partagée (`buildReverb`, réponse synthétisée de 1,4 s qui s'assombrit), réservée aux sons musicaux (`o.wet`), jamais aux « toc » de l'interface ;
+  - cloches plus riches : copie à peine désaccordée et frappe très brève ;
+  - accord grave sous la fin de séance ;
+  - nouveaux sons : `fav` (étoile) et `toggle` (interrupteurs, le « toc » monte ou descend) ;
+  - le « toc » des sélecteurs ne se jouait jamais : l'écouteur passait après l'action, qui avait déjà marqué le segment `.on`. Il écoute désormais en phase de capture (état *avant* l'action) ;
+  - Rewind : bus `[sec, salle]` par diapo (couper la salle laisse la queue s'éteindre), nappe d'un accord par diapo (do, la mineur, fa, sol : `rwPad`, `pad`), son baissé pendant la pause (`rwDuck`) ;
+  - niveaux vérifiés hors ligne (OfflineAudioContext) : crêtes et intensités inchangées, ~0,6 s de queue en plus pour les sons musicaux.
+- **Robustesse** : un exercice disparu du catalogue (gardé dans les anciennes séances) faisait planter Progrès > Résumé (`favoriteExercise`). Corrigé, et tous les écrans et diapos passés au crible (aucun « undefined » ni « NaN »).
+- **Mesures** : rendu des écrans avec un processeur ralenti ×4, de ≈ 35 ms (Profil) à ≈ 70 ms (Historique, 200 séances) ; changements de période et de sous-onglet sans image longue ; le halo des étincelles des trophées diamant n'est plus recalculé à chaque image dans la grille.
+- Test : `tests/v49.js` ; `tests/v41.js` suit la nouvelle règle de « Prochain cap ».
+
 **Vérifications** :
 - `tests/v40.js` couvre la 2e passe : Rewind, virgules, carte et légende des muscles, accueil, catalogue, fusion, séance Pilates, recherche.
 - Tour visuel de 27 écrans en clair et en sombre (`tests/tour.js` + `tests/montage.js`) ; audit d'accessibilité repassé (`tests/ux_audit.js`).

@@ -347,11 +347,13 @@ function deloadCardHTML(){
       <button class="icon-btn dl-x" data-a="deloadDismiss" aria-label="Masquer">${icon("close")}</button>
     </div>`;
   const a = deloadAdvice(); if(!a) return "";
+  // « Pourquoi ? » dans le coin (comme les fiches) : une ligne de boutons en moins avant la séance
   return `<div class="dl-card stagger" style="--i:1">
     <span class="dl-ic">${ii("leaf")}</span>
     <div class="dl-main"><div class="dl-t">Semaine allégée conseillée</div>
       <div class="dl-s">${esc(a.txt)} Une semaine plus légère aide à récupérer, sans perdre en force.</div>
-      <div class="dl-act"><button class="btn sm" data-a="deloadStart">Commencer</button><button class="btn tertiary sm" data-a="deloadLater">Plus tard</button><button class="dl-link" data-a="deloadHow">Pourquoi ?</button></div></div>
+      <div class="dl-act"><button class="btn sm" data-a="deloadStart">Commencer</button><button class="btn tertiary sm" data-a="deloadLater">Plus tard</button></div></div>
+    <button class="info-btn dl-x" data-a="deloadHow" aria-label="Pourquoi une semaine allégée ?">i</button>
   </div>`;
 }
 const DELOAD_SOURCES = [

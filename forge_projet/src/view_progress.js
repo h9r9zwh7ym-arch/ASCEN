@@ -240,15 +240,20 @@ function medalsPaneHTML(){
     <div class="medal-grid">${SECRETS.slice().sort((a,b)=>medalTier(b)-medalTier(a)).map((m,i)=>medalCardHTML(m,i+4)).join("")}</div>`;
 }
 
+const paneSeen = {}; // sous-onglet de Progrès → version des données déjà affichée
 Object.assign(ACT, {
   progressTab(d){
     if(progressTab===d.v) return;
     // v4.0 : plus de capture de toute la page (View Transitions) ni de cascade rejouée : le
     // sélecteur glisse (settleSegs), le contenu est reconstruit et apparaît en fondu court
-    progressTab = d.v; const v = qs("#v-progress");
+    // les graphiques (courbe, carte des muscles, barres) ne se redessinent qu'à la première visite
+    // de chaque sous-onglet pour ces données : aller-retour Résumé ↔ Muscles sans tout rejouer
+    paneSeen[progressTab] = DATA_VER;
+    progressTab = d.v; const v = qs("#v-progress"), first = paneSeen[d.v]!==DATA_VER;
     if(v.scrollTop) v.scrollTop = 0; // avant le rendu : pas de seconde mise en page forcée
     renderView("progress");
     const pane = v.querySelector(".seg-pane");
+    if(pane && first){ pane.classList.add("pane-in"); setTimeout(()=>pane.classList.remove("pane-in"), 2400); }
     if(pane && pane.animate && !reducedMotion()) try{ pane.animate([{ opacity:0, transform:"translateY(6px)" }, { opacity:1, transform:"none" }], { duration:200, easing:"cubic-bezier(.2,.8,.2,1)" }); }catch(e){}
   },
   openExoChart(d){ exoChartSheet(d.id); },

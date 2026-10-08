@@ -184,10 +184,11 @@ function switchTabNow(id){
   const upToDate = v._ver===DATA_VER && v._day===todayISO() && v.firstChild;
   if(!upToDate){
     const first = !v._seen; v._seen = true;
-    if(first){ v.classList.add("enter"); clearTimeout(enterTimer); enterTimer = setTimeout(()=>v.classList.remove("enter"), 1200); }
+    if(first) markEnter(v);
     renderView(id);
     if(first) animateCounts(v);
   } else settleSegs(v);
+  if(id==="history" && typeof markFreshHistory==="function") markFreshHistory(v);
   // fondu d'arrivée par l'API Web Animations : aucune mise en page forcée, rien à nettoyer
   if(changed && v.animate && !reducedMotion()){
     const dx = v.dataset.dir==="r" ? 12 : v.dataset.dir==="l" ? -12 : 0;
@@ -254,7 +255,13 @@ function viewErrorHTML(id){
 }
 // rendu avec entrée animée (apparition décalée des éléments .stagger, compteurs)
 // — réservé aux changements d'onglet ou de section, pas aux rendus après chaque action.
-let enterTimer = null;
+// Un minuteur par écran : avec un seul minuteur partagé, deux onglets visités coup sur coup
+// laissaient le premier en « .enter » pour de bon, et chacun de ses rendus suivants (séance
+// modifiée, « Afficher plus »…) rejouait toute la cascade d'entrée.
+function markEnter(el){
+  el.classList.add("enter"); clearTimeout(el._enterT);
+  el._enterT = setTimeout(()=>{ el.classList.remove("enter"); el.dataset.dir = ""; }, 1200);
+}
 function renderViewAnimated(id, reuse){
   const el = qs("#v-"+id);
   if(!el) return;
@@ -263,11 +270,9 @@ function renderViewAnimated(id, reuse){
   // les animations d'entrée. Un rendu neuf les joue de lui-même (éléments nouveaux).
   if(reuse && el._ver===DATA_VER && el._day===todayISO() && el.firstChild){
     el.classList.remove("enter"); void el.offsetWidth;
-    el.classList.add("enter"); settleSegs(el);
-  } else { el.classList.add("enter"); renderView(id); }
+    markEnter(el); settleSegs(el);
+  } else { markEnter(el); renderView(id); }
   animateCounts(el);
-  clearTimeout(enterTimer);
-  enterTimer = setTimeout(()=>{ el.classList.remove("enter"); el.dataset.dir = ""; }, 1200);
 }
 
 // ---------- contrôle segmenté avec indicateur glissant ----------
@@ -289,7 +294,8 @@ function settleSegs(root){
     SEG_PREV[key] = cur;
     ind.style.transition = "none";
     ind.style.transform = `translateX(${cur*100}%)`;
-    if(prev!==cur && ind.animate) try{ ind.animate([{ transform:`translateX(${prev*100}%)` }, { transform:`translateX(${cur*100}%)` }], { duration:320, easing:"cubic-bezier(.32,.72,0,1)" }); }catch(e){}
+    // en glissant, l'indicateur s'étire un peu puis se pose (comme une goutte, iOS 26)
+    if(prev!==cur && ind.animate && !reducedMotion()) try{ ind.animate([{ transform:`translateX(${prev*100}%)` }, { transform:`translateX(${(prev+cur)*50}%) scaleX(${Math.min(1.25, 1+Math.abs(cur-prev)*.08).toFixed(3)})`, offset:.4 }, { transform:`translateX(${cur*100}%)` }], { duration:360, easing:"cubic-bezier(.32,.72,0,1)" }); }catch(e){}
   });
 }
 

@@ -54,7 +54,7 @@ function renderProfil(){
       </div>
       <div class="rest-seg">${[["court","Court"],["normal","Conseillé"],["long","Long"]].map(([k,l])=>`<button class="chip ${(S.settings.rest||"normal")===k?"on":""}" data-a="setRest" data-v="${k}" aria-pressed="${(S.settings.rest||"normal")===k}">${l}</button>`).join("")}</div>
       <div class="row">
-        ${sfIcon("leaf","green")}
+        ${sfIcon("mat","indigo")}
         <div class="grow"><div class="t">Étirements en fin de séance</div><div class="s">Ajoutés aux séances proposées par l'app</div></div>
         <button class="switch ${S.settings.stretching?"on":""}" aria-label="Étirements en fin de séance" data-a="toggleStretching"></button>
       </div>

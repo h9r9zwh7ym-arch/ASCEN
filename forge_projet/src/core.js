@@ -784,7 +784,8 @@ function monthPlanAdherence(){
 function favoriteExercise(){ return memo("favoriteExercise", favoriteExercise_raw); }
 function favoriteExercise_raw(){
   const c = {};
-  S.sessions.forEach(s=>s.exos.forEach(ex=>{ if(ex.sets.some(st=>st.done)) c[ex.exoId]=(c[ex.exoId]||0)+1; }));
+  // exercices connus seulement : une séance ancienne peut garder un exercice retiré depuis
+  S.sessions.forEach(s=>s.exos.forEach(ex=>{ if(EXO_MAP[ex.exoId] && ex.sets.some(st=>st.done)) c[ex.exoId]=(c[ex.exoId]||0)+1; }));
   const id = Object.keys(c).sort((a,b)=>c[b]-c[a])[0];
   return id ? { def:EXO_MAP[id], n:c[id] } : null;
 }

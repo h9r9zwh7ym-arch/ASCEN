@@ -4,10 +4,29 @@
 // Le contexte audio n'existe qu'après un premier toucher (règle de Safari iOS) ;
 // avant cela, et si les sons sont coupés dans le Profil, sfx() ne fait rien.
 
-let AC = null, SFX_OUT = null, NOISE = null;
-// bus de sortie temporaire (le Rewind y joue les sons d'une diapo pour pouvoir les couper net)
-let SFX_BUS = null;
+let AC = null, SFX_OUT = null, NOISE = null, SFX_WET = null;
+// bus de sortie temporaire (le Rewind y joue les sons d'une diapo pour pouvoir les couper net) ;
+// son envoi vers la réverbération passe par le même bus, coupé en même temps
+let SFX_BUS = null, SFX_BUS_WET = null;
 function sfxDest(){ return SFX_BUS || SFX_OUT; }
+function sfxWet(){ return SFX_BUS_WET || SFX_WET; }
+// Réverbération douce, comme une pièce calme : réponse synthétisée (souffle stéréo qui s'éteint
+// en ~1,4 s et s'assombrit en s'éteignant). Seuls les sons musicaux (cloches, accords) y sont
+// envoyés, en petite quantité ; les « toc » de l'interface restent secs et précis.
+function buildReverb(){
+  const sr = AC.sampleRate, len = Math.floor(sr*1.4), ir = AC.createBuffer(2, len, sr);
+  for(let c=0;c<2;c++){
+    const d = ir.getChannelData(c); let lp = 0;
+    for(let i=0;i<len;i++){
+      const t = i/sr, k = 0.55 - 0.45*Math.min(1, t/1.1); // filtre qui se ferme : la queue s'assombrit
+      lp += k*((Math.random()*2-1) - lp);
+      d[i] = lp*Math.pow(1-i/len, 2.2)*(t<0.012 ? t/0.012 : 1);
+    }
+  }
+  const conv = AC.createConvolver(); conv.buffer = ir;
+  const send = AC.createGain(); send.gain.value = 0.32;
+  send.connect(conv); return { send, conv };
+}
 // iOS : les sons d'ASCEN se mélangent à la musique au lieu de l'interrompre (et ne sont
 // plus coupés quand une autre app reprend la main sur l'audio).
 try{ if(navigator.audioSession) navigator.audioSession.type = "ambient"; }catch(e){}
@@ -21,6 +40,7 @@ function buildAudio(){
     comp.threshold.value = -18; comp.ratio.value = 4;
     SFX_OUT = AC.createGain(); SFX_OUT.gain.value = 0.9;
     SFX_OUT.connect(comp); comp.connect(AC.destination);
+    try{ const r = buildReverb(); r.conv.connect(comp); SFX_WET = r.send; }catch(e){ SFX_WET = null; }
     NOISE = null; // les buffers sont recréés avec le nouveau contexte
   }catch(e){ AC = null; return false; }
   return true;
@@ -80,13 +100,26 @@ function tone(f, t, dur, o){
   osc.connect(g);
   if(o.pan && AC.createStereoPanner){ const p = AC.createStereoPanner(); p.pan.value = o.pan; g.connect(p); p.connect(sfxDest()); }
   else g.connect(sfxDest());
+  // envoi vers la réverbération (o.wet : 0 = sec) ; le gain de l'envoi est partagé, pas de nœud en plus
+  const wet = sfxWet(); if(o.wet && wet) g.connect(wet);
   osc.start(t0); osc.stop(t0+dur+0.05);
 }
-// cloche : fondamentale + partiels inharmoniques qui s'éteignent plus vite
+// cloche : fondamentale + une copie à peine désaccordée (léger battement, plus vivant), partiels
+// inharmoniques qui s'éteignent plus vite, et une frappe très brève (la mailloche) ; un peu de salle
 function bell(f, t, dur, gain){
-  tone(f, t, dur, { gain:gain, type:"sine" });
-  tone(f*2.76, t, dur*0.45, { gain:gain*0.35 });
-  tone(f*5.4, t, dur*0.2, { gain:gain*0.12 });
+  tone(f, t, dur, { gain:gain*0.8, wet:1 });
+  tone(f*1.0028, t, dur*0.9, { gain:gain*0.28, wet:1 });
+  tone(f*2.76, t, dur*0.45, { gain:gain*0.32, wet:1 });
+  tone(f*5.4, t, dur*0.18, { gain:gain*0.1 });
+  tone(f*8.1, t, 0.03, { gain:gain*0.06, att:0.001 });
+}
+// nappe : note tenue (attaque lente, palier, relâche), doublée d'une copie à peine désaccordée
+function pad(f, t, dur, gain){
+  const t0 = AC.currentTime + t, g = AC.createGain(), att = Math.min(0.7, dur*0.3), rel = Math.min(1.4, dur*0.4);
+  g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(gain, t0+att);
+  g.gain.setValueAtTime(gain, t0+dur-rel); g.gain.linearRampToValueAtTime(0, t0+dur);
+  g.connect(sfxDest()); const wet = sfxWet(); if(wet) g.connect(wet);
+  [1, 1.0035].forEach((k,i)=>{ const o = AC.createOscillator(); o.type = i ? "triangle" : "sine"; o.frequency.value = f*k; o.connect(g); o.start(t0); o.stop(t0+dur+0.05); });
 }
 // souffle filtré (whoosh)
 function whoosh(t, dur, from, to, gain){
@@ -131,20 +164,26 @@ const SFX = {
   swipe(){ whoosh(0, 0.2, 700, 2200, 0.18); },
   set(){ bell(NT.E6, 0, 0.35, 0.16); bell(NT.A6, 0.075, 0.5, 0.14); },
   exo(){ [NT.C6, NT.E6, NT.G6, NT.C7].forEach((f,i)=>bell(f, i*0.07, 0.55, 0.13)); },
-  pr(){ [NT.G6, NT.C7, NT.E6, NT.G6, NT.C7].forEach((f,i)=>tone(f*(1+Math.random()*0.01), i*0.05, 0.3, { gain:0.22, type:"triangle", pan:(i%2?.4:-.4) })); bell(NT.C6, 0, 0.8, 0.12); },
+  pr(){ [NT.G6, NT.C7, NT.E6, NT.G6, NT.C7].forEach((f,i)=>tone(f*(1+Math.random()*0.01), i*0.05, 0.3, { gain:0.2, type:"triangle", pan:(i%2?.4:-.4), wet:1 })); bell(NT.C6, 0, 0.9, 0.12); tone(NT.C5, 0, 0.6, { gain:0.08, type:"triangle", att:0.01, wet:1 }); },
   complete(){
-    [NT.C5, NT.E5, NT.G5].forEach((f,i)=>tone(f, i*0.1, 1.4, { gain:0.12, type:"triangle", att:0.03 }));
-    [NT.C6, NT.E6, NT.G6, NT.C7].forEach((f,i)=>bell(f, 0.32+i*0.08, 0.9, 0.12));
+    // accord de do qui s'installe (basse douce), cloches qui montent, souffle d'air au sommet
+    tone(NT.C5/2, 0, 1.8, { gain:0.08, att:0.06, wet:1 });
+    [NT.C5, NT.E5, NT.G5].forEach((f,i)=>tone(f, i*0.1, 1.5, { gain:0.11, type:"triangle", att:0.03, wet:1 }));
+    [NT.C6, NT.E6, NT.G6, NT.C7].forEach((f,i)=>bell(f, 0.32+i*0.08, 1, 0.12));
     whoosh(0.3, 0.6, 3000, 8000, 0.05);
   },
-  medal(){ [NT.G5, NT.C6, NT.E6, NT.G6].forEach((f,i)=>bell(f, i*0.09, 0.8, 0.12)); },
-  count(){ tone(NT.A5, 0, 0.16, { gain:0.45, type:"triangle" }); tone(NT.A5*2, 0, 0.08, { gain:0.14 }); },
-  go(){ whoosh(0, 0.5, 400, 4000, 0.16); [NT.C5, NT.G5, NT.C6, NT.E6].forEach((f,i)=>tone(f, 0.05+i*0.03, 0.9, { gain:0.1, type:"triangle", att:0.02 })); },
+  medal(){ [NT.G5, NT.C6, NT.E6, NT.G6].forEach((f,i)=>bell(f, i*0.09, 0.9, 0.12)); tone(NT.C5, 0.27, 1.1, { gain:0.06, type:"triangle", att:0.04, wet:1 }); },
+  count(){ tone(NT.A5, 0, 0.16, { gain:0.42, type:"triangle" }); tone(NT.A5*2, 0, 0.08, { gain:0.14 }); }, // net : les chiffres se suivent vite
+  go(){ whoosh(0, 0.5, 400, 4000, 0.16); [NT.C5, NT.G5, NT.C6, NT.E6].forEach((f,i)=>tone(f, 0.05+i*0.03, 0.9, { gain:0.1, type:"triangle", att:0.02, wet:1 })); },
   restTick(){ tone(NT.E5, 0, 0.12, { gain:0.28 }); tok(0, 330, 0.5); },
-  restEnd(){ bell(NT.A5, 0, 1.1, 0.2); bell(NT.E6, 0.14, 1.1, 0.16); },
+  restEnd(){ bell(NT.A5, 0, 1.2, 0.2); bell(NT.E6, 0.14, 1.2, 0.16); },
   remove(){ tone(170, 0, 0.12, { gain:0.3, to:95, att:0.003 }); tok(0, 140, 0.7); },
+  // étoile des favoris : deux notes claires qui montent (retirer : le « close » habituel)
+  fav(){ bell(NT.E6, 0, 0.45, 0.09); bell(NT.A6, 0.06, 0.6, 0.08); },
+  // interrupteur : le « toc » monte quand on active, descend quand on coupe
+  toggle(on){ tok(0, on ? 250 : 165, 0.85); if(on) tone(NT.E6, 0.01, 0.07, { gain:0.04, att:0.002 }); },
 };
-const UI_SOUNDS = new Set(["tick","step","open","close","seg","swipe","remove"]);
+const UI_SOUNDS = new Set(["tick","step","open","close","seg","swipe","remove","toggle"]);
 function sfx(name, arg){
   // app en arrière-plan : aucun son (il sortirait en retard, en rafale, au retour)
   if(!soundOn() || !SFX[name] || document.hidden) return;
@@ -163,7 +202,12 @@ function sfx(name, arg){
 
 // petit « toc » uniquement quand on change une sélection (segments, filtres, interrupteurs) :
 // ni les onglets, ni la navigation, ni les boutons ordinaires ne font de bruit.
+// Phase de capture : on lit l'état *avant* l'action (en phase de bouillonnement, l'action avait déjà
+// marqué le segment touché « .on », et le « toc » des sélecteurs ne se jouait jamais).
 document.addEventListener("click", e=>{
-  const b = e.target.closest && e.target.closest(".seg button:not(.on), .type-chip:not(.on), #pickerCats .chip, #pickerChips .chip, .switch, .tpl-daypick button, .chip[data-a^='toggle']");
+  // interrupteur : le son dit l'état qu'il va prendre ; ceux des sons ont leur propre retour
+  const sw = e.target.closest && e.target.closest(".switch");
+  if(sw){ if(!sw.disabled && !/^toggle(Ui)?Sound$/.test(sw.dataset.a||"")) sfx("toggle", !sw.classList.contains("on")); return; }
+  const b = e.target.closest && e.target.closest(".seg button:not(.on), .type-chip:not(.on), #pickerCats .chip, #pickerChips .chip, .tpl-daypick button, .chip[data-a^='toggle']");
   if(b && !b.disabled) sfx("seg");
-});
+}, true);

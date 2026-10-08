@@ -59,11 +59,12 @@ function histLabel(unit, k, long){
   if(unit==="month"){ const d = parseISO(k+"-01"), m = MOIS[d.getMonth()]; return long ? MOIS_LONG[d.getMonth()].replace(/^./,c=>c.toUpperCase())+" "+d.getFullYear() : (d.getMonth()===0 ? m+" "+String(d.getFullYear()).slice(2) : m); }
   return k;
 }
+function histFmt(m){ return v => m==="minutes" ? fmtDuration(v*60) : m==="volume" ? fmtKg(v) : `${fmtDec(v)} ${m==="sets"?"série":"séance"}${v>=2?"s":""}`; }
 function histChartHTML(){
   const { unit, out, prev, span } = histBuckets(histRange);
   const m = histMetric;
   const val = b => m==="minutes" ? Math.round(b.minutes) : m==="volume" ? Math.round(b.volume) : b[m];
-  const fmt = v => m==="minutes" ? fmtDuration(v*60) : m==="volume" ? fmtKg(v) : `${fmtDec(v)} ${m==="sets"?"série":"séance"}${v>=2?"s":""}`;
+  const fmt = histFmt(m);
   const total = out.reduce((t,b)=>t+val(b),0), delta = total-val(prev), all = histRange==="all";
   // moyenne par semaine jusqu'à 6 mois, par mois au-delà ; jours actifs sur 7 jours
   const perMonth = histRange==="y" || (all && unit!=="week");
@@ -71,7 +72,7 @@ function histChartHTML(){
   const avg = m==="minutes"||m==="volume" ? Math.round(avgRaw) : round1(avgRaw);
   const foot = histRange==="w" ? `${nb(out.filter(b=>b.sessions).length,"jour")} actif${out.filter(b=>b.sessions).length>1?"s":""} sur 7`
     : `Moyenne : ${fmt(avg)} par ${perMonth ? "mois" : "semaine"}`;
-  return `<div class="hist-kpi"><div><b>${fmt(total)}</b><small>${HIST_RANGE_TXT[histRange]}</small></div>
+  return `<div class="hist-kpi"><div><b data-v="${total}">${fmt(total)}</b><small>${HIST_RANGE_TXT[histRange]}</small></div>
       ${all ? "" : `<div class="hk-delta ${delta>0?"up":delta<0?"down":""}">${delta>0?"▲":delta<0?"▼":"="} ${delta?fmt(Math.abs(delta)):"stable"}<small>vs période précédente</small></div>`}</div>
     ${columnChart(out.map(b=>({ label:histLabel(unit,b.k), v:val(b), tip:`${histLabel(unit,b.k,true)} : ${fmt(val(b))}` })), { goal: m==="sessions" && unit==="week" ? S.goals.daysPerWeek : 0, fmt })}
     <div class="hist-avg">${foot}</div>`;
@@ -136,6 +137,18 @@ function renderHistory(){
   </div>`;
 }
 
+// séance enregistrée depuis la dernière visite de l'historique : sa ligne arrive et s'éclaire une
+// fois, à l'ouverture de l'onglet (pas pendant un rendu en coulisses, qu'on ne verrait pas)
+// (comparée à l'ensemble des séances déjà vues : supprimer la dernière n'éclaire pas la précédente)
+let histSeenIds = null;
+function markFreshHistory(v){
+  const ids = S.sessions.map(s=>s.id), top = ids[ids.length-1];
+  if(histSeenIds && top && !histSeenIds.has(top) && !reducedMotion()){
+    const r = qs(`.row[data-id="${top}"]`, v);
+    if(r){ r.classList.add("fresh"); setTimeout(()=>r.classList.remove("fresh"), 1800); }
+  }
+  histSeenIds = new Set(ids);
+}
 Object.assign(ACT, {
   histMetric(d, el){ histSwitch("histMetric", HIST_METRICS, d.v, el); },
   histRange(d, el){ histSwitch("histRange", HIST_RANGES, d.v, el); },
@@ -147,16 +160,30 @@ function histSwitch(key, opts, v, el){
   if(seg){ seg.dataset.cur = opts.findIndex(x=>x[0]===v); qsa("button", seg).forEach(b=>{ const on = b.dataset.v===v; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); }); settleSegs(seg.parentElement); }
   const box = qs("#histChart");
   if(!box) return;
-  // même nombre de barres (autre mesure) : chaque barre glisse de son ancienne hauteur à la nouvelle ;
-  // sinon (autre période) elles repoussent en cascade
-  const old = qsa(".cc-bar", box).map(b=>parseFloat(b.style.height)||0);
-  box.classList.remove("swap","morph"); box.innerHTML = histChartHTML();
+  // le graphique se transforme au lieu de repartir de zéro : chaque nouvelle barre part de la hauteur
+  // qu'avait l'ancien graphique au même endroit (même colonne si leur nombre ne change pas), puis
+  // glisse vers sa valeur. Avant, changer de période faisait repousser toutes les barres depuis le bas.
+  const old = qsa(".cc-bar", box).map(b=>parseFloat(b.style.height)||0), k0 = qs(".hist-kpi b", box), v0 = k0 ? +k0.dataset.v : 0;
+  clearTimeout(box._t); cancelAnimationFrame(box._raf); box.classList.remove("swap","morph","tween"); box.innerHTML = histChartHTML();
   const bars = qsa(".cc-bar", box);
-  if(old.length===bars.length && !reducedMotion() && bars[0] && bars[0].animate){
+  if(reducedMotion() || !bars[0] || !bars[0].animate) return;
+  // autre période, même mesure : le total défile de l'ancienne valeur à la nouvelle
+  const k1 = qs(".hist-kpi b", box), v1 = k1 ? +k1.dataset.v : 0;
+  if(key==="histRange" && k1 && v0!==v1){
+    box.classList.add("tween"); const fmt = histFmt(histMetric), t0 = performance.now();
+    const tick = now=>{ const p = Math.min(1, (now-t0)/450), e = 1-Math.pow(1-p, 3);
+      k1.textContent = fmt(p<1 ? Math.round(v0+(v1-v0)*e) : v1); if(p<1) box._raf = requestAnimationFrame(tick); };
+    box._raf = requestAnimationFrame(tick);
+  }
+  if(!old.some(h=>h>0)){ void box.offsetWidth; box.classList.add("swap"); }
+  else {
     box.classList.add("morph");
+    const n = bars.length, same = old.length===n;
     bars.forEach((b,i)=>{ const h = parseFloat(b.style.height)||0; if(!h) return;
-      try{ b.animate([{ transform:`scaleY(${Math.min(4, old[i]/h).toFixed(3)})` }, { transform:"scaleY(1)" }], { duration:460, easing:"cubic-bezier(.32,.72,0,1)", delay:Math.min(i,20)*10 }); }catch(e){} });
-  } else { void box.offsetWidth; box.classList.add("swap"); }
+      const h0 = old[same ? i : Math.min(old.length-1, Math.floor((i+.5)/n*old.length))];
+      try{ b.animate([{ transform:`scaleY(${Math.min(6, h0/h).toFixed(3)})` }, { transform:"scaleY(1)" }], { duration:480, easing:"cubic-bezier(.32,.72,0,1)", delay:Math.min(i,24)*(same ? 10 : 6), fill:"backwards" }); }catch(e){} });
+  }
+  box._t = setTimeout(()=>box.classList.remove("swap","morph","tween"), 1000);
 }
 function sessionDetailHTML(s){
   const rows = s.exos.map(ex=>{
@@ -191,7 +218,13 @@ function sessionDetailHTML(s){
 }
 
 Object.assign(ACT, {
-  histMore(){ histLimit += 25; changed(); },
+  // les séances révélées arrivent en cascade, les premières restent en place
+  histMore(){
+    const n0 = qsa("#v-history .row[data-id]").length; histLimit += 25; changed();
+    if(reducedMotion()) return;
+    qsa("#v-history .row[data-id]").slice(n0).forEach((r,i)=>{ if(i>11 || !r.animate) return;
+      try{ r.animate([{ opacity:0, transform:"translateY(10px)" }, { opacity:1, transform:"none" }], { duration:380, delay:i*35, easing:"cubic-bezier(.2,.8,.2,1)", fill:"backwards" }); }catch(e){} });
+  },
   saveNote(d, el){
     const s = S.sessions.find(x=>x.id===d.id); if(!s) return;
     const v = el.value.trim().slice(0,280);

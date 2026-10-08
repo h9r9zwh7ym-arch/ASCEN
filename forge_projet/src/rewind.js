@@ -129,22 +129,36 @@ function sessionsPRs(list){ return list.reduce((t,s)=>t+sessionPRCount(s), 0); }
 // Chaque diapo joue sur son propre bus : passer à la suivante coupe net les sons prévus de la
 // précédente. Les délais reprennent ceux du CSS (.rw-cal, .rw-plates, .rw-ring…) et des compteurs.
 const RW_PENTA = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.7, 1318.5, 1568, 1760];
+// bus d'une diapo : [sec, envoi vers la réverbération] ; couper l'envoi laisse la salle s'éteindre
+// d'elle-même (pas de coupure sèche), couper le sec arrête net les notes prévues
 function rwMute(){
   if(!rw || !rw.bus) return;
   const b = rw.bus; rw.bus = null;
-  try{ b.gain.setTargetAtTime(0.0001, AC.currentTime, 0.03); setTimeout(()=>{ try{ b.disconnect(); }catch(e){} }, 400); }catch(e){}
+  try{ b.forEach(n=>n.gain.setTargetAtTime(0.0001, AC.currentTime, 0.05)); setTimeout(()=>{ b.forEach(n=>{ try{ n.disconnect(); }catch(e){} }); }, 600); }catch(e){}
+}
+// pause (appui long) : le son baisse sans s'arrêter, et revient au relâché
+function rwDuck(on){
+  if(!rw || !rw.bus || !AC) return;
+  try{ rw.bus.forEach(n=>n.gain.setTargetAtTime(on ? 0.25 : 1, AC.currentTime, 0.12)); }catch(e){}
 }
 function rwSound(fn){
   rwMute();
   if(!rw || !soundOn() || document.hidden || !audioReady()) return;
   const r = rw, run = ()=>{
     if(rw!==r) return;
-    try{ const bus = AC.createGain(); bus.connect(SFX_OUT); r.bus = bus; SFX_BUS = bus; fn(); }catch(e){} finally{ SFX_BUS = null; }
+    try{
+      const dry = AC.createGain(), wet = AC.createGain(); dry.connect(SFX_OUT); if(SFX_WET) wet.connect(SFX_WET);
+      r.bus = [dry, wet]; SFX_BUS = dry; SFX_BUS_WET = wet; fn();
+    }catch(e){} finally{ SFX_BUS = SFX_BUS_WET = null; }
   };
   if(AC.state==="running") run(); else AC.resume().then(run).catch(()=>{});
 }
+// fond musical : un accord tenu par diapo, qui avance comme une petite histoire (do, la mineur,
+// fa, sol…) ; très bas dans le mélange, il lie les sons des animations entre eux
+const RW_PADS = [[130.81,164.81,196], [110,130.81,164.81], [87.31,110,130.81], [98,123.47,146.83]];
+function rwPad(i, dur){ RW_PADS[i%RW_PADS.length].forEach((f,k)=>pad(f*2, 0.05+k*0.04, dur, 0.018)); }
 // pincement doux (triangle court) et « tic » de compteur
-function rwPluck(f, t, g){ tone(f, t, 0.32, { gain:g||0.07, type:"triangle", att:0.004 }); tone(f*2, t, 0.12, { gain:(g||0.07)*0.3 }); }
+function rwPluck(f, t, g){ tone(f, t, 0.32, { gain:g||0.07, type:"triangle", att:0.004, wet:1 }); tone(f*2, t, 0.12, { gain:(g||0.07)*0.3 }); }
 function rwThud(t, g){ tone(150, t, 0.16, { gain:g||0.22, to:70, att:0.003 }); tok(t, 120, 0.6); }
 // compteur : un tic à chaque cran, de plus en plus espacés (même courbe que le chiffre), puis une cloche
 function rwCountTicks(t0, dur){
@@ -167,6 +181,7 @@ function rwSlideSounds(sl, n){
   rwSound(()=>{
     if(sl.outro){ SFX.complete(); return; }
     whoosh(0, 0.34, 450, 2600, 0.1); tone(196, 0, 0.3, { gain:0.05, type:"sine", att:0.02 });
+    rwPad(Math.max(0, rw.i-1), RW_DUR/1000+0.6);
     if(reduce) return;
     if(qs("[data-to]", n)) rwCountTicks(0.26, 1.3);
     qsa(".rw-cal i.on", n).forEach((d,i)=>rwPluck(RW_PENTA[i%RW_PENTA.length], 0.6+(+d.style.getPropertyValue("--k"))*0.035, 0.05));
@@ -279,7 +294,7 @@ function bindRewindGestures(el){
   el.addEventListener("pointerdown", e=>{
     if(e.target.closest("button,a")) return;
     down = { x:e.clientX, y:e.clientY, t:performance.now() };
-    holdT = setTimeout(()=>{ if(rw){ rw.paused = true; el.classList.add("paused"); } }, 220);
+    holdT = setTimeout(()=>{ if(rw){ rw.paused = true; el.classList.add("paused"); rwDuck(true); } }, 220);
   });
   el.addEventListener("pointermove", e=>{
     if(!down) return;
@@ -290,14 +305,14 @@ function bindRewindGestures(el){
     if(!down || !rw) return; clearTimeout(holdT);
     const dy = e.clientY-down.y, dx = e.clientX-down.x, held = performance.now()-down.t > 220;
     el.style.transition = ""; el.style.transform = "";
-    const was = rw.paused; rw.paused = false; el.classList.remove("paused");
+    const was = rw.paused; rw.paused = false; el.classList.remove("paused"); if(was) rwDuck(false);
     down = null;
     if(dy>110){ closeRewind(); return; }
     if(held && was) return; // on relâche après une pause
     if(Math.abs(dx)>60){ rwGo(rw.i + (dx<0 ? 1 : -1)); return; }
     if(e.clientX < innerWidth*0.3) rwGo(rw.i-1); else if(!rw.slides[rw.i].outro) rwGo(rw.i+1);
   };
-  el.addEventListener("pointerup", up); el.addEventListener("pointercancel", ()=>{ clearTimeout(holdT); down = null; if(rw){ rw.paused = false; el.classList.remove("paused"); } el.style.transform = ""; });
+  el.addEventListener("pointerup", up); el.addEventListener("pointercancel", ()=>{ clearTimeout(holdT); down = null; if(rw){ if(rw.paused) rwDuck(false); rw.paused = false; el.classList.remove("paused"); } el.style.transform = ""; });
 }
 document.addEventListener("keydown", e=>{
   if(!rw) return;

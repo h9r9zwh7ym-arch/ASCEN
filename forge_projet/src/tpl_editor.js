@@ -193,21 +193,24 @@ Object.assign(ACT, {
   wizardCreate(){
     const split = WEEK_SPLITS[wizardN], days = split.map(s=>s[2]);
     S.templates.forEach(t=>{ t.days = (t.days||[]).filter(d=>!days.includes(d)); });
-    const used = new Set(); let made = 0;
+    const used = new Set(), made = [];
     split.forEach(([type,name,day])=>{
       const s = generateEngineSession(type, used);
       if(!s.exos.length) return;
       s.exos.forEach(x=>used.add(x.exoId));
       const n = S.templates.some(t=>t.n===name) ? `${name} (${JOURS_COURTS[day]})` : name;
       const t = { id:uid(), n, days:[day], since:todayISO(), exos:s.exos.map(x=>({ exoId:x.exoId, sets:x.sets.length })) };
-      S.templates.push(t); openTpls.delete(t.id); made++;
+      S.templates.push(t); openTpls.delete(t.id); made.push(t.id);
     });
-    if(!made){ toast("Pas assez d'exercices avec ton matériel"); return; }
+    if(!made.length){ toast("Pas assez d'exercices avec ton matériel"); return; }
     S.goals.daysPerWeek = wizardN;
     uiState().tplOpen = true; uiState().planOpen = true;
     if(!(S.draft && S.draft.startedAt)) applyPlannedSession(true);
-    closeSheet(); save(); renderViewAnimated("today"); sfx("exo");
-    toast(`${made} séances créées et placées dans ta semaine`, "sparkle");
+    closeSheet(); save(); renderTodaySoft(); sfx("exo");
+    // les nouvelles séances apparaissent l'une après l'autre (le reste de l'accueil ne bouge pas)
+    made.forEach((id,k)=>{ const c = qs(`#v-today .tpl-card2[data-id="${id}"]`); if(!c) return;
+      c.style.setProperty("--k", k); c.classList.add("pop-in"); setTimeout(()=>c.classList.remove("pop-in"), 1200); });
+    toast(`${made.length} séances créées et placées dans ta semaine`, "sparkle");
     setTimeout(()=>{ const w = qs("#v-today .week-plan"); if(w) w.scrollIntoView({ behavior:"smooth", block:"center" }); }, 420);
   },
   pickerCancel(){ const p = picker; if(p && p.onCancel) p.onCancel(); else closeSheet(); },

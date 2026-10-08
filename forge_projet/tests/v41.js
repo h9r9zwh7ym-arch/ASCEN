@@ -36,12 +36,15 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     const save0 = JSON.stringify(S.sessions), cust0 = JSON.stringify(S.custom); const wkStart = weekKey(todayISO());
     S.sessions = S.sessions.filter(s => s.date < wkStart); DATA_VER++; out.week3 = nextGoal().t;     // 0/3 : la séance prête porte un record
     S.custom = { exos: [] }; DATA_VER++; out.weekOnly = nextGoal().t;
+    // 4.0 (passe qualité) : l'objectif de la semaine n'apparaît qu'à une séance du but (la pastille dit déjà « 0/3 »)
+    const g0 = S.goals.daysPerWeek; S.goals.daysPerWeek = sessionsThisWeek() + 1; DATA_VER++; out.oneLeft = nextGoal().t;
+    out.daysLeft = 7 - weekdayIdx(todayISO()) - (sessionsToday().length ? 1 : 0); S.goals.daysPerWeek = g0;
     S.sessions = JSON.parse(save0); S.custom = JSON.parse(cust0); DATA_VER++; renderView('today');
     return out;
   });
   log('Goal candidates:', JSON.stringify(cands));
   if (!/Record à battre aujourd'hui · Développé couché haltères : \d+ × 1\d kg/.test(cands.week3)) fail('record à battre de la séance prête');
-  if (!/semaine/.test(cands.weekOnly)) fail('objectif de la semaine');
+  if (/semaine/.test(cands.weekOnly) || (cands.daysLeft > 0 && !/Une séance de plus et ta semaine est validée/.test(cands.oneLeft))) fail('objectif de la semaine (seulement à une séance du but)');
   await shot('01_home_goal');
 
   // 2. en séance : « à battre » face à la même série la dernière fois, puis retour quand c'est dépassé
