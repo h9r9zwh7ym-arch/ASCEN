@@ -49,9 +49,8 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   });
   log('Muscle card:', JSON.stringify({ cards: mm.cards, rows: mm.rows, head: mm.head, legend: mm.swatch.map(s => s.cls), vals: mm.vals.slice(0, 5) }));
   if (mm.cards !== 1 || mm.rows || !mm.stimRows || !mm.head || mm.titles.includes('Volume par muscle')) fail('carte des muscles puis stimulus par muscle');
-  const regions = ['r-push', 'r-pull', 'r-legs', 'r-core'];
-  if (mm.swatch.map(s => s.cls).join() !== regions.join() || new Set(mm.swatch.map(s => s.c)).size !== 4) fail('légende aux couleurs des régions');
-  Object.entries(mm.zones).forEach(([r, c]) => { const sw = mm.swatch.find(s => s.cls === 'r-' + r); if (!sw || sw.c !== c) fail('zone ' + r + ' de la couleur de sa légende'); });
+  // 4.0 : une seule teinte (l'intensité dit combien), plus de légende qui mêle mouvements et muscles
+  if (mm.swatch.length || new Set(Object.values(mm.zones)).size > 1 || !Object.keys(mm.zones).length) fail('carte des muscles en une seule teinte');
   if (mm.vals.some(v => /\./.test(v))) fail('séries avec une virgule');
   await page.evaluate(() => { const c = document.querySelector('.mm-card'); document.querySelector('#v-progress').scrollTop = c.offsetTop - 60; }); await wait(300); await shot('01_muscles');
 

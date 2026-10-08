@@ -67,6 +67,57 @@ const PICTO_BY_PATTERN = { squat:"squat", hinge:"hinge", push:"pushup", pull:"ro
 function pictoKey(def){ return PICTO_OF[def.id] || PICTO_BY_PATTERN[def.pattern] || "squat"; }
 // pictogramme propre à chaque exercice : la pose de fin du squelette animé (mêmes proportions,
 // même mouvement que la fiche), en trait plus épais pour les petites tailles. Repli : famille.
+// ---------- matériel tenu (4.0) ----------
+// Haltère (deux disques de part et d'autre de la prise), disque de barre (anneau), kettlebell (boule
+// pendue sous la main), élastique (trait tendu vers son point d'attache). Le même dessin sert au
+// pictogramme et à l'animation : on reconnaît d'un coup d'œil un curl aux haltères d'un curl à l'élastique.
+const BAND_ANCHOR = { ecarte_elastique:"hands", ecarte_elastique_pect:"hands", tirage_elastique:"front", face_pull_elastique:"front", pallof_press:"front", tirage_vertical_elastique:"top", pont_fessier_elastique:"none", band_walk:"none", kickback_fessier_elastique:"none" };
+// barre fixe (pas une charge) ; une seule charge tenue à deux mains (dessinée entre les mains)
+const NO_LOAD = new Set(["rowing_inverse_barre"]);
+const ONE_LOAD = new Set(["woodchopper_haltere","pullover_haltere","squat_sumo_haltere","swing_kb","goblet_squat_kb","squat_gobelet","fente_goblet_kb","extension_triceps_nuque","deadlift_kb","halo_kb","thruster_haltere"]);
+function loadKind(def){ if(NO_LOAD.has(def.id)) return null; const t = typeof loadableTypeOf==="function" ? loadableTypeOf(def) : null; return t==="dumbbells" || t==="barbell" || t==="kettlebell" || t==="bands" ? t : null; }
+// main (W, W2) ou milieu des deux mains (M)
+const handAt = (f, k)=> k==="M" ? [(f.W[0]+f.W2[0])/2, (f.W[1]+f.W2[1])/2] : f[k];
+const loadHands = (def, two)=> ONE_LOAD.has(def.id) ? ["M"] : two ? ["W","W2"] : ["W"];
+const DB_SHAPE = "M-1.45 -1.25V1.25M1.45 -1.25V1.25M-1.45 0H1.45", KB_SHAPE = "M-.95 .85C-.95 -.75 .95 -.75 .95 .85";
+// angle de l'haltère : perpendiculaire à l'avant-bras (prise marteau : dans son axe)
+function dbAngle(f, w, e, grip){ if(w==="M"){ w = "W"; e = "E"; } const a = Math.atan2(f[w][1]-f[e][1], f[w][0]-f[e][0])/RAD; return grip==="v" ? a : a+90; }
+function bandAnchor(def, f, A, k){
+  const m = BAND_ANCHOR[def.id] || "feet";
+  if(m==="none") return null;
+  if(m==="hands") return k==="W" ? f.W2 : null;
+  if(m==="top") return [A[k][0], .8];
+  if(m==="front"){ const d = [A[k][0]-A.N[0], A[k][1]-A.N[1]], l = Math.hypot(d[0], d[1]) || 1; return [Math.max(1, Math.min(23, A[k][0]+d[0]/l*3)), Math.max(1, Math.min(22, A[k][1]+d[1]/l*3))]; }
+  return k==="W" ? f.F : f.F2;
+}
+// barre vue de face (mains écartées) : la barre dépasse des mains, un disque à chaque bout
+function barPath(f){
+  const dx = f.W2[0]-f.W[0], dy = f.W2[1]-f.W[1], l = Math.hypot(dx, dy) || 1, ux = dx/l, uy = dy/l, r = v=>v.toFixed(2);
+  const a = [f.W[0]-ux*2.6, f.W[1]-uy*2.6], b = [f.W2[0]+ux*2.6, f.W2[1]+uy*2.6], pl = (p, k)=>{ const c = [p[0]+ux*k, p[1]+uy*k]; return `M${r(c[0]-uy*1.7)} ${r(c[1]+ux*1.7)}L${r(c[0]+uy*1.7)} ${r(c[1]-ux*1.7)}`; };
+  return `M${r(a[0])} ${r(a[1])}L${r(b[0])} ${r(b[1])}${pl(a, .5)}${pl(b, -.5)}`;
+}
+// pose figée (pictogramme) : traits à la couleur du texte, détourés de la couleur de la tuile (--rc)
+// pour rester lisibles quand la charge passe devant le corps (kettlebell le long des jambes…)
+function loadStatic(def, rig, f, two, sw){
+  const kind = loadKind(def), out = { back:"", front:"" }; if(!kind) return out;
+  const r = v=>v.toFixed(2), hands = loadHands(def, two);
+  if(kind==="bands"){ out.back = hands.map(k=>{ const a = bandAnchor(def, f, rig.A, k); return a ? `<path d="M${r(f[k][0])} ${r(f[k][1])}L${r(a[0])} ${r(a[1])}" stroke="currentColor" stroke-width="${sw*.42}" stroke-linecap="round" opacity=".7"/>` : ""; }).join(""); return out; }
+  if(kind==="barbell"){
+    if(two && !ONE_LOAD.has(def.id)){ const d = barPath(f); out.front = `<path class="pk" d="${d}" stroke-width="${sw*.9+1.4}"/><path d="${d}" stroke="currentColor" stroke-width="${sw*.6}" stroke-linecap="round"/>`; }
+    else {
+      // barre sur le dos (squat) : le disque se décale vers l'arrière pour ne pas disparaître sous la tête
+      const dh = Math.hypot(f.W[0]-f.H[0], f.W[1]-f.H[1]), k = dh<3.6 ? (3.6-dh)/(dh||1) : 0, c = [f.W[0]+(f.W[0]-f.H[0])*k, f.W[1]+(f.W[1]-f.H[1])*k];
+      out.back = `<circle cx="${r(c[0])}" cy="${r(c[1])}" r="2.1" fill="none" stroke="currentColor" stroke-width="${sw*.5}"/><circle cx="${r(c[0])}" cy="${r(c[1])}" r=".6" fill="currentColor"/>`;
+    }
+    return out;
+  }
+  out.front = hands.map(k=>{ const e = k==="W2" ? "E2" : "E", p = handAt(f, k), x = r(p[0]), y = r(p[1]);
+    if(kind==="kettlebell") return `<g transform="translate(${x} ${y})"><circle class="pkf" cy="1.9" r="2.15"/><path d="${KB_SHAPE}" fill="none" stroke="currentColor" stroke-width="${sw*.4}"/><circle cy="1.9" r="1.4" fill="currentColor"/></g>`;
+    const t = `translate(${x} ${y}) rotate(${dbAngle(f, k, e, rig.grip).toFixed(1)})`;
+    return `<path class="pk" transform="${t}" d="${DB_SHAPE}" stroke-width="${sw*.58+1.4}"/><path transform="${t}" d="${DB_SHAPE}" stroke="currentColor" stroke-width="${sw*.58}" stroke-linecap="round"/>`;
+  }).join("");
+  return out;
+}
 const PICTO_CACHE = new Map();
 function exoPicto(def){
   if(!def) return pictoSVG("squat");
@@ -75,7 +126,8 @@ function exoPicto(def){
   try{
     if(typeof RIGS==="undefined" || !RIGS[def.id]) throw 0;
     const rig = animRig(def), rd = RIGS[def.id], f = rd.icon==="A" ? rig.A : rd.icon==="mid" ? rig.frames[rig.frames.length>>1] : rig.B;
-    svg = `<svg class="picto" viewBox="0 0 24 24" aria-hidden="true"><path d="${rig.env||FLOOR}" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity=".38"/><path d="${animPath(f)}" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${f.H[0].toFixed(2)}" cy="${f.H[1].toFixed(2)}" r="2.3" fill="currentColor"/></svg>`;
+    const ld = loadStatic(def, rig, f, Math.hypot(f.W[0]-f.W2[0], f.W[1]-f.W2[1])>.6, 2.3);
+    svg = `<svg class="picto" viewBox="0 0 24 24" aria-hidden="true"><path d="${rig.env||FLOOR}" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity=".38"/>${ld.back}<path d="${animPath(f)}" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${f.H[0].toFixed(2)}" cy="${f.H[1].toFixed(2)}" r="2.3" fill="currentColor"/>${ld.front}</svg>`;
   }catch(e){ svg = pictoSVG(pictoKey(def)); }
   PICTO_CACHE.set(def.id, svg);
   return svg;
@@ -419,30 +471,46 @@ function animRig(def){
   ANIM_CACHE.set(def.id, rig);
   return rig;
 }
-// charge tenue : disque aux mains pour les exercices chargés (pas les élastiques)
+// Animation de la fiche : le mouvement au rythme d'une vraie répétition (montée 40 %, court temps
+// d'arrêt, descente 40 %, temps d'arrêt), la position d'arrivée en filigrane (on voit où aller),
+// une ombre au sol qui suit le corps et le matériel tenu (haltère, disque, kettlebell, élastique).
 function exoAnimSVG(def){
   const rig = animRig(def);
   const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const lt = typeof loadableTypeOf==="function" ? loadableTypeOf(def) : null, w = lt && lt!=="bands" ? (lt==="barbell" ? 1.9 : 1.3) : 0;
   const F = rig.frames, n = F.length-1, dur = (rig.dur || (isTimed(def) ? 3.6 : 2.4)) + "s";
-  // aller (45 % du temps) puis retour, images intermédiaires calculées articulation par articulation
-  const seq = F.concat(F.slice(0,-1).reverse());
-  const kt = seq.map((_,i)=>(i<=n ? i/n*.45 : .45+(i-n)/n*.55).toFixed(3)).join(";");
+  const seq = F.concat([F[n]], F.slice(0,-1).reverse(), [F[0]]);
+  const times = F.map((_,i)=>i/n*.4).concat([.5], F.slice(0,-1).map((_,j)=>.5+(j+1)/n*.4), [1]);
+  const kt = times.map(t=>t.toFixed(3)).join(";");
   const anim = (attr, fn)=> reduce ? "" : `<animate attributeName="${attr}" values="${seq.map(fn).join(";")}" keyTimes="${kt}" dur="${dur}" repeatCount="indefinite"/>`;
+  const animT = (type, fn)=> reduce ? "" : `<animateTransform attributeName="transform" type="${type}" values="${seq.map(fn).join(";")}" keyTimes="${kt}" dur="${dur}" repeatCount="indefinite"/>`;
   const r2 = v=>v.toFixed(2);
   const dot = (k, r, cls)=>`<circle class="${cls}" cx="${r2(F[0][k][0])}" cy="${r2(F[0][k][1])}" r="${r}">${anim("cx", f=>r2(f[k][0]))}${anim("cy", f=>r2(f[k][1]))}</circle>`;
-  const load = k=> rig.grip==="v"
-    ? `<ellipse class="ea-load" cx="${r2(F[0][k][0])}" cy="${r2(F[0][k][1])}" rx="${r2(w*.55)}" ry="${r2(w*1.25)}">${anim("cx", f=>r2(f[k][0]))}${anim("cy", f=>r2(f[k][1]))}</ellipse>`
-    : dot(k, w, "ea-load");
-  const pose = animPose(def), two = rig.two ? Math.hypot(F[0].W[0]-F[0].W2[0], F[0].W[1]-F[0].W2[1])>.6 : (pose.A.W2 || pose.B.W2);
+  const pose = animPose(def), two = rig.two ? Math.hypot(F[0].W[0]-F[0].W2[0], F[0].W[1]-F[0].W2[1])>.6 : !!(pose.A.W2 || pose.B.W2);
   const seg = FOCUS_SEG[def.muscles[0]];
   const focus = seg ? `<path class="ea-focus" d="${focusPath(F[0], seg)}">${anim("d", f=>focusPath(f, seg))}</path>` : "";
+  // matériel : suit la main (translation) et l'avant-bras (rotation, angles déroulés sans saut de 360°)
+  const kind = loadKind(def), hands = loadHands(def, two);
+  const unwrap = arr=>{ for(let i=1;i<arr.length;i++){ while(arr[i]-arr[i-1]>180) arr[i] -= 360; while(arr[i]-arr[i-1]<-180) arr[i] += 360; } return arr; };
+  const follow = (k, inner)=>`<g transform="translate(${r2(handAt(F[0],k)[0])} ${r2(handAt(F[0],k)[1])})">${animT("translate", f=>r2(handAt(f,k)[0])+" "+r2(handAt(f,k)[1]))}${inner}</g>`;
+  const load = !kind ? "" : kind==="bands"
+    ? hands.map(k=>{ const pt = f=>bandAnchor(def, f, rig.A, k); if(!pt(F[0])) return ""; const d = f=>{ const a = pt(f); return `M${r2(f[k][0])} ${r2(f[k][1])}L${r2(a[0])} ${r2(a[1])}`; };
+        return `<path class="ea-band" d="${d(F[0])}">${anim("d", d)}</path>`; }).join("")
+    : hands.map(k=>{ const e = k==="W2" ? "E2" : "E";
+        if(kind==="barbell") return two && k!=="M" ? (k==="W" ? `<path class="ea-bar" d="${barPath(F[0])}">${anim("d", barPath)}</path>` : "") : follow(k, `<circle class="ea-plate" r="2"/><circle class="ea-load" r=".55"/>`);
+        if(kind==="kettlebell") return follow(k, `<path class="ea-handle" d="${KB_SHAPE}"/><circle class="ea-load" cy="1.9" r="1.35"/>`);
+        const ang = unwrap(seq.map(f=>dbAngle(f, k, e, rig.grip)));
+        return follow(k, `<g transform="rotate(${ang[0].toFixed(1)})">${reduce ? "" : `<animateTransform attributeName="transform" type="rotate" values="${ang.map(a=>a.toFixed(1)).join(";")}" keyTimes="${kt}" dur="${dur}" repeatCount="indefinite"/>`}<path class="ea-db" d="${DB_SHAPE}"/></g>`);
+      }).join("");
+  const floor = /21h21/.test(rig.env||FLOOR);
+  const shadow = floor ? `<ellipse class="ea-shadow" cx="${r2(F[0].P[0])}" cy="21.2" rx="3.6" ry=".6">${anim("cx", f=>r2(f.P[0]))}</ellipse>` : "";
+  const B = F[n], ghost = `<g class="ea-ghost"><path d="${animPath(B)}"/><circle cx="${r2(B.H[0])}" cy="${r2(B.H[1])}" r="2.15"/></g>`;
   return `<svg class="exo-anim" viewBox="0 0 24 24" aria-label="Animation du mouvement">
-    <path class="ea-env" d="${rig.env||FLOOR}"/>
+    ${shadow}<path class="ea-env" d="${rig.env||FLOOR}"/>
+    ${ghost}
     <path class="ea-body" d="${animPath(F[0])}">${anim("d", animPath)}</path>
     ${focus}
     ${dot("H", 2.15, "ea-head")}
-    ${w ? load("W") + (two ? load("W2") : "") : ""}
+    ${load}
   </svg>`;
 }
 

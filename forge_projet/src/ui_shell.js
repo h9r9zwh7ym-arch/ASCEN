@@ -297,8 +297,8 @@ function animateCounts(root){
   const els = qsa("[data-count]", root);
   const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   els.forEach(el=>{
-    const target = parseFloat(el.dataset.count), dec = +(el.dataset.dec||0), unit = el.dataset.unit;
-    const fmt = v => (dec ? v.toLocaleString("fr-FR",{minimumFractionDigits:dec,maximumFractionDigits:dec}) : fmtNum(v)) + (unit?" "+unit:"");
+    const target = parseFloat(el.dataset.count), dec = +(el.dataset.dec||0), unit = el.dataset.unit, pre = el.dataset.pre||"";
+    const fmt = v => pre + (dec ? v.toLocaleString("fr-FR",{minimumFractionDigits:dec,maximumFractionDigits:dec}) : fmtNum(v)) + (unit?(el.dataset.thin?"\u202f":" ")+unit:"");
     if(reduce || !(target>0)){ el.textContent = fmt(target||0); return; }
     const t0 = performance.now(), dur = 800;
     (function step(t){
@@ -317,6 +317,7 @@ function showTip(target){
   if(tipOn) tipOn.classList.remove("tip-on");
   tipOn = target; target.classList.add("tip-on");
   tip.textContent = target.dataset.tip;
+  clearTimeout(tip._park); tip.style.top = "0px"; // rangée au-dessus de l'écran quand elle est cachée (voir #sbar)
   tip.classList.add("show");
   // graphiques : la bulle se pose en haut du graphique, au-dessus de la colonne ou du point touché
   // (avant, elle montait au-dessus de toute la colonne et recouvrait le titre et les onglets) ;
@@ -337,7 +338,7 @@ function showTip(target){
 function lineHitCenter(target, r){ return target.classList.contains("lc-hit") ? r.top + r.height/2 - 5 : r.top; }
 function hideTip(){
   const tip = qs("#charttip");
-  if(tip) tip.classList.remove("show");
+  if(tip && tip.classList.contains("show")){ tip.classList.remove("show"); clearTimeout(tip._park); tip._park = setTimeout(()=>{ tip.style.top = ""; }, 200); }
   qsa(".lc-cursor.on,.lc-cdot.on").forEach(x=>x.classList.remove("on"));
   if(tipOn){ tipOn.classList.remove("tip-on"); tipOn = null; }
 }
@@ -380,6 +381,8 @@ function showOverlay(inner, kind){
   ov.classList.add("open");
   if(typeof syncStatusBar==="function") syncStatusBar(true);
   ov.dataset.kind = kind;
+  // contenu en courte cascade à l'ouverture (pas quand la feuille se redessine ensuite)
+  const sh = ov.querySelector(".sheet"); if(sh && !reducedMotion()){ sh.classList.add("sh-in"); setTimeout(()=>sh.classList.remove("sh-in"), 800); }
   requestAnimationFrame(()=>requestAnimationFrame(()=>{ if(gen===overlayGen) ov.classList.add("show"); }));
 }
 // ---------- pile de feuilles ----------

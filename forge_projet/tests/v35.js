@@ -44,7 +44,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.evaluate(() => { switchTab('progress'); ACT.progressTab({ v: 'muscles' }); }); await wait(800);
   const week = await page.evaluate(() => { const rows = weekVolume(), pec = rows.find(r => r.id === 'pect'), z = document.querySelector(`.mm-week .mm-z[data-tip^="${MUSCLE_MAP.pect.n}"]`);
     z.querySelector('ellipse,path').dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    return { on: z.classList.contains('on'), sets: pec.sets, tip: z.dataset.tip, legend: !!document.querySelector('.mm-card .mm-legend') }; });
+    return { on: z.classList.contains('on'), sets: pec.sets, tip: z.dataset.tip, legend: !!document.querySelector('.mm-card .mm-scale') }; });
   await wait(300); const tipShown = await page.evaluate(() => !!document.querySelector('.mm-week .mm-z.tip-on'));
   log('Week map:', JSON.stringify(week), '| tip:', tipShown); if (!week.on || !tipShown || !(week.sets > 0) || !week.legend || !/série/.test(week.tip)) fail('carte des muscles de la semaine');
 

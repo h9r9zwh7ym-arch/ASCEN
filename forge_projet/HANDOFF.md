@@ -849,6 +849,38 @@ Mesures (`tests/tab_perf.js`, processeur ×4, 3 ans d'historique) :
   - la moyenne sur 4 semaines est divisée par le nombre de semaines réellement écoulées depuis la 1re séance.
 - Test : `tests/v45.js`.
 
+**Finitions : accueil, barre d'état iOS 26, carte des muscles, matériel dans les pictogrammes (toujours 4.0)** :
+- **Ma séance ↔ Proposée par l'app** (`ACT.todayMode`) : seul le contenu sous le sélecteur change, avec un glissé du côté de l'onglet et la hauteur qui suit. Avant, `renderViewAnimated` reconstruisait tout l'accueil et rejouait sa cascade d'entrée.
+- **Barre d'état** :
+  - Safari 26 ignore theme-color. Il colore la barre d'après l'élément fixe et opaque collé en haut de l'écran, à défaut d'après le fond de la page écrit en style direct ;
+  - les coupables étaient l'écran de lancement (noir) et la bulle des graphiques (couleur du texte, posée en haut à gauche même invisible) ;
+  - `syncStatusBar` écrit maintenant un bandeau fixe `#sbar` toujours à la bonne couleur (fond, barre de navigation après défilement, voile des feuilles), le fond du `body` et du `html` en style direct, et theme-color pour les anciens iOS ;
+  - la bulle est rangée à `top:-400px` quand elle est cachée, et la couleur est réappliquée à la fin de l'écran de lancement.
+- **Carte des muscles de la semaine** :
+  - une seule teinte (`opts.mono`), dont l'intensité dit combien le muscle a travaillé ;
+  - l'ancienne légende mêlait des mouvements (poussée, tirage) et des parties du corps (jambes, gainage) ; elle est remplacée par l'échelle 0 → 10+ séries et « Le plus travaillé : … » ;
+  - la fiche d'un exercice garde la couleur de sa région, assortie à son animation.
+- **Stimulus** :
+  - plus de losange ni de bandes vertes ;
+  - la barre est grise sous le seuil et verte dans la zone de progrès, avec deux fines entailles à 4 et 10 séries ;
+  - la moyenne sur 4 semaines est dans la bulle au toucher.
+- **Pictogrammes : le matériel est dessiné** (`loadStatic`) :
+  - haltère (deux disques autour de la prise, perpendiculaire à l'avant-bras ; dans son axe en prise marteau) ;
+  - disque de barre (anneau, placé derrière le corps et décalé hors de la tête au squat) ; barre vue de face avec un disque à chaque bout (`barPath`) ;
+  - kettlebell pendu sous la main ; élastique tendu vers son point d'attache (`BAND_ANCHOR` : pieds, mains, devant, en haut) ;
+  - un liseré de la couleur de la tuile (`--tile`) garde la charge lisible devant le corps ;
+  - `NO_LOAD` (barre fixe du rowing inversé) et `ONE_LOAD` (une charge tenue à deux mains, dessinée entre les mains).
+- **Animations des fiches** (`exoAnimSVG`) :
+  - rythme d'une vraie répétition : 40 % de montée, temps d'arrêt, 40 % de descente, temps d'arrêt ;
+  - position d'arrivée en filigrane (`ea-ghost`) et ombre au sol qui suit le bassin (`ea-shadow`) ;
+  - le même matériel suit la main (translation) et l'avant-bras (rotation déroulée, sans saut de 360°).
+- **Petits détails** :
+  - le contenu d'une feuille arrive en courte cascade à l'ouverture (classe `sh-in` 800 ms) ;
+  - l'icône du toast rebondit ;
+  - le jour même s'illumine une fois dans « Ma semaine » et les coches apparaissent en cascade ;
+  - la progression de force défile jusqu'à sa valeur (`animateCounts` gère maintenant `data-pre` et `data-thin`).
+- Test : `tests/v46.js`.
+
 **Vérifications** :
 - `tests/v40.js` couvre la 2e passe : Rewind, virgules, carte et légende des muscles, accueil, catalogue, fusion, séance Pilates, recherche.
 - Tour visuel de 27 écrans en clair et en sombre (`tests/tour.js` + `tests/montage.js`) ; audit d'accessibilité repassé (`tests/ux_audit.js`).

@@ -9,28 +9,39 @@ function applyTheme(){
   else document.documentElement.removeAttribute("data-theme");
   syncStatusBar();
 }
-// Barre d'état (heure, batterie) : sur iPhone, l'app installée la colore avec theme-color. Elle
-// prend exactement la couleur de ce qui est juste dessous : le fond de l'app en haut de page, la
-// barre de navigation (translucide, composée sur le fond) dès qu'on a défilé, et le voile noir à
-// 40 % quand une feuille est ouverte. Plus de bande « coupée » au-dessus de l'app.
+// Barre d'état (heure, batterie). Depuis iOS 26, Safari ignore theme-color : il colore la barre
+// d'après l'élément fixe et opaque collé au bord haut de l'écran, à défaut d'après le fond de la
+// page (et seulement s'il est écrit en style direct). Avant, l'écran de lancement (noir) et la
+// bulle des graphiques (couleur du texte, en haut à gauche même invisible) lui donnaient du noir.
+// On lui fournit donc un bandeau fixe (#sbar) toujours à la bonne couleur : le fond de l'app en
+// haut de page, la barre de navigation (translucide, composée sur le fond) dès qu'on a défilé,
+// assombri comme la page quand une feuille est ouverte. theme-color reste écrit pour les iOS
+// plus anciens et Android.
 let statusDim = false;
 function syncStatusBar(dim){
   if(dim!==undefined) statusDim = dim;
   try{
-    let m = document.querySelector('meta[name="theme-color"]:not([media])');
-    if(!m){ document.querySelectorAll('meta[name="theme-color"]').forEach(x=>x.remove()); m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
-    const c = getComputedStyle(document.body).backgroundColor.match(/[\d.]+/g);
-    if(!c) return;
-    let rgb = c.slice(0,3).map(Number);
+    const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+    let rgb = hexRGB(bg);
+    if(!rgb){ const c = getComputedStyle(document.body).backgroundColor.match(/[\d.]+/g); if(!c || (c.length>3 && +c[3]===0)) return; rgb = c.slice(0,3).map(Number); }
+    const base = "#"+rgb.map(x=>Math.round(x).toString(16).padStart(2,"0")).join("");
+    // fond de page en style direct (seul lu en direct par Safari 26)
+    if(document.body.style.backgroundColor!==base){ document.body.style.backgroundColor = base; document.documentElement.style.backgroundColor = base; }
     const v = typeof currentTab!=="undefined" && document.getElementById("v-"+currentTab);
     if(v && v.classList.contains("scrolled")){
       const b = getComputedStyle(document.documentElement).getPropertyValue("--bar").match(/[\d.]+/g);
       if(b && b.length>=4) rgb = rgb.map((x,i)=>+b[i]*+b[3] + x*(1-+b[3]));
     }
-    const k = statusDim ? .6 : 1, hex = rgb.map(x=>Math.round(x*k).toString(16).padStart(2,"0")).join("");
-    if(m.content!=="#"+hex) m.content = "#"+hex;
+    const k = statusDim ? .6 : 1, hex = "#"+rgb.map(x=>Math.round(x*k).toString(16).padStart(2,"0")).join("");
+    let bar = document.getElementById("sbar");
+    if(!bar){ bar = document.createElement("div"); bar.id = "sbar"; bar.setAttribute("aria-hidden","true"); document.body.appendChild(bar); }
+    if(bar.style.backgroundColor!==hex) bar.style.backgroundColor = hex;
+    let m = document.querySelector('meta[name="theme-color"]:not([media])');
+    if(!m){ document.querySelectorAll('meta[name="theme-color"]').forEach(x=>x.remove()); m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
+    if(m.content!==hex) m.content = hex;
   }catch(e){}
 }
+function hexRGB(h){ const m = /^#([0-9a-f]{6})$/i.exec(h||""); return m ? [0,2,4].map(i=>parseInt(m[1].slice(i,i+2),16)) : null; }
 if(window.matchMedia) try{ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ()=>syncStatusBar()); }catch(e){}
 
 // ---------- animation de lancement ----------
@@ -62,7 +73,7 @@ function showSplash(){
     if(gone) return; gone = true;
     sp.classList.add("out");
     if(typeof needsOnboarding==="function" && needsOnboarding()) openOnboarding();
-    setTimeout(()=>sp.remove(), 450);
+    setTimeout(()=>{ sp.remove(); syncStatusBar(); }, 450);
   };
   sp.addEventListener("click", leave);
   setTimeout(leave, reduce ? 600 : 1500);

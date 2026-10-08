@@ -197,7 +197,7 @@ function strengthCardHTML(){
   const regions = Object.keys(REGIONS).filter(r=>reg[r]).map(r=>{ const l = reg[r], v = Math.round(100*l.reduce((a,m)=>a+m.ratio,0)/l.length), down = l.some(m=>m.f<1);
     return `<div class="tr-reg r-${r}"><i></i><span>${r==="core" ? "Gainage" : REGIONS[r].n}</span><b>${pctTxt(v)}</b>${down ? `<em>${ii("warn")}</em>` : ""}</div>`; }).join("");
   return `<div class="chart-card trend-card stagger" style="--i:1">${head}
-    <div class="tr-hero"><span class="tr-v">${pctTxt(last.v)}</span>${wk>0 ? `<span class="tr-d ${d>0?"up":d<0?"down":""}">${d>0?"+":d<0?"−":"±"}${Math.abs(d)} pts en ${nb(wk,"semaine")}</span>` : ""}</div>
+    <div class="tr-hero"><span class="tr-v" ${(()=>{ const p = Math.round(last.v-100); return `data-count="${Math.abs(p)}" data-pre="${p>0?"+":p<0?"−":""}" data-unit="%" data-thin="1"`; })()}>${pctTxt(last.v)}</span>${wk>0 ? `<span class="tr-d ${d>0?"up":d<0?"down":""}">${d>0?"+":d<0?"−":"±"}${Math.abs(d)} pts en ${nb(wk,"semaine")}</span>` : ""}</div>
     <button class="tr-status st-${status.c}" data-a="strengthHow" aria-label="Statut : ${status.n}. Voir comment il est calculé"><span class="tr-dot"></span><span><b>${status.n}</b> · ${fmtDec(round1(L.acute))} série${round1(L.acute)>=2?"s":""} difficile${round1(L.acute)>=2?"s":""} sur 7 jours (habituel : ${fmtDec(round1(L.chronic))})</span></button>
     ${lineChart(pts.map(p=>({ label:fmtDate(p.wk), v:p.v-100, tip:`Semaine du ${fmtDate(p.wk)} : ${pctTxt(p.v)} (${nb(p.n,"muscle")})` })), { aria:"Progression de force par semaine", fmt:v=>pctTxt(v+100), tickFmt:v=>(v>0?"+":v<0?"−":"")+Math.abs(v)+"\u202f%" })}
     ${regions ? `<div class="tr-regs">${regions}</div>` : ""}

@@ -1,7 +1,8 @@
 // ================= CARTE DES MUSCLES (v3.6) =================
 // Deux silhouettes stylisées (face, dos) ; chaque muscle est une zone qui prend la couleur de sa
 // région (poussée, tirage, jambes, gainage) avec une intensité de 0 à 1. Utilisée dans la fiche
-// d'un exercice (principal plein, secondaires atténués) et dans Progrès (séries de la semaine).
+// d'un exercice (principal plein, secondaires atténués) et dans Progrès (séries de la semaine,
+// en une seule teinte : l'intensité dit combien, sans légende qui mêle mouvements et muscles).
 // Chaque zone porte data-tip : touchée, elle affiche son nom et sa valeur (bulle des graphiques).
 const MM_SHAPES = (()=>{
   const e = (cx, cy, rx, ry, a)=>`<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}"${a ? ` transform="rotate(${a} ${cx} ${cy})"` : ""}/>`;
@@ -45,7 +46,7 @@ function muscleMapSVG(levels, tips, opts){
     return `<g class="mm-z r-${r} ${v>0 ? "on" : ""}" style="--v:${v.toFixed(2)}"${tip}>${shape}</g>`;
   };
   const side = (k)=>Object.keys(MM_SHAPES[k]).map(id=>zone(id, MM_SHAPES[k][id])).join("");
-  return `<svg class="mm ${opts.cls||""}" viewBox="0 0 120 ${opts.caps===false ? 102 : 107}" role="img" aria-label="${esc(opts.label||"Carte des muscles")}">
+  return `<svg class="mm ${opts.mono ? "mono" : ""} ${opts.cls||""}" viewBox="0 0 120 ${opts.caps===false ? 102 : 107}" role="img" aria-label="${esc(opts.label||"Carte des muscles")}">
     <g class="mm-base">${MM_SHAPES.base}</g>${side("front")}${side("back")}
     ${opts.caps===false ? "" : `<text x="30" y="106" class="mm-cap">face</text><text x="90" y="106" class="mm-cap">dos</text>`}
   </svg>`;
@@ -59,23 +60,23 @@ function exoMuscleMap(def){
 // Progrès > Muscles : la carte de la semaine (couleur = région, intensité = séries de la semaine,
 // pleine à 10 séries pondérées ; tout muscle travaillé reste bien visible), puis le stimulus de chaque
 // muscle face aux repères sourcés. Les explications détaillées sont dans « À propos » (ACT.stimHow).
-const STIM_ZONE_TXT = { none:"pas travaillé", low:"sous le seuil de progrès", ok:"zone de progrès", high:"zone haute" };
 function mmLevel(sets){ return sets>0 ? .4 + .6*Math.min(1, sets/STIM.high) : 0; }
 function weekMuscleMapHTML(){
   const rows = weekVolume(), month = muscleVolume(28), lv = {}, tips = {};
   // moyenne sur 4 semaines, ou depuis la 1re séance si elle est plus récente (sinon on sous-estime)
   const first = S.sessions.length ? S.sessions[0].date : todayISO(), avgWeeks = Math.max(1, Math.min(28, daysBetween(first, todayISO())+1)/7);
   rows.forEach(r=>{ lv[r.id] = mmLevel(r.sets); tips[r.id] = `${r.n} : ${fmtDec(r.sets)} série${r.sets>=2?"s":""}${r.freq ? ` · ${nb(r.freq, "jour")}` : ""}`; });
-  const legend = Object.keys(REGIONS).map(r=>`<span class="r-${r}"><i></i>${r==="core" ? "Gainage" : REGIONS[r].n}</span>`).join("");
+  // une seule couleur : l'intensité dit combien chaque muscle a travaillé (le nom s'affiche au toucher)
   const scale = [0, 1, 4, STIM.high].map(v=>`<i style="--o:${mmLevel(v).toFixed(2)}"></i>`).join("");
+  const top = rows.filter(r=>r.sets>0).sort((a,b)=>b.sets-a.sets).slice(0,3);
   const max = Math.max(STIM.high*1.4, ...rows.map(r=>r.sets)), avg = id=>round1(month.find(m=>m.id===id).sets/avgWeeks);
   const pos = v=>(v/max*100).toFixed(1);
   const zones = { none:0, low:0, ok:0, high:0 }; rows.forEach(r=>zones[stimZone(r.sets)]++);
   return `<div class="chart-card mm-card stagger" style="--i:1">
     <div class="cc-h"><div class="cc-t">Muscles de la semaine</div><div class="cc-s">7 derniers jours · touche un muscle pour le détail</div></div>
-    ${muscleMapSVG(lv, tips, { cls:"mm-week", label:"Muscles travaillés cette semaine" })}
-    <div class="mm-legend">${legend}</div>
-    <div class="mm-scale"><span>Rien</span><span class="sc">${scale}</span><span>${STIM.high}+ séries</span></div>
+    ${muscleMapSVG(lv, tips, { cls:"mm-week", mono:true, label:"Muscles travaillés cette semaine" })}
+    <div class="mm-scale"><span>0</span><span class="sc">${scale}</span><span>${STIM.high}+ séries</span></div>
+    ${top.length ? `<div class="mm-top">Le plus travaillé : ${top.map(r=>`<span><b>${esc(r.n)}</b>&nbsp;${fmtDec(r.sets)}</span>`).join(" · ")}</div>` : `<div class="mm-top">Aucun muscle travaillé ces 7 derniers jours.</div>`}
   </div>
   <div class="chart-card stim-card stagger" style="--i:2">
     <div class="cc-h tr-h"><div><div class="cc-t">Stimulus par muscle</div><div class="cc-s">Séries des 7 derniers jours, par muscle</div></div>
@@ -85,17 +86,15 @@ function weekMuscleMapHTML(){
       <span class="sz-low"><b>${zones.low+zones.none}</b> sous le seuil</span>
     </div>
     <div class="wv-list" style="--a:${pos(STIM.min)}%;--b:${pos(STIM.high)}%">${rows.map((r,i)=>{ const z = stimZone(r.sets), a = avg(r.id);
-      return `<div class="wv-row z-${z}" style="--i:${i}" tabindex="0" data-tip="${esc(r.n)} : ${fmtDec(r.sets)} série${r.sets>=2?"s":""} en 7 jours · moyenne ${fmtDec(a)} par semaine (4 sem.) · ${STIM_ZONE_TXT[z]}">
+      return `<div class="wv-row z-${z}" style="--i:${i}" tabindex="0" data-tip="${esc(r.n)} : ${fmtDec(r.sets)} série${r.sets>=2?"s":""} en 7 jours · moyenne ${fmtDec(a)} par semaine sur 4 semaines">
       <span class="wv-n">${esc(r.n)}</span>
-      <span class="wv-track"><i class="r-${r.region}" style="width:${Math.min(100, r.sets/max*100).toFixed(1)}%"></i>${a>0 ? `<u style="left:${Math.min(100, a/max*100).toFixed(1)}%"></u>` : ""}</span>
+      <span class="wv-track"><i style="width:${Math.min(100, r.sets/max*100).toFixed(1)}%"></i></span>
       <span class="wv-v">${fmtDec(r.sets)}</span>
     </div>`; }).join("")}</div>
     <div class="wv-axis" aria-hidden="true" style="--a:${pos(STIM.min)}%;--b:${pos(STIM.high)}%"><span></span><span class="wv-ticks"><em>0</em><em style="left:var(--a)">${STIM.min}</em><em style="left:var(--b)">${STIM.high}</em></span><span>séries</span></div>
     <div class="stim-key">
-      <span><i class="k-low"></i>Sous le seuil</span>
+      <span><i class="k-low"></i>Sous le seuil (moins de ${STIM.min})</span>
       <span><i class="k-ok"></i>Zone de progrès</span>
-      <span><i class="k-high"></i>Zone haute</span>
-      <span><i class="k-avg"></i>Ta moyenne (4 sem.)</span>
     </div>
   </div>`;
 }
@@ -104,7 +103,7 @@ Object.assign(ACT, {
     const rows = weekVolume(), under = rows.filter(r=>r.sets<STIM.min).map(r=>r.n), twice = rows.filter(r=>r.freq>=2).length;
     openSheet(`<div class="sheet-hd"><span class="t">Stimulus par muscle</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body how-body">
       <h3>Ce qui est compté</h3>
-      <p>Chaque série terminée compte pour <b>1</b> pour le muscle principal de l'exercice et pour <b>½</b> pour chaque muscle qui aide (par exemple les triceps au développé couché). Une série facile (3 répétitions ou plus en réserve) compte moitié moins : loin de l'échec, elle stimule moins. Les étirements ne comptent pas. Le losange montre ta moyenne par semaine sur les 4 dernières semaines.</p>
+      <p>Chaque série terminée compte pour <b>1</b> pour le muscle principal de l'exercice et pour <b>½</b> pour chaque muscle qui aide (par exemple les triceps au développé couché). Une série facile (3 répétitions ou plus en réserve) compte moitié moins : loin de l'échec, elle stimule moins. Les étirements ne comptent pas. Touche un muscle pour voir aussi ta moyenne par semaine sur les 4 dernières semaines.</p>
       <h3>Les repères</h3>
       <p><b>${STIM.min} séries</b> par semaine : le seuil à partir duquel un gain de muscle devient mesurable. <b>${STIM.high} séries</b> et plus : le gain continue, mais de plus en plus lentement. Pour gagner seulement en force, environ 3 séries par semaine suffisent.</p>
       <h3>Ta semaine</h3>

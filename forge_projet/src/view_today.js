@@ -1027,11 +1027,25 @@ document.addEventListener("pointercancel", endSwipe);
 document.addEventListener("ascen:suspend", endSwipe);
 
 Object.assign(ACT, {
-  todayMode(d){
+  // Ma séance ↔ Proposée par l'app : seul le contenu sous le sélecteur change. Le sélecteur glisse,
+  // la hauteur suit, le nouveau contenu arrive du côté de l'onglet choisi ; le reste de l'accueil
+  // ne bouge pas (avant : tout l'écran était reconstruit et rejouait sa cascade d'entrée)
+  todayMode(d, el){
     if(S.settings.todayTab===d.v) return;
-    paneDir = d.v==="proposal" ? "r" : "l";
-    S.settings.todayTab = d.v; save(); renderViewAnimated("today");
-    paneDir = "";
+    S.settings.todayTab = d.v; save();
+    const v = qs("#v-today"), pane = v && qs(".seg-pane", v), seg = el && el.closest(".seg");
+    const draft = getOrCreateDraft();
+    if(!pane || !seg || draft.startedAt){ paneDir = d.v==="proposal" ? "r" : "l"; renderViewAnimated("today"); paneDir = ""; return; }
+    seg.dataset.cur = d.v==="proposal" ? 1 : 0;
+    qsa("button", seg).forEach(b=>{ const on = b.dataset.v===d.v; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
+    settleSegs(seg.parentElement);
+    const html = `${sessionsToday().length ? "" : heroHTML(d.v, draft)}${d.v==="custom" ? customPaneHTML() : proposalPaneHTML(draft)}`;
+    morphHeight(pane, ()=>{ pane.className = "seg-pane "+d.v; pane.innerHTML = html; });
+    if(pane.animate && !reducedMotion()){
+      const dx = d.v==="proposal" ? 28 : -28;
+      try{ pane.animate([{ opacity:0, transform:`translateX(${dx}px)` }, { opacity:1, transform:"none" }], { duration:320, easing:"cubic-bezier(.2,.8,.2,1)" }); }catch(e){}
+    }
+    v._ver = DATA_VER; // l'écran reste à jour : pas de reconstruction au prochain passage
   },
   pickerCat(d){
     picker.cat = d.v || null;

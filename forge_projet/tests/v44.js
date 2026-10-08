@@ -45,17 +45,18 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.click('.tabbtn[data-id="progress"]'); await wait(600);
   await page.evaluate(() => ACT.progressTab({ v: 'muscles' })); await wait(1300); // zones allumées en fondu
   const mm = await page.evaluate(() => { const z = document.querySelector('.mm-week .mm-z.r-core.on'), cs = z && getComputedStyle(z);
-    const off = getComputedStyle(document.querySelector('.mm-week .mm-z:not(.on)'));
-    return { abs: !!z, op: z ? +cs.fillOpacity : 0, fill: cs && cs.fill, stroke: off.stroke !== 'none', legend: [...document.querySelectorAll('.mm-legend span')].map(e => e.textContent.trim()), scale: document.querySelectorAll('.mm-scale .sc i').length }; });
+    const off = getComputedStyle(document.querySelector('.mm-week .mm-z:not(.on)')), tint = getComputedStyle(document.documentElement).getPropertyValue('--tint').trim();
+    return { abs: !!z, op: z ? +cs.fillOpacity : 0, fill: cs && cs.fill, stroke: off.stroke !== 'none', tint, legend: document.querySelectorAll('.mm-legend').length, scale: document.querySelectorAll('.mm-scale .sc i').length, top: (document.querySelector('.mm-top') || {}).textContent }; });
   log('Muscle map:', JSON.stringify(mm));
-  const [r, g, b] = (mm.fill || '').match(/\d+/g) || [];
-  if (!mm.abs || mm.op < 0.45 || Math.abs(r - g) < 30 || !mm.stroke || mm.legend.join() !== 'Poussée,Tirage,Jambes,Gainage' || mm.scale !== 4) fail('carte des muscles contrastée et légende');
+  const hex = '#' + ((mm.fill || '').match(/\d+/g) || []).map(x => (+x).toString(16).padStart(2, '0')).join('');
+  if (!mm.abs || mm.op < 0.45 || hex.toLowerCase() !== mm.tint.toLowerCase() || !mm.stroke || mm.legend || mm.scale !== 4 || !/^Le plus travaillé/.test(mm.top || '')) fail('carte des muscles contrastée, une seule teinte');
   await shot('02_muscle_map');
-  // stimulus : zones en fond de piste, losange de la moyenne, légende, explications dans « À propos »
-  const st = await page.evaluate(() => ({ foot: !!document.querySelector('.wv-foot, .wv-src'), key: [...document.querySelectorAll('.stim-key span')].map(e => e.textContent.trim()), ticks: [...document.querySelectorAll('.wv-ticks em')].map(e => e.textContent),
-    tips: [...document.querySelectorAll('.stim-card .wv-row')].filter(r => r.dataset.tip).length, avg: document.querySelectorAll('.stim-card .wv-track u').length, sub: document.querySelector('.stim-card .cc-s').textContent }));
+  // stimulus : barre grise sous le seuil, verte au-delà, repères 4 et 10, plus de losange ; détails dans « À propos »
+  const st = await page.evaluate(() => ({ foot: !!document.querySelector('.wv-foot, .wv-src, .wv-track u'), key: [...document.querySelectorAll('.stim-key span')].map(e => e.textContent.trim()), ticks: [...document.querySelectorAll('.wv-ticks em')].map(e => e.textContent),
+    tips: [...document.querySelectorAll('.stim-card .wv-row')].filter(r => r.dataset.tip && /moyenne/.test(r.dataset.tip)).length,
+    colors: [...new Set([...document.querySelectorAll('.stim-card .wv-track i')].filter(i => i.offsetWidth).map(i => getComputedStyle(i).backgroundColor))].length, sub: document.querySelector('.stim-card .cc-s').textContent }));
   log('Stimulus:', JSON.stringify(st));
-  if (st.foot || st.key.join() !== 'Sous le seuil,Zone de progrès,Zone haute,Ta moyenne (4 sem.)' || st.ticks.join() !== '0,4,10' || st.tips !== 10 || st.avg < 1 || st.sub.length > 60) fail('stimulus lisible avec légende');
+  if (st.foot || st.key.length !== 2 || st.ticks.join() !== '0,4,10' || st.tips !== 10 || st.colors > 2 || st.sub.length > 60) fail('stimulus simple et lisible');
   await page.evaluate(() => { const c = document.querySelector('.stim-card'); document.querySelector('#v-progress').scrollTop = c.offsetTop - 70; }); await wait(300); await shot('03_stimulus');
   await page.click('.stim-card [data-a="stimHow"]'); await wait(600);
   const about = await page.evaluate(() => ({ t: document.querySelector('#overlay .sheet-hd .t').textContent, h: [...document.querySelectorAll('#overlay .how-body h3')].map(e => e.textContent), src: document.querySelectorAll('#overlay .how-src a[href^="https://"]').length }));
