@@ -74,7 +74,8 @@ function renderProfil(){
     <div class="group">
       ${[["beat","target","orange","Objectif à battre en séance","Ta série de la dernière fois et ce qu'il faut pour la dépasser"],
          ["nextGoal","flag","red","Prochain cap sur l'accueil","Le but le plus proche : semaine, record, trophée, niveau"],
-         ["trend","trendUp","green","Progression de force","Ta courbe depuis tes débuts, ton statut et les alertes de pause"]].map(([k,ic,c,t,sub])=>`<div class="row">
+         ["trend","trendUp","green","Progression de force","Ta courbe depuis tes débuts, ton statut et les alertes de pause"],
+         ["thenNow","chart","blue","Toi, il y a 3 mois","Tes séries d'avant face à celles de maintenant"]].map(([k,ic,c,t,sub])=>`<div class="row">
         ${sfIcon(ic,c)}
         <div class="grow"><div class="t">${t}</div><div class="s">${sub}</div></div>
         <button class="switch ${S.settings[k]!==false?"on":""}" aria-label="${t}" aria-pressed="${S.settings[k]!==false}" data-a="toggleMotiv" data-k="${k}"></button>
@@ -498,7 +499,7 @@ Object.assign(ACT, {
     if(S.settings.sound) sfx("set");
   },
   toggleMotiv(d, el){
-    if(!["beat","nextGoal","trend"].includes(d.k)) return;
+    if(!["beat","nextGoal","trend","thenNow"].includes(d.k)) return;
     S.settings[d.k] = S.settings[d.k]===false; el.classList.toggle("on", S.settings[d.k]); el.setAttribute("aria-pressed", S.settings[d.k]);
     save();
   },

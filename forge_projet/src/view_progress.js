@@ -107,9 +107,9 @@ function overviewPaneHTML(){
     <div class="kpi stagger" style="--i:4"><div class="kpi-l">Temps d'entraînement</div><div class="kpi-v" data-count="${round1(hours)}" data-dec="1" data-unit="h">${fmtDec(hours)} h</div><div class="kpi-s">${fmtDuration(Math.round(totalDurationSec()/S.sessions.length))} en moyenne</div></div>
     <div class="kpi stagger" style="--i:5"><div class="kpi-l">Séries validées</div><div class="kpi-v" data-count="${totalSets()}">${fmtNum(totalSets())}</div><div class="kpi-s">${S.meta.prCount||0} records battus</div></div>
   </div>`;
-  return `${strengthCardHTML()}${kpis}
+  return `${strengthCardHTML()}${thenNowListHTML()}${kpis}
     <div class="chart-card stagger" style="--i:6">
-      <div class="cc-h"><div class="cc-t">Régularité</div><div class="cc-s">18 dernières semaines · ${currentStreakWeeks()} sem. d'affilée, record ${maxStreakWeeksEver()}</div></div>
+      <div class="cc-h"><div class="cc-t">Régularité</div><div class="cc-s">18 dernières semaines · ${currentStreakWeeks()} sem. d'affilée, record ${maxStreakWeeksEver()}${(()=>{ const a = monthPlanAdherence(); return a ? ` · ce mois : ${a.done} séance${a.done>1?"s":""} sur ${a.planned} prévue${a.planned>1?"s":""}` : ""; })()}</div></div>
       ${heatmap(18)}
     </div>
     ${habitsHTML()}`;

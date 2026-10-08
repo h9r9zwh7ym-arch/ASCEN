@@ -25,7 +25,7 @@ function defaultState(){
     deload: null,           // semaine allégée en cours ou juste finie : {start, end} (strength.js)
     deloadLog: [],          // débuts des semaines allégées passées ["AAAA-MM-JJ"]
     medals: {},            // {familleId: {t: palier atteint 0-4, d: {1: iso, 2: iso…}}}
-    settings: { theme:"auto", unit:"kg", todayTab:"custom", name:"", why:"", sound:true, stretching:false, rest:"normal", beat:true, nextGoal:true, trend:true, appPicks:true, deloadTips:true }, // why : « ton pourquoi »
+    settings: { theme:"auto", unit:"kg", todayTab:"custom", name:"", why:"", sound:true, stretching:false, rest:"normal", beat:true, nextGoal:true, trend:true, appPicks:true, deloadTips:true, thenNow:true }, // why : « ton pourquoi »
     meta: { createdAt: new Date().toISOString(), prCount:0 },
   };
 }
@@ -751,6 +751,33 @@ function weekdayIdx(iso){ return (parseISO(iso).getDay()+6)%7; } // lundi = 0
 function plannedTemplate(iso){
   const wd = weekdayIdx(iso||todayISO());
   return S.templates.find(t=>(t.days||[]).includes(wd)) || null;
+}
+
+// séance prévue plus tôt cette semaine, ni faite ce jour-là, ni rattrapée depuis (la plus récente)
+function missedPlanned(){
+  const t0 = todayISO(), monday = weekKey(t0);
+  for(let i=weekdayIdx(t0)-1; i>=0; i--){
+    const iso = addDaysISO(monday, i), t = S.templates.find(x=>(x.days||[]).includes(i));
+    if(!t || (t.since && iso<t.since)) continue;
+    if(S.sessions.some(s=>s.date===iso || (s.date>iso && s.tplId===t.id))) continue;
+    if(S.meta.missSkip===iso+":"+t.id) continue;
+    return { t, iso };
+  }
+  return null;
+}
+// régularité du mois : jours prévus (depuis la création de chaque séance planifiée) et jours faits
+function monthPlanAdherence(){
+  return memo("planAdh"+todayISO(), ()=>{
+    if(!S.templates.some(t=>(t.days||[]).length)) return null;
+    const t0 = todayISO(), start = t0.slice(0,8)+"01", days = new Set(S.sessions.map(s=>s.date));
+    let planned = 0, done = 0;
+    for(let iso = start; iso<=t0; iso = addDaysISO(iso, 1)){
+      const t = S.templates.find(x=>(x.days||[]).includes(weekdayIdx(iso)));
+      if(!t || (t.since && iso<t.since) || (iso===t0 && !days.has(iso))) continue;
+      planned++; if(days.has(iso) || S.sessions.some(s=>s.date>iso && s.date<=addDaysISO(iso, 2) && s.tplId===t.id)) done++;
+    }
+    return planned ? { planned, done } : null;
+  });
 }
 
 // ---------- statistiques du profil ----------

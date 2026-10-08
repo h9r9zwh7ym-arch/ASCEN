@@ -72,6 +72,39 @@ function strengthData(){
     return { exos, muscleDays };
   });
 }
+// un record non retrouvé s'estompe : 2 séances en dessous ne comptent pas (jour sans, fatigue
+// passagère), puis −1,5 % par séance qui ne le retrouve pas (−15 % au plus). Choix de modélisation
+// (pas une mesure publiée) : lent, pour ne réagir qu'aux tendances.
+function peakFade(misses){ return misses<=2 ? 1 : Math.max(.85, 1-.015*(misses-2)); }
+// ---------- forme d'une séance (jour sans, fatigue) ----------
+// Chaque exercice est comparé à sa forme habituelle juste avant : la médiane de ses performances des
+// 6 dernières semaines (6 au plus, 3 au moins ; 1RM estimé, répétitions en réserve comprises). Assez
+// stable pour que deux séances faibles d'affilée ne deviennent pas la nouvelle « normale ». Ne comptent pas : les exercices faits
+// exprès plus facilement (« 3 ou + » en réserve), ceux d'une semaine allégée, les reprises après 3
+// semaines, ceux qui ont moins de 3 performances. Résultat : rapport médian (1 = forme habituelle).
+function sessionForm(session){
+  if(!session) return null;
+  const { exos } = strengthData(), out = [];
+  session.exos.forEach(ex=>{
+    const def = EXO_MAP[ex.exoId]; if(!def || isStretch(def) || ex.deload) return;
+    const done = ex.sets.filter(st=>st.done && st.reps>0); if(!done.length || done.every(st=>st.effort===1)) return;
+    const from = addDaysISO(session.date, -42), prior = (exos[ex.exoId]||[]).filter(x=>x.date<session.date && x.date>=from).slice(-6);
+    if(prior.length<3 || daysBetween(prior[prior.length-1].date, session.date)>=21) return;
+    const p = sessionPerf(def, ex, session.date); if(!p) return;
+    const sorted = prior.map(x=>x.v).sort((a,b)=>a-b), ref = sorted[sorted.length>>1];
+    if(ref>0) out.push(p.v/ref);
+  });
+  if(!out.length) return null;
+  out.sort((a,b)=>a-b);
+  return { ratio:out[out.length>>1], n:out.length };
+}
+// fatigue : les 3 dernières séances mesurables nettement sous la forme habituelle (−6 % ou plus)
+function formTrend(){
+  return memo("formTrend", ()=>{
+    const last = []; for(let i=S.sessions.length-1; i>=0 && last.length<3; i--){ const f = sessionForm(S.sessions[i]); if(f) last.push(f.ratio); }
+    return last.length===3 && last.every(r=>r<.94);
+  });
+}
 function lastBefore(dates, iso){ for(let i=dates.length-1;i>=0;i--) if(dates[i]<=iso) return dates[i]; return null; }
 function detrainFactor(days){
   if(days==null || days<=DETRAIN.grace) return 1;
@@ -87,8 +120,15 @@ function strengthAt_raw(iso){
     const all = exos[id]; let k = all.length; while(k>0 && all[k-1].date>iso) k--;
     if(k<3) return;
     const def = EXO_MAP[id], m = def.muscles[0], h = all;
-    const base = Math.max(h[0].v, h[1].v), lastE = h[k-1], from = addDaysISO(lastE.date, -56);
-    let best = 0; for(let j=k-1; j>=0 && h[j].date>from; j--) if(h[j].v>best) best = h[j].v;
+    // forme actuelle : la meilleure performance des 12 dernières semaines, mais un record que les séances
+    // suivantes ne retrouvent pas s'estompe (peakFade). Un jour sans ne fait rien bouger ; une baisse
+    // qui dure finit par se voir.
+    const base = Math.max(h[0].v, h[1].v), lastE = h[k-1], from = addDaysISO(lastE.date, -84);
+    let best = 0;
+    for(let j=k-1; j>=0 && h[j].date>from; j--){
+      let miss = 0; for(let q=j+1; q<k; q++) if(h[q].v<.97*h[j].v) miss++;
+      const v = h[j].v*peakFade(miss); if(v>best) best = v;
+    }
     const lastM = lastBefore(muscleDays[m]||[], iso), days = lastM ? daysBetween(lastM, iso) : null;
     const f = detrainFactor(days), w = Math.min(1, k/6) * (lastE.conf||1);
     (byMuscle[m] = byMuscle[m] || { sum:0, w:0, days, f, n:0 });
@@ -141,6 +181,7 @@ const STATUS = {
   maintain:  { n:"Maintien",        c:"blue",   d:"Ta charge suffit à maintenir ta force. Pour progresser : une répétition ou un cran de charge en plus." },
   recovery:  { n:"Récupération",    c:"teal",   d:"Charge plus légère que d'habitude : utile après des semaines chargées, à condition de reprendre vite." },
   unproductive:{ n:"Improductif",   c:"orange", d:"Tu t'entraînes autant, mais ton indice baisse : sommeil, récupération ou exercices à varier ?" },
+  fatigue:   { n:"Fatigue",         c:"orange", d:"Tes 3 dernières séances sont en dessous de ta forme habituelle. Sommeil, stress ou charge trop élevée : une semaine plus légère t'aidera à repartir." },
   starting:  { n:"En calibrage",    c:"gray",   d:"Il faut environ 3 semaines de séances pour établir ta charge habituelle et ton statut." },
 };
 function trainingStatus(){
@@ -149,6 +190,7 @@ function trainingStatus(){
     if(!S.sessions.length || L.span<21) return "starting";
     if(gap>=7 && L.ratio<0.6) return "detraining";
     if(L.ratio>1.5) return "overreach";
+    if(formTrend()) return "fatigue";
     const pts = strengthSeries(12).slice(-5), d = pts.length>=2 ? pts[pts.length-1].v - pts[0].v : 0;
     if(L.ratio<0.8) return "recovery";
     if(d>=2) return "productive";
@@ -226,7 +268,7 @@ Object.assign(ACT, {
       <h3>1. Ta force sur chaque exercice</h3>
       <p>Le 1RM estimé de ta meilleure série (formules d'Epley et de Brzycki, fiables jusqu'à 10 répétitions). Si tu indiques les répétitions que tu aurais pu faire en plus, elles sont ajoutées. Pour les pompes, la charge est la part du poids du corps qu'elles soulèvent (64 % au sol, 49 % sur les genoux) : ajoute une pesée dans Profil pour qu'elles comptent en kg. Sans pesée, et pour les autres exercices au poids du corps, la même formule s'applique à charge constante : passer de 10 à 20 répétitions compte +25 %, pas +100 %. Pour les gainages, 1 répétition ≈ 3 secondes sous tension.</p>
       <h3>2. La progression</h3>
-      <p>Pour chaque muscle : ta force actuelle (meilleure des 8 dernières semaines) comparée à celle de tes 2 premières séances. La progression est la moyenne des muscles : 0 % = ton niveau de départ, +20 % = 20 % plus fort.</p>
+      <p>Pour chaque muscle : ta forme actuelle comparée à celle de tes 2 premières séances. La forme actuelle, c'est ta meilleure performance des 12 dernières semaines, mais un record que tes séances suivantes ne retrouvent pas s'estompe : deux séances en dessous ne comptent pas (un jour sans, ça arrive), puis il perd 1,5 % par séance. Une baisse qui dure finit donc par se voir. Si tu indiques que tu as gardé de la marge (« 3 ou + »), la séance ne compte pas comme une baisse. La progression est la moyenne des muscles : 0 % = ton niveau de départ, +20 % = 20 % plus fort.</p>
       <h3>3. Quand tu t'arrêtes</h3>
       <p>Rien ne bouge pendant 21 jours sans travailler un muscle (en principal ou en secondaire) : les études montrent que la force reste quasi intacte pendant 3 à 4 semaines. Ensuite, l'estimation baisse de ${S.goals.senior ? "4,5" : "3"}&nbsp;% par semaine${S.goals.senior ? " (plus vite à partir de 65 ans)" : ""}, jusqu'à −30&nbsp;%. Une séance qui travaille le muscle arrête la baisse, et tes vraies performances remplacent l'estimation : la force revient vite à la reprise.</p>
       <h3>4. Le statut</h3>
@@ -282,6 +324,7 @@ function deloadAdvice(){
   if(last && daysBetween(last, t)<DELOAD.gap) return null;
   const st = trainingStatus(), streak = loadedWeeksStreak();
   if(st==="overreach" && streak>=3) return { kind:"overreach", txt:"Ta charge des 7 derniers jours dépasse de loin ton habitude." };
+  if(st==="fatigue" && streak>=2) return { kind:"fatigue", txt:"Tes 3 dernières séances sont en dessous de ta forme habituelle." };
   if(st==="unproductive" && streak>=4) return { kind:"stall", txt:"Tu t'entraînes autant, mais ta force estimée baisse depuis quelques semaines." };
   if(streak>=DELOAD.every) return { kind:"streak", txt:`${streak} semaines chargées d'affilée, sans semaine plus légère.` };
   return null;
@@ -359,3 +402,59 @@ Object.assign(ACT, {
     </div>`, { tall:true });
   },
 });
+
+// ---------- « Toi, il y a 3 mois » ----------
+// Comparaisons concrètes, en vraies séries (« 10 × 14 kg »), classées par progression du 1RM estimé :
+// ta meilleure série des 3 dernières semaines face à celle d'il y a environ 3 mois (entre 2 et 4 mois),
+// à défaut ta toute première fois si elle date d'au moins 4 semaines. Seules les hausses de 5 % et plus.
+function setTxt(def, st){ return isTimed(def) ? `${st.reps} s` : `${st.reps}${kgType(def) ? "" : " reps"}${loadSuffix(def, st.weight)}`; }
+function bestSetOf(def, ex, date){
+  let best = null;
+  ex.sets.forEach(st=>{ if(!st.done || !(st.reps>0)) return; const p = sessionPerf(def, { sets:[st] }, date); if(p && (!best || p.v>best.v)) best = { v:p.v, txt:setTxt(def, st) }; });
+  return best;
+}
+function thenVsNow(){
+  return memo("thenNow"+todayISO(), ()=>{
+    const t0 = todayISO(), recent = addDaysISO(t0, -21), target = addDaysISO(t0, -90), per = {};
+    S.sessions.forEach(s=>s.exos.forEach(ex=>{ const def = EXO_MAP[ex.exoId]; if(!def || isStretch(def)) return;
+      const b = bestSetOf(def, ex, s.date); if(b) (per[ex.exoId] = per[ex.exoId] || []).push(Object.assign({ date:s.date }, b)); }));
+    const out = [];
+    Object.keys(per).forEach(id=>{
+      const h = per[id]; if(h.length<3) return;
+      const cur = h.filter(x=>x.date>=recent); if(!cur.length) return;
+      const now = cur.reduce((a,b)=>b.v>=a.v ? b : a);
+      let then = h.filter(x=>{ const d = daysBetween(x.date, t0); return d>=60 && d<=120; })
+        .sort((a,b)=>Math.abs(daysBetween(a.date, target))-Math.abs(daysBetween(b.date, target)))[0], label;
+      if(then) label = "Il y a 3 mois";
+      else { then = h[0]; const d = daysBetween(then.date, t0); if(d<28) return;
+        label = d>=50 ? `Il y a ${Math.round(d/30.4)} mois` : `Il y a ${Math.round(d/7)} semaines`; }
+      const pct = Math.round((now.v/then.v-1)*100);
+      if(pct>=5) out.push({ def:EXO_MAP[id], then, now, pct, label });
+    });
+    return out.sort((a,b)=>b.pct-a.pct);
+  });
+}
+// accueil : une comparaison par jour (parmi les 5 plus fortes), qui change d'un jour à l'autre
+function thenNowCardHTML(){
+  if(S.settings.thenNow===false) return "";
+  const list = thenVsNow().slice(0, 5); if(!list.length) return "";
+  const c = list[Math.round(Date.parse(todayISO())/864e5) % list.length];
+  return `<button class="tn-card stagger" style="--i:2" data-a="openExoChart" data-id="${c.def.id}" aria-label="${esc(c.def.n)} : ${esc(c.label.toLowerCase())} ${esc(c.then.txt)}, maintenant ${esc(c.now.txt)}">
+    <span class="tn-k">${ii("trendUp")}Toi, ${esc(c.label.toLowerCase())}</span>
+    <span class="tn-ex">${esc(c.def.n)}</span>
+    <span class="tn-row"><span class="tn-then"><small>${esc(c.label)}</small><b>${esc(c.then.txt)}</b></span><span class="tn-arrow">${icon("chev")}</span><span class="tn-now"><small>Maintenant</small><b>${esc(c.now.txt)}</b></span><span class="tn-pct">+${c.pct}&#8239;%</span></span>
+  </button>`;
+}
+// Progrès > Résumé : les 3 plus belles progressions
+function thenNowListHTML(){
+  if(S.settings.thenNow===false) return "";
+  const list = thenVsNow().slice(0, 3); if(!list.length) return "";
+  return `<div class="chart-card tn-list stagger" style="--i:2">
+    <div class="cc-h"><div class="cc-t">Toi, avant et maintenant</div><div class="cc-s">Tes plus belles progressions, en vraies séries</div></div>
+    ${list.map((c,i)=>`<button class="tn-li" style="--k:${i}" data-a="openExoChart" data-id="${c.def.id}">
+      <span class="tn-li-n">${exoIcon(c.def,"xs")}<span>${esc(c.def.n)}</span></span>
+      <span class="tn-li-v"><small>${esc(c.label)}</small> ${esc(c.then.txt)} ${icon("chev")} <b>${esc(c.now.txt)}</b></span>
+      <span class="tn-pct">+${c.pct}&#8239;%</span>
+    </button>`).join("")}
+  </div>`;
+}

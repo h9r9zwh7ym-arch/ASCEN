@@ -905,6 +905,35 @@ Mesures (`tests/tab_perf.js`, processeur ×4, 3 ans d'historique) :
   - Bell 2025, approche pratique.
 - Test : `tests/v47.js`.
 
+**Progrès visibles et force plus intelligente (toujours 4.0)** :
+- **Forme actuelle** (`strengthAt_raw`) :
+  - c'est la meilleure performance des 12 dernières semaines ;
+  - un record que les séances suivantes ne retrouvent pas (moins de 97 %) s'estompe (`peakFade`) : 2 séances en dessous ne comptent pas, puis −1,5 % par séance, −15 % au plus ;
+  - un jour sans ne fait donc rien bouger, une baisse qui dure finit par se voir ;
+  - choix de modélisation, signalé comme tel dans le code et la feuille « Comment c'est calculé » ;
+  - le désentraînement après 21 jours sans le muscle est inchangé.
+- **Forme d'une séance** (`sessionForm`) :
+  - chaque exercice est comparé à la médiane de ses performances des 6 dernières semaines (6 au plus, 3 au moins) ;
+  - sont ignorés : les séries faites exprès plus facilement (« 3 ou + » en réserve), la semaine allégée et les reprises.
+- **Fatigue** (`formTrend`) :
+  - 3 séances d'affilée sous 94 % donnent le nouveau statut « Fatigue », placé après « Surcharge » ;
+  - une semaine allégée est alors conseillée (`deloadAdvice` de type `fatigue`), si au moins 2 semaines chargées précèdent.
+- **Séance prévue manquée** :
+  - `missedPlanned` repère la dernière séance planifiée cette semaine, ni faite ce jour-là ni rattrapée depuis ;
+  - si rien n'est prévu ni fait aujourd'hui, la carte « Séance manquée » propose « La faire aujourd'hui » (`missCatchUp`) ou « Laisser passer » (`missSkip`, `S.meta.missSkip`) ;
+  - la régularité du mois (`monthPlanAdherence`) s'affiche dans la carte Régularité : « ce mois : X séances sur Y prévues ».
+- **Fin de séance** (`sessionWins`, sous les lignes existantes) :
+  - force estimée record (1RM estimé, au moins 2 performances avant), au plus 2 exercices ;
+  - muscles qui passent le seuil de 4 séries cette semaine grâce à la séance ;
+  - « un jour sans » (moins de 92 % de la forme, ton neutre) ou « grande forme » (105 % et plus, seulement sans record) ;
+  - mot dédié en semaine allégée.
+- **« Toi, il y a 3 mois »** (`thenVsNow`) :
+  - en vraies séries (« 10 × 10 kg → 10 × 14 kg ») : la meilleure série des 3 dernières semaines face à celle d'il y a environ 3 mois (2 à 4 mois), à défaut la toute première fois si elle date d'au moins 4 semaines ;
+  - classement par hausse du 1RM estimé, 5 % au moins ;
+  - sur l'accueil, une carte qui change chaque jour parmi les 5 meilleures (`thenNowCardHTML`) ; dans Progrès > Résumé, les 3 plus belles (`thenNowListHTML`) ;
+  - réglage Motivation `thenNow`.
+- Test : `tests/v48.js`.
+
 **Vérifications** :
 - `tests/v40.js` couvre la 2e passe : Rewind, virgules, carte et légende des muscles, accueil, catalogue, fusion, séance Pilates, recherche.
 - Tour visuel de 27 écrans en clair et en sombre (`tests/tour.js` + `tests/montage.js`) ; audit d'accessibilité repassé (`tests/ux_audit.js`).

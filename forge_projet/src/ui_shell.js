@@ -7,6 +7,7 @@ const TABS = [
 ];
 
 const ICONS = {
+  heart:'<path d="M12 20s-7.5-4.6-7.5-10.2A4.2 4.2 0 0 1 12 7.2a4.2 4.2 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20Z" fill="currentColor"/>',
   leaf:'<path d="M19.8 4.2C10.2 4.2 5 8.8 5 15c0 1.7.5 3.1 1.2 4.2 1-4.1 4-7.6 8.4-9.7-3.7 2.7-6.1 6.2-6.9 10C17.2 20.4 20.4 13 19.8 4.2Z" fill="currentColor"/>',
   lock:'<rect x="6" y="10.5" width="12" height="9.5" rx="2.2" fill="currentColor"/><path d="M8.6 10.5V8a3.4 3.4 0 0 1 6.8 0v2.5" stroke="currentColor" stroke-width="2" fill="none"/>',
   bolt:'<path d="M13.2 2.8 5.5 13.3h5.6l-.9 7.9 7.9-10.8h-5.7Z" fill="currentColor"/>',

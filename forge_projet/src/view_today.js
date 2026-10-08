@@ -97,6 +97,18 @@ function nextGoalHTML(){
   const ring = g.pct==null ? "" : `<span class="gl-ring" style="--p:${Math.round(g.pct*100)}" aria-hidden="true"></span>`;
   return `<button class="goal-line ${g.warn?"warn":""} stagger" style="--i:1" ${g.act}><span class="gl-ic">${ii(g.ic)}</span><span class="gl-t"><small>${g.warn ? "À surveiller" : "Prochain cap"}</small>${esc(g.t)}</span>${ring}</button>`;
 }
+// rattrapage : une séance prévue cette semaine a été manquée ; on propose de la faire aujourd'hui
+// (seulement s'il n'y a rien de prévu aujourd'hui ni de séance déjà faite)
+function missedCardHTML(){
+  if(sessionsToday().length || plannedTemplate() || (S.draft && S.draft.startedAt)) return "";
+  const m = missedPlanned(); if(!m) return "";
+  return `<div class="dl-card miss stagger" style="--i:1">
+    <span class="dl-ic">${ii("repeat")}</span>
+    <div class="dl-main"><div class="dl-t">Séance manquée : ${esc(m.t.n)}</div>
+      <div class="dl-s">Prévue ${JOURS[parseISO(m.iso).getDay()]}. Une séance décalée vaut bien mieux qu'une séance sautée.</div>
+      <div class="dl-act"><button class="btn sm" data-a="missCatchUp" data-id="${m.t.id}">La faire aujourd'hui</button><button class="btn tertiary sm" data-a="missSkip" data-iso="${m.iso}" data-id="${m.t.id}">Laisser passer</button></div></div>
+  </div>`;
+}
 function heroPicts(ids){
   const defs = ids.map(id=>EXO_MAP[id]).filter(Boolean);
   // chaque pictogramme ouvre la fiche de l'exercice ; « +N » mène à la liste complète
@@ -185,8 +197,9 @@ function renderTodayPreview(draft){
       <h1 class="lt">${greeting()}</h1>
     </div>
     ${statPillsHTML()}
-    ${deloadCardHTML()}
+    ${deloadCardHTML() || missedCardHTML()}
     ${nextGoalHTML()}
+    ${thenNowCardHTML()}
     ${whyReminder() && !sessionsToday().length ? `<div class="why-card stagger" style="--i:2"><div class="why-k">${ii("flame")} Ton pourquoi</div><div class="why-t">« ${esc(whyReminder())} »</div><div class="why-s">${daysSinceLastSession()} jours sans séance : une seule suffit pour reprendre le fil.</div><button class="btn secondary sm why-go" data-a="startExpress">${icon("timer")} Séance express · 10 min</button></div>` : ""}
     ${sessionsToday().length ? doneCardHTML() : ""}
     <div class="home-seg stagger" style="--i:2">${segHTML("today", [["custom","Ma séance"],["proposal","Proposée par l'app"]], mode, "todayMode")}</div>
@@ -1276,6 +1289,13 @@ Object.assign(ACT, {
       ...(S.custom.tplId ? {} : { days:(S.custom.pendingDays||[]).slice() }) });
   },
 
+  missCatchUp(d){
+    const t = S.templates.find(x=>x.id===d.id); if(!t) return;
+    S.custom = { exos: clone(t.exos), name: t.n, tplId: t.id, planDate: todayISO() };
+    S.settings.todayTab = "custom"; t.exos.forEach(e=>freshIds.add(e.exoId));
+    save(); renderViewAnimated("today"); toast(`« ${t.n} » chargée : en route pour le rattrapage`, "repeat");
+  },
+  missSkip(d){ S.meta.missSkip = d.iso+":"+d.id; save(); changed(); },
   loadTemplate(d){
     const t = S.templates.find(x=>x.id===d.id); if(!t) return;
     S.custom = { exos: clone(t.exos), name: t.n, tplId: t.id };

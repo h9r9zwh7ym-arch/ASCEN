@@ -401,6 +401,41 @@ function sessionProgressLines(session){
   });
   return lines.sort((a,b)=>b.g-a.g).slice(0,2).map(l=>l.t);
 }
+// Ce qui a progressé pendant la séance, au-delà des records exacts :
+// - force estimée record (1RM estimé, répétitions en réserve comprises) sur un exercice déjà fait 2 fois ;
+// - muscles qui passent le seuil de 4 séries cette semaine grâce à cette séance ;
+// - la forme du jour : un jour sans (sans dramatiser, ça ne change pas la progression) ou une grande forme ;
+// - semaine allégée : la séance a fait exactement ce qu'il fallait.
+function sessionWins(session){
+  const out = [], { exos } = strengthData();
+  const recs = [];
+  session.exos.forEach(ex=>{
+    const def = EXO_MAP[ex.exoId]; if(!def || isStretch(def) || ex.deload) return;
+    const p = sessionPerf(def, ex, session.date); if(!p) return;
+    const prior = (exos[ex.exoId]||[]).filter(x=>x.date<session.date);
+    if(prior.length<2) return;
+    const max = Math.max(...prior.map(x=>x.v)), g = Math.round((p.v/max-1)*100);
+    if(g>=1) recs.push({ g, t:`${def.n} : force estimée record (+${g} %)` });
+  });
+  recs.sort((a,b)=>b.g-a.g).slice(0,2).forEach(r=>out.push({ ic:"bolt", t:r.t }));
+  // séries de la semaine avant / après cette séance (même comptage que la carte Stimulus)
+  try{
+    const add = {};
+    session.exos.forEach(ex=>{ const def = EXO_MAP[ex.exoId]; if(!def || isStretch(def)) return;
+      const n = ex.sets.reduce((t,st)=>t+(st.done ? (st.effort===1 ? .5 : 1) : 0), 0); if(!n) return;
+      def.muscles.forEach((m,k)=>{ add[m] = (add[m]||0) + (k===0 ? n : n/2); }); });
+    const inWeek = daysBetween(session.date, todayISO())<7;
+    muscleVolume(7).forEach(r=>{ const before = r.sets-(inWeek ? (add[r.id]||0) : 0);
+      if(inWeek && add[r.id] && before<STIM.min && r.sets>=STIM.min) out.push({ ic:"target", t:`${r.n} : zone de progrès atteinte cette semaine (${fmtDec(r.sets)} séries)` }); });
+  }catch(e){}
+  if(session.exos.some(ex=>ex.deload)) out.push({ ic:"leaf", t:"Semaine allégée : séance faite, c'est exactement ce qu'il fallait." });
+  else {
+    const f = sessionForm(session);
+    if(f && f.ratio<.92) out.push({ ic:"heart", soft:true, t:`Un peu en dessous de ta forme habituelle (−${Math.round((1-f.ratio)*100)} %) : un jour sans, ça arrive. Ça ne change pas ta progression.` });
+    else if(f && f.ratio>=1.05 && !recs.length) out.push({ ic:"trendUp", t:`En grande forme : +${Math.round((f.ratio-1)*100)} % par rapport à tes dernières séances` });
+  }
+  return out;
+}
 function showCelebration(session, ups, xpBefore, xpAfter, hits, won){
   const vol = Math.round(sessionVolume(session));
   const sets = sessionSetCount(session);
@@ -421,6 +456,7 @@ function showCelebration(session, ups, xpBefore, xpAfter, hits, won){
     ${prs?`<div class="cel-pr">${ii("bolt")} ${prs} record${prs>1?"s":""} battu${prs>1?"s":""}</div>`:""}
     ${session.beats ? `<div class="cel-prog cel-beat" style="--i:0">${ii("trendUp")}<span>${session.beats>1 ? `${session.beats} séries mieux que la dernière fois` : "1 série mieux que la dernière fois"}</span></div>` : ""}
     ${sessionProgressLines(session).map((t,i)=>`<div class="cel-prog" style="--i:${i}">${ii("chart")}<span>${esc(t)}</span></div>`).join("")}
+    ${sessionWins(session).map((w,i)=>`<div class="cel-prog cel-win ${w.soft?"soft":""}" style="--i:${i+2}">${ii(w.ic)}<span>${esc(w.t)}</span></div>`).join("")}
     ${(hits||[]).map((t,i)=>`<div class="cel-target" style="--i:${i}">${ii("target")} Objectif atteint : ${esc(EXO_MAP[t.exoId].n)}, ${fmtTarget(t.kind, t.value)}</div>`).join("")}
     ${(won||[]).map((c,i)=>`<div class="cel-target cel-chal" style="--i:${(hits||[]).length+i}">${ii("star")} Défi réussi : ${esc(CHAL_MAP[c.id].n)}</div>`).join("")}
     <div class="cel-xp">
