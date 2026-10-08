@@ -204,8 +204,11 @@ function rwGo(i){
   if(!rw) return;
   i = Math.max(0, Math.min(rw.slides.length-1, i));
   const sl = rw.slides[i], stage = qs("#rwStage", rw.el);
-  const old = qs(".rw-slide", stage);
-  if(old){ old.classList.add("out", i<rw.i ? "back" : "fwd"); setTimeout(()=>old.remove(), 380); }
+  // déjà sur cette diapo (toucher à la fin, double toucher) : rien à refaire
+  if(i===rw.i && qs(".rw-slide:not(.out)", stage)) return;
+  // toutes les diapos encore affichées s'en vont : avec des touchers rapides, la précédente n'était
+  // pas toujours la première du conteneur, et les écrans finissaient par se superposer
+  qsa(".rw-slide:not(.out)", stage).forEach(old=>{ old.classList.add("out", i<rw.i ? "back" : "fwd"); setTimeout(()=>old.remove(), 400); });
   const n = document.createElement("div");
   n.className = "rw-slide" + (i<rw.i ? " from-back" : "");
   n.innerHTML = `<div class="rw-in">${sl.html}</div>`;
