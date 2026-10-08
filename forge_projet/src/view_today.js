@@ -185,6 +185,7 @@ function renderTodayPreview(draft){
       <h1 class="lt">${greeting()}</h1>
     </div>
     ${statPillsHTML()}
+    ${deloadCardHTML()}
     ${nextGoalHTML()}
     ${whyReminder() && !sessionsToday().length ? `<div class="why-card stagger" style="--i:2"><div class="why-k">${ii("flame")} Ton pourquoi</div><div class="why-t">« ${esc(whyReminder())} »</div><div class="why-s">${daysSinceLastSession()} jours sans séance : une seule suffit pour reprendre le fil.</div><button class="btn secondary sm why-go" data-a="startExpress">${icon("timer")} Séance express · 10 min</button></div>` : ""}
     ${sessionsToday().length ? doneCardHTML() : ""}
@@ -223,10 +224,11 @@ function proposalPaneHTML(draft){
     const t = SESSION_TYPE_MAP[draft.type]||SESSION_TYPES[0], rt = SESSION_TYPE_MAP[draft.resolvedType];
     const title = draft.type==="auto" && rt ? rt.n : t.n;
     const focus = focusMuscles(draft).slice(0,4);
-    hero = heroShown ? (draft.reason ? `<div class="pc-inline stagger" style="--i:5">${esc(draft.reason)}</div>` : "") : `<div class="plan-card stagger" style="--i:5">
+    const stim = draft.stim ? `<div class="pc-stim">${ii("target")}<span>${esc(draft.stim)}</span></div>` : "";
+    hero = heroShown ? (draft.reason || stim ? `<div class="pc-inline stagger" style="--i:5">${draft.reason ? esc(draft.reason) : ""}${stim}</div>` : "") : `<div class="plan-card stagger" style="--i:5">
       <div class="pc-eyebrow">${draft.type==="auto"?"Choisie pour toi":"Séance proposée"}</div>
       <div class="pc-title">${title}</div>
-      ${draft.reason?`<div class="pc-reason">${esc(draft.reason)}</div>`:""}
+      ${draft.reason?`<div class="pc-reason">${esc(draft.reason)}</div>`:""}${stim}
       ${draft.exos.length?`<div class="pc-meta"><span>${mainExos(draft).length} exercices</span><span>${mainExos(draft).reduce((t,e)=>t+e.sets.length,0)} séries</span><span>≈ ${estimateMinutes(draft)} min</span></div>
       <div class="pc-muscles">${focus.map(m=>`<span>${MUSCLE_MAP[m].n}</span>`).join("")}</div>`:""}
     </div>`;
@@ -756,13 +758,15 @@ function lastTimeHTML(exoId, hasNote){
 // un toucher dans un menu (modale centrée) le referme ; l'étoile d'une fiche, non
 function closeModalIfMenu(){ const o = qs("#overlay"); if(o && o.dataset.kind==="modal" && qs("#overlay .menu-list")) closeSheet(); }
 // la note « une répétition de plus que la dernière fois » double la ligne « à battre » : une seule suffit
-function noteIsBeat(ex){ return S.settings.beat!==false && /^Objectif( du jour)? : (une répétition de plus|\+\d+ (s|répétitions?) )/.test(ex.note||""); }
+function noteIsBeat(ex){ return S.settings.beat!==false && (ex.deload || /^Objectif( du jour)? : (une répétition de plus|\+\d+ (s|répétitions?) )/.test(ex.note||"")); }
 let beatWinKey = ""; // série déjà annoncée « mieux » : l'animation ne rejoue pas à chaque +/−
 function beatLineHTML(ex, def, si, st){
   const ref = isStretch(def) ? null : beatRef(ex.exoId, si);
   if(!ref) return lastTimeHTML(ex.exoId, !!ex.note);
   const u = isTimed(def) ? " s" : "", refTxt = `${ref.reps}${u}${loadSuffix(def, ref.weight)}`;
   const key = ex.exoId+":"+si, gap = daysBetween(ref.date, todayISO());
+  // semaine allégée : pas de record à battre, on garde de la marge
+  if(ex.deload) return `<div class="fc-beat dl">${ii("leaf")}<span>Semaine allégée : vise <b>${st.reps}${u}</b>${loadSuffix(def, st.weight)}, sans aller à fond <small>(la dernière fois : ${refTxt})</small></span></div>`;
   // après 3 semaines sans l'exercice, on ne cherche pas à battre : on retrouve son niveau (la force revient vite)
   if(gap>=21) return `<div class="fc-beat">${ii("repeat")}<span>Reprise après ${gap} jours : retrouve tes sensations <small>(la dernière fois : ${refTxt})</small></span></div>`;
   if(beatCmp(def, st, ref)>0){ const pop = beatWinKey!==key; beatWinKey = key; return `<div class="fc-beat win${pop ? " pop" : ""}">${ii("trendUp")}<span>Ça bat la dernière fois <small>(${refTxt})</small></span></div>`; }
@@ -1061,7 +1065,9 @@ Object.assign(ACT, {
     if(!add.length){ toast("Aucun exercice disponible avec ton matériel"); return; }
     add.forEach(e=>{ S.custom.exos.push({ exoId:e.id, sets:e.sets, app:true }); freshIds.add(e.id); });
     save(); changed();
-    toast(`${add.length} exercice${add.length>1?"s":""} ajouté${add.length>1?"s":""} par l'app`, "sparkle");
+    // ce que l'app a visé : les muscles en retard sur la semaine, s'il y en a
+    const t = stimTargets(add);
+    toast(`${add.length} exercice${add.length>1?"s":""} ajouté${add.length>1?"s":""}${t.length ? ` · priorité : ${t.slice(0,2).map(r=>r.n.toLowerCase()).join(" et ")}, en retard cette semaine` : " par l'app"}`, "sparkle");
   },
   planDay(d){ openPlanDaySheet(+d.d); },
   planSet(d){

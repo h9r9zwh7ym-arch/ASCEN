@@ -22,8 +22,10 @@ function defaultState(){
     challenges: [],         // défis [{id, start:"AAAA-MM-JJ", doneAt?, missedAt?}] (challenges.js)
     targets: [],            // objectifs chiffrés [{id, exoId, kind:"reps"|"kg"|"sec", value, start, createdAt, doneAt}]
     body: [],               // pesées facultatives [{d:"AAAA-MM-JJ", kg}]
+    deload: null,           // semaine allégée en cours ou juste finie : {start, end} (strength.js)
+    deloadLog: [],          // débuts des semaines allégées passées ["AAAA-MM-JJ"]
     medals: {},            // {familleId: {t: palier atteint 0-4, d: {1: iso, 2: iso…}}}
-    settings: { theme:"auto", unit:"kg", todayTab:"custom", name:"", why:"", sound:true, stretching:false, rest:"normal", beat:true, nextGoal:true, trend:true, appPicks:true }, // why : « ton pourquoi »
+    settings: { theme:"auto", unit:"kg", todayTab:"custom", name:"", why:"", sound:true, stretching:false, rest:"normal", beat:true, nextGoal:true, trend:true, appPicks:true, deloadTips:true }, // why : « ton pourquoi »
     meta: { createdAt: new Date().toISOString(), prCount:0 },
   };
 }
@@ -274,6 +276,9 @@ function normalizeState(parsed){
     merged.importedProgram = parsed.importedProgram||[];
     merged.challenges = (Array.isArray(parsed.challenges)?parsed.challenges:[]).filter(c=>c && typeof c.id==="string" && /^\d{4}-\d{2}-\d{2}$/.test(c.start));
     merged.targets = (Array.isArray(parsed.targets)?parsed.targets:[]).filter(t=>t && t.id && EXO_MAP[t.exoId] && ["reps","kg","sec"].includes(t.kind) && t.value>0);
+    const isoOK = x=>typeof x==="string" && /^\d{4}-\d{2}-\d{2}$/.test(x);
+    merged.deload = parsed.deload && isoOK(parsed.deload.start) && isoOK(parsed.deload.end) ? { start:parsed.deload.start, end:parsed.deload.end } : null;
+    merged.deloadLog = (Array.isArray(parsed.deloadLog) ? parsed.deloadLog : []).filter(isoOK).slice(-50);
     merged.body = (Array.isArray(parsed.body)?parsed.body:[]).filter(e=>e && /^\d{4}-\d{2}-\d{2}$/.test(e.d) && e.kg>=20 && e.kg<=400).sort((a,b)=>a.d<b.d?-1:1);
     // réglages : même type que la valeur par défaut ; les textes-codes (thème, niveau…) restent des
     // mots simples (ils finissent dans des classes et attributs) ; seul le prénom est libre (échappé)

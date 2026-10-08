@@ -155,6 +155,7 @@ Object.assign(ACT, {
     if(!add.length){ toast("Aucun exercice disponible avec ton matériel"); return; }
     add.forEach(e=>tplEdit.exos.push({ exoId:e.id, sets:e.sets, fresh:true }));
     tplEdit.dirty = true; sfx("open"); refreshTplEditor();
+    const t = stimTargets(add); if(t.length) toast(`Priorité : ${t.slice(0,2).map(r=>r.n.toLowerCase()).join(" et ")}, en retard cette semaine`, "target");
   },
   tplEdCancel(){
     // la feuille d'enregistrement ne perd rien : les exercices restent dans Ma séance

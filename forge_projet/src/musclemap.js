@@ -96,9 +96,35 @@ function weekMuscleMapHTML(){
       <span><i class="k-low"></i>Sous le seuil (moins de ${STIM.min})</span>
       <span><i class="k-ok"></i>Zone de progrès</span>
     </div>
+    ${stimLagging().length && appPicksOn() ? `<button class="btn secondary sm stim-go" data-a="stimSession"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Composer une séance pour ${stimLagging().length>1 ? "ces muscles" : "ce muscle"}</button>` : ""}
   </div>`;
 }
+// muscles en retard cette semaine (sous le seuil, sans les « rien fait depuis 7 jours » généralisés)
+function stimLagging(){
+  if(!S.sessions.length) return [];
+  const rows = weekVolume(), low = rows.filter(r=>r.sets<STIM.min);
+  return low.length===rows.length ? [] : low;
+}
 Object.assign(ACT, {
+  // « Composer une séance pour ces muscles » : des exercices pour les muscles en retard qui ont
+  // récupéré (pas travaillés hier ou aujourd'hui), ajoutés à Ma séance, puis direction l'accueil
+  stimSession(){
+    const lag = stimLagging(), ready = lag.filter(r=>daysSinceTrained(r.id)>=2);
+    if(!ready.length){ toast(lag.length ? "Ces muscles récupèrent encore : reviens demain" : "Tous tes muscles sont dans la zone de progrès", "check"); return; }
+    const ids = new Set(ready.map(r=>r.id)), have = S.custom.exos.map(e=>e.exoId);
+    const pool = engineExos().filter(e=>ids.has(e.muscles[0]) && !have.includes(e.id));
+    // un exercice par muscle d'abord (le mieux noté), puis un second pour les plus en retard
+    const pick = [], byScore = pool.slice().sort((a,b)=>scoreExo(b)-scoreExo(a));
+    // les plus en retard d'abord, autant de muscles que d'exercices dans une séance
+    ready.sort((a,b)=>a.sets-b.sets).splice(sessionSize());
+    ready.forEach(r=>{ const e = byScore.find(x=>x.muscles[0]===r.id && !pick.includes(x)); if(e) pick.push(e); });
+    for(const r of ready){ if(pick.length>=Math.min(sessionSize(), 6)) break; const e = byScore.find(x=>x.muscles[0]===r.id && !pick.includes(x) && exoFamily(x)!==exoFamily(pick.find(p=>p.muscles[0]===r.id)||x)); if(e) pick.push(e); }
+    if(!pick.length){ toast("Aucun exercice disponible avec ton matériel pour ces muscles"); return; }
+    pick.forEach(e=>{ S.custom.exos.push({ exoId:e.id, sets:e.sets, app:true }); freshIds.add(e.id); });
+    S.settings.todayTab = "custom"; save();
+    switchTab("today"); changed();
+    toast(`${nb(pick.length, "exercice")} pour ${ready.slice(0,3).map(r=>r.n.toLowerCase()).join(", ")} dans Ma séance`, "sparkle");
+  },
   stimHow(){
     const rows = weekVolume(), under = rows.filter(r=>r.sets<STIM.min).map(r=>r.n), twice = rows.filter(r=>r.freq>=2).length;
     openSheet(`<div class="sheet-hd"><span class="t">Stimulus par muscle</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body how-body">

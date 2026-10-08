@@ -237,3 +237,125 @@ Object.assign(ACT, {
     </div>`, { tall:true });
   },
 });
+
+// ---------- semaine allégée (deload) ----------
+// Une semaine plus légère après plusieurs semaines chargées, pour récupérer sans perdre en force.
+// - Consensus Delphi de 21 entraîneurs experts (Bell 2023) : réduire le nombre de séries et de
+//   répétitions fait l'unanimité ; garder ou baisser l'intensité est moins consensuel.
+// - Pratique courante : environ 1 semaine toutes les 4 à 8 semaines (Bell 2024, enquête auprès de
+//   246 athlètes : 6,4 jours toutes les 5,6 semaines en moyenne).
+// - Une semaine d'ARRÊT complet a légèrement réduit la force des jambes (Coleman 2024) : ici on continue
+//   à s'entraîner, avec ~40 % de séries en moins, la même charge et 2 répétitions de réserve.
+// Déclencheurs : 6 semaines chargées d'affilée ; une charge qui s'emballe (statut « Surcharge ») après
+// 3 semaines ; ou un indice qui baisse alors qu'on s'entraîne autant (« Improductif ») après 4 semaines.
+// Jamais deux semaines allégées à moins de 4 semaines d'écart ; « Plus tard » repousse d'une semaine.
+const DELOAD = { every:6, gap:28, days:7, snooze:7 };
+function deloadActive(){ const d = S.deload, t = todayISO(); return !!(d && d.start<=t && t<=d.end); }
+function deloadDay(){ return S.deload ? daysBetween(S.deload.start, todayISO())+1 : 0; }
+// semaine allégée finie depuis 2 jours au plus : un mot de reprise sur l'accueil
+function deloadJustEnded(){ const d = S.deload, t = todayISO(); return !!(d && t>d.end && daysBetween(d.end, t)<=2); }
+// semaines pleines d'affilée (semaine en cours exclue) : au moins 2 séances et 8 séries difficiles,
+// et pas nettement plus légère (moins de 60 %) que la moyenne des 4 semaines d'avant
+function loadedWeeksStreak(){
+  return memo("dlStreak"+todayISO(), ()=>{
+    const d = dailyHardSets(), cur = weekKey(todayISO()), last = (S.deloadLog||[]).slice(-1)[0] || "";
+    const days = {}; S.sessions.forEach(s=>{ days[s.date] = 1; });
+    const weeks = [];
+    for(let k=1;k<=20;k++){
+      const wk = addDaysISO(cur, -7*k); let sets = 0, n = 0;
+      for(let i=0;i<7;i++){ const iso = addDaysISO(wk, i); sets += d[iso]||0; n += days[iso]||0; }
+      weeks.push({ wk, sets, n });
+    }
+    let streak = 0;
+    for(let i=0;i<weeks.length;i++){
+      const w = weeks[i]; if(last && w.wk<=last) break;   // une semaine allégée remet le compteur à zéro
+      const prev = weeks.slice(i+1, i+5).filter(x=>x.sets>0), mean = prev.length ? prev.reduce((a,x)=>a+x.sets,0)/prev.length : 0;
+      if(w.n>=2 && w.sets>=8 && (!mean || w.sets>=.6*mean)) streak++; else break;
+    }
+    return streak;
+  });
+}
+function deloadAdvice(){
+  if(S.settings.deloadTips===false || deloadActive() || !S.sessions.length) return null;
+  const t = todayISO(), last = (S.deloadLog||[]).slice(-1)[0];
+  if(S.meta.deloadSnooze && t<S.meta.deloadSnooze) return null;
+  if(last && daysBetween(last, t)<DELOAD.gap) return null;
+  const st = trainingStatus(), streak = loadedWeeksStreak();
+  if(st==="overreach" && streak>=3) return { kind:"overreach", txt:"Ta charge des 7 derniers jours dépasse de loin ton habitude." };
+  if(st==="unproductive" && streak>=4) return { kind:"stall", txt:"Tu t'entraînes autant, mais ta force estimée baisse depuis quelques semaines." };
+  if(streak>=DELOAD.every) return { kind:"streak", txt:`${streak} semaines chargées d'affilée, sans semaine plus légère.` };
+  return null;
+}
+// accueil : conseil, semaine en cours (jour X sur 7) ou mot de reprise
+function deloadCardHTML(){
+  if(deloadActive()){
+    const day = Math.min(DELOAD.days, deloadDay());
+    return `<div class="dl-card on stagger" style="--i:1">
+      <span class="dl-ic">${ii("leaf")}</span>
+      <div class="dl-main"><div class="dl-t">Semaine allégée · jour ${day} sur ${DELOAD.days}</div>
+        <div class="dl-s">Moins de séries, même charge, aucune série à fond. Tes séances sont déjà ajustées.</div>
+        <div class="dl-bar" aria-hidden="true">${Array.from({ length:DELOAD.days }, (_,i)=>`<i class="${i<day?"on":""}" style="--k:${i}"></i>`).join("")}</div>
+        <div class="dl-act"><button class="dl-link" data-a="deloadHow">Pourquoi ?</button><button class="dl-link" data-a="deloadStop">Arrêter</button></div></div>
+    </div>`;
+  }
+  if(deloadJustEnded()) return `<div class="dl-card done stagger" style="--i:1">
+      <span class="dl-ic">${ii("bolt")}</span>
+      <div class="dl-main"><div class="dl-t">Semaine allégée terminée</div><div class="dl-s">Tes séances reprennent leur volume habituel : bon moment pour viser un record.</div></div>
+      <button class="icon-btn dl-x" data-a="deloadDismiss" aria-label="Masquer">${icon("close")}</button>
+    </div>`;
+  const a = deloadAdvice(); if(!a) return "";
+  return `<div class="dl-card stagger" style="--i:1">
+    <span class="dl-ic">${ii("leaf")}</span>
+    <div class="dl-main"><div class="dl-t">Semaine allégée conseillée</div>
+      <div class="dl-s">${esc(a.txt)} Une semaine plus légère aide à récupérer, sans perdre en force.</div>
+      <div class="dl-act"><button class="btn sm" data-a="deloadStart">Commencer</button><button class="btn tertiary sm" data-a="deloadLater">Plus tard</button><button class="dl-link" data-a="deloadHow">Pourquoi ?</button></div></div>
+  </div>`;
+}
+const DELOAD_SOURCES = [
+  ["Bell et al. 2023, Sports Medicine – Open : intégrer les semaines allégées (consensus Delphi d'entraîneurs experts)", "https://pmc.ncbi.nlm.nih.gov/articles/PMC10511399/"],
+  ["Bell et al. 2024, Sports Medicine – Open : pratiques de semaine allégée de 246 athlètes de force", "https://pmc.ncbi.nlm.nih.gov/articles/PMC10948666/"],
+  ["Coleman et al. 2024, PeerJ : une semaine d'arrêt au milieu de 9 semaines d'entraînement", "https://peerj.com/articles/16777"],
+  ["Bell et al. 2025, Strength & Conditioning Journal : approche pratique de la semaine allégée", "https://shura.shu.ac.uk/35313/"],
+];
+// la séance proposée (non commencée) suit le changement : séries réduites ou rétablies
+function deloadRefresh(){ if(typeof regenerateDraftIfIdle==="function") regenerateDraftIfIdle(); save(); changed(); }
+Object.assign(ACT, {
+  deloadStart(){
+    const t = todayISO();
+    S.deload = { start:t, end:addDaysISO(t, DELOAD.days-1) };
+    S.deloadLog = (S.deloadLog||[]).concat(t).slice(-50);
+    if(qs("#overlay.open")) closeSheet();
+    deloadRefresh(); haptic(15); sfx("open");
+    toast("Semaine allégée lancée : tes séances sont ajustées pour 7 jours", "leaf");
+  },
+  deloadLater(){ S.meta.deloadSnooze = addDaysISO(todayISO(), DELOAD.snooze); save(); changed(); toast("Je te le reproposerai dans une semaine"); },
+  deloadStop(){
+    if(!S.deload) return;
+    // arrêtée avant la fin : elle compte quand même (pas de nouveau conseil tout de suite)
+    S.deload = null; if(qs("#overlay.open")) closeSheet();
+    deloadRefresh(); toast("Semaine allégée arrêtée : volume habituel rétabli");
+  },
+  deloadDismiss(){ S.deload = null; save(); changed(); },
+  deloadToggleTips(d, el){ S.settings.deloadTips = S.settings.deloadTips===false; el.classList.toggle("on", S.settings.deloadTips); el.setAttribute("aria-pressed", S.settings.deloadTips); save(); changed(); },
+  deloadHow(){
+    const a = deloadAdvice(), on = deloadActive(), streak = loadedWeeksStreak(), last = (S.deloadLog||[]).slice(-1)[0];
+    openSheet(`<div class="sheet-hd"><span class="t">Semaine allégée</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body how-body">
+      <div class="how-st"><span class="dl-ic">${ii("leaf")}</span><div><b>${on ? `En cours · jour ${Math.min(DELOAD.days, deloadDay())} sur ${DELOAD.days}` : a ? "Conseillée maintenant" : "Pas nécessaire pour l'instant"}</b>
+        <p>${on ? "Tes séances ont environ 40 % de séries en moins, la même charge, et visent 2 répétitions de réserve." : a ? esc(a.txt) : `${nb(streak, "semaine chargée")} d'affilée${last ? `, dernière semaine allégée le ${fmtDate(last)}` : ""}. L'app te préviendra au bon moment.`}</p></div></div>
+      <h3>Pourquoi alléger ?</h3>
+      <p>Après plusieurs semaines chargées, la fatigue s'accumule. Une semaine plus légère la fait retomber, puis on repart de plus belle. Les entraîneurs experts en programment en général une toutes les 4 à 8 semaines.</p>
+      <h3>Comment ASCEN l'applique</h3>
+      <p>On continue à s'entraîner : <b>environ 40 % de séries en moins</b> (3 séries deviennent 2), <b>la même charge</b> et <b>2 répétitions de moins</b>, sans aller à l'échec. Les experts s'accordent tous pour réduire séries et répétitions ; une semaine d'arrêt complet, elle, a légèrement fait baisser la force des jambes dans une étude récente.</p>
+      <h3>Quand l'app la propose</h3>
+      <p>Après ${DELOAD.every} semaines chargées d'affilée (au moins 2 séances par semaine), si ta charge s'emballe (statut « Surcharge »), ou si ta force estimée baisse alors que tu t'entraînes autant. Jamais deux fois en moins de 4 semaines.</p>
+      <div class="group" style="margin-top:16px"><div class="row">
+        <div class="grow"><div class="t">Me la proposer automatiquement</div><div class="s">Une carte sur l'accueil, au bon moment</div></div>
+        <button class="switch ${S.settings.deloadTips!==false?"on":""}" aria-label="Proposer automatiquement les semaines allégées" aria-pressed="${S.settings.deloadTips!==false}" data-a="deloadToggleTips"></button>
+      </div></div>
+      <div class="btnrow">${on ? `<button class="btn secondary" data-a="deloadStop">Arrêter la semaine allégée</button>` : `<button class="btn" data-a="deloadStart">${icon("play")} Commencer maintenant</button>`}</div>
+      <h3>Sources</h3>
+      <ul class="how-src">${DELOAD_SOURCES.map(([t,u])=>`<li><a href="${u}" target="_blank" rel="noopener">${esc(t)}</a></li>`).join("")}</ul>
+      <p class="hr-note">Des repères issus de la recherche et de l'expérience d'entraîneurs, pas une règle : écoute aussi ta fatigue.</p>
+    </div>`, { tall:true });
+  },
+});

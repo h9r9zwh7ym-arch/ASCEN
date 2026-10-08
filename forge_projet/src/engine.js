@@ -18,12 +18,37 @@ function normName(s){
   return (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim();
 }
 
-// score d'un groupe musculaire : plus il a été délaissé récemment, plus il est prioritaire
+// ---------- stimulus de la semaine (4.0) ----------
+// Les propositions visent aussi les muscles sous le seuil de progrès : moins de 4 séries pondérées
+// sur 7 jours (Progrès > Muscles, repères de Pelland et al.). Manque à combler de 0 (seuil atteint)
+// à 1 (rien cette semaine) ; au-delà de 10 séries, un léger malus (le muscle a déjà beaucoup donné).
+function stimDeficit(muscleId){
+  try{
+    if(!S.sessions.length) return 0;
+    const r = muscleVolume(7).find(x=>x.id===muscleId); if(!r) return 0;
+    return r.sets>=STIM.high ? -.5 : Math.max(0, STIM.min-r.sets)/STIM.min;
+  }catch(e){ return 0; }
+}
+// muscles sous le seuil que la séance fait travailler en principal (pour l'expliquer)
+function stimTargets(exos){
+  try{
+    const vol = muscleVolume(7), low = new Map(vol.filter(r=>r.sets<STIM.min).map(r=>[r.id, r]));
+    // rien fait depuis 7 jours : tout est sous le seuil, le dire n'apprend rien
+    if(!S.sessions.length || low.size===vol.length) return [];
+    const out = []; exos.forEach(e=>{ const r = low.get(e.muscles[0]); if(r && !out.includes(r)) out.push(r); });
+    return out.map(r=>({ id:r.id, n:r.n, sets:r.sets }));
+  }catch(e){ return []; }
+}
+function stimTargetsText(t){
+  return t.length ? `Priorité à ${t.slice(0,3).map(r=>`${r.n.toLowerCase()} (${fmtDec(r.sets)}/${STIM.min} séries)`).join(", ")}, en retard cette semaine.` : "";
+}
+// score d'un groupe musculaire : plus il a été délaissé récemment, plus il est prioritaire ;
+// un muscle sous le seuil de la semaine gagne jusqu'à 4 points, sauf s'il récupère encore
 function muscleScore(muscleId){
   const days = daysSinceTrained(muscleId);
   const emph = S.goals.emphasis[muscleId] || "normal";
   let w = emph==="prioriser" ? 1.6 : emph==="eviter" ? 0.25 : 1;
-  let score = Math.min(days,10) * w;
+  let score = (Math.min(days,10) + 4*stimDeficit(muscleId)) * w;
   if(days<2) score *= 0.2; // récupération : fortement déprioritisé si travaillé hier ou aujourd'hui
   return score;
 }
@@ -137,7 +162,7 @@ function startWeight(exo, type){
   const below = owned.filter(w=>w<=target+0.001);
   return below.length ? below[below.length-1] : owned[0];
 }
-function suggestForExo(exo, setsN){
+function suggestForExo(exo, setsN, deload){
   const [rMin,rMax] = repRangeForGoal(exo);
   const n = setsN || exo.sets, timed = isTimed(exo);
   const type = loadableTypeOf(exo);
@@ -203,6 +228,14 @@ function suggestForExo(exo, setsN){
     } else if(add){
       note = timed ? `Objectif : +${add} s par rapport à la dernière fois.` : `Objectif : +${add} répétition${add>1?"s":""} par série par rapport à la dernière fois.`;
     }
+  }
+  // semaine allégée : même charge (pas de progression), 2 répétitions de moins (10 s pour un exercice
+  // tenu), aucune série à fond. On réduit le volume et l'effort, pas la charge (consensus Delphi, Bell 2023)
+  if(deload){
+    harder = null;
+    if(type && gap<21){ const lw = Math.max(0, ...done.map(st=>st.weight||0)); if(lw) weight = lw; }
+    reps = reps.map((_,i)=>Math.max(timed ? rMin : Math.max(1, rMin-2), lastReps(i) - (timed ? 10 : 2)));
+    note = timed ? "Semaine allégée : 10 s de moins que la dernière fois, sans aller au bout." : `Semaine allégée : ${type ? "même charge, " : ""}2 répétitions de moins, aucune série à fond.`;
   }
   return { targetReps:[rMin,rMax], weight, reps, note, harder };
 }
@@ -339,10 +372,13 @@ function pickExosForSession(n, pool, avoid, typeId){
 }
 
 function sessionEntryFor(exo, setsN){
-  const n = setsN || exo.sets;
-  const sug = suggestForExo(exo, n);
+  // semaine allégée : environ 40 % de séries en moins (3 → 2, 5 → 3), jamais moins de 2
+  const dl = typeof deloadActive==="function" && deloadActive() && !isStretch(exo);
+  const n0 = setsN || exo.sets, n = dl ? Math.max(2, Math.min(n0, Math.round(n0*.6))) : n0;
+  const sug = suggestForExo(exo, n, dl);
   const e = { exoId:exo.id, targetSets:n, targetReps:sug.targetReps, note:sug.note, sets:buildSetsFor(Object.assign({},exo,{sets:n}),sug) };
   if(sug.harder) e.harder = sug.harder;
+  if(dl) e.deload = true;
   return e;
 }
 
@@ -352,8 +388,9 @@ function generateEngineSession(typeId, avoid){
   if(typeId==="auto"){ const r = resolveAutoType(); resolved = r.type; reason = r.reason; }
   const n = sessionSize();
   const exos = pickExosForSession(resolved==="core" ? Math.min(n,5) : n, poolForType(resolved), avoid, resolved);
+  const stim = stimTargets(exos);
   const session = {
-    id: uid(), date: todayISO(), source:"engine", type:typeId, resolvedType:resolved, reason,
+    id: uid(), date: todayISO(), source:"engine", type:typeId, resolvedType:resolved, reason, stim:stim.length ? stimTargetsText(stim) : null,
     startedAt:null, completedAt:null,
     exos: exos.map(exo=>sessionEntryFor(exo))
   };

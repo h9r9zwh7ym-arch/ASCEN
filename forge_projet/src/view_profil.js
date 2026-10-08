@@ -58,6 +58,11 @@ function renderProfil(){
         <div class="grow"><div class="t">Étirements en fin de séance</div><div class="s">Ajoutés aux séances proposées par l'app</div></div>
         <button class="switch ${S.settings.stretching?"on":""}" aria-label="Étirements en fin de séance" data-a="toggleStretching"></button>
       </div>
+      <button class="row tap" style="width:100%" data-a="deloadHow">
+        ${sfIcon("leaf","green")}
+        <div class="grow"><div class="t">Semaine allégée</div><div class="s">${deloadActive() ? `En cours · jour ${Math.min(DELOAD.days, deloadDay())} sur ${DELOAD.days}` : S.settings.deloadTips===false ? "Pas de conseil automatique" : "Conseillée au bon moment"}</div></div>
+        <span class="chev">${icon("chev")}</span>
+      </button>
       <div class="row">
         ${sfIcon("sparkles","purple")}
         <div class="grow"><div class="t">Suggestions de l'app</div><div class="s">Dans Ma séance : « laisse l'app choisir », « Compléter » et le programme de la semaine</div></div>

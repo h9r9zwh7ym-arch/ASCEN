@@ -881,6 +881,30 @@ Mesures (`tests/tab_perf.js`, processeur ×4, 3 ans d'historique) :
   - la progression de force défile jusqu'à sa valeur (`animateCounts` gère maintenant `data-pre` et `data-thin`).
 - Test : `tests/v46.js`.
 
+**Moteur guidé par le stimulus et semaine allégée (toujours 4.0)** :
+- **Propositions guidées par le stimulus** (engine.js) :
+  - `stimDeficit(muscle)` vaut de 0 à 1 selon le manque par rapport au seuil de 4 séries pondérées sur 7 jours, et −0,5 au-delà de 10 séries ;
+  - `muscleScore` l'ajoute (jusqu'à +4 points) ; la récupération reste prioritaire (×0,2 si le muscle a travaillé hier ou aujourd'hui) ;
+  - la séance proposée, « L'app choisit », « Compléter » et l'éditeur de séance en profitent.
+- **Explication des priorités** :
+  - `stimTargets` et `stimTargetsText` disent ce que l'app a visé ;
+  - une ligne s'affiche dans la proposition (`draft.stim`, `.pc-stim`) et un message après « L'app choisit » et « Compléter » ;
+  - rien n'est affiché si aucune séance n'a eu lieu depuis 7 jours.
+- **Carte Stimulus** : bouton « Composer une séance pour ces muscles » (`ACT.stimSession`). Il ajoute à Ma séance un exercice par muscle en retard et déjà récupéré, les plus en retard d'abord, dans la limite de la taille de séance, puis ouvre l'accueil.
+- **Semaine allégée** (strength.js, `S.deload`, `S.deloadLog`, `S.settings.deloadTips`) :
+  - conseillée après 6 semaines chargées d'affilée (`loadedWeeksStreak` : au moins 2 séances et 8 séries difficiles, et pas moins de 60 % de la moyenne des 4 semaines d'avant), ou si le statut est « Surcharge » après 3 semaines, ou « Improductif » après 4 ;
+  - jamais deux fois en moins de 28 jours ; « Plus tard » repousse de 7 jours ;
+  - appliquée dans `sessionEntryFor` : environ 40 % de séries en moins (minimum 2), même charge, 2 répétitions de moins (10 s pour un exercice tenu), pas de variante plus dure ;
+  - chaque exercice est marqué `deload` ; en séance, la ligne « à battre » devient « Semaine allégée : vise … sans aller à fond » ;
+  - sur l'accueil, `deloadCardHTML` affiche le conseil, puis « jour X sur 7 » avec une barre, puis « terminée » pendant 2 jours ;
+  - Profil > Entraînement > « Semaine allégée » ouvre la feuille `deloadHow` : explication, réglage automatique, Commencer / Arrêter, sources.
+- **Sources** :
+  - Bell 2023, consensus Delphi : réduire séries et répétitions fait l'unanimité ;
+  - Bell 2024, enquête auprès de 246 athlètes : environ 6 jours toutes les 5 à 6 semaines ;
+  - Coleman 2024 : une semaine d'arrêt complet a réduit la force des jambes, d'où une semaine allégée plutôt que l'arrêt ;
+  - Bell 2025, approche pratique.
+- Test : `tests/v47.js`.
+
 **Vérifications** :
 - `tests/v40.js` couvre la 2e passe : Rewind, virgules, carte et légende des muscles, accueil, catalogue, fusion, séance Pilates, recherche.
 - Tour visuel de 27 écrans en clair et en sombre (`tests/tour.js` + `tests/montage.js`) ; audit d'accessibilité repassé (`tests/ux_audit.js`).

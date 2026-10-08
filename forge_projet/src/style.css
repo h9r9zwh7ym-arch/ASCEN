@@ -2148,3 +2148,26 @@ button.set-dots::before{content:"";position:absolute;left:50%;top:50%;width:max(
 /* progression de force : le chiffre défile jusqu'à sa valeur */
 .tr-v{font-variant-numeric:tabular-nums}
 @media (prefers-reduced-motion:reduce){.sheet.sh-in .sheet-body>*,#toast.show .t-ic,.enter .wp-day.today,.enter .wp-check{animation:none!important}}
+/* proposition : ce que l'app vise en plus (muscles sous le seuil de la semaine) */
+.pc-stim{display:flex;gap:6px;align-items:flex-start;margin-top:6px;font-size:var(--fs-foot);color:var(--label2);line-height:1.4}
+.pc-stim .ii{flex:none;width:14px;height:14px;margin-top:2px;color:var(--green)}
+.stim-go{width:100%;margin-top:14px}
+/* semaine allégée (deload) : conseil, semaine en cours, reprise */
+.dl-card{display:flex;gap:12px;align-items:flex-start;width:calc(100% - 2 * var(--gutter));margin:-4px var(--gutter) 16px;padding:14px;border-radius:var(--r-card);background:var(--bg2);position:relative}
+.dl-card.on{background:color-mix(in srgb,var(--green) 10%,var(--bg2))}
+.dl-ic{width:34px;height:34px;flex:none;border-radius:11px;display:grid;place-items:center;background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green)}
+.dl-ic .ii{width:18px;height:18px}
+.dl-card.done .dl-ic{background:var(--tint-bg);color:var(--tint-ink)}
+.dl-main{flex:1;min-width:0}
+.dl-t{font-size:var(--fs-sub);font-weight:700}
+.dl-s{font-size:var(--fs-foot);color:var(--label2);line-height:1.4;margin-top:2px}
+.dl-act{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-top:10px}
+.dl-link{font-size:var(--fs-foot);font-weight:600;color:var(--tint-ink);min-height:32px}
+.dl-bar{display:flex;gap:4px;margin-top:10px}
+.dl-bar i{flex:1;height:5px;border-radius:3px;background:var(--fill)}
+.dl-bar i.on{background:var(--green)}
+.enter .dl-bar i.on{animation:hbGrow .5s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--k) * 50ms + .3s);transform-origin:left}
+.dl-x{position:absolute;top:8px;right:8px}
+.how-st .dl-ic{margin-top:2px}
+.fc-beat.dl,.fc-beat.dl .ii{color:var(--green)}
+@media (prefers-reduced-motion:reduce){.enter .dl-bar i.on{animation:none}}
