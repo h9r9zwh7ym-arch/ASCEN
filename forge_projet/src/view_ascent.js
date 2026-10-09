@@ -232,58 +232,122 @@ function ascCardHTML(){
 
 // ---------- l'écran « Mon ascension » ----------
 let ascG = null;
+// où l'on en est : barre de l'expédition et UNE phrase sur la prochaine étape
 function ascExpHTML(a){
-  const D = ASC_DATA[a.key], prog = Math.max(0, Math.min(1, a.done))*100, P = v=>v.toFixed(1);
-  const left = a.wait ? (a.series>=a.nextReq ? `prochaine séance : ${esc(ASC_DATA[a.next].n)}` : `série de ${a.nextReq} sem. pour ${esc(ASC_DATA[a.next].n)}`)
-    : a.nextCamp ? `prochain camp dans <b class="num">${ascM(a.nextCamp[0]-a.alt)}</b>` : `sommet dans <b class="num">${ascM(D.top-a.alt)}</b>`;
-  return `<div class="exp-row"><span>${a.wait ? "<b>Sommet atteint</b>" : `<b>Camp ${a.passed} sur ${D.camps.length}</b> franchi`}</span><span>${left}</span></div>
+  const D = ASC_DATA[a.key], prog = Math.max(0, Math.min(1, a.done))*100, P = v=>v.toFixed(1), N = ASC_DATA[a.next];
+  const next = a.wait
+    ? (a.series>=a.nextReq ? `Prochaine expédition : <b>${esc(N.n)}</b>, dès ta prochaine séance.` : `Prochaine expédition : <b>${esc(N.n)}</b>, avec une série de ${nb(a.nextReq, "semaine")} (tu en as ${a.series}).`)
+    : a.nextCamp ? `Prochain camp : <b>${esc(a.nextCamp[1])}</b> dans <b class="num">${ascM(a.nextCamp[0]-a.alt)}</b>, environ ${nb(ascSessionsFor(a.nextCamp[0]-a.alt, a), "séance")}.`
+    : `Sommet dans <b class="num">${ascM(D.top-a.alt)}</b>, environ ${nb(ascSessionsFor(D.top-a.alt, a), "séance")}.`;
+  return `<div class="exp-row"><span>${a.wait ? "<b>Sommet atteint</b>" : `<b>Camp ${a.passed}</b> sur ${D.camps.length}`}</span><span>sommet <b class="num">${fmtNum(D.top)} m</b></span></div>
     <div class="exp-track"><div class="exp-push" style="width:${ASC_PUSH*100}%"></div><div class="exp-fill" style="width:${P(prog)}%"></div>${D.camps.map(c=>`<i class="exp-tick ${c[0]<=a.alt+.5 ? "past" : ""}" style="left:${P((c[0]-D.start)/(D.top-D.start)*100)}%"></i>`).join("")}<i class="exp-me" style="left:${P(prog)}%"></i></div>
-    <div class="exp-ends"><span>${D.from ? esc(D.from)+" · " : "départ · "}${fmtNum(D.fromAlt)} m</span><span><i class="hatch"></i>dernière ligne droite · ${fmtNum(D.top)} m</span></div>`;
+    <p class="exp-next">${next}</p>`;
 }
 function ascHudHTML(a){
   const D = ASC_DATA[a.key];
   return `<div class="asc-hud"><div class="hud-l"><div class="hud-k">Expédition ${a.idx+1} sur 13 · ${esc(D.region)}</div><div class="hud-n">${esc(D.n)}</div></div>
     <div class="hud-r"><b class="asc-alt">${fmtNum(a.wait ? D.top : a.alt)} m</b><span>${a.wait ? "sommet atteint" : `sur ${fmtNum(D.top)} m`}</span></div></div>`;
 }
-function ascSpeedHTML(a){
-  const L = a.last, eff = L ? L.eff : ascEffort(15), hard = L ? L.hard : 15, mul = L ? L.mul : a.mul, f = L ? L.force : a.force, res = eff*mul*f*(L ? L.lapF : 1/(1+.25*a.lap));
-  return `<section class="card asc-cd"><div class="card-h"><h2>Vitesse de montée</h2><span class="sub">${L ? "ta dernière séance" : "une séance type"}</span></div>
-    <div class="formula">
-      <div class="f-term"><b class="num">${ascM(eff)}</b><span>${fmtDec(hard)} série${hard>=2 ? "s" : ""} difficile${hard>=2 ? "s" : ""}</span></div>
-      <div class="f-term"><b class="num">${ascX(mul)}</b><span>régularité</span></div>
-      <div class="f-term"><b class="num">${ascX(Math.round(f*100)/100)}</b><span>force</span></div><span class="f-op">=</span>
-      <div class="f-term res"><b class="num">+${ascM(res)}</b><span>par séance</span></div>
-    </div>
-    <p class="note">La même séance sans série en cours et sans progrès de force : <b class="num">+${ascM(eff*ASC_MUL[0])}</b>. Une séance de temps en temps compte très peu.${L && L.waiting ? " Elle n'a pas fait monter : l'expédition suivante attend ta série." : ""}</p></section>`;
+// vitesse d'une séance type maintenant (séries de la dernière séance, palier et force actuels)
+function ascSpeedNow(a){ const eff = a.last ? a.last.eff : ascEffort(15); return eff*a.mul*a.force/(1 + .25*a.lap); }
+// ---------- « Cette semaine » : la seule chose à faire pour monter plus vite ----------
+function ascWeekHTML(a){
+  const thisW = weekKey(todayISO()), W = a.weeks[a.weeks.length-1], n = W && W.w===thisW ? W.n : 0, g = a.goal, left = Math.max(0, g-n);
+  const daysLeft = 7 - weekdayIdx(todayISO()), held = left===0, paused = a.paused && !held;
+  const nextP = a.tier<ASC_TH.length-1 ? a.tier+1 : null, toNext = nextP==null ? 0 : ASC_TH[nextP] - a.series;
+  let msg;
+  if(paused) msg = "Semaine en pause : elle ne compte pas, rien ne se perd.";
+  else if(held) msg = `Objectif tenu : ta série passe à <b>${nb(a.series, "semaine")}</b>.`;
+  else if(left>daysLeft) msg = n ? "Plus assez de jours pour tenir l'objectif : chaque séance fait quand même monter, et la série reste gelée." : `Fais au moins une séance d'ici dimanche : sans séance, tu redescendrais au camp précédent.`;
+  else if(n===0 && !a.wait) msg = `${nb(left, "séance")} d'ici dimanche pour tenir ton objectif. Sans séance, tu redescendrais au camp précédent.`;
+  else msg = `Encore ${nb(left, "séance")} d'ici dimanche : ta série passera à <b>${nb(a.series+1, "semaine")}</b>.`;
+  const speed = `Ta vitesse : <b class="num">+${ascM(ascSpeedNow(a))}</b> par séance${nextP==null ? ", la plus rapide" : `, <b>${ascX(ASC_MUL[nextP])}</b> après ${nb(toNext, "semaine")} tenue${toNext>1 ? "s" : ""} de plus`}.`;
+  const pz = ascPauses().includes(thisW);
+  return `<section class="card asc-week" id="ascWeek">
+    <div class="aw-hd"><h2>Cette semaine</h2><span class="aw-n"><b class="num">${n}</b>/${g} séance${g>1 ? "s" : ""}</span></div>
+    <div class="aw-dots" aria-hidden="true">${Array.from({ length:g }, (_,i)=>`<i class="${i<n ? "on" : ""}"></i>`).join("")}</div>
+    <p class="aw-msg">${msg}</p>
+    <div class="aw-speed">${ascIc("peak")}<span>${speed}</span></div>
+    ${held ? "" : `<button class="aw-pause" data-a="ascPause" data-w="${thisW}" aria-pressed="${pz}" ${!pz && !a.pausesLeft ? "disabled" : ""}>${pz ? "Annuler la pause de cette semaine" : a.pausesLeft ? "Vacances ou malade ? Mettre la semaine en pause" : "Plus de pause disponible ce trimestre"}</button>`}
+  </section>`;
+}
+// ---------- le détail, replié : une ligne par sujet ----------
+const ASC_SECS = [
+  ["speed", "gauge", "orange", "Vitesse de montée", a=>`+${ascM(ascSpeedNow(a))} / séance`],
+  ["reg", "calendar", "green", "Régularité", a=>`${a.series} sem. · ${ascX(a.mul)}`],
+  ["force", "barbell", "blue", "Force", a=>ascX(Math.round(a.force*100)/100)],
+  ["itin", "compass", "teal", "Itinéraire", a=>`${new Set(a.summits.filter(s=>s.lap===a.lap).map(s=>s.key)).size} sur 13`],
+  ["rw", "trophy", "yellow", "Trophées de sommet", a=>a.summits.length ? String(a.summits.length) : ""],
+  ["how", "info", "gray", "Comment ça marche", ()=>""],
+];
+let ascOpen = new Set();
+function ascRowsHTML(a){
+  return `<div class="group asc-rows">${ASC_SECS.map(([k, g, c, t, v])=>{ const on = ascOpen.has(k);
+    return `<button class="row tap asc-row ${on ? "on" : ""}" data-a="ascSec" data-k="${k}" aria-expanded="${on}">${sfIcon(g, c)}<div class="grow"><div class="t">${t}</div></div><span class="val">${v(a)}</span><span class="chev">${icon("chev")}</span></button>
+      <div class="clp asc-clp" id="ascSec-${k}">${on ? `<div class="asc-sec">${ascSecBody(k, a)}</div>` : ""}</div>`; }).join("")}</div>`;
+}
+function ascSecBody(k, a){
+  if(k==="speed"){
+    const L = a.last, eff = L ? L.eff : ascEffort(15), hard = L ? L.hard : 15, mul = L ? L.mul : a.mul, f = L ? L.force : a.force, res = eff*mul*f*(L ? L.lapF : 1/(1+.25*a.lap));
+    return `<p class="sub">${L ? "Ta dernière séance" : "Une séance type de 15 séries"} :</p>
+      <div class="formula">
+        <div class="f-term"><b class="num">${ascM(eff)}</b><span>effort · ${fmtDec(hard)} série${hard>=2 ? "s" : ""} difficile${hard>=2 ? "s" : ""}</span></div>
+        <div class="f-term"><b class="num">${ascX(mul)}</b><span>régularité</span></div>
+        <div class="f-term"><b class="num">${ascX(Math.round(f*100)/100)}</b><span>force</span></div><span class="f-op">=</span>
+        <div class="f-term res"><b class="num">+${ascM(res)}</b><span>par séance</span></div>
+      </div>
+      <p class="note">Sans série en cours et sans progrès de force, la même séance ne vaudrait que <b class="num">+${ascM(eff*ASC_MUL[0])}</b> : une séance de temps en temps compte très peu.${L && L.waiting ? " Elle n'a pas fait monter : l'expédition suivante attend ta série." : ""}</p>`;
+  }
+  if(k==="reg"){
+    const p = a.tier, nextP = p<ASC_TH.length-1 ? p+1 : null, opens = nextP==null ? [] : ASC_ORDER.filter(x=>ASC_REQ[x]===ASC_TH[nextP]).map(x=>ASC_DATA[x].n);
+    const list = x=>x.length>2 ? x.slice(0,-1).join(", ")+" et "+x.slice(-1) : x.join(" et ");
+    const weeks = a.weeks.slice(-13), thisW = weekKey(todayISO()), nextW = addDaysISO(thisW, 7), pz = ascPauses();
+    const pauseBtn = (w, lbl)=>{ const on = pz.includes(w); return `<button class="btn ${on ? "secondary on" : "tertiary"} sm" data-a="ascPause" data-w="${w}" aria-pressed="${on}" aria-label="${on ? `Annuler la pause (${lbl.toLowerCase()})` : `Pause : ${lbl.toLowerCase()}`}" ${!on && !a.pausesLeft ? "disabled" : ""}>${on ? icon("check")+" " : ""}${lbl}</button>`; };
+    return `<p class="sub">Ta série : les semaines d'affilée où tu fais tes ${nb(a.goal, "séance")}. Plus elle est longue, plus tu montes vite.</p>
+      <div class="pal">${ASC_TH.map((t,i)=>`<div class="${i<=p ? "on" : ""} ${i===p ? "cur" : ""}"><b class="num">${ascX(ASC_MUL[i])}</b><i></i><small>${t ? t+" sem." : "départ"}</small></div>`).join("")}</div>
+      <p class="note">${nextP==null ? `Palier maximal : tu montes <b>3 fois</b> plus vite qu'au départ. Garde la série.`
+        : `Prochain palier dans <b class="num">${nb(ASC_TH[nextP]-a.series, "semaine")}</b> : <b>${ascX(ASC_MUL[nextP])}</b>${opens.length ? `. Il ouvre ${esc(list(opens))}.` : "."}`}</p>
+      ${ascGoalHint(a)}
+      <div class="asc-wk-h">Tes dernières semaines</div>
+      <div class="weeks" aria-label="Dernières semaines">${weeks.map(w=>`<i class="wk ${w.state}" title="${ASC_WK_LABEL[w.state]}"></i>`).join("")}</div>
+      <div class="legend"><span><i class="wk ok"></i>objectif tenu</span><span><i class="wk frozen"></i>raté : série gelée</span><span><i class="wk deload"></i>allégée ou pause</span><span><i class="wk empty"></i>sans séance</span></div>
+      <div class="asc-pause"><div class="ap-t">${ascIc("pause")}<span><b>Pause</b><span>Vacances, maladie : la semaine ne compte pas, rien ne se perd. ${a.pausesLeft ? `Encore ${nb(a.pausesLeft, "semaine")} ce trimestre.` : "Plus de pause disponible ce trimestre."}</span></span></div>
+        <div class="ap-b">${pauseBtn(thisW, "Cette semaine")}${pauseBtn(nextW, "La suivante")}</div></div>`;
+  }
+  if(k==="force"){
+    const pct = a.index==null ? null : a.index-100;
+    const wx = a.index==null ? `${ascIc("pulse")}<span><b>Dernière ligne droite possible</b><span>Ta force sera mesurée après quelques séances d'un même exercice.</span></span>`
+      : a.pushOK ? `${ascIc("pulse")}<span><b>Dernière ligne droite possible</b><span>Ta force est à ${Math.round(a.form*100)} % de ton meilleur niveau : tu peux viser le sommet à pleine vitesse.</span></span>`
+      : `${ascIc("pulse", "warn")}<span><b>Dernière ligne droite à mi-vitesse</b><span>Ta force est à ${Math.round(a.form*100)} % de ton meilleur niveau des 6 derniers mois (il faut ${Math.round(ASC_FORM_OK*100)} %).</span></span>`;
+    return `<div class="cond"><span class="cond-x num">${ascX(Math.round(a.force*100)/100)}</span><span class="sub">${pct==null ? "Pas encore d'indice de force : ×1 en attendant." : `Ton indice de force a ${pct>=0 ? "gagné" : "perdu"} ${Math.abs(pct)} % depuis tes débuts. Chaque 10 % de force en plus fait monter 6 % plus vite.`}</span></div>
+      <div class="wx ${a.pushOK || a.index==null ? "" : "warn"}">${wx}</div>`;
+  }
+  if(k==="itin"){
+    const done = new Set(a.summits.filter(s=>s.lap===a.lap).map(s=>s.key)), any = new Set(a.summits.map(s=>s.key));
+    return `${a.lap ? `<p class="sub">${a.lap+1}ᵉ tour de l'itinéraire.</p>` : ""}${ASC_GROUPS.map(([stage, keys])=>`<div class="stage">${stage}</div><ol class="stops">${keys.map(x=>{
+      const n = ASC_ORDER.indexOf(x), D = ASC_DATA[x], isDone = done.has(x), cur = n===a.idx && !a.wait, locked = !isDone && !cur && ASC_REQ[x]>a.series;
+      const prog = cur ? Math.round(Math.max(0, Math.min(1, a.done))*100) : 0;
+      const right = isDone ? `<b class="num">${fmtNum(D.top)} m</b>atteint` : cur ? `<b class="num">${fmtNum(D.top)} m</b>en cours · ${prog} %` : locked ? `<b class="num">${fmtNum(D.top)} m</b>série de ${ASC_REQ[x]} sem.` : `<b class="num">${fmtNum(D.top)} m</b>${any.has(x) ? "déjà gravi" : "ouvert"}`;
+      return `<li class="${isDone ? "done" : cur ? "cur" : locked ? "locked" : ""}"><span class="node">${isDone ? ascIc("check") : locked ? ascIc("lock") : ""}</span><span class="stop-t">${esc(D.n)}<small>${esc(D.region)}</small></span><span class="stop-r">${right}</span></li>`; }).join("")}</ol>`).join("")}`;
+  }
+  if(k==="rw"){
+    const x = a.wait ? a.next : a.key, t = ASC_TIERS[ASC_TIER_OF(x)], mine = a.summits.slice().reverse();
+    return `${mine.length ? `<div class="asc-trophies">${mine.map((s,i)=>`<button class="asc-tr" data-a="ascReplay" data-i="${a.summits.length-1-i}" aria-label="${esc(ASC_DATA[s.key].n)}, atteint le ${fmtDate(s.date)}">${ascMedalSVG(s.key, 56, true)}<b>${esc(ASC_DATA[s.key].n)}</b><small>${fmtDate(s.date)} ${s.date.slice(0,4)}</small></button>`).join("")}</div>` : ""}
+      <div class="rw-row"><span class="rw-ic">${ascMedalSVG(x, 44, true)}</span><span><span class="t">À gagner : trophée ${ascDu(x)}</span><span class="s">${t[3]}, gravé de sa vraie silhouette, avec sa carte de sommet à partager</span></span></div>
+      <div class="tiers">${Object.values(ASC_TIERS).map(([d, m, l, nm, what])=>`<div class="tier">${ascMedalSVG(null, 38, false, [d, m, l])}<b>${nm}</b>${what}</div>`).join("")}</div>`;
+  }
+  return `<ul class="asc-rules">
+      <li><b>Chaque séance fait monter</b> : effort × régularité × force. Les séries faites exprès faciles comptent moitié, 20 séries au plus.</li>
+      <li><b>Une semaine sans séance</b> fait redescendre au camp précédent. Les sommets gagnés restent acquis.</li>
+      <li><b>Objectif raté une fois</b> : la série est gelée. Une 2ᵉ fois en 4 semaines, ou une semaine sans séance : un palier de moins.</li>
+      <li><b>Pause ou semaine allégée</b> : rien ne se perd (${ASC_PAUSE_MAX} semaines de pause par trimestre).</li>
+      <li><b>Les grandes montagnes demandent une série</b> : 4 semaines pour le Titlis, 8 pour l'Eiger et le Cervin, 12 pour le Mont Blanc et le Kilimandjaro, 20 pour l'Aconcagua, le K2 et l'Everest.</li>
+      <li><b>La dernière ligne droite</b> (hachurée sur la barre, les 12 derniers %) : pleine vitesse si ta force est à ${Math.round(ASC_FORM_OK*100)} % de ton meilleur niveau, sinon mi-vitesse.</li>
+      <li><b>Tout part de ton historique</b> : corriger ou supprimer une séance corrige l'ascension.</li>
+    </ul>
+    <p class="asc-credit">Montagnes calculées depuis le relief réel (swisstopo swissALTI3D en Suisse, Copernicus GLO-30 ailleurs). Voies d'ascension réelles (© contributeurs OpenStreetMap), refuges à leur place ; en pointillé estompé, les passages cachés derrière un relief.</p>`;
 }
 const ASC_WK_LABEL = { ok:"objectif tenu", frozen:"objectif raté : série gelée", deload:"semaine allégée", pause:"pause déclarée", empty:"sans séance", cur:"semaine en cours" };
-function ascRegHTML(a){
-  const p = a.tier, nextP = p<ASC_TH.length-1 ? p+1 : null, opens = nextP==null ? [] : ASC_ORDER.filter(k=>ASC_REQ[k]===ASC_TH[nextP]).map(k=>ASC_DATA[k].n);
-  const list = x=>x.length>2 ? x.slice(0,-1).join(", ")+" et "+x.slice(-1) : x.join(" et ");
-  const weeks = a.weeks.slice(-13);
-  const thisW = weekKey(todayISO()), nextW = addDaysISO(thisW, 7), pz = ascPauses();
-  const pauseBtn = (w, lbl)=>{ const on = pz.includes(w); return `<button class="btn ${on ? "secondary on" : "tertiary"} sm" data-a="ascPause" data-w="${w}" aria-pressed="${on}" aria-label="${on ? `Annuler la pause (${lbl.toLowerCase()})` : `Pause : ${lbl.toLowerCase()}`}" ${!on && !a.pausesLeft ? "disabled" : ""}>${on ? icon("check")+" " : ""}${lbl}</button>`; };
-  const pzTxt = pz.includes(thisW) ? "Pause déclarée cette semaine : elle ne compte pas, rien ne se perd. Touche pour l'annuler." : pz.includes(nextW) ? "Pause déclarée la semaine prochaine : elle ne comptera pas, rien ne se perd." : "Vacances, maladie : la semaine ne compte pas, rien ne se perd.";
-  return `<section class="card asc-cd" id="ascReg"><div class="card-h"><h2>Régularité</h2><span class="pill">Série de ${nb(a.series, "semaine")}</span></div>
-    <p class="sub">Ta série de semaines où l'objectif (${nb(a.goal, "séance")}) est tenu. Plus elle dure, plus tu montes vite.</p>
-    <div class="pal">${ASC_TH.map((t,i)=>`<div class="${i<=p ? "on" : ""} ${i===p ? "cur" : ""}"><b class="num">${ascX(ASC_MUL[i])}</b><i></i><small>${t ? t+" sem." : "aucune"}</small></div>`).join("")}</div>
-    <div class="weeks" aria-label="Dernières semaines">${weeks.map(w=>`<i class="wk ${w.state}" title="${ASC_WK_LABEL[w.state]}"></i>`).join("")}<span class="sub wk-cap">${weeks.length>1 ? "dernières semaines" : ""}</span></div>
-    <div class="legend"><span><i class="wk ok"></i>objectif tenu</span><span><i class="wk frozen"></i>raté une fois, série gelée</span><span><i class="wk deload"></i>allégée ou pause</span><span><i class="wk empty"></i>sans séance</span></div>
-    <p class="note">${nextP==null ? `Palier maximal : tu montes <b>3 fois</b> plus vite qu'au départ. Garde la série.`
-      : `Prochain palier dans <b class="num">${nb(ASC_TH[nextP]-a.series, "semaine")}</b> : <b>${ascX(ASC_MUL[nextP])}</b>${opens.length ? `. Ouvre ${esc(list(opens))}.` : "."}`}</p>
-    ${ascGoalHint(a)}
-    <div class="asc-pause"><div class="ap-t">${ascIc("pause")}<span><b>Pause</b><span>${pzTxt} ${a.pausesLeft ? `Encore ${nb(a.pausesLeft, "semaine")} ce trimestre.` : "Plus de pause disponible ce trimestre."}</span></span></div>
-      <div class="ap-b">${pauseBtn(thisW, "Cette semaine")}${pauseBtn(nextW, "La semaine prochaine")}</div></div>
-    <details class="rules"><summary>Comment on monte et on redescend</summary><ul>
-      <li><b>Chaque séance</b> fait monter : effort × régularité × force. Les séries faites exprès faciles comptent moitié, et le nombre de séries est plafonné à 20.</li>
-      <li><b>Objectif raté une fois :</b> la série est gelée. Raté une 2ᵉ fois en 4 semaines, ou semaine sans séance : un palier de moins.</li>
-      <li><b>Semaine sans séance :</b> tu redescends au camp précédent. Les sommets gagnés restent acquis.</li>
-      <li><b>Semaine allégée ou pause déclarée</b> (vacances, maladie, ${ASC_PAUSE_MAX} semaines par trimestre) : rien ne se perd.</li>
-      <li><b>Les grandes montagnes</b> demandent une série : 4 semaines pour le Titlis, 8 pour l'Eiger et le Cervin, 12 pour le Mont Blanc et le Kilimandjaro, 20 pour l'Aconcagua, le K2 et l'Everest.</li>
-      <li><b>La dernière ligne droite</b> (les 12 derniers %) se monte à pleine vitesse quand ta force est à ${Math.round(ASC_FORM_OK*100)} % de ton meilleur niveau des 6 derniers mois, sinon à mi-vitesse.</li>
-      <li><b>Tout part de ton historique :</b> corriger ou supprimer une séance corrige l'ascension.</li>
-    </ul></details></section>`;
-}
 // objectif souvent manqué d'une seule séance : il vaut mieux un objectif tenable qu'une série qui ne démarre jamais
 function ascGoalHint(a){
   const g = a.goal, done = a.weeks.filter(w=>w.state!=="cur").slice(-8);
@@ -292,49 +356,17 @@ function ascGoalHint(a){
   if(short<4) return "";
   return `<div class="note asc-hint">Tu fais souvent ${nb(g-1, "séance")} par semaine. Avec un objectif de ${g-1}, ta série avancerait et tu monterais plus vite. <button class="link" data-a="openGoals">Changer mon objectif</button></div>`;
 }
-function ascForceHTML(a){
-  const pct = a.index==null ? null : a.index-100;
-  const wx = a.index==null ? `${ascIc("pulse")}<span><b>Dernière ligne droite possible</b><span>Ta force sera mesurée après quelques séances d'un même exercice.</span></span>`
-    : a.pushOK ? `${ascIc("pulse")}<span><b>Dernière ligne droite possible</b><span>Ta force est à ${Math.round(a.form*100)} % de ton meilleur niveau : tu peux viser le sommet.</span></span>`
-    : `${ascIc("pulse", "warn")}<span><b>Dernière ligne droite à mi-vitesse</b><span>Ta force est à ${Math.round(a.form*100)} % de ton meilleur niveau des 6 derniers mois (${Math.round(ASC_FORM_OK*100)} % pour la pleine vitesse).</span></span>`;
-  return `<section class="card asc-cd"><div class="card-h"><h2>Force</h2><span class="sub">ton indice</span></div>
-    <div class="cond"><span class="cond-x num">${ascX(Math.round(a.force*100)/100)}</span><span class="sub">${pct==null ? "Pas encore d'indice de force : ×1 en attendant." : `Ton indice de force a ${pct>=0 ? "gagné" : "perdu"} ${Math.abs(pct)} % depuis tes débuts. Chaque 10 % de force en plus te fait monter 6 % plus vite ; si tu en perds, tu montes moins vite.`}</span></div>
-    <div class="wx ${a.pushOK || a.index==null ? "" : "warn"}">${wx}</div></section>`;
-}
-function ascItinHTML(a){
-  const done = new Set(a.summits.filter(s=>s.lap===a.lap).map(s=>s.key)), any = new Set(a.summits.map(s=>s.key));
-  const count = done.size;
-  return `<section class="card asc-cd"><div class="card-h"><h2>Itinéraire</h2><span class="sub">${nb(count, "sommet")} sur 13${a.lap ? ` · ${a.lap+1}ᵉ tour` : ""}</span></div>
-    ${ASC_GROUPS.map(([stage, keys])=>`<div class="stage">${stage}</div><ol class="stops">${keys.map(k=>{
-      const n = ASC_ORDER.indexOf(k), D = ASC_DATA[k], isDone = done.has(k), cur = n===a.idx && !a.wait, locked = !isDone && !cur && ASC_REQ[k]>a.series;
-      const prog = cur ? Math.round(Math.max(0, Math.min(1, a.done))*100) : 0;
-      const right = isDone ? `<b class="num">${fmtNum(D.top)} m</b>atteint` : cur ? `<b class="num">${fmtNum(D.top)} m</b>en cours · ${prog} %` : locked ? `<b class="num">${fmtNum(D.top)} m</b>série de ${ASC_REQ[k]} sem.` : `<b class="num">${fmtNum(D.top)} m</b>${any.has(k) ? "déjà gravi" : "ouvert"}`;
-      return `<li class="${isDone ? "done" : cur ? "cur" : locked ? "locked" : ""}"><span class="node">${isDone ? ascIc("check") : locked ? ascIc("lock") : ""}</span><span class="stop-t">${esc(D.n)}<small>${esc(D.region)}</small></span><span class="stop-r">${right}</span></li>`; }).join("")}</ol>`).join("")}</section>`;
-}
-function ascRewardsHTML(a){
-  const k = a.wait ? a.next : a.key, D = ASC_DATA[k], t = ASC_TIERS[ASC_TIER_OF(k)], ni = (ASC_ORDER.indexOf(k)+1)%13, nk = ASC_ORDER[ni];
-  const mine = a.summits.slice().reverse();
-  return `<section class="card asc-cd"><div class="card-h"><h2>Au sommet</h2>${mine.length ? `<span class="sub">${nb(mine.length, "trophée")}</span>` : ""}</div>
-    <div class="rw-row"><span class="rw-ic">${ascMedalSVG(k, 44, true)}</span><span><span class="t">Trophée ${ascDu(k)}</span><span class="s">${t[3]} · gravé de sa vraie silhouette</span></span></div>
-    <div class="rw-row"><span class="rw-ic">${ascIc("card", "sm")}</span><span><span class="t">Carte de sommet</span><span class="s">La date, tes séances et ta série, à garder ou partager</span></span></div>
-    <div class="rw-row"><span class="rw-ic">${ascIc("flag", "sm")}</span><span><span class="t">Puis : ${ni===0 ? "un deuxième tour" : esc(ASC_DATA[nk].n)}</span><span class="s">${ni===0 ? "L'itinéraire recommence, plus exigeant" : `${fmtNum(ASC_DATA[nk].top)} m · ${esc(ASC_DATA[nk].region)}`}</span></span></div>
-    <div class="tiers">${Object.values(ASC_TIERS).map(([d, m, l, nm, what])=>`<div class="tier">${ascMedalSVG(null, 38, false, [d, m, l])}<b>${nm}</b>${what}</div>`).join("")}</div>
-    ${mine.length ? `<div class="stage asc-mine">Mes sommets</div><div class="asc-trophies">${mine.map((s,i)=>`<button class="asc-tr" data-a="ascReplay" data-i="${a.summits.length-1-i}" aria-label="${esc(ASC_DATA[s.key].n)}, atteint le ${fmtDate(s.date)}">${ascMedalSVG(s.key, 56, true)}<b>${esc(ASC_DATA[s.key].n)}</b><small>${fmtDate(s.date)} ${s.date.slice(0,4)}</small></button>`).join("")}</div>` : ""}
-  </section>`;
-}
 function ascBodyHTML(a){
   const D = ASC_DATA[a.key], intro = !(S.ascent && S.ascent.intro) && a.summitCount;
-  return `<p class="asc-lead">Chaque séance te fait monter. Ta régularité et ta force décident de la vitesse.</p>
-    ${intro ? `<div class="asc-intro">${ascIc("flag")}<span>Ton historique compte déjà : ${nb(a.summitCount, "sommet")} gravi${a.summitCount>1 ? "s" : ""}, jusqu'${ascAu(a.summits[a.summits.length-1].key)}.</span></div>` : ""}
+  return `${intro ? `<div class="asc-intro">${ascIc("flag")}<span>Ton historique compte déjà : ${nb(a.summitCount, "sommet")} gravi${a.summitCount>1 ? "s" : ""}, jusqu'${ascAu(a.summits[a.summits.length-1].key)}.</span></div>` : ""}
     <section class="asc-scene" id="ascScene" aria-label="${esc(D.n)}, ${fmtNum(a.alt)} mètres">
       <div class="asc-ph">${ascSkySVG(a.key, "asc-ph-svg", true)}</div>
       ${ascHudHTML(a)}
       <div class="asc-toast" role="status" aria-live="polite"></div>
     </section>
     <section class="asc-exp" id="ascExp" aria-label="Avancement de l'expédition">${ascExpHTML(a)}</section>
-    <p class="asc-where">${esc(ascWhereTxt(a))}</p>
-    ${ascSpeedHTML(a)}${ascRegHTML(a)}${ascForceHTML(a)}${ascItinHTML(a)}${ascRewardsHTML(a)}
-    <p class="asc-credit">Montagnes calculées depuis le relief réel : swisstopo swissALTI3D (2 m) en Suisse, Copernicus GLO-30 ailleurs. Voies d'ascension réelles (© contributeurs OpenStreetMap) et refuges à leur place ; en pointillé estompé, les passages cachés derrière un relief.</p>`;
+    ${S.sessions.length ? ascWeekHTML(a) : `<section class="card asc-week"><p class="aw-msg">Chaque séance te fait monter. Ta régularité et ta force décident de la vitesse : commence par ta première séance.</p></section>`}
+    ${ascRowsHTML(a)}`;
 }
 function ascSceneToast(icn, html){
   const t = qs("#ascScene .asc-toast"); if(!t) return;
@@ -371,8 +403,11 @@ function ascMountScene(a){
     }, reducedMotion() ? 0 : 450);
   }).catch(()=>{ const host = qs("#ascScene"); if(host) host.classList.add("offline"); });
 }
+// après une pause : la carte de la semaine, les valeurs des lignes et le détail ouvert se mettent à jour sur place
 function ascRefreshSheet(){
-  const a = ascent(), reg = qs("#ascReg"); if(reg) reg.outerHTML = ascRegHTML(a);
+  const a = ascent(), wk = qs("#ascWeek"); if(wk) wk.outerHTML = ascWeekHTML(a);
+  ASC_SECS.forEach(([k, , , , v])=>{ const r = qs(`.asc-row[data-k="${k}"] .val`); if(r) r.textContent = v(a);
+    const b = qs(`#ascSec-${k} .asc-sec`); if(b) b.innerHTML = ascSecBody(k, a); });
 }
 
 // ---------- sommet atteint : plein écran ----------
@@ -455,11 +490,19 @@ function ascDescentNotice(){
 }
 
 Object.assign(ACT, {
-  openAscent(){ openAscent(); },
+  openAscent(){ ascOpen = new Set(); openAscent(); },
+  ascSec(d, el){
+    const k = d.k, on = !ascOpen.has(k), box = qs("#ascSec-"+k); if(!box) return;
+    on ? ascOpen.add(k) : ascOpen.delete(k);
+    el.classList.toggle("on", on); el.setAttribute("aria-expanded", on);
+    animateCollapse(box, on, on ? `<div class="asc-sec">${ascSecBody(k, ascent())}</div>` : "");
+  },
   ascFromCel(){ closeSheet(); setTimeout(openAscent, 320); },
   ascPause(d){
     if(!ascTogglePause(d.w)) return toast(`Déjà ${ASC_PAUSE_MAX} semaines de pause ce trimestre`);
-    save(); ascRefreshSheet(); sfx("toggle", ascPauses().includes(d.w));
+    const on = ascPauses().includes(d.w);
+    save(); ascRefreshSheet(); sfx("toggle", on);
+    toast(on ? (d.w===weekKey(todayISO()) ? "Semaine en pause : rien ne se perd" : "Semaine prochaine en pause") : "Pause annulée", on ? "check" : "undo");
   },
   ascReplay(d){ const s = ascent().summits[+d.i]; if(s) ascShowSummit(s); },
   ascSummitClose(){ const el = qs("#ascSummit"); if(!el) return; el.classList.remove("on"); setTimeout(()=>el.remove(), 450); },

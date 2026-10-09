@@ -426,6 +426,18 @@ function openModal(html){
   sheetStack = []; sheetRestore = null; sheetOnBack = null;
   showOverlay(`<div class="center-modal" role="dialog">${html}</div>`, "modal");
 }
+// La page elle-même ne doit jamais défiler (#app est fixé, chaque onglet défile seul). Sur iPhone, un geste
+// qui s'échappe d'une feuille qui se ferme pouvait pourtant la décaler : barre d'onglets remontée, haut de
+// l'écran descendu. On la remet en place, sauf pendant une saisie (iOS la déplace alors exprès pour le clavier).
+function resetDocScroll(){
+  const a = document.activeElement;
+  if(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+  const se = document.scrollingElement || document.documentElement;
+  if(se.scrollTop || se.scrollLeft) se.scrollTop = se.scrollLeft = 0;
+  if(window.scrollY || window.scrollX) window.scrollTo(0, 0);
+}
+window.addEventListener("scroll", ()=>{ if(window.scrollY || window.scrollX) requestAnimationFrame(resetDocScroll); }, { passive:true });
+document.addEventListener("focusout", ()=>setTimeout(resetDocScroll, 120));
 function closeSheet(){
   const ov = qs("#overlay");
   if(!ov.classList.contains("open")) return;
@@ -436,6 +448,7 @@ function closeSheet(){
   setTimeout(()=>{
     if(gen!==overlayGen) return;
     ov.classList.remove("open"); ov.innerHTML="";
+    resetDocScroll();
     if(dirtyOnClose){ dirtyOnClose=false; renderView(currentTab); }
   },300);
 }

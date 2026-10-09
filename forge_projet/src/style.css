@@ -2208,9 +2208,7 @@ button.set-dots::before{content:"";position:absolute;left:50%;top:50%;width:max(
 /* feuille */
 .asc-body{padding:0 16px calc(28px + var(--sab));display:flex;flex-direction:column;gap:14px}
 .asc-body .num{font-family:var(--num);font-variant-numeric:tabular-nums}
-.asc-lead{margin:0;color:var(--label2);font-size:var(--fs-sub)}
 .asc-intro{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:14px;background:var(--tint-bg);color:var(--tint-ink);font-size:var(--fs-foot);font-weight:600}
-.asc-where{margin:-4px 2px 0;font-size:var(--fs-sub);color:var(--label2)}
 .asc-credit{margin:4px 0 0;text-align:center;font-size:var(--fs-cap);color:var(--label3)}
 /* scène */
 .asc-scene{position:relative;border-radius:var(--r-hero);overflow:hidden;aspect-ratio:780/940;width:100%;isolation:isolate;background:linear-gradient(180deg,#78A8D6,#D6E4EE);flex:none}
@@ -2252,14 +2250,8 @@ button.set-dots::before{content:"";position:absolute;left:50%;top:50%;width:max(
 .asc-exp .exp-tick{position:absolute;top:50%;width:4px;height:4px;margin:-2px 0 0 -2px;border-radius:50%;background:var(--label3)}
 .asc-exp .exp-tick.past{background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
 .asc-exp .exp-me{position:absolute;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;background:var(--tint);border:3px solid var(--bg);box-shadow:0 0 0 1px var(--tint)}
-.asc-exp .exp-ends{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--label3);font-weight:600}
-.asc-exp .hatch{display:inline-block;width:14px;height:8px;border-radius:2px;margin-right:5px;background:repeating-linear-gradient(135deg,transparent 0 2px,var(--label3) 2px 3.5px)}
 /* cartes */
-.asc-body .asc-cd{margin:0;display:flex;flex-direction:column;gap:12px}
-.asc-body .card-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
-.asc-body .card-h h2{margin:0;font-family:var(--display);font-weight:700;font-size:var(--fs-t3);letter-spacing:-.015em}
 .asc-body .sub{margin:0;color:var(--label2);font-size:14px}
-.asc-body .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--tint-bg);color:var(--tint-ink);font-size:13px;font-weight:650;white-space:nowrap}
 .asc-body .formula{display:grid;grid-template-columns:1fr 1fr 1fr auto 1.2fr;align-items:start;gap:8px}
 .asc-body .f-term{display:flex;flex-direction:column;gap:3px;min-width:0}
 .asc-body .f-term b{font-family:var(--num);font-weight:700;font-size:22px;line-height:1.1;white-space:nowrap}
@@ -2277,7 +2269,6 @@ button.set-dots::before{content:"";position:absolute;left:50%;top:50%;width:max(
 .asc-body .pal .on b{color:var(--label)}
 .asc-body .pal small{font-size:11px;color:var(--label3);white-space:nowrap}
 .asc-body .weeks{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.asc-body .wk-cap{font-size:12px;margin-left:4px}
 .wk{width:18px;height:18px;border-radius:50%;flex:none;display:inline-block}
 .wk.ok{background:var(--tint)}
 .wk.frozen{background:linear-gradient(90deg,var(--tint) 50%,var(--fill) 50%)}
@@ -2293,11 +2284,6 @@ button.set-dots::before{content:"";position:absolute;left:50%;top:50%;width:max(
 .asc-pause .ap-t .asc-ic{color:var(--green);margin-top:1px}
 .asc-pause .ap-b{display:flex;gap:8px;flex-wrap:wrap}
 .asc-pause .ap-b .btn{flex:1 1 0;width:auto;min-width:0;margin:0}
-.asc-body details.rules{border-top:.5px solid var(--sep);padding-top:10px}
-.asc-body details.rules summary{cursor:pointer;font-weight:650;font-size:14.5px;color:var(--tint-ink);list-style:none;min-height:32px;display:flex;align-items:center}
-.asc-body details.rules summary::-webkit-details-marker{display:none}
-.asc-body details.rules ul{margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--label2)}
-.asc-body details.rules li b{color:var(--label);font-weight:650}
 .asc-body .cond{display:grid;grid-template-columns:auto 1fr;gap:10px 12px;align-items:center}
 .asc-body .cond-x{font-weight:700;font-size:30px;line-height:1}
 .asc-body .wx{display:flex;gap:12px;align-items:flex-start;padding:12px;border-radius:12px;background:var(--fill2)}
@@ -2337,7 +2323,6 @@ button.set-dots::before{content:"";position:absolute;left:50%;top:50%;width:max(
 .asc-body .tier{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;font-size:11.5px;color:var(--label2)}
 .asc-body .tier .asc-medal{width:38px;height:38px}
 .asc-body .tier b{font-size:12.5px;color:var(--label);font-weight:650}
-.asc-body .asc-mine{margin:8px 0 0}
 .asc-trophies{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
 .asc-tr{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;border-radius:14px;background:var(--fill2);text-align:center;transition:transform .15s}
 .asc-tr:active{transform:scale(.95)}
@@ -2396,3 +2381,42 @@ button.set-dots::before{content:"";position:absolute;left:50%;top:50%;width:max(
 .asc-hint .link{display:inline;color:var(--tint-ink);font-weight:650;padding:0;min-height:0}
 .asc-pause .ap-b .btn.on{color:var(--green)}
 .asc-pause .ap-b .btn svg{width:15px;height:15px;vertical-align:-2px}
+/* ascension : hiérarchie claire (où j'en suis → cette semaine → détail replié) */
+.asc-exp .exp-next{margin:2px 0 0;font-size:var(--fs-sub);color:var(--label2);line-height:1.4}
+.asc-exp .exp-next b{color:var(--label);font-weight:650}
+.asc-week{margin:0;display:flex;flex-direction:column;gap:10px}
+.asc-week .aw-hd{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.asc-week h2{margin:0;font-family:var(--display);font-weight:700;font-size:var(--fs-t3);letter-spacing:-.015em}
+.asc-week .aw-n{font-size:var(--fs-sub);color:var(--label2)}
+.asc-week .aw-n b{font-size:22px;font-weight:700;color:var(--label)}
+.asc-week .aw-dots{display:flex;gap:6px}
+.asc-week .aw-dots i{flex:1;height:8px;border-radius:4px;background:var(--fill)}
+.asc-week .aw-dots i.on{background:var(--tint)}
+.asc-week .aw-msg{margin:0;font-size:var(--fs-callout);line-height:1.4}
+.asc-week .aw-msg b{font-weight:650}
+.asc-week .aw-speed{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:var(--fill2);font-size:var(--fs-sub);color:var(--label2);line-height:1.4}
+.asc-week .aw-speed .asc-ic{color:var(--tint-ink);margin-top:1px}
+.asc-week .aw-speed b{color:var(--label);font-weight:650}
+.asc-week .aw-speed b.num{color:var(--tint-ink);font-family:var(--num);font-weight:700}
+.asc-week .aw-pause{align-self:flex-start;min-height:36px;padding:0;font-size:var(--fs-foot);font-weight:600;color:var(--label2);text-decoration:underline;text-decoration-color:var(--sep);text-underline-offset:3px}
+.asc-week .aw-pause[aria-pressed="true"]{color:var(--green)}
+.asc-week .aw-pause:disabled{opacity:.6;text-decoration:none}
+.asc-body > *{flex-shrink:0}  /* colonne de hauteur fixe : un bloc en overflow:hidden y serait écrasé à 0 */
+.asc-body .asc-rows{margin:0}
+.asc-row{width:100%;text-align:left}
+.asc-row .val{color:var(--label2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.asc-row .chev svg{transition:transform .25s cubic-bezier(.32,.72,0,1)}
+.asc-row.on .chev svg{transform:rotate(90deg)}
+.asc-sec{padding:4px 16px 16px;display:flex;flex-direction:column;gap:12px}
+.asc-row + .asc-clp:not(:empty){box-shadow:inset 0 .5px 0 var(--sep)}
+.asc-sec .asc-wk-h{font-size:var(--fs-cap);font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--label2);margin-top:4px}
+.asc-rules{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font-size:14px;color:var(--label2);line-height:1.4}
+.asc-rules b{color:var(--label);font-weight:650}
+.asc-sec .asc-credit{text-align:left;margin:0}
+.asc-sec .stage{margin-left:34px}
+/* iPhone : la page elle-même ne défile ni ne rebondit jamais. Un glissement qui s'échappait d'une feuille au
+   moment où elle se fermait pouvait la décaler (barre d'onglets remontée, haut de l'écran descendu). Les barres
+   du bas sont collées à l'écran (et non au document), les feuilles retiennent leur défilement. */
+html,body{overscroll-behavior:none}
+.tabbar,#restbar{position:fixed}
+.sheet-body{overscroll-behavior:contain}

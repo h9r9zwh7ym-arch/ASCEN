@@ -104,12 +104,19 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await wait(wk ? 3500 : 3000);
   const sheet = await page.evaluate(() => { const a = ascent(), h = document.querySelector('#ascScene'), svg = h.querySelector('.asc-svg');
     return { ready: h.classList.contains('ready'), paths: svg.querySelectorAll('path[class^="ak"]').length, camps: svg.querySelectorAll('.asc-camp').length, exp: ASC_DATA[a.key].camps.length,
-      hud: h.querySelector('.hud-n').textContent, name: ASC_DATA[a.key].n, cards: [...document.querySelectorAll('.asc-body .card-h h2')].map(x => x.textContent).join('|'),
-      stops: document.querySelectorAll('.asc-body .stops li').length, me: !!svg.querySelector('.asc-me[transform]'), seen: S.ascent.seen && S.ascent.seen.key === a.key,
+      hud: h.querySelector('.hud-n').textContent, name: ASC_DATA[a.key].n, cards: [...document.querySelectorAll('.asc-body .asc-row .t')].map(x => x.textContent).join('|'),
+      week: !!document.querySelector('#ascWeek .aw-msg'), next: (document.querySelector('.asc-exp .exp-next') || {}).textContent || '', rowsH: Math.round(document.querySelector('.asc-rows').getBoundingClientRect().height),
+      folded: document.querySelectorAll('.asc-body .stops li').length, me: !!svg.querySelector('.asc-me[transform]'), seen: S.ascent.seen && S.ascent.seen.key === a.key,
       day: svg.innerHTML.includes('#78A8D6') || svg.innerHTML.includes('#6EA2D2') || svg.innerHTML.includes('#5A8CCD') || svg.innerHTML.includes('#2F62B4') }; });
   log('Sheet:', JSON.stringify(sheet));
-  if (!sheet.ready || sheet.paths < 20 || sheet.camps !== sheet.exp || sheet.hud !== sheet.name || sheet.stops !== 13 || !sheet.me || !sheet.seen || !sheet.day) fail('écran Mon ascension : scène, camps, HUD, itinéraire');
-  if (sheet.cards !== 'Vitesse de montée|Régularité|Force|Itinéraire|Au sommet') fail('cartes de l\'écran');
+  if (!sheet.ready || sheet.paths < 20 || sheet.camps !== sheet.exp || sheet.hud !== sheet.name || !sheet.me || !sheet.seen || !sheet.day) fail('écran Mon ascension : scène, camps, HUD');
+  // lisibilité : où j'en suis (une phrase), cette semaine, puis le détail replié en lignes (visibles : la colonne ne les écrase pas)
+  if (sheet.cards !== 'Vitesse de montée|Régularité|Force|Itinéraire|Trophées de sommet|Comment ça marche' || !sheet.week || !/^(Prochain camp|Sommet dans|Prochaine expédition)/.test(sheet.next) || sheet.rowsH < 250 || sheet.folded) fail('écran : hiérarchie et détail replié');
+  await page.click('.asc-row[data-k="itin"]'); await wait(700);
+  const itin = await page.evaluate(() => ({ stops: document.querySelectorAll('#ascSec-itin .stops li').length, exp: document.querySelector('.asc-row[data-k="itin"]').getAttribute('aria-expanded') }));
+  await page.click('.asc-row[data-k="itin"]'); await wait(600);
+  const itin2 = await page.evaluate(() => document.querySelectorAll('#ascSec-itin .stops li').length);
+  log('Itinerary:', JSON.stringify(itin), itin2); if (itin.stops !== 13 || itin.exp !== 'true' || itin2) fail('itinéraire déplié puis replié');
   await shot('02_sheet');
   await page.evaluate(() => { document.querySelector('.asc-body').scrollTop = 900; }); await wait(300); await shot('03_sheet_reg');
   // pause : bouton, état, nombre restant
@@ -120,6 +127,11 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   log('Pause:', JSON.stringify(pz), pz2);
   if (pz.p.length !== 1 || !pz.on || !pz.paused || pz2 !== 0) fail('pause déclarée puis annulée');
   await page.evaluate(() => closeSheet()); await wait(500);
+  // iPhone : après la fermeture, la page ne doit pas rester décalée (barre d'onglets collée à l'écran, page sans défilement)
+  const lay = await page.evaluate(() => { const t = document.querySelector('.tabbar'), r = t.getBoundingClientRect();
+    return { pos: getComputedStyle(t).position, bottom: Math.round(r.bottom), h: innerHeight, sy: scrollY, ob: getComputedStyle(document.documentElement).overscrollBehaviorY, reset: typeof resetDocScroll }; });
+  log('Layout after close:', JSON.stringify(lay));
+  if (lay.pos !== 'fixed' || lay.bottom !== lay.h || lay.sy || lay.ob !== 'none' || lay.reset !== 'function') fail('page en place après la fermeture');
 
   // 4. fin de séance : altitude gagnée (plus d'XP) ; puis une séance qui atteint le sommet
   const fin = () => page.evaluate(() => {

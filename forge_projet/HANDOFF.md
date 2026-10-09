@@ -987,7 +987,13 @@ Demande de YaYa : une motivation « sympa », pas une app de montagne. Chaque s�
 **Où on la voit** (pas d'onglet en plus) :
 - Accueil : 3ᵉ pastille = altitude et montagne (`ascPillHTML`) ; « Prochain cap » par défaut = prochain camp ou série requise.
 - Progrès › Objectifs : carte « Mon ascension » avec la silhouette (`ascCardHTML`). Profil : « Cervin · 2 872 m · 7 sommets ».
-- **Écran « Mon ascension »** (`openAscent`, feuille haute, `view_ascent.js`) : scène, HUD (expédition n sur 13, altitude), barre de l'expédition (camps, dernière ligne droite hachurée), cartes Vitesse de montée (formule de la dernière séance), Régularité (paliers, 13 dernières semaines, conseil d'objectif, **pause**, règles), Force, Itinéraire (Suisse / Alpes / Le monde, séries requises), Au sommet (trophée du prochain sommet, carte de sommet, métal par difficulté, **Mes sommets**). À l'ouverture, le grimpeur rejoue la montée (ou la descente) depuis la dernière visite, avec les camps qui sautent et leurs sons.
+- **Écran « Mon ascension »** (`openAscent`, feuille haute, `view_ascent.js`). Retour de YaYa : « énormément d'info, on ne sait pas ce qui est important ». D'où trois niveaux :
+  1. **Où j'en suis** : la scène et son HUD (expédition n sur 13, altitude), la barre de l'expédition (camps, dernière ligne droite hachurée) et UNE phrase (« Prochain camp : Hörnlihütte dans 75 m, environ 3 séances »).
+  2. **Cette semaine** (`ascWeekHTML`), la seule chose à faire : séances faites sur l'objectif, ce que ça change (« Encore 2 séances d'ici dimanche : ta série passera à 13 semaines » ; sans séance, on redescendrait), la vitesse actuelle et le prochain palier, et le lien « Mettre la semaine en pause ».
+  3. **Le détail, replié** (`ASC_SECS`, `ascRowsHTML`, `ACT.ascSec` avec `animateCollapse`) : une ligne par sujet avec sa valeur (Vitesse de montée, Régularité, Force, Itinéraire, Trophées de sommet, Comment ça marche). L'état ouvert est gardé tant que la feuille est ouverte (`ascOpen`), remis à zéro à chaque ouverture.
+  À l'ouverture, le grimpeur rejoue la montée (ou la descente) depuis la dernière visite, avec les camps qui sautent et leurs sons.
+  - **Piège** : `.asc-body` est une colonne flexible de hauteur fixe ; un enfant en `overflow:hidden` (le `.group` des lignes) y était écrasé à 0 px. D'où `.asc-body > *{flex-shrink:0}`.
+- **iPhone, page décalée après la fermeture** (capture de YaYa : barre d'onglets remontée, haut de l'écran descendu, bande noire en haut). Non reproduit hors iPhone : un geste qui s'échappe d'une feuille au moment où elle se ferme faisait défiler ou rebondir le document lui-même. Correctifs : `.tabbar` et `#restbar` en `position:fixed` (collées à l'écran et non au document), `overscroll-behavior:none` sur `html`/`body` et `contain` sur `.sheet-body`, `resetDocScroll()` (ui_shell.js) à chaque fermeture de feuille, à la sortie d'un champ et dès que la page défile (sauf pendant une saisie, où iOS la déplace exprès pour le clavier).
 - **Fin de séance** : bloc « +36 m » (compteur, barre de l'expédition, régularité et force, camps franchis) à la place de l'XP ; si le sommet est atteint, « Voir le sommet » ouvre le **plein écran du sommet** (médaille gravée de la vraie silhouette, faits, cadeaux, flocons) et la **carte de sommet** à partager (canvas 1080 × 1350, `ascDrawCard`).
 - Démarrage : une semaine sans séance est annoncée une fois (`ascDescentNotice`).
 - Sons (`SFX.ascClimb`, `ascCamp`, `ascDown`, `ascSummit`).
@@ -997,7 +1003,7 @@ Demande de YaYa : une motivation « sympa », pas une app de montagne. Chaque s�
 - `vendor/ascent-scenes.js` (≈ 680 Ko, ≈ 140 Ko compressé) : les 13 scènes (tracés relatifs entiers) et les voies. Copié à côté de la page par `build.sh`, **chargé à la demande** (`ascLoadScenes`) comme Three.js, préchargé dans le cache dès le premier lancement en ligne (`ascPrefetch`), service worker `forge-v30`. Sans le fichier : la silhouette s'affiche, rien ne casse.
 - **Régénérer** : `tools/ascent/` (Python : relief, rendu, vectorisation, voies OSM, export) ; voir `tools/ascent/README.md`.
 
-**Tests** : `tests/v50.js` (règles du moteur, données abîmées, écrans, célébration, sommet, nuit, descente, repli hors ligne) ; `v12`, `v25`, `v43` suivent la disparition du niveau.
+**Tests** : `tests/v50.js` (règles du moteur, données abîmées, écrans, hiérarchie et détail replié, page en place après la fermeture, célébration, sommet, nuit, descente, repli hors ligne) ; `v12`, `v25`, `v43` suivent la disparition du niveau.
 
 ## 10. Cahier des charges d'origine (résumé)
 
