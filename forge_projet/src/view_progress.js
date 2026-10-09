@@ -84,17 +84,6 @@ function exoProjection(){
     return { def, cur, proj, date:addDaysISO(todayISO(), 56) };
   });
 }
-function levelCardHTML(){
-  const lv = levelInfo();
-  return `<div class="level-card stagger" style="--i:0">
-    <div class="lv-badge"><span>${lv.level}</span></div>
-    <div class="grow">
-      <div class="lv-title">Niveau ${lv.level} · ${esc(lv.title)}</div>
-      <div class="xpbar"><span style="width:${Math.round(lv.pct*100)}%"></span></div>
-      <div class="lv-sub"><span data-count="${lv.xp}" data-unit="XP">${fmtNum(lv.xp)} XP</span> · encore ${fmtNum(lv.next-lv.xp)} XP pour le niveau ${lv.level+1}</div>
-    </div>
-  </div>`;
-}
 
 function overviewPaneHTML(){
   if(!S.sessions.length){
@@ -138,7 +127,7 @@ function musclesPaneHTML(){
   return weekMuscleMapHTML();
 }
 // Objectifs : niveau, objectifs chiffrés, défis, puis les trophées
-function goalsPaneHTML(){ return `${levelCardHTML()}${targetsHTML()}${challengesHTML()}${medalsPaneHTML()}`; }
+function goalsPaneHTML(){ return `${ascCardHTML()}${targetsHTML()}${challengesHTML()}${medalsPaneHTML()}`; }
 
 function exoSeries(id){
   const def = EXO_MAP[id], loaded = !!kgType(def), pts = [];

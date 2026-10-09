@@ -191,7 +191,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
 
   // streak check (timezone Europe/Zurich)
   log('High tiers:', await page.evaluate(() => MEDALS.filter(m => medalTier(m) >= 3).map(m => m.id + ':' + medalTier(m) + ' v=' + m.val()).join(', ')));
-  log('Streak weeks:', await page.evaluate(() => currentStreakWeeks()), 'max:', await page.evaluate(() => maxStreakWeeksEver()), 'level:', await page.evaluate(() => JSON.stringify(levelInfo())));
+  log('Streak weeks:', await page.evaluate(() => currentStreakWeeks()), 'max:', await page.evaluate(() => maxStreakWeeksEver()), 'ascent:', await page.evaluate(() => { const a = ascent(); return a.key + ' ' + Math.round(a.alt); }));
 
   await browser.close();
   if (errors.length) { console.log('=== ERRORS ==='); errors.forEach(e => console.log(e)); process.exit(1); }

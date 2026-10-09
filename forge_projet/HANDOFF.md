@@ -31,7 +31,7 @@ Pour un smoke test automatisé (Playwright/Chromium déjà installé dans les en
 
 ```
 style.css
-data_equipment.js data_exercises.js
+data_equipment.js data_exercises.js data_pictos.js data_rigs.js data_ascent.js   (data_ascent.js AVANT core.js : load() lit ASC_DATA)
 core.js engine.js
 ui_shell.js sfx.js fx.js timer.js charts.js trophies.js
 view_today.js tpl_editor.js onboarding.js view_history.js view_progress.js view_profil.js
@@ -968,6 +968,36 @@ Mesures (`tests/tab_perf.js`, processeur ×4, 3 ans d'historique) :
 - Tour visuel de 27 écrans en clair et en sombre (`tests/tour.js` + `tests/montage.js`) ; audit d'accessibilité repassé (`tests/ux_audit.js`).
 - Test du singe (`tests/monkey.js`) : environ 3 000 touchers aléatoires sur Chromium et WebKit, sans erreur. Une version courte est ajoutée à `run.sh`.
 - `tests/v39.js` couvre toutes les nouveautés.
+
+## 9 undetricies. L'ascension (toujours 4.0 ; remplace le niveau XP)
+
+Demande de YaYa : une motivation « sympa », pas une app de montagne. Chaque séance fait gravir de **vraies montagnes**, de la Gruyère à l'Everest. Décisions prises avec lui (maquettes successives, planche de validation des silhouettes) :
+- **13 expéditions**, Everest en dernier : Moléson, Pilatus, Titlis, Eiger, Mönch, Jungfrau, Dent Blanche, Cervin, Mont Blanc, Kilimandjaro, Aconcagua, K2, Everest. Puis un 2ᵉ tour, plus exigeant (×1/(1+0,25·tour)).
+- **Vitesse d'une séance = effort × régularité × force** (`ascent.js`) :
+  - effort : séries difficiles (une série « 3 ou + en réserve » compte ½, comme la charge d'entraînement), plafonnées à 20 ; 11 m pour 15 séries ;
+  - régularité : la **série de semaines où l'objectif (`S.goals.daysPerWeek`) est tenu**, paliers 0/2/4/8/12/20 semaines → ×0,5/1/1,5/2/2,5/3 ;
+  - force : indice de force (`strengthAt`, strength.js) amorti (+10 % de force → +6 % de vitesse), borné ×0,85–×1,6, recalculé par blocs fixes de 4 semaines.
+- **Règles de semaine** (semaines terminées seulement) : objectif tenu → série +1 ; objectif raté une fois → série gelée ; raté une 2ᵉ fois en 4 semaines → un palier de moins ; **semaine sans séance** → un palier de moins ET **retour au camp précédent** (les sommets restent acquis) ; semaine allégée (`S.deloadLog`, `S.deload`, ou exercice `deload`) ou **pause déclarée** (2 semaines par trimestre, `S.ascent.pauses`, cette semaine ou la suivante) → rien ne se perd.
+- **Séries requises** pour partir vers une montagne (`ASC_REQ`) : Pilatus 2, Titlis 4, Eiger → Cervin 8, Mont Blanc et Kilimandjaro 12, Aconcagua, K2, Everest 20. Au sommet, on attend ; les séances suivantes ne font pas monter tant que la série n'y est pas (`log[id].waiting`).
+- **Dernière ligne droite** (12 derniers % du dénivelé) : pleine vitesse si la force est à 95 % de son meilleur niveau des 6 derniers mois, sinon mi-vitesse.
+- **Rythme vérifié** par simulation (3 profils, 3 à 5 ans) : régulier 3×/semaine → Everest en ≈ 4,4 ans ; 4×/semaine → 2,8 ans ; irrégulier (≈ 1,8 séance/sem., objectif 3) → Moléson puis Pilatus en 5 ans, bloqué avant le Titlis ; occasionnel → presque rien. 2×/semaine avec un objectif de 3 ne tient jamais la série : la carte Régularité propose alors de passer l'objectif à 2 (`ascGoalHint`).
+- **Tout est recalculé depuis l'historique** (`ascent()`, mémorisé par jour et par version des données, 13–18 ms à froid pour 3 ans avec un processeur ×4) : corriger ou supprimer une séance corrige l'ascension. `S.ascent` ne garde que `pauses`, `seen` (dernière position vue, pour rejouer la montée), `descSeen` (dernière descente annoncée) et `intro`. Nettoyé par `normalizeState`.
+- Le **niveau XP est supprimé** (`totalXP`, `levelInfo`, titres, carte de niveau, XP de la célébration) ; l'ascension le remplace partout.
+
+**Où on la voit** (pas d'onglet en plus) :
+- Accueil : 3ᵉ pastille = altitude et montagne (`ascPillHTML`) ; « Prochain cap » par défaut = prochain camp ou série requise.
+- Progrès › Objectifs : carte « Mon ascension » avec la silhouette (`ascCardHTML`). Profil : « Cervin · 2 872 m · 7 sommets ».
+- **Écran « Mon ascension »** (`openAscent`, feuille haute, `view_ascent.js`) : scène, HUD (expédition n sur 13, altitude), barre de l'expédition (camps, dernière ligne droite hachurée), cartes Vitesse de montée (formule de la dernière séance), Régularité (paliers, 13 dernières semaines, conseil d'objectif, **pause**, règles), Force, Itinéraire (Suisse / Alpes / Le monde, séries requises), Au sommet (trophée du prochain sommet, carte de sommet, métal par difficulté, **Mes sommets**). À l'ouverture, le grimpeur rejoue la montée (ou la descente) depuis la dernière visite, avec les camps qui sautent et leurs sons.
+- **Fin de séance** : bloc « +36 m » (compteur, barre de l'expédition, régularité et force, camps franchis) à la place de l'XP ; si le sommet est atteint, « Voir le sommet » ouvre le **plein écran du sommet** (médaille gravée de la vraie silhouette, faits, cadeaux, flocons) et la **carte de sommet** à partager (canvas 1080 × 1350, `ascDrawCard`).
+- Démarrage : une semaine sans séance est annoncée une fois (`ascDescentNotice`).
+- Sons (`SFX.ascClimb`, `ascCamp`, `ascDown`, `ascSummit`).
+
+**La scène** : la vraie montagne vue d'un point de vue classique, calculée par lancer de rayons sur le relief (swisstopo swissALTI3D 2 m en Suisse, Copernicus GLO-30 ailleurs), vectorisée en 27 aplats (plan × matière × lumière, palettes jour et nuit selon le thème), avec la **vraie voie d'ascension** (OpenStreetMap ; arête suivie sur le relief quand elle n'y est pas) projetée dans la vue : Hörnli au Cervin, Goûter au Mont Blanc, flanc ouest de l'Eiger, Nollen au Mönch, Guggi à la Jungfrau, Wandfluegrat à la Dent Blanche, Machame au Kilimandjaro (vu de Moshi), voie normale à l'Aconcagua (cachée depuis la face sud : en pointillé estompé), Abruzzes au K2, voie nord à l'Everest. Refuges à leur place et altitudes officielles ; camps génériques entre eux ; parties cachées par le relief estompées, hors cadre bornées au bord.
+- `src/data_ascent.js` (6 Ko, embarqué) : départs, sommets, camps `[progression, nom, altitude réelle]`, silhouette compacte (`sky`) pour les vignettes et médailles.
+- `vendor/ascent-scenes.js` (≈ 680 Ko, ≈ 140 Ko compressé) : les 13 scènes (tracés relatifs entiers) et les voies. Copié à côté de la page par `build.sh`, **chargé à la demande** (`ascLoadScenes`) comme Three.js, préchargé dans le cache dès le premier lancement en ligne (`ascPrefetch`), service worker `forge-v30`. Sans le fichier : la silhouette s'affiche, rien ne casse.
+- **Régénérer** : `tools/ascent/` (Python : relief, rendu, vectorisation, voies OSM, export) ; voir `tools/ascent/README.md`.
+
+**Tests** : `tests/v50.js` (règles du moteur, données abîmées, écrans, célébration, sommet, nuit, descente, repli hors ligne) ; `v12`, `v25`, `v43` suivent la disparition du niveau.
 
 ## 10. Cahier des charges d'origine (résumé)
 

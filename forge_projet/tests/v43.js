@@ -28,7 +28,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.click('.tabbtn[data-id="progress"]'); await wait(700);
   const tab = async v => { await page.evaluate(v => ACT.progressTab({ v }), v); await wait(400);
     return page.evaluate(() => ({ trend: !!document.querySelector('#v-progress .trend-card'), kpi: document.querySelectorAll('#v-progress .kpi').length, heat: !!document.querySelector('#v-progress .heatmap, #v-progress .hm'), habits: !!document.querySelector('#v-progress .group.habits'),
-      level: !!document.querySelector('#v-progress .level-card'), mm: !!document.querySelector('#v-progress .mm-card'), stim: !!document.querySelector('#v-progress .stim-card'), medals: !!document.querySelector('#v-progress .medal-summary'),
+      level: !!document.querySelector('#v-progress .asc-card'), mm: !!document.querySelector('#v-progress .mm-card'), stim: !!document.querySelector('#v-progress .stim-card'), medals: !!document.querySelector('#v-progress .medal-summary'),
       exos: !!document.querySelector('#v-progress [data-a="openExoChart"]'), titles: [...document.querySelectorAll('#v-progress .sh, #v-progress .cc-t')].map(e => e.textContent.trim()) })); };
   const labels = await page.$$eval('[data-seg="progress"] button', b => b.map(x => x.textContent));
   const ov = await tab('overview'), mu = await tab('muscles'), ex = await tab('exos'), go = await tab('medals');

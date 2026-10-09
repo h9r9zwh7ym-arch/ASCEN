@@ -7,15 +7,15 @@ const LEVEL_HINTS = { debutant:"Moins d'un an de musculation régulière : exerc
 function ownedEquipCount(){ return EQUIP_TYPES.filter(e=>!e.always && S.equipment.owned[e.id]).length; }
 
 function profileHeroHTML(){
-  const lv = levelInfo(), name = (S.settings.name||"").trim();
+  const a = ascent(), D = ASC_DATA[a.key], name = (S.settings.name||"").trim();
   const since = firstSessionDate();
   const initial = name ? esc(name[0].toUpperCase()) : `<svg viewBox="0 0 24 24" class="ph-person">${GLYPHS.person.replace(/#fff/g,"currentColor")}</svg>`;
   return `<div class="profile-hero stagger" style="--i:0">
-    <button class="ph-avatar" data-a="editName" aria-label="Modifier ton prénom"><span>${initial}</span><em>${lv.level}</em></button>
+    <button class="ph-avatar" data-a="editName" aria-label="Modifier ton prénom"><span>${initial}</span></button>
     <div class="ph-main">
       <button class="ph-name" data-a="editName">${name?esc(name):"Ajoute ton prénom"} ${icon("edit")}</button>
-      <div class="ph-title">Niveau ${lv.level} · ${esc(lv.title)}</div>
-      <div class="xpbar"><span style="width:${Math.round(lv.pct*100)}%"></span></div>
+      <button class="ph-title ph-asc" data-a="openAscent">${a.wait ? `Au sommet ${ascDu(a.key)}` : `${esc(D.n)} · ${fmtNum(a.alt)} m`}${a.summitCount ? ` · ${nb(a.summitCount, "sommet")}` : ""} ${icon("chev")}</button>
+      <div class="xpbar"><span style="width:${Math.round(Math.max(0, Math.min(1, a.done))*100)}%"></span></div>
       <div class="ph-sub">${since?`Membre actif depuis le ${fmtDate(since)} ${parseISO(since).getFullYear()}`:"Ta première séance t'attend"}</div>
       <button class="ph-why ${S.settings.why?"":"empty"}" data-a="editWhy">${S.settings.why ? `« ${esc(S.settings.why)} »` : "Ajoute ton pourquoi"} ${icon("edit")}</button>
     </div>

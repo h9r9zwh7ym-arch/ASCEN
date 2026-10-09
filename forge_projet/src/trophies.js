@@ -436,13 +436,13 @@ function sessionWins(session){
   }
   return out;
 }
-function showCelebration(session, ups, xpBefore, xpAfter, hits, won){
+function showCelebration(session, ups, hits, won){
   const vol = Math.round(sessionVolume(session));
   const sets = sessionSetCount(session);
   const prs = sessionPRCount(session);
   const reps = sessionReps(session);
-  const before = levelInfo(xpBefore), after = levelInfo(xpAfter);
-  const levelUp = after.level>before.level;
+  // l'ascension remplace l'XP : altitude gagnée, camps franchis, sommet
+  const asc = typeof ascent==="function" ? ascent().log[session.id] : null, summit = asc && asc.summit, moved = !!(asc && (asc.camps.length || asc.summit || asc.started));
   const medalsHTML = ups.length ? `<div class="cel-medals">${ups.map((u,i)=>`<div class="cel-medal" style="--i:${i}">${medalHTML(u.m,u.tier)}<div class="cm-t">${esc(u.m.n)}</div><div class="cm-tier">${tierLabel(u.m, u.tier)}</div></div>`).join("")}</div>` : "";
   openModal(`<div class="cel">
     <div class="celebrate-ring">${icon("check")}</div>
@@ -459,11 +459,7 @@ function showCelebration(session, ups, xpBefore, xpAfter, hits, won){
     ${sessionWins(session).map((w,i)=>`<div class="cel-prog cel-win ${w.soft?"soft":""}" style="--i:${i+2}">${ii(w.ic)}<span>${esc(w.t)}</span></div>`).join("")}
     ${(hits||[]).map((t,i)=>`<div class="cel-target" style="--i:${i}">${ii("target")} Objectif atteint : ${esc(EXO_MAP[t.exoId].n)}, ${fmtTarget(t.kind, t.value)}</div>`).join("")}
     ${(won||[]).map((c,i)=>`<div class="cel-target cel-chal" style="--i:${(hits||[]).length+i}">${ii("star")} Défi réussi : ${esc(CHAL_MAP[c.id].n)}</div>`).join("")}
-    <div class="cel-xp">
-      <div class="cel-xp-hd"><span>${levelUp?`Niveau ${after.level} atteint !`:`Niveau ${after.level}`}</span><span class="xpg">+${xpAfter-xpBefore} XP</span></div>
-      <div class="xpbar"><span id="celXp" style="width:${Math.round((levelUp?0:before.pct)*100)}%"></span></div>
-      <div class="cel-xp-sub">${esc(after.title)}</div>
-    </div>
+    ${typeof ascCelHTML==="function" ? ascCelHTML(session.id) : ""}
     ${medalsHTML}
     <button class="cel-note-btn" data-a="celNote" data-id="${esc(session.id)}">${icon("edit")} Ajouter une note</button>
     ${typeof lastDoneForSave!=="undefined" && lastDoneForSave ? `<div class="cel-save">
@@ -471,14 +467,15 @@ function showCelebration(session, ups, xpBefore, xpAfter, hits, won){
       <div class="cs-s">Enregistre-la pour la refaire ou la placer dans ta semaine.</div>
       <button class="btn secondary" data-a="saveDoneSession">${icon("bookmark")} Enregistrer cette séance</button>
     </div>` : ""}
-    <button class="btn" style="margin-top:14px" data-a="closesheet">Continuer</button>
+    <button class="btn" style="margin-top:14px" ${summit ? `data-a="ascCelSummit" data-id="${esc(session.id)}"` : 'data-a="closesheet"'}>${summit ? "Voir le sommet" : "Continuer"}</button>
   </div>`);
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    const bar = qs("#celXp"); if(bar) bar.style.width = Math.round(after.pct*100)+"%";
+    if(typeof ascCelAnimate==="function") ascCelAnimate();
     animateCounts(qs(".cel"));
   }));
-  setTimeout(()=>confettiBurst(null, innerHeight*0.3, ups.length||levelUp||(hits&&hits.length) ? 150 : 90), 150);
-  setTimeout(()=>sfx(ups.length||levelUp||(hits&&hits.length) ? "medal" : "exo"), 200);
+  setTimeout(()=>confettiBurst(null, innerHeight*0.3, ups.length||moved||(hits&&hits.length) ? 150 : 90), 150);
+  setTimeout(()=>sfx(ups.length||moved||(hits&&hits.length) ? "medal" : "exo"), 200);
+  if(asc && asc.camps.length) setTimeout(()=>sfx("ascCamp"), 1100);
 }
 
 Object.assign(ACT, {

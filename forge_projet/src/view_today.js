@@ -34,7 +34,6 @@ function greeting(){
 function statPillsHTML(){
   // résumé de la semaine : trois colonnes de même structure (valeur, libellé, jauge)
   const goal = S.goals.daysPerWeek||3, done = sessionsThisWeek(), si = streakInfo(), streak = si.n;
-  const lv = levelInfo();
   return `<div class="stat-pills stagger" style="--i:1">
     <button class="spill ${done>=goal?"full":""}" data-a="tab" data-id="progress" aria-label="${done} séances sur ${goal} cette semaine">
       <span class="sp-v"><b data-count="${done}">${done}</b><i>/${goal}</i></span>
@@ -46,11 +45,7 @@ function statPillsHTML(){
       <span class="sp-l">${si.recent ? "joker utilisé" : "d'affilée"}</span>
       <span class="spg spg-dots">${[0,1,2,3,4].map(k=>`<i class="${k<Math.min(streak,5)?"on":""}"></i>`).join("")}</span>
     </button>
-    <button class="spill" data-a="tab" data-id="profil" aria-label="Niveau ${lv.level}">
-      <span class="sp-v"><i>niv.</i><b>${lv.level}</b></span>
-      <span class="sp-l">${Math.round(lv.pct*100)} % vers le ${lv.level+1}</span>
-      <span class="spg"><i style="width:${Math.round(lv.pct*100)}%"></i></span>
-    </button>
+    ${ascPillHTML()}
   </div>`;
 }
 // ---------- prochain cap (réglage Motivation) ----------
@@ -88,8 +83,9 @@ function nextGoal(){
   if(best){ const { m, p } = best, rest = p.next - p.v;
     return { ic:"trophy", pct:p.pct, act:`data-a="showMedal" data-id="${m.id}"`,
       t:`${TIERS[p.t+1].n} « ${m.n} » : plus que ${fmtMedalVal(m, rest)} ${medalUnit(m, rest)}` }; }
-  const lv = levelInfo(), toGo = lv.next-lv.xp, perSession = 50 + 2*Math.max(10, Math.round(totalSets()/Math.max(1,S.sessions.length)));
-  return { ic:"star", pct:lv.pct, act:'data-a="tab" data-id="profil"', t:`Niveau ${lv.level+1} dans ${fmtNum(toGo)} XP, environ ${nb(Math.max(1, Math.ceil(toGo/perSession)), "séance")}` };
+  // sinon : l'ascension (prochain camp, ou la série qui ouvre la montagne suivante)
+  const a = ascent();
+  return { ic:"trendUp", pct:a.wait ? Math.min(1, a.series/Math.max(1, a.nextReq)) : a.done, act:'data-a="openAscent"', t:ascWhereTxt(a) };
 }
 function nextGoalHTML(){
   if(S.settings.nextGoal===false) return "";
@@ -925,7 +921,6 @@ function overviewBodyHTML(){
 let lastDoneForSave = null;
 function finalizeSession(){
   const draft = S.draft;
-  const xpBefore = totalXP();
   draft.completedAt = new Date().toISOString();
   draft.durationSec = Math.round((Date.parse(draft.completedAt)-Date.parse(draft.startedAt))/1000);
   draft.exos = draft.exos.filter(ex=>ex.sets.some(s=>s.done));
@@ -953,11 +948,10 @@ function finalizeSession(){
   const won = checkChallenges(); // avant les trophées : « Défis relevés » compte la réussite
   const ups = checkMedals();
   const hits = checkTargets();
-  const xpAfter = totalXP();
   save();
   scrollTodayTop();
   renderViewAnimated("today");
-  showCelebration(draft, ups, xpBefore, xpAfter, hits, won);
+  showCelebration(draft, ups, hits, won);
 }
 
 // changer d'écran (aperçu ↔ séance en cours) repart du haut de la page

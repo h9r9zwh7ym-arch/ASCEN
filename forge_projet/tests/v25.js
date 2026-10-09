@@ -83,14 +83,12 @@ const OUT = path.join(OUT_ROOT, 'v25'); fs.mkdirSync(OUT, { recursive: true });
     b.dispatchEvent(new PointerEvent('pointermove', { clientX: r.right - 5, clientY: r.top + 5, bubbles: true })); return b.style.transform; });
   log('Tilt:', tilt); if (!/rotateY\(/.test(tilt)) fail('inclinaison 3D');
   await page.evaluate(() => closeSheet()); await wait(400);
-  // un secret débloqué par une vraie séance : semainier + XP
-  const xp0 = await page.evaluate(() => totalXP());
+  // un secret débloqué par une vraie séance : semainier
   await page.evaluate(() => { S.medals = {}; save(); });
   const sec = await page.evaluate(() => { const base = new Date(2026, 0, 5); for (let i = 0; i < 7; i++) { const d = new Date(base); d.setDate(d.getDate() + i);
       S.sessions.push({ id: 'w' + i, date: localISO(d), source: 'custom', durationSec: 1800, exos: [{ exoId: 'pompes', sets: [{ reps: 10, done: true }] }] }); }
     S.sessions.sort((a, b) => a.date < b.date ? -1 : 1); save(); const ups = checkMedals(); return ups.map(u => u.m.id + ':' + tierLabel(u.m, u.tier)); });
   log('Unlocked:', sec.join(', ')); if (!sec.includes('s_week7:Secret')) fail('secret non débloqué');
-  if (!(await page.evaluate(() => totalXP())) > 0) fail('xp');
   // dark
   await page.emulateMedia({ colorScheme: 'dark' }); await page.evaluate(() => { progressTab = 'medals'; renderView('progress'); }); await wait(700); await shot('08_medals_dark');
 

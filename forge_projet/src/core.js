@@ -25,6 +25,7 @@ function defaultState(){
     deload: null,           // semaine allégée en cours ou juste finie : {start, end} (strength.js)
     deloadLog: [],          // débuts des semaines allégées passées ["AAAA-MM-JJ"]
     medals: {},            // {familleId: {t: palier atteint 0-4, d: {1: iso, 2: iso…}}}
+    ascent: { pauses:[], seen:null, descSeen:"", intro:0 }, // ascension (ascent.js) : pauses déclarées (lundis), dernière position vue, dernière descente annoncée
     settings: { theme:"auto", unit:"kg", todayTab:"custom", name:"", why:"", sound:true, stretching:false, rest:"normal", beat:true, nextGoal:true, trend:true, appPicks:true, deloadTips:true, thenNow:true }, // why : « ton pourquoi »
     meta: { createdAt: new Date().toISOString(), prCount:0 },
   };
@@ -279,6 +280,9 @@ function normalizeState(parsed){
     const isoOK = x=>typeof x==="string" && /^\d{4}-\d{2}-\d{2}$/.test(x);
     merged.deload = parsed.deload && isoOK(parsed.deload.start) && isoOK(parsed.deload.end) ? { start:parsed.deload.start, end:parsed.deload.end } : null;
     merged.deloadLog = (Array.isArray(parsed.deloadLog) ? parsed.deloadLog : []).filter(isoOK).slice(-50);
+    { const a = parsed.ascent && typeof parsed.ascent==="object" ? parsed.ascent : {}, sn = a.seen;
+      merged.ascent = { pauses:(Array.isArray(a.pauses) ? a.pauses : []).filter(isoOK).slice(-40), descSeen:isoOK(a.descSeen) ? a.descSeen : "", intro:a.intro ? 1 : 0,
+        seen:sn && typeof sn==="object" && typeof ASC_DATA!=="undefined" && ASC_DATA[sn.key] && isFinite(sn.alt) ? { key:sn.key, lap:Math.max(0, +sn.lap||0), alt:+sn.alt, wait:!!sn.wait } : null }; }
     merged.body = (Array.isArray(parsed.body)?parsed.body:[]).filter(e=>e && /^\d{4}-\d{2}-\d{2}$/.test(e.d) && e.kg>=20 && e.kg<=400).sort((a,b)=>a.d<b.d?-1:1);
     // réglages : même type que la valeur par défaut ; les textes-codes (thème, niveau…) restent des
     // mots simples (ils finissent dans des classes et attributs) ; seul le prénom est libre (échappé)
@@ -728,22 +732,7 @@ function dayMap_raw(){
   return m;
 }
 
-// ---------- niveau (XP) ----------
-const LEVEL_TITLES = [[15,"Au sommet"],[10,"Confirmé·e"],[6,"Régulier·e"],[3,"Compagnon·ne"],[1,"Apprenti·e"]];
-function totalXP(){ return memo("totalXP", totalXP_raw); }
-function totalXP_raw(){
-  // un trophée secret vaut autant qu'un palier or
-  const medalPts = Object.keys(S.medals).reduce((t,id)=>{ const m = S.medals[id]; if(typeof MEDAL_MAP!=="undefined" && MEDAL_MAP[id] && MEDAL_MAP[id].secret) return t+(m.t?50:0); return t+[0,10,25,50,100].slice(1,(m.t||0)+1).reduce((a,b)=>a+b,0); },0);
-  return S.sessions.length*50 + totalSets()*2 + (S.meta.prCount||0)*10 + medalPts;
-}
-// niveau L atteint à 125·L·(L−1) XP : 0, 250, 750, 1500, 2500…
-function levelInfo(xp){
-  if(xp==null) xp = totalXP();
-  let L=1;
-  while(125*(L+1)*L <= xp) L++;
-  const base = 125*L*(L-1), next = 125*(L+1)*L;
-  return { level:L, xp, base, next, pct:(xp-base)/(next-base), title:LEVEL_TITLES.find(([min])=>L>=min)[1] };
-}
+// (le niveau XP des versions ≤ 4.0 est remplacé par l'ascension : ascent.js)
 
 // ---------- planning hebdomadaire ----------
 const JOURS_COURTS = ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
