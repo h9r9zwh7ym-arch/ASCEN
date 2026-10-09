@@ -142,34 +142,64 @@ function ascBuildScene(host, k){
     <g class="asc-camps"></g>
     <g transform="translate(${sc.summit[0]} ${sc.summit[1]})"><g class="asc-flag"><line x1="0" y1="0" x2="0" y2="-46" stroke="${hud}" stroke-width="3" stroke-linecap="round"/><path class="asc-cloth" d="M0 -46h30l-7 9 7 9H0Z" fill="#FF6B3D"/></g></g>
     <g class="asc-me">${night ? `<circle r="80" fill="url(#asLamp)"/>` : ""}<circle r="34" fill="url(#asMe)"/><circle class="asc-ring" r="11" fill="none" stroke="#FF6B3D" stroke-width="3.5"/><circle r="11" fill="#FF6B3D" stroke="#fff" stroke-width="4"/></g>
-    <g class="asc-next"></g></svg>`;
+    <g class="asc-sel"></g><g class="asc-next"></g></svg>`;
   const old = host.querySelector(".asc-svg"); if(old) old.remove();
   host.insertAdjacentHTML("afterbegin", svg);
   const el = host.querySelector(".asc-svg"), rt = { pts, len }, total = len[len.length-1];
-  const G = { k, rt, total, el, done:el.querySelector(".asc-done"), me:el.querySelector(".asc-me"), flag:el.querySelector(".asc-flag"), next:el.querySelector(".asc-next"), camps:[], night, W };
+  const G = { k, rt, total, el, done:el.querySelector(".asc-done"), me:el.querySelector(".asc-me"), flag:el.querySelector(".asc-flag"), next:el.querySelector(".asc-next"), sel:el.querySelector(".asc-sel"), camps:[], night, W };
   const cg = el.querySelector(".asc-camps");
-  D.camps.forEach(([a, name, real], i)=>{
-    const p = ascRouteAt(rt, a), hut = !/^(Camp|Bivouac) \d/.test(name);
+  // camps : refuges en icône, étapes en petits jalons ; le prochain a un halo qui pulse (dans .asc-next)
+  ascCamps(k).forEach(([a, name, real], i)=>{
+    const p = ascRouteAt(rt, a), hut = !ASC_GENERIC(k, name);
     const g = document.createElementNS("http://www.w3.org/2000/svg", "g"); g.setAttribute("transform", `translate(${ascP1(p.x)} ${ascP1(p.y)})`);
-    if(p.h===2) g.style.display = "none"; else if(p.h===1) g.style.opacity = ".5";
-    g.innerHTML = `<g class="asc-camp">${hut ? `<path d="M-12 0v-13l12-10 12 10V0Z" stroke-width="2.6"/><rect x="-3.2" y="-8" width="6.4" height="8" fill="rgba(0,0,0,.45)" stroke="none"/>` : `<path d="M-13 0 0 -20 13 0Z" stroke-width="2.6"/><path d="M0 -20V0" stroke-width="2"/>`}</g>`;
-    cg.appendChild(g); G.camps.push({ a, name, real, i, inner:g.firstChild, x:p.x, y:p.y });
+    if(p.h===2) g.style.display = "none"; else if(p.h===1) g.style.opacity = ".55";
+    g.innerHTML = `<g class="asc-camp ${hut ? "hut" : "pin"}">${hut ? `<path d="M-12 0v-13l12-10 12 10V0Z" stroke-width="2.6"/><rect x="-3.2" y="-8" width="6.4" height="8" fill="rgba(0,0,0,.45)" stroke="none"/>` : `<circle r="7.5" stroke-width="3"/>`}</g>`;
+    cg.appendChild(g); G.camps.push({ a, name, real, i, hut, h:p.h, inner:g.firstChild, x:p.x, y:hut ? p.y-11 : p.y });
   });
   G.done.style.strokeDasharray = `0 ${total+20}`;
+  G.summit = { x:sc.summit[0], y:sc.summit[1]-20 };
   G.set = (alt, summited)=>{
     const D2 = ASC_DATA[k], a = Math.min(D2.top, Math.max(D2.start, alt)), p = ascRouteAt(rt, a);
+    G.alt = a; G.summited = summited; G.meXY = { x:p.x, y:p.y };
     G.done.style.strokeDasharray = `${ascP1(p.L)} ${ascP1(total+20)}`;
     G.me.setAttribute("transform", `translate(${ascP1(p.x)} ${ascP1(p.y)})`); G.me.style.opacity = p.h && !summited ? ".55" : "1";
     G.camps.forEach(c=>{ const past = c.a<=a+.5;
-      c.inner.setAttribute("fill", past ? "#FF6B3D" : (night ? "rgba(17,23,38,.85)" : "rgba(255,255,255,.92)"));
-      c.inner.setAttribute("stroke", past ? "#fff" : (night ? "rgba(255,255,255,.7)" : "rgba(15,27,40,.6)")); });
-    const nx = summited ? null : G.camps.find(c=>c.a>a+.5);
-    if(nx){ const tx = `${nx.name} · ${fmtNum(nx.real)} m`, w = tx.length*11.2+30, left = nx.x+w+30>W-10, lx = left ? nx.x-w-22 : nx.x+22;
-      G.next.innerHTML = `<g transform="translate(${ascP1(Math.max(6, lx))} ${ascP1(Math.max(6, nx.y-46))})"><rect width="${ascP1(w)}" height="38" rx="19" fill="${night ? "rgba(17,23,38,.86)" : "rgba(255,255,255,.9)"}"/><text x="${ascP1(w/2)}" y="25.5" text-anchor="middle" font-size="21" font-weight="600" font-family="-apple-system,BlinkMacSystemFont,sans-serif" fill="${night ? "#F2F4F8" : "#13202A"}">${esc(tx)}</text></g>`; }
-    else G.next.innerHTML = "";
+      c.inner.setAttribute("fill", past ? "#FF6B3D" : (night ? "rgba(17,23,38,.88)" : "rgba(255,255,255,.95)"));
+      c.inner.setAttribute("stroke", past ? "#fff" : (night ? "rgba(255,255,255,.75)" : "rgba(15,27,40,.6)")); });
+    const nx = summited ? null : G.camps.find(c=>c.a>a+.5 && c.h!==2);
+    if(nx && nx!==G.nx){
+      const tx = `${nx.name} · ${fmtNum(nx.real)} m`, w = tx.length*11.2+30, left = nx.x+w+30>W-10, lx = left ? nx.x-w-22 : nx.x+22;
+      G.next.innerHTML = `<g transform="translate(${ascP1(nx.x)} ${ascP1(nx.y)})"><circle class="asc-halo" r="16" fill="none" stroke="#FF6B3D" stroke-width="4"/><circle class="asc-halo h2" r="16" fill="none" stroke="#FF6B3D" stroke-width="3"/></g>
+        <g class="asc-pillg" transform="translate(${ascP1(Math.max(6, lx))} ${ascP1(Math.max(6, nx.y-46))})"><rect width="${ascP1(w)}" height="38" rx="19" fill="${night ? "rgba(17,23,38,.86)" : "rgba(255,255,255,.92)"}"/><text x="${ascP1(w/2)}" y="25.5" text-anchor="middle" font-size="21" font-weight="600" font-family="-apple-system,BlinkMacSystemFont,sans-serif" fill="${night ? "#F2F4F8" : "#13202A"}">${esc(tx)}</text></g>`;
+    } else if(!nx) G.next.innerHTML = "";
+    G.nx = nx;
     G.flag.style.opacity = summited ? 1 : .45; G.flag.querySelector(".asc-cloth").style.animationPlayState = summited ? "running" : "paused";
   };
+  // toucher la montagne : le camp (ou le sommet, ou soi) le plus proche ouvre sa bulle
+  el.addEventListener("click", e=>{
+    const m = el.getScreenCTM(); if(!m) return;
+    const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
+    const cands = G.camps.filter(c=>c.h!==2).map(c=>({ kind:"camp", c, x:c.x, y:c.y }))
+      .concat([{ kind:"summit", x:G.summit.x, y:G.summit.y }, { kind:"me", x:G.meXY ? G.meXY.x : -999, y:G.meXY ? G.meXY.y : -999 }]);
+    let best = null; cands.forEach(o=>{ const d = Math.hypot(o.x-pt.x, o.y-pt.y); if(d<52 && (!best || d<best.d)) best = Object.assign({ d }, o); });
+    if(best){ e.stopPropagation(); ascBubble(best); } else ascBubbleHide();
+  });
   return G;
+}
+// éclat quand un camp est franchi : anneau qui s'ouvre et étincelles (animé image par image, sans CSS dans le SVG)
+function ascBurst(G, c){
+  if(!G || reducedMotion()) return;
+  const ns = "http://www.w3.org/2000/svg", g = document.createElementNS(ns, "g");
+  g.setAttribute("transform", `translate(${ascP1(c.x)} ${ascP1(c.y)})`); g.setAttribute("pointer-events", "none");
+  const ring = document.createElementNS(ns, "circle"); ring.setAttribute("fill", "none"); ring.setAttribute("stroke", "#FFB36B"); g.appendChild(ring);
+  const dots = Array.from({ length:10 }, (_, i)=>{ const d = document.createElementNS(ns, "circle"); d.setAttribute("fill", i%2 ? "#FF6B3D" : "#FFE2B8"); g.appendChild(d); return { d, a:i/10*Math.PI*2 + .3 }; });
+  G.el.querySelector(".asc-camps").after(g);
+  const t0 = performance.now(), dur = 900;
+  const f = now=>{ const t = Math.min(1, (now-t0)/dur), e = 1-Math.pow(1-t, 3);
+    ring.setAttribute("r", (10 + 46*e).toFixed(1)); ring.setAttribute("stroke-width", (6*(1-t)+.5).toFixed(1)); ring.setAttribute("opacity", (1-t).toFixed(2));
+    dots.forEach(o=>{ o.d.setAttribute("cx", (Math.cos(o.a)*58*e).toFixed(1)); o.d.setAttribute("cy", (Math.sin(o.a)*58*e).toFixed(1)); o.d.setAttribute("r", (5*(1-t)+.5).toFixed(1)); o.d.setAttribute("opacity", (1-t*t).toFixed(2)); });
+    if(t<1 && g.isConnected) requestAnimationFrame(f); else g.remove(); };
+  requestAnimationFrame(f);
 }
 // montée (ou descente) animée du grimpeur ; onCamp(camp) à chaque camp franchi en montant
 function ascAnimate(G, from, to, dur, onCamp, onStep){
@@ -181,7 +211,7 @@ function ascAnimate(G, from, to, dur, onCamp, onStep){
       if(!G.el.isConnected){ res(); return; }
       const t = Math.min(1, (now-t0)/dur), a = from+(to-from)*ease(t);
       G.set(a); if(onStep) onStep(a);
-      if(to>from) G.camps.forEach(c=>{ if(c.a>prev && c.a<=a && !crossed.has(c.i)){ crossed.add(c.i); c.inner.classList.remove("pop"); void c.inner.getBBox(); c.inner.classList.add("pop"); sfx("ascCamp"); if(onCamp) onCamp(c); } });
+      if(to>from) G.camps.forEach(c=>{ if(c.a>prev && c.a<=a && !crossed.has(c.i)){ crossed.add(c.i); c.inner.classList.remove("pop"); void c.inner.getBBox(); c.inner.classList.add("pop"); ascBurst(G, c); sfx("ascCamp"); haptic(12); if(onCamp) onCamp(c); } });
       prev = a;
       if(t<1) requestAnimationFrame(step); else res();
     };
@@ -193,6 +223,7 @@ function ascAnimate(G, from, to, dur, onCamp, onStep){
 Object.assign(SFX, {
   ascClimb(dur){ const n = Math.max(4, Math.round((dur||1.5)*6)); for(let k=0;k<n;k++){ const p = k/n; tone(392*Math.pow(2, p*1.2), p*(dur||1.5), .09, { gain:.05, type:"triangle" }); } },
   ascCamp(){ bell(NT.E6, 0, .7, .1); bell(NT.A6, .09, .8, .08); },
+  ascCampBig(){ [NT.G5, NT.C6, NT.E6, NT.G6].forEach((f,i)=>bell(f, i*.075, 1.2, .09)); tone(NT.C5, 0, 1.1, { gain:.05, type:"triangle", wet:1 }); tone(NT.G5, .05, 1, { gain:.035, type:"triangle", wet:1 }); bell(NT.C7, .36, 1.5, .07); },
   ascDown(){ [659.25, 587.33, 523.25, 440].forEach((f,i)=>tone(f, i*.11, .28, { gain:.07, type:"triangle" })); },
   ascSummit(){ [NT.C5, NT.E5, NT.G5].forEach((f,i)=>tone(f, i*.09, 2, { gain:.07, type:"triangle", wet:1 })); [NT.C6, NT.E6, NT.G6, NT.C7].forEach((f,i)=>bell(f, .35+i*.11, 1.4, .09)); },
 });
@@ -207,6 +238,75 @@ function ascWhereTxt(a){ // une ligne : où l'on en est
   const nc = a.nextCamp;
   return nc ? `${nc[1]} dans ${ascM(nc[0]-a.alt)}, environ ${nb(ascSessionsFor(nc[0]-a.alt, a), "séance")}.` : `Sommet dans ${ascM(D.top-a.alt)}.`;
 }
+// délai estimé : séances au rythme de montée actuel, durée au rythme des 4 dernières semaines
+function ascEta(m, a){
+  const s = ascSessionsFor(m, a), w = s/Math.max(.5, a.perWeek || a.goal);
+  if(s<=1) return { s, txt:"à ta prochaine séance", time:"" };
+  const time = w<1 ? "en quelques jours" : w<8.5 ? `≈ ${nb(Math.round(w), "semaine")}` : w<78 ? `≈ ${Math.round(w/4.35)} mois` : `≈ ${fmtDec(Math.round(w/26)/2)} ans`;
+  return { s, txt:`≈ ${nb(s, "séance")}`, time };
+}
+const ascEtaTxt = (m, a)=>{ const e = ascEta(m, a); return e.time ? `${e.txt} · ${e.time}` : e.txt; };
+// date d'arrivée au sommet de l'expédition en cours (en attente de la suivante)
+function ascSummitDate(a){ const s = a.summits[a.summits.length-1]; return a.wait && s && s.key===a.key ? s.date : null; }
+
+// ---------- bulle d'un camp : toucher la montagne (ou une étape de la liste) ----------
+let ascBubOn = null;
+function ascBubbleHTML(o, a){
+  const D = ASC_DATA[a.key], camps = ascCamps(a.key), alt = a.wait ? D.top : a.alt, ni = a.wait ? -1 : camps.findIndex(c=>c[0]>alt+.5);
+  const ahead = (m, next)=>`<div class="ab-s ${next ? "next" : ""}">${next ? `<b>Prochaine étape</b> · ` : ""}dans <b class="num">${ascM(m)}</b></div><div class="ab-e">${esc(ascEtaTxt(m, a))}</div>`;
+  if(o.kind==="me"){
+    const L = a.last && a.last.key===a.key && a.last.gain>0 ? a.last : null;
+    return { cls:"me", html:`<div class="ab-k">Tu es ici</div><div class="ab-n"><span>${esc(D.n)}</span><b class="num">${fmtNum(alt)} m</b></div>
+      <div class="ab-s">${a.wait ? "Sommet atteint" : `${nb(a.passed, "étape")} sur ${camps.length} franchie${a.passed>1 ? "s" : ""}`}${L ? ` · <b class="num">+${ascM(L.gain)}</b> à ta dernière séance` : ""}</div>` };
+  }
+  if(o.kind==="summit"){
+    const d = ascSummitDate(a);
+    return { cls:"summit"+(a.wait ? " past" : ""), html:`<div class="ab-k">Sommet · ${esc(D.region)}</div><div class="ab-n"><span>${esc(D.n)}</span><b class="num">${fmtNum(D.top)} m</b></div>
+      ${a.wait ? `<div class="ab-s ok">${ascIc("check")}Atteint${d ? ` le ${fmtDate(d)}` : ""}</div>` : ahead(D.top-alt, false)}` };
+  }
+  const i = o.c.i, c = camps[i], past = c[0]<=alt+.5, d = a.campDates[c[1]], real = !ASC_GENERIC(a.key, c[1]);
+  return { cls:past ? "past" : i===ni ? "next" : "", html:`<div class="ab-k">Étape ${i+1} sur ${camps.length}${real ? " · lieu réel" : ""}</div>
+    <div class="ab-n"><span>${esc(c[1])}</span><b class="num">${fmtNum(c[2])} m</b></div>
+    ${past ? `<div class="ab-s ok">${ascIc("check")}Atteint${d ? ` le ${fmtDate(d)}` : ""}</div>` : ahead(c[0]-alt, i===ni)}` };
+}
+// o : { kind:"camp", c } | { kind:"summit" } | { kind:"me" } ; ancrée au point de la scène (SVG → écran → scène)
+function ascBubble(o){
+  const host = qs("#ascScene"); if(!host) return;
+  const a = ascent(), G = ascG && ascG.el.isConnected ? ascG : null, b0 = host.querySelector(".asc-bub");
+  if(b0) b0.remove();
+  const { cls, html } = ascBubbleHTML(o, a);
+  const b = document.createElement("div"); b.className = "asc-bub "+cls; b.setAttribute("role", "status");
+  b.innerHTML = html+`<i class="ab-arrow"></i>`;
+  host.appendChild(b);
+  const R = host.getBoundingClientRect(), bw = b.offsetWidth, bh = b.offsetHeight;
+  let pt = null;
+  if(G){ const p = o.kind==="camp" ? o.c : o.kind==="summit" ? G.summit : G.meXY, m = G.el.getScreenCTM();
+    if(p && m && !(o.kind==="camp" && o.c.h===2)){ const s = new DOMPoint(p.x, p.y).matrixTransform(m); pt = { x:s.x-R.left, y:s.y-R.top }; } }
+  let left, top, below = false;
+  if(pt && pt.x>-4 && pt.x<R.width+4 && pt.y>0 && pt.y<R.height){
+    left = Math.max(10, Math.min(R.width-bw-10, pt.x-bw/2)); top = pt.y-bh-18;
+    if(top<10){ top = pt.y+18; below = true; }
+    b.style.setProperty("--ax", Math.max(18, Math.min(bw-18, pt.x-left))+"px");
+  } else { left = (R.width-bw)/2; top = R.height*.42-bh/2; b.classList.add("free"); }
+  b.classList.toggle("below", below); b.style.left = left+"px"; b.style.top = Math.max(10, top)+"px";
+  b.addEventListener("click", e=>{ e.stopPropagation(); ascBubbleHide(); });
+  requestAnimationFrame(()=>b.classList.add("on"));
+  // l'étape choisie est cerclée sur la montagne, l'étiquette du prochain camp s'efface
+  if(G){
+    G.el.classList.add("bub");
+    const p = o.kind==="camp" && o.c.h!==2 ? o.c : o.kind==="summit" ? { x:G.summit.x, y:G.summit.y+20 } : null;
+    G.sel.innerHTML = p ? `<g transform="translate(${ascP1(p.x)} ${ascP1(p.y)})"><circle class="asc-selc" r="19" fill="none" stroke="#fff" stroke-width="3.5"/></g>` : "";
+  }
+  ascBubOn = o; sfx("tick"); haptic(8);
+}
+function ascBubbleHide(){
+  const b = qs("#ascScene .asc-bub"); if(!ascBubOn && !b) return;
+  ascBubOn = null;
+  if(b){ b.classList.remove("on"); setTimeout(()=>b.remove(), 200); }
+  if(ascG){ ascG.el.classList.remove("bub"); ascG.sel.innerHTML = ""; }
+}
+// toucher ailleurs que sur la scène referme la bulle
+document.addEventListener("pointerdown", e=>{ if(ascBubOn && !(e.target.closest && e.target.closest("#ascScene, [data-a='ascCamp']"))) ascBubbleHide(); }, { passive:true, capture:true });
 
 // ---------- vignettes : pastille d'accueil, carte de Progrès, profil ----------
 function ascPillHTML(){
@@ -232,16 +332,50 @@ function ascCardHTML(){
 
 // ---------- l'écran « Mon ascension » ----------
 let ascG = null;
-// où l'on en est : barre de l'expédition et UNE phrase sur la prochaine étape
-function ascExpHTML(a){
-  const D = ASC_DATA[a.key], prog = Math.max(0, Math.min(1, a.done))*100, P = v=>v.toFixed(1), N = ASC_DATA[a.next];
-  const next = a.wait
-    ? (a.series>=a.nextReq ? `Prochaine expédition : <b>${esc(N.n)}</b>, dès ta prochaine séance.` : `Prochaine expédition : <b>${esc(N.n)}</b>, avec une série de ${nb(a.nextReq, "semaine")} (tu en as ${a.series}).`)
-    : a.nextCamp ? `Prochain camp : <b>${esc(a.nextCamp[1])}</b> dans <b class="num">${ascM(a.nextCamp[0]-a.alt)}</b>, environ ${nb(ascSessionsFor(a.nextCamp[0]-a.alt, a), "séance")}.`
-    : `Sommet dans <b class="num">${ascM(D.top-a.alt)}</b>, environ ${nb(ascSessionsFor(D.top-a.alt, a), "séance")}.`;
-  return `<div class="exp-row"><span>${a.wait ? "<b>Sommet atteint</b>" : `<b>Camp ${a.passed}</b> sur ${D.camps.length}`}</span><span>sommet <b class="num">${fmtNum(D.top)} m</b></span></div>
-    <div class="exp-track"><div class="exp-push" style="width:${ASC_PUSH*100}%"></div><div class="exp-fill" style="width:${P(prog)}%"></div>${D.camps.map(c=>`<i class="exp-tick ${c[0]<=a.alt+.5 ? "past" : ""}" style="left:${P((c[0]-D.start)/(D.top-D.start)*100)}%"></i>`).join("")}<i class="exp-me" style="left:${P(prog)}%"></i></div>
-    <p class="exp-next">${next}</p>`;
+// ---------- les étapes : barre de l'expédition, prochain camp mis en avant, quelques suivants, le sommet ----------
+let ascStepsAll = false;
+function ascStepsListHTML(a){
+  const k = a.key, D = ASC_DATA[k], camps = ascCamps(k), N = camps.length, alt = a.wait ? D.top : a.alt;
+  const f = camps.findIndex(c=>c[0]>alt+.5), nI = a.wait || f<0 ? N : f;
+  const item = i=>{
+    const top = i===N, c = top ? [D.top, D.n, D.top] : camps[i], past = top ? a.wait : c[0]<=alt+.5, nx = !a.wait && i===nI;
+    const d = top ? ascSummitDate(a) : a.campDates[c[1]], real = !top && !ASC_GENERIC(k, c[1]);
+    let node = "", r;
+    if(past){ node = ascIc("check"); r = `<span class="st-r"><small>${d ? `le ${fmtDate(d)}` : "atteint"}</small></span>`; }
+    else { const m = c[0]-alt, e = ascEta(m, a);
+      if(nx){ const p0 = i ? camps[i-1][0] : D.start; node = `<i class="st-ring" style="--p:${Math.round(Math.max(0, Math.min(1, (alt-p0)/Math.max(1, c[0]-p0)))*100)}"></i>`;
+        r = `<span class="st-r"><b class="num">dans ${ascM(m)}</b><small>${esc(e.time ? `${e.txt} · ${e.time}` : e.txt)}</small></span>`; }
+      else r = `<span class="st-r"><b>${esc(e.txt)}</b>${e.time ? `<small>${esc(e.time)}</small>` : ""}</span>`;
+      if(top) node = ascIc("flag"); }
+    return `<button class="st-i${past ? " past" : ""}${nx ? " next" : ""}${top ? " top" : ""}" data-a="ascCamp" data-i="${i}">
+      <span class="st-node">${node}</span><span class="st-t">${top ? `Sommet ${esc(ascDu(k))}` : esc(c[1])}<small><span class="num">${fmtNum(c[2])} m</span>${real ? " · lieu réel" : ""}</small></span>${r}</button>`;
+  };
+  let idx;
+  if(ascStepsAll) idx = Array.from({ length:N+1 }, (_, i)=>i);
+  else if(a.wait) idx = [N-2, N-1, N].filter(i=>i>=0);
+  else idx = [nI-1, nI, nI+1, nI+2].filter(i=>i>=0 && i<N).concat([N]);
+  idx = [...new Set(idx)];
+  let html = "", prev = null;
+  idx.forEach(i=>{ const gap = prev!=null ? i-prev-1 : 0;
+    if(gap>0) html += `<div class="st-gap"><span>${gap} étape${gap>1 ? "s" : ""}</span></div>`;
+    html += item(i); prev = i; });
+  if(a.wait){
+    const X = ASC_DATA[a.next], ok = a.series>=a.nextReq;
+    html += `<div class="st-gap"></div><div class="st-i exp-next-i ${ok ? "open" : "locked"}"><span class="st-node">${ascIc(ok ? "flag" : "lock")}</span>
+      <span class="st-t">Prochaine expédition<small>${esc(X.n)} · <span class="num">${fmtNum(X.top)} m</span></small></span>
+      <span class="st-r">${ok ? `<b>dès ta prochaine séance</b>` : `<b>série de ${nb(a.nextReq, "semaine")}</b><small>tu en as ${a.series}</small>`}</span></div>`;
+  }
+  return html;
+}
+function ascStepsHTML(a){
+  const D = ASC_DATA[a.key], camps = ascCamps(a.key), N = camps.length, alt = a.wait ? D.top : a.alt, P = v=>v.toFixed(1), pos = v=>P((v-D.start)/(D.top-D.start)*100);
+  const prog = Math.max(0, Math.min(1, a.done))*100, ni = a.wait ? -1 : camps.findIndex(c=>c[0]>alt+.5);
+  return `<section class="card asc-steps" id="ascSteps" aria-label="Étapes de l'expédition">
+    <div class="st-hd"><h2>Étapes</h2><span class="st-n">${a.wait ? "Sommet atteint" : a.passed ? `<b class="num">${a.passed}</b> sur ${N} franchie${a.passed>1 ? "s" : ""}` : `<b class="num">${N}</b> jusqu'au sommet`}</span></div>
+    <div class="exp-track" aria-hidden="true"><div class="exp-push" style="width:${ASC_PUSH*100}%"></div><div class="exp-fill" style="width:${P(prog)}%"></div>${camps.map((c, i)=>`<i class="exp-tick${c[0]<=alt+.5 ? " past" : ""}${i===ni ? " next" : ""}" style="left:${pos(c[0])}%"></i>`).join("")}<i class="exp-me" style="left:${P(prog)}%"></i></div>
+    <div class="st-list">${ascStepsListHTML(a)}</div>
+    <div class="st-ft"><span>Touche une étape pour la voir sur la montagne.</span><button class="st-more" data-a="ascAllSteps" aria-expanded="${ascStepsAll}">${ascStepsAll ? "Réduire" : `Voir les ${N+1}`}</button></div>
+  </section>`;
 }
 function ascHudHTML(a){
   const D = ASC_DATA[a.key];
@@ -364,7 +498,7 @@ function ascBodyHTML(a){
       ${ascHudHTML(a)}
       <div class="asc-toast" role="status" aria-live="polite"></div>
     </section>
-    <section class="asc-exp" id="ascExp" aria-label="Avancement de l'expédition">${ascExpHTML(a)}</section>
+    ${ascStepsHTML(a)}
     ${S.sessions.length ? ascWeekHTML(a) : `<section class="card asc-week"><p class="aw-msg">Chaque séance te fait monter. Ta régularité et ta force décident de la vitesse : commence par ta première séance.</p></section>`}
     ${ascRowsHTML(a)}`;
 }
@@ -396,7 +530,7 @@ function ascMountScene(a){
       if(!G.el.isConnected) return;
       const up = a.alt>from, dur = Math.min(2600, 900+Math.abs(a.alt-from)*6);
       sfx(up ? "ascClimb" : "ascDown", dur/1000);
-      ascAnimate(G, from, a.alt, dur, c=>ascSceneToast(/^(Camp|Bivouac) \d/.test(c.name) ? "tent" : "hut", `<b>${esc(c.name)}</b> atteint · ${fmtNum(c.real)} m`),
+      ascAnimate(G, from, a.alt, dur, c=>ascSceneToast(c.hut ? "hut" : "tent", `<b>${esc(c.name)}</b> atteint · ${fmtNum(c.real)} m`),
         v=>{ if(altEl) altEl.textContent = fmtNum(v)+" m"; })
         .then(()=>{ G.set(a.alt, a.wait); remember();
           if(!up){ const d = a.descents[a.descents.length-1]; ascSceneToast("tent", d && d.camp ? `Semaine sans séance : retour à <b>${esc(d.camp)}</b>. Les sommets restent acquis.` : "Semaine sans séance : retour au départ. Les sommets restent acquis."); } });
@@ -405,7 +539,8 @@ function ascMountScene(a){
 }
 // après une pause : la carte de la semaine, les valeurs des lignes et le détail ouvert se mettent à jour sur place
 function ascRefreshSheet(){
-  const a = ascent(), wk = qs("#ascWeek"); if(wk) wk.outerHTML = ascWeekHTML(a);
+  const a = ascent(), wk = qs("#ascWeek"), sl = qs("#ascSteps .st-list"); if(wk) wk.outerHTML = ascWeekHTML(a);
+  if(sl) sl.innerHTML = ascStepsListHTML(a);
   ASC_SECS.forEach(([k, , , , v])=>{ const r = qs(`.asc-row[data-k="${k}"] .val`); if(r) r.textContent = v(a);
     const b = qs(`#ascSec-${k} .asc-sec`); if(b) b.innerHTML = ascSecBody(k, a); });
 }
@@ -460,21 +595,65 @@ function ascDrawCard(s){
 }
 
 // ---------- fin de séance : le gain d'altitude (remplace l'XP) ----------
+// Une piste zoomée sur le tronçon de la séance : du dernier camp sous le départ au premier camp au-dessus de
+// l'arrivée. Le grimpeur y avance franchement ; chaque camp franchi s'allume (son, vibration), puis le badge
+// du camp atteint se révèle. Sinon, la ligne du prochain camp entretient l'envie de revenir.
 function ascCelHTML(sessionId){
   const a = ascent(), e = a.log[sessionId]; if(!e) return "";
-  const D = ASC_DATA[e.key], k0 = e.started ? e.started : e.key, D0 = ASC_DATA[k0];
-  const pFrom = Math.max(0, Math.min(1, (e.from-D0.start)/(D0.top-D0.start))), pTo = Math.max(0, Math.min(1, (e.to-D0.start)/(D0.top-D0.start)));
   if(e.waiting) return `<div class="cel-asc wait"><div class="ca-hd">${ascIc("peak")}<span>Au sommet ${ascDu(e.key)}</span></div>
     <div class="ca-sub">Une série de ${nb(ASC_REQ[a.next], "semaine")} ouvre ${ascLe(a.next)} (tu en as ${a.series}). Cette séance la fait avancer.</div></div>`;
-  return `<button class="cel-asc" data-a="ascFromCel">
-    <div class="ca-hd">${ascIc("peak")}<span>${e.started ? `Nouvelle expédition : ${esc(D.n)}` : esc(D.n)}</span><b class="num" data-count="${Math.round(e.gain)}" data-unit="m" data-thin="1" data-pre="+">+${ascM(e.gain)}</b></div>
-    <div class="xpbar"><span id="celAsc" style="width:${(pFrom*100).toFixed(1)}%" data-to="${(pTo*100).toFixed(1)}"></span></div>
-    <div class="ca-sub">${e.summit ? `<b>Sommet atteint !</b> ${fmtNum(D.top)} m` : `${fmtNum(e.to)} m sur ${fmtNum(D.top)} m`} · régularité ${ascX(e.mul)} · force ${ascX(Math.round(e.force*100)/100)}</div>
-    ${e.camps.length ? `<div class="ca-camps">${e.camps.map(c=>`<span class="ca-chip">${ascIc(/^(Camp|Bivouac) \d/.test(c) ? "tent" : "hut")} ${esc(c)}</span>`).join("")}</div>` : ""}
+  const k = e.key, D = ASC_DATA[k], camps = ascCamps(k), P = v=>v.toFixed(1);
+  const below = camps.filter(c=>c[0]<=e.from+.5), lo = below[below.length-1] || null;
+  const hi = e.summit ? null : camps.find(c=>c[0]>e.to+.5) || null;
+  const L = lo ? lo[0] : D.start, H = hi ? hi[0] : D.top, x = v=>P(Math.max(0, Math.min(1, (v-L)/Math.max(1, H-L)))*100);
+  const inner = camps.filter(c=>c[0]>L+.5 && c[0]<H-.5);
+  const crossed = camps.filter(c=>e.camps.includes(c[1])), last = crossed[crossed.length-1];
+  const end = (c, top)=>`<span class="ca-end ${top ? "r" : "l"}${top && e.summit ? " goal" : ""}" ${top ? `data-p="100"` : ""}>${top ? ascIc(hi ? (ASC_GENERIC(k, hi[1]) ? "tent" : "hut") : "flag") : ""}</span>`;
+  const glob = Math.round(Math.max(0, Math.min(1, (e.to-D.start)/(D.top-D.start)))*100);
+  let badge = "";
+  if(e.summit) badge = ["flag", "Sommet atteint", D.n, `${fmtNum(D.top)} m · ${D.region}`];
+  else if(last) badge = [ASC_GENERIC(k, last[1]) ? "tent" : "hut", crossed.length>1 ? `${crossed.length} camps atteints` : "Camp atteint", last[1], `${fmtNum(last[2])} m · étape ${camps.indexOf(last)+1} sur ${camps.length}`];
+  else if(e.started) badge = ["peak", "Nouvelle expédition", D.n, `${fmtNum(D.top)} m · ${D.region}`];
+  const nc = e.summit ? null : hi, rest = nc ? nc[0]-e.to : 0;
+  return `<button class="cel-asc" data-a="ascFromCel" aria-label="Mon ascension : ${esc(D.n)}, +${fmtNum(e.gain)} mètres">
+    <div class="ca-hd">${ascIc("peak")}<span>${esc(D.n)}</span><b class="num" data-count="${Math.round(e.gain)}" data-unit="m" data-thin="1" data-pre="+">+${ascM(e.gain)}</b></div>
+    <div class="ca-trk" id="celTrk" data-from="${x(e.from)}" data-to="${x(e.to)}" aria-hidden="true">
+      <div class="ca-line"><i class="ca-fill" style="width:${x(e.from)}%"></i>
+        ${inner.map(c=>`<i class="ca-tick" style="left:${x(c[0])}%" data-p="${x(c[0])}"><span>${esc(c[1])}</span></i>`).join("")}
+        ${end(lo, false)}${end(hi, true)}<i class="ca-me" style="left:${x(e.from)}%"></i></div>
+      <div class="ca-ends"><span>${esc(lo ? lo[1] : D.from || "Départ")}<b class="num">${fmtNum(lo ? lo[2] : D.fromAlt || D.start)} m</b></span><span>${esc(hi ? hi[1] : "Sommet")}<b class="num">${fmtNum(hi ? hi[2] : D.top)} m</b></span></div>
+    </div>
+    <div class="ca-sub"><b class="num">${fmtNum(e.to)} m</b> sur ${fmtNum(D.top)} m (${glob} %) · régularité ${ascX(e.mul)} · force ${ascX(Math.round(e.force*100)/100)}</div>
+    ${badge ? `<div class="ca-badge" id="celBadge"><span class="cb-ic"><i class="cb-rays"></i>${ascIc(badge[0])}</span><span class="cb-t"><small>${esc(badge[1])}</small><b>${esc(badge[2])}</b><span>${esc(badge[3])}</span></span></div>` : ""}
+    ${nc ? `<div class="ca-next">${ascIc(ASC_GENERIC(k, nc[1]) ? "tent" : "hut")}<span><b>${esc(nc[1])}</b> dans <b class="num">${ascM(rest)}</b>${ascSessionsFor(rest, a)<=1 ? " : ta prochaine séance t'y amène." : ` · ${esc(ascEtaTxt(rest, a))}`}</span></div>` : ""}
   </button>`;
 }
+// lancée quand la piste est visible (la fenêtre de fin de séance peut défiler)
 function ascCelAnimate(){
-  const bar = qs("#celAsc"); if(bar) bar.style.width = bar.dataset.to+"%";
+  const trk = qs("#celTrk"); if(!trk) return;
+  const from = +trk.dataset.from, to = +trk.dataset.to, fill = trk.querySelector(".ca-fill"), me = trk.querySelector(".ca-me"), badge = qs("#celBadge");
+  const marks = qsa(".ca-tick, .ca-end.r", trk).map(t=>({ t, p:+(t.dataset.p||0) })).filter(m=>m.p>from+.01 && m.p<=to+.01);
+  const set = p=>{ fill.style.width = p+"%"; me.style.left = p+"%"; };
+  const reveal = ()=>{
+    trk.classList.remove("go"); me.classList.add("land");
+    if(!badge) return;
+    badge.classList.add("on"); sfx("ascCampBig"); haptic([20, 40, 30]);
+    const r = badge.getBoundingClientRect(); if(r.top<innerHeight && r.bottom>0) confettiBurst(r.left+28, r.top+r.height/2, 60);
+  };
+  if(reducedMotion()){ set(to); marks.forEach(m=>m.t.classList.add("hit")); if(badge) badge.classList.add("on"); return; }
+  const run = ()=>{
+    const dur = 900+Math.min(900, (to-from)*14), t0 = performance.now(), ease = t=>1-Math.pow(1-t, 3);
+    trk.classList.add("go"); sfx("ascClimb", dur/1000*.8);
+    const f = now=>{ if(!trk.isConnected) return;
+      const t = Math.min(1, (now-t0)/dur), p = from+(to-from)*ease(t); set(p);
+      marks.forEach(m=>{ if(!m.done && p>=m.p-.01){ m.done = true; m.t.classList.add("hit"); sfx("ascCamp"); haptic(12); } });
+      if(t<1) requestAnimationFrame(f); else setTimeout(reveal, 120); };
+    requestAnimationFrame(f);
+  };
+  // démarre quand la piste est bien visible (sinon dès qu'on y arrive en faisant défiler)
+  if(!window.IntersectionObserver){ setTimeout(run, 500); return; }
+  const io = new IntersectionObserver(es=>{ if(es.some(x=>x.isIntersecting)){ io.disconnect(); setTimeout(run, 450); } }, { threshold:.9 });
+  io.observe(trk);
 }
 function ascCelSummit(sessionId){ const a = ascent(), e = a.log[sessionId]; return e && e.summit ? a.summits.find(s=>s.date===e.date && s.key===e.summit) : null; }
 
@@ -490,7 +669,22 @@ function ascDescentNotice(){
 }
 
 Object.assign(ACT, {
-  openAscent(){ ascOpen = new Set(); openAscent(); },
+  openAscent(){ ascOpen = new Set(); ascStepsAll = false; ascBubOn = null; openAscent(); },
+  // une étape de la liste : on remonte à la montagne et sa bulle s'ouvre
+  ascCamp(d){
+    const i = +d.i, a = ascent(), N = ascCamps(a.key).length, body = qs(".asc-body"), host = qs("#ascScene"); if(!host) return;
+    const G = ascG && ascG.el.isConnected ? ascG : null;
+    const o = i>=N ? { kind:"summit" } : { kind:"camp", c:G ? G.camps[i] : { i, h:2 } };
+    const far = body && body.scrollTop>4;   // la scène entière en vue : la bulle peut s'ouvrir n'importe où
+    if(far) body.scrollTo({ top:0, behavior:reducedMotion() ? "auto" : "smooth" });
+    setTimeout(()=>ascBubble(o), far && !reducedMotion() ? 420 : 0);
+  },
+  ascAllSteps(d, el){
+    const box = qs("#ascSteps .st-list"); if(!box) return;
+    ascStepsAll = !ascStepsAll; sfx(ascStepsAll ? "open" : "close");
+    el.setAttribute("aria-expanded", ascStepsAll); el.textContent = ascStepsAll ? "Réduire" : `Voir les ${ascCamps(ascent().key).length+1}`;
+    morphHeight(box, ()=>{ box.innerHTML = ascStepsListHTML(ascent()); });
+  },
   ascSec(d, el){
     const k = d.k, on = !ascOpen.has(k), box = qs("#ascSec-"+k); if(!box) return;
     on ? ascOpen.add(k) : ascOpen.delete(k);
@@ -516,5 +710,5 @@ Object.assign(ACT, {
   },
 });
 // le thème change : la scène passe du jour à la nuit
-try{ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ()=>{ const h = qs("#ascScene"); if(h && ascG){ const a = ascent(); const G = ascBuildScene(h, a.key); if(G){ ascG = G; G.set(a.alt, a.wait); } } }); }catch(e){}
+try{ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ()=>{ const h = qs("#ascScene"); if(h && ascG){ ascBubbleHide(); const a = ascent(); const G = ascBuildScene(h, a.key); if(G){ ascG = G; G.set(a.alt, a.wait); } } }); }catch(e){}
 document.addEventListener("keydown", e=>{ if(e.key==="Escape" && qs("#ascSummit")) ACT.ascSummitClose(); });

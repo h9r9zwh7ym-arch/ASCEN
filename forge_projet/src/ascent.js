@@ -35,6 +35,33 @@ function ascHardSets(s){
 // force +20 à +40 %) monte ≈ 120 m par semaine, soit l'Everest en ≈ 4 ans (≈ 23 700 m sur 13 expéditions)
 function ascEffort(hard){ return 11*Math.min(hard, 20)/15; }
 function ascForceMult(index){ return Math.min(1.6, Math.max(.85, 1 + (index/100 - 1)*.6)); }
+// ---------- camps : rapprochés, pour qu'on en atteigne souvent ----------
+// On simule un profil régulier (3 séances de 15 séries par semaine, série qui monte, force +12 % sur les 400
+// premières séances) sur tout l'itinéraire, et on pose un camp toutes les 2 séances sur les deux premières montagnes (le
+// premier camp du Moléson dès la 2ᵉ séance), puis toutes les 3. Les refuges réels (ASC_DATA) restent à leur
+// place ; les camps génériques trop proches d'un refuge sont retirés. Une semaine sans séance ne coûte donc
+// que 2 ou 3 séances (retour au camp précédent).
+const ASC_GENERIC = (k, n)=>/^Bivouac \d+$/.test(n) || (!/^(k2|everest)$/.test(k) && /^Camp \d+$/.test(n));
+const ASC_CAMPS = (()=>{
+  const out = {}; let series = 0, n = 0;
+  ASC_ORDER.forEach((k, mi)=>{
+    const D = ASC_DATA[k], named = D.camps.filter(c=>!ASC_GENERIC(k, c[1]));
+    const pos = []; let alt = D.start;
+    while(alt<D.top){
+      n++; const third = n%3===0;
+      alt += ascEffort(15)*ASC_MUL[ascTier(series + (third ? 1 : 0))]*(1 + .12*Math.min(1, n/400));
+      pos.push(Math.min(alt, D.top)); if(third) series++;
+    }
+    const N = mi<2 ? 2 : 3, step = (D.top - D.start)/pos.length*N, gen = [];
+    for(let i=N; i<pos.length; i+=N) if(D.top - pos[i-1]>step*.5 && named.every(c=>Math.abs(c[0] - pos[i-1])>step*.5)) gen.push(pos[i-1]);
+    const all = named.map(c=>({ p:c[0], n:c[1], r:c[2] })).concat(gen.map(p=>({ p:Math.round(p), n:null }))).sort((a, b)=>a.p-b.p);
+    const numbered = named.some(c=>/^Camp \d/.test(c[1]));
+    let g = 0;
+    out[k] = all.map((c, i)=>c.n ? [c.p, c.n, c.r] : [c.p, numbered ? `Bivouac ${++g}` : `Camp ${i+1}`, c.p]);
+  });
+  return out;
+})();
+function ascCamps(k){ return ASC_CAMPS[k]; }
 // le « de/du/de l' » devant un nom de sommet
 function ascDu(k){ const n = ASC_DATA[k].n; return /^[AEIOUÉ]/.test(n) ? `de l'${n}` : /^(Mont|Cervin|Moléson|Pilatus|Titlis|Mönch|K2|Kilimandjaro)/.test(n) ? `du ${n}` : `de la ${n}`; }
 function ascLe(k){ const n = ASC_DATA[k].n; return /^[AEIOUÉ]/.test(n) ? `l'${n}` : /^(Mont|Cervin|Moléson|Pilatus|Titlis|Mönch|K2|Kilimandjaro)/.test(n) ? `le ${n}` : `la ${n}`; }
@@ -58,7 +85,7 @@ function ascent_raw(){
     if(s.exos.some(ex=>ex.deload)) deloads.add(w);
   }
   const k0 = ASC_ORDER[0];
-  const st = { lap:0, i:0, alt:ASC_DATA[k0].start, wait:false, series:0, expFrom:null, expN:0 };
+  const st = { lap:0, i:0, alt:ASC_DATA[k0].start, wait:false, series:0, expFrom:null, expN:0, campDates:{} };
   const out = { weeks:[], summits:[], descents:[], log:{}, last:null };
   // force : indice à la fin de la semaine précédente, recalculé toutes les 4 semaines ; forme = indice
   // rapporté à son meilleur niveau des 6 derniers mois (la dernière ligne droite la demande)
@@ -89,7 +116,7 @@ function ascent_raw(){
         const ni = nextIdx(), nk = ASC_ORDER[ni];
         if(series>=ASC_REQ[nk]){
           if(ni===0) st.lap++;
-          st.i = ni; st.alt = ASC_DATA[nk].start; st.wait = false; st.expFrom = s.date; st.expN = 0;
+          st.i = ni; st.alt = ASC_DATA[nk].start; st.wait = false; st.expFrom = s.date; st.expN = 0; st.campDates = {};
           e.started = nk; e.key = nk; e.from = e.to = st.alt;
           e.lapF = 1/(1 + .25*st.lap); gain = ascEffort(hard)*ASC_MUL[tier]*f.mult*e.lapF;
         } else { e.waiting = true; out.log[s.id] = e; out.last = e; continue; }
@@ -99,7 +126,8 @@ function ascent_raw(){
       if(f.form<ASC_FORM_OK && to>pushFrom){ const before = Math.max(0, pushFrom - st.alt); to = st.alt + before + (gain - before)*.5; e.push = true; }
       if(!st.expFrom) st.expFrom = s.date;
       st.expN++;
-      e.camps = D.camps.filter(c=>c[0]>st.alt && c[0]<=to).map(c=>c[1]);
+      e.camps = ascCamps(key()).filter(c=>c[0]>st.alt+.5 && c[0]<=to+.5).map(c=>c[1]);   // même tolérance que « passed »
+      e.camps.forEach(nm=>{ st.campDates[nm] = s.date; });
       if(to>=D.top){
         to = D.top; e.summit = key(); st.wait = true;
         out.summits.push({ key:key(), lap:st.lap, date:s.date, sessions:st.expN, weeks:Math.max(1, Math.round(daysBetween(weekKey(st.expFrom), w)/7)+1), series });
@@ -120,7 +148,7 @@ function ascent_raw(){
       else {
         state = "empty"; st.series = ascDrop(st.series);
         if(!st.wait){
-          const D = ASC_DATA[key()], below = D.camps.filter(c=>c[0]<st.alt-.5), c = below[below.length-1];
+          const D = ASC_DATA[key()], below = ascCamps(key()).filter(c=>c[0]<st.alt-.5), c = below[below.length-1];
           const to = c ? c[0] : D.start;
           if(to<st.alt) out.descents.push({ w, key:key(), from:st.alt, to, camp:c ? c[1] : null, real:c ? c[2] : D.fromAlt });
           st.alt = to;
@@ -133,7 +161,10 @@ function ascent_raw(){
   const sNow = st.series + ((out.weeks.length && out.weeks[out.weeks.length-1].w===thisWeek && out.weeks[out.weeks.length-1].state==="ok") ? 1 : 0);
   const fNow = firstWeek ? forceFor(Math.round(daysBetween(firstWeek, thisWeek)/7)) : force;
   const done = st.wait ? 1 : (st.alt - D.start)/(D.top - D.start);
-  const camps = D.camps, passed = camps.filter(c=>c[0]<=st.alt+.5).length, nextCamp = camps.find(c=>c[0]>st.alt+.5) || null;
+  const camps = ascCamps(k), passed = camps.filter(c=>c[0]<=st.alt+.5).length, nextCamp = camps.find(c=>c[0]>st.alt+.5) || null;
+  // rythme récent (séances par semaine sur les 4 dernières semaines terminées) : pour les délais estimés
+  const recent = out.weeks.filter(w=>w.state!=="cur" && w.state!=="pause").slice(-4);
+  const perWeek = recent.length ? Math.max(.5, recent.reduce((t, w)=>t + w.n, 0)/recent.length) : goal;
   // pauses du trimestre en cours (la semaine en cours et la suivante peuvent être déclarées)
   const q = ascQuarter(thisWeek), pausesQ = ascPauses().filter(w=>ascQuarter(w)===q).length;
   return Object.assign(out, {
@@ -142,6 +173,7 @@ function ascent_raw(){
     series:sNow, tier:ascTier(sNow), mul:ASC_MUL[ascTier(sNow)], force:fNow.mult, form:fNow.form, index:fNow.index,
     pushOK:fNow.form>=ASC_FORM_OK, pushFrom:D.top - ASC_PUSH*(D.top - D.start),
     expFrom:st.expFrom, expN:st.expN, paused:pauses.has(thisWeek), pausesLeft:Math.max(0, ASC_PAUSE_MAX - pausesQ),
+    camps, campDates:st.campDates, perWeek,
     summitCount:out.summits.length, goal,
   });
 }

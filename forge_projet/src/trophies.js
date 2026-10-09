@@ -475,7 +475,6 @@ function showCelebration(session, ups, hits, won){
   }));
   setTimeout(()=>confettiBurst(null, innerHeight*0.3, ups.length||moved||(hits&&hits.length) ? 150 : 90), 150);
   setTimeout(()=>sfx(ups.length||moved||(hits&&hits.length) ? "medal" : "exo"), 200);
-  if(asc && asc.camps.length) setTimeout(()=>sfx("ascCamp"), 1100);
 }
 
 Object.assign(ACT, {

@@ -84,8 +84,9 @@ function nextGoal(){
     return { ic:"trophy", pct:p.pct, act:`data-a="showMedal" data-id="${m.id}"`,
       t:`${TIERS[p.t+1].n} « ${m.n} » : plus que ${fmtMedalVal(m, rest)} ${medalUnit(m, rest)}` }; }
   // sinon : l'ascension (prochain camp, ou la série qui ouvre la montagne suivante)
-  const a = ascent();
-  return { ic:"trendUp", pct:a.wait ? Math.min(1, a.series/Math.max(1, a.nextReq)) : a.done, act:'data-a="openAscent"', t:ascWhereTxt(a) };
+  // la barre montre le chemin depuis le camp précédent : avec des camps rapprochés, elle se remplit à chaque séance
+  const a = ascent(), nc = a.nextCamp, c0 = nc ? (a.camps[a.passed-1] || [a.start])[0] : 0;
+  return { ic:"trendUp", pct:a.wait ? Math.min(1, a.series/Math.max(1, a.nextReq)) : nc ? Math.max(0, Math.min(1, (a.alt-c0)/Math.max(1, nc[0]-c0))) : a.done, act:'data-a="openAscent"', t:ascWhereTxt(a) };
 }
 function nextGoalHTML(){
   if(S.settings.nextGoal===false) return "";

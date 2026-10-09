@@ -1,9 +1,10 @@
 // Généré pour le dépôt : dossiers de sortie et navigateur configurables (voir tests/README.md)
 const OUT_ROOT = process.env.OUT_DIR || require('path').join(__dirname, 'out'); require('fs').mkdirSync(OUT_ROOT, { recursive: true });
 // 4.0 (ascension) : l'ascension remplace le niveau XP. Règles du moteur (série, gel, paliers, descente au camp
-// précédent, pause, semaine allégée, série requise, dernière ligne droite, étirements), données
-// abîmées, pastille d'accueil, carte de Progrès, profil, écran « Mon ascension » (scène chargée à la
-// demande, jour et nuit, repli sans le fichier), fin de séance, sommet plein écran, carte de sommet,
+// précédent, pause, semaine allégée, série requise, dernière ligne droite, étirements), camps rapprochés
+// (le premier du Moléson en 2 séances), données abîmées, pastille d'accueil, carte de Progrès, profil, écran
+// « Mon ascension » (scène chargée à la demande, bulle d'un camp au toucher, carte Étapes, jour et nuit, repli
+// sans le fichier), fin de séance (piste animée, badge du camp atteint), sommet plein écran, carte de sommet,
 // avertissement de descente.
 const __pw = require('playwright'); const path = require('path'); const fs = require('fs');
 const OUT = path.join(OUT_ROOT, 'v50'); fs.mkdirSync(OUT, { recursive: true });
@@ -34,8 +35,13 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     let a = run({}); R.empty = { key: a.key, alt: a.alt, start: ASC_DATA.moleson.start, wait: a.wait };
     const reg = {}; for (let n = 12; n >= 1; n--) reg[n] = 3;
     a = run(reg); R.regular = { summits: a.summits.map(s => s.key), series: a.series, states: a.weeks.map(w => w.state).join(','), mul: a.mul };
+    // camps rapprochés : chaque passage daté, un camp toutes les 2 séances au début (le premier en 2 séances de 15 séries)
+    R.campDates = Object.keys(a.campDates).length - a.passed; R.perWeek = a.perWeek;
+    a = run({ 1: 2 }); R.first = { passed: a.passed, alt: a.alt, camp1: ascCamps('moleson')[0][0] };
+    R.camps = ASC_ORDER.map(k => { const c = ascCamps(k), D = ASC_DATA[k]; return { k, n: c.length, ok: c.every((x, i) => x[0] > D.start && x[0] < D.top && (!i || x[0] > c[i - 1][0])) && new Set(c.map(x => x[1])).size === c.length,
+      real: D.camps.filter(x => !ASC_GENERIC(k, x[1])).every(x => c.some(y => y[1] === x[1])) }; });
     a = run({ 6: 3, 5: 3, 4: 3, 3: 3, 1: 3 }); R.empty_week = { descents: a.descents.length, w: a.descents[0] && a.descents[0].w, exp: wk(2), series: a.series, to: a.descents[0] && a.descents[0].to,
-      camp: a.descents[0] ? (a.descents[0].to === ASC_DATA.moleson.start || ASC_DATA.moleson.camps.some(c => c[0] === a.descents[0].to)) : false, state: (a.weeks.find(w => w.w === wk(2)) || {}).state };
+      camp: a.descents[0] ? (a.descents[0].to === ASC_DATA.moleson.start || ascCamps('moleson').some(c => c[0] === a.descents[0].to)) : false, state: (a.weeks.find(w => w.w === wk(2)) || {}).state };
     const fr = {}; for (let n = 10; n >= 3; n--) fr[n] = 3; fr[2] = 1; fr[1] = 1;
     a = run(fr); R.frozen = { series: a.series, states: a.weeks.slice(-3).map(w => w.state).join(','), descents: a.descents.length };
     a = run({ 6: 3, 5: 3, 4: 3, 3: 3, 1: 3 }, { pauses: [wk(2)] }); R.pause = { descents: a.descents.length, state: (a.weeks.find(w => w.w === wk(2)) || {}).state, series: a.series };
@@ -74,6 +80,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   if (eng.stretch.alt !== 1516 || eng.stretch.weeks || eng.stretch.log) fail('étirements seuls : ne comptent pas');
   if (!(eng.push_low > 0) || eng.push_ok !== 0 || Math.abs(eng.force - 1.12) > .001) fail('dernière ligne droite et force amortie');
   if (eng.pz.join() !== 'true,true,false,true') fail('2 pauses par trimestre');
+  if (eng.first.passed < 1 || eng.campDates < 0 || !(eng.perWeek >= 2.9) || eng.camps.some(c => !c.ok || !c.real || c.n < 8) || eng.camps[0].n < 12) fail('camps rapprochés, datés, refuges réels conservés');
   if (eng.norm.pauses.join() !== '2026-01-05' || eng.norm.seen !== null || eng.norm.desc !== '' || !eng.norm2) fail('données abîmées nettoyées');
 
   // 2. un historique réel : 14 semaines, 3 séances par semaine
@@ -103,21 +110,41 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.waitForSelector('#ascScene .asc-svg', { timeout: 8000 });
   await wait(wk ? 3500 : 3000);
   const sheet = await page.evaluate(() => { const a = ascent(), h = document.querySelector('#ascScene'), svg = h.querySelector('.asc-svg');
-    return { ready: h.classList.contains('ready'), paths: svg.querySelectorAll('path[class^="ak"]').length, camps: svg.querySelectorAll('.asc-camp').length, exp: ASC_DATA[a.key].camps.length,
+    return { ready: h.classList.contains('ready'), paths: svg.querySelectorAll('path[class^="ak"]').length, camps: svg.querySelectorAll('.asc-camp').length, exp: ascCamps(a.key).length,
       hud: h.querySelector('.hud-n').textContent, name: ASC_DATA[a.key].n, cards: [...document.querySelectorAll('.asc-body .asc-row .t')].map(x => x.textContent).join('|'),
-      week: !!document.querySelector('#ascWeek .aw-msg'), next: (document.querySelector('.asc-exp .exp-next') || {}).textContent || '', rowsH: Math.round(document.querySelector('.asc-rows').getBoundingClientRect().height),
+      week: !!document.querySelector('#ascWeek .aw-msg'), next: (document.querySelector('#ascSteps .st-i.next, #ascSteps .exp-next-i') || {}).textContent || '', steps: document.querySelectorAll('#ascSteps .st-list .st-i').length, rowsH: Math.round(document.querySelector('.asc-rows').getBoundingClientRect().height),
       folded: document.querySelectorAll('.asc-body .stops li').length, me: !!svg.querySelector('.asc-me[transform]'), seen: S.ascent.seen && S.ascent.seen.key === a.key,
       day: svg.innerHTML.includes('#78A8D6') || svg.innerHTML.includes('#6EA2D2') || svg.innerHTML.includes('#5A8CCD') || svg.innerHTML.includes('#2F62B4') }; });
   log('Sheet:', JSON.stringify(sheet));
   if (!sheet.ready || sheet.paths < 20 || sheet.camps !== sheet.exp || sheet.hud !== sheet.name || !sheet.me || !sheet.seen || !sheet.day) fail('écran Mon ascension : scène, camps, HUD');
   // lisibilité : où j'en suis (une phrase), cette semaine, puis le détail replié en lignes (visibles : la colonne ne les écrase pas)
-  if (sheet.cards !== 'Vitesse de montée|Régularité|Force|Itinéraire|Trophées de sommet|Comment ça marche' || !sheet.week || !/^(Prochain camp|Sommet dans|Prochaine expédition)/.test(sheet.next) || sheet.rowsH < 250 || sheet.folded) fail('écran : hiérarchie et détail replié');
+  if (sheet.cards !== 'Vitesse de montée|Régularité|Force|Itinéraire|Trophées de sommet|Comment ça marche' || !sheet.week || !/dans \d|Prochaine expédition/.test(sheet.next) || sheet.steps < 3 || sheet.steps > 6 || sheet.rowsH < 250 || sheet.folded) fail('écran : hiérarchie et détail replié');
   await page.click('.asc-row[data-k="itin"]'); await wait(700);
   const itin = await page.evaluate(() => ({ stops: document.querySelectorAll('#ascSec-itin .stops li').length, exp: document.querySelector('.asc-row[data-k="itin"]').getAttribute('aria-expanded') }));
   await page.click('.asc-row[data-k="itin"]'); await wait(600);
   const itin2 = await page.evaluate(() => document.querySelectorAll('#ascSec-itin .stops li').length);
   log('Itinerary:', JSON.stringify(itin), itin2); if (itin.stops !== 13 || itin.exp !== 'true' || itin2) fail('itinéraire déplié puis replié');
   await shot('02_sheet');
+  // toucher un camp sur la montagne : bulle (nom, altitude, séances) ; une étape de la liste ; toucher ailleurs la ferme
+  await page.evaluate(() => { document.querySelector('.asc-body').scrollTop = 0; }); await wait(300);
+  const pt = await page.evaluate(() => { const G = ascG, a = ascent(), c = G.camps.find(x => x.h === 0 && x.a < a.alt) || G.camps.find(x => x.h === 0), m = G.el.getScreenCTM(), p = new DOMPoint(c.x, c.y).matrixTransform(m);
+    return { x: p.x + 3, y: p.y - 2, name: c.name }; });
+  await page.mouse.click(pt.x, pt.y); await wait(500);
+  const bub = await page.evaluate(() => { const b = document.querySelector('#ascScene .asc-bub.on'), r = b && b.getBoundingClientRect(), h = document.querySelector('#ascScene').getBoundingClientRect();
+    return { txt: b ? b.textContent.replace(/\s+/g, ' ') : '', inside: !!r && r.left >= h.left && r.right <= h.right, sel: !!document.querySelector('.asc-sel circle') }; });
+  await shot('02b_bubble');
+  await page.evaluate(() => { const s = document.querySelector('#ascSteps .st-i.next'); s.scrollIntoView({ block: 'center' }); }); await wait(300);
+  await page.click('#ascSteps .st-i.next'); await wait(900);
+  const bub2 = await page.evaluate(() => { const b = document.querySelector('#ascScene .asc-bub.on'); return { txt: b ? b.textContent.replace(/\s+/g, ' ') : '', top: document.querySelector('.asc-body').scrollTop }; });
+  await page.click('#ascSteps .st-hd'); await wait(400);
+  const bub3 = await page.evaluate(() => !!document.querySelector('#ascScene .asc-bub'));
+  await page.click('[data-a="ascAllSteps"]'); await wait(600);
+  const all = await page.evaluate(() => ({ n: document.querySelectorAll('#ascSteps .st-list .st-i').length, exp: ascCamps(ascent().key).length + 1 }));
+  log('Bubble:', JSON.stringify(bub), JSON.stringify(bub2), bub3, JSON.stringify(all));
+  if (!bub.txt.includes(pt.name) || !/\d m/.test(bub.txt) || !/Atteint|séance/.test(bub.txt) || !bub.inside || !bub.sel) fail('bulle d\'un camp touché sur la montagne');
+  if (!/Prochaine étape/.test(bub2.txt) || !/séance/.test(bub2.txt) || bub2.top > 40 || bub3) fail('étape de la liste : bulle sur la montagne, fermée en touchant ailleurs');
+  if (all.n !== all.exp) fail('toutes les étapes');
+  await page.click('[data-a="ascAllSteps"]'); await wait(500);
   await page.evaluate(() => { document.querySelector('.asc-body').scrollTop = 900; }); await wait(300); await shot('03_sheet_reg');
   // pause : bouton, état, nombre restant
   await page.click('[data-a="ascPause"]'); await wait(300);
@@ -139,10 +166,19 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     S.draft = { id: 'live' + Date.now(), date: todayISO(), startedAt: new Date(Date.now() - 2400e3).toISOString(), source: 'custom', exos }; finalizeSession(); return S.sessions[S.sessions.length - 1].id; });
   let sid = await fin(); await wait(1600);
   const cel = await page.evaluate(id => { const c = document.querySelector('.cel .cel-asc'), e = ascent().log[id];
-    return { asc: !!c, txt: c ? c.textContent.replace(/\s+/g, ' ') : '', gain: e && Math.round(e.gain), xp: /XP/.test(document.querySelector('.cel').textContent), bar: c ? c.querySelector('#celAsc').style.width : '' }; }, sid);
+    return { asc: !!c, txt: c ? c.textContent.replace(/\s+/g, ' ') : '', gain: e && Math.round(e.gain), xp: /XP/.test(document.querySelector('.cel').textContent), trk: !!(c && c.querySelector('#celTrk')), next: !!(c && (c.querySelector('.ca-next') || e.summit)) }; }, sid);
   log('Celebration:', JSON.stringify(cel));
-  if (!cel.asc || !(cel.gain > 0) || !cel.txt.includes('+') || cel.xp) fail('fin de séance : altitude gagnée à la place de l\'XP');
+  if (!cel.asc || !(cel.gain > 0) || !cel.txt.includes('+') || cel.xp || !cel.trk || !cel.next) fail('fin de séance : altitude gagnée à la place de l\'XP');
   await shot('04_celebration');
+  await page.evaluate(() => closeSheet()); await wait(500);
+  // une séance qui franchit un camp : la piste avance, le camp s'allume, le badge se révèle
+  const cid = await page.evaluate(() => { const a = ascent(), s = S.sessions.slice().reverse().find(x => a.log[x.id] && a.log[x.id].camps.length && !a.log[x.id].summit); showCelebration(s, [], [], []); return s.id; });
+  await wait(300); await page.evaluate(() => document.querySelector('#celTrk').scrollIntoView({ block: 'center' })); await wait(3200);
+  const badge = await page.evaluate(id => { const e = ascent().log[id], b = document.querySelector('#celBadge');
+    return { on: !!(b && b.classList.contains('on')), txt: b ? b.textContent : '', camp: e.camps[e.camps.length - 1], hit: document.querySelectorAll('#celTrk .ca-tick.hit').length, me: document.querySelector('#celTrk .ca-me').style.left, to: document.querySelector('#celTrk').dataset.to + '%' }; }, cid);
+  log('Camp badge:', JSON.stringify(badge));
+  if (!badge.on || !badge.txt.includes(badge.camp) || !/Camp atteint|camps atteints/.test(badge.txt) || badge.hit < 1 || badge.me !== badge.to) fail('camp franchi : piste animée et badge');
+  await shot('04b_camp');
   await page.evaluate(() => closeSheet()); await wait(500);
   await page.evaluate(() => { let g = 0; while (g++ < 400) { const a = ascent(); if (a.wait || a.top - a.alt < 12) break;
       S.sessions.push({ id: 'x' + g, date: todayISO(), durationSec: 900, exos: [{ exoId: 'pompes', sets: [1, 2].map(() => ({ reps: 10, done: true })) }] }); save(); } });
