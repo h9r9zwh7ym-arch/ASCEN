@@ -81,6 +81,28 @@ const ASC_CAMPS = (()=>{
   return out;
 })();
 function ascCamps(k){ return ASC_CAMPS[k]; }
+// carnet de route (data_ascent_story.js) : pour chaque camp, { t: terrain ou lieu, q: ligne du carnet, real, art }.
+// Toujours la même carte pour le même camp : les libellés et les lignes d'un terrain passent à tour de rôle,
+// à partir d'un point qui dépend de la montagne ; une ligne propre à la montagne remplace celle du camp le plus proche.
+const ASC_STORY = {};
+function ascStory(k){
+  if(ASC_STORY[k]) return ASC_STORY[k];
+  const camps = ascCamps(k), zones = ASC_ZONES[k], own = {}, cnt = {}, cur = {};
+  let h = 7; for(const ch of k) h = (h*31 + ch.charCodeAt(0))>>>0;
+  (ASC_LINES[k] || []).forEach(([alt, q])=>{
+    let best = -1; camps.forEach((c, i)=>{ if(!ASC_PLACES[k+"/"+c[1]] && own[i]==null && (best<0 || Math.abs(c[0]-alt)<Math.abs(camps[best][0]-alt))) best = i; });
+    if(best>=0) own[best] = q;
+  });
+  return ASC_STORY[k] = camps.map((c, i)=>{
+    const z = zones.find(x=>c[0]<=x[0]) || zones[zones.length-1], T = ASC_TERRAIN[z[1]], p = ASC_PLACES[k+"/"+c[1]];
+    if(p) return { t:p[0], q:p[1], real:true, art:T.art };
+    const zi = zones.indexOf(z), n = cnt[zi] = (cnt[zi]==null ? -1 : cnt[zi]) + 1, L = z[2] || T.l, t = L[(n + (z[2] ? 0 : h))%L.length];
+    if(own[i]) return { t, q:own[i], real:false, art:T.art };
+    if(T.f && !n && zi && zones[zi-1][1]!==z[1]) return { t, q:T.f, real:false, art:T.art };   // on entre dans ce terrain
+    const m = cur[z[1]] = cur[z[1]]==null ? h%T.q.length : (cur[z[1]] + 1)%T.q.length;
+    return { t, q:T.q[m], real:false, art:T.art };
+  });
+}
 // le « de/du/de l' » devant un nom de sommet
 function ascDu(k){ const n = ASC_DATA[k].n; return /^[AEIOUÉ]/.test(n) ? `de l'${n}` : /^(Mont|Cervin|Moléson|Pilatus|Titlis|Mönch|K2|Kilimandjaro)/.test(n) ? `du ${n}` : `de la ${n}`; }
 function ascLe(k){ const n = ASC_DATA[k].n; return /^[AEIOUÉ]/.test(n) ? `l'${n}` : /^(Mont|Cervin|Moléson|Pilatus|Titlis|Mönch|K2|Kilimandjaro)/.test(n) ? `le ${n}` : `la ${n}`; }

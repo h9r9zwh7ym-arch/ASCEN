@@ -132,7 +132,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   log('Sheet:', JSON.stringify(sheet));
   if (!sheet.ready || sheet.paths < 20 || sheet.camps !== sheet.exp || sheet.hud !== sheet.name || !sheet.me || !sheet.seen || !sheet.day) fail('écran Mon ascension : scène, camps, HUD');
   // lisibilité : où j'en suis (une phrase), cette semaine, puis le détail replié en lignes (visibles : la colonne ne les écrase pas)
-  if (sheet.cards !== 'Vitesse|Régularité|Itinéraire|Trophées' || !sheet.week || !/dans \d|Prochaine expédition/.test(sheet.next) || sheet.steps < 3 || sheet.steps > 5 || sheet.rowsH < 180 || sheet.folded || sheet.aspect !== sheet.vh) fail('écran : hiérarchie et détail replié');
+  if (sheet.cards !== 'Vitesse|Régularité|Itinéraire|Carnet de route|Trophées' || !sheet.week || !/dans \d|Prochaine expédition/.test(sheet.next) || sheet.steps < 3 || sheet.steps > 5 || sheet.rowsH < 180 || sheet.folded || sheet.aspect !== sheet.vh) fail('écran : hiérarchie et détail replié');
   await page.click('.asc-row[data-k="itin"]'); await wait(700);
   const itin = await page.evaluate(() => ({ stops: document.querySelectorAll('#ascSec-itin .stops li').length, exp: document.querySelector('.asc-row[data-k="itin"]').getAttribute('aria-expanded') }));
   await page.click('.asc-row[data-k="itin"]'); await wait(600);
@@ -210,7 +210,8 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   log('Summit session:', JSON.stringify(sum));
   if (!sum.e || !sum.btn) fail('séance qui atteint le sommet : bouton « Voir le sommet »');
   if (sum.btn) {
-    await page.click('.cel [data-a="ascCelSummit"]'); await wait(1800);
+    // (on attend l'écran plutôt qu'un délai fixe : sans carte graphique, la mise en cache des trophées 3D peut occuper la page quelques secondes)
+    await page.click('.cel [data-a="ascCelSummit"]'); await page.waitForSelector('#ascSummit.on', { timeout: 12000 }).catch(() => {}); await wait(600);
     const ov = await page.evaluate(() => { const el = document.querySelector('#ascSummit'); return { on: !!(el && el.classList.contains('on')), h2: el ? el.querySelector('h2').textContent : '', gifts: el ? el.querySelectorAll('.gift').length : 0 }; });
     log('Summit overlay:', JSON.stringify(ov));
     if (!ov.on || !/ m$/.test(ov.h2) || ov.gifts !== 3) fail('sommet plein écran');

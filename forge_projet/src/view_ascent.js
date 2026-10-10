@@ -229,6 +229,8 @@ Object.assign(SFX, {
   ascCampBig(){ [NT.G5, NT.C6, NT.E6, NT.G6].forEach((f,i)=>bell(f, i*.075, 1.2, .09)); tone(NT.C5, 0, 1.1, { gain:.05, type:"triangle", wet:1 }); tone(NT.G5, .05, 1, { gain:.035, type:"triangle", wet:1 }); bell(NT.C7, .36, 1.5, .07); },
   ascDown(){ [659.25, 587.33, 523.25, 440].forEach((f,i)=>tone(f, i*.11, .28, { gain:.07, type:"triangle" })); },
   ascSummit(){ [NT.C5, NT.E5, NT.G5].forEach((f,i)=>tone(f, i*.09, 2, { gain:.07, type:"triangle", wet:1 })); [NT.C6, NT.E6, NT.G6, NT.C7].forEach((f,i)=>bell(f, .35+i*.11, 1.4, .09)); },
+  // le drapeau se plante : un choc sourd, un souffle, puis l'accord du sommet
+  ascPlant(){ tone(150, 0, .26, { gain:.18, to:60, att:.002 }); tok(0, 115, 1); whoosh(.03, .5, 500, 2800, .05); SFX.ascSummit(); },
 });
 
 // ---------- textes ----------
@@ -276,12 +278,12 @@ function ascBubbleHTML(o, a){
   if(o.kind==="summit"){
     const d = ascSummitDate(a);
     return { cls:"summit"+(a.wait ? " past" : ""), html:`<div class="ab-k">Sommet · ${esc(D.region)}</div><div class="ab-n"><span>${esc(D.n)}</span><b class="num">${fmtNum(D.top)} m</b></div>
-      ${a.wait ? `<div class="ab-s ok">${ascIc("check")}Atteint${d ? ` le ${fmtDate(d)}` : ""}</div>` : ahead(D.top-alt, false)}` };
+      ${a.wait ? `<div class="ab-s ok">${ascIc("check")}Atteint${d ? ` le ${fmtDate(d)}` : ""}</div>${ASC_TOPS[a.key] ? `<div class="ab-q">${esc(ASC_TOPS[a.key])}</div>` : ""}` : ahead(D.top-alt, false)}` };
   }
-  const i = o.c.i, c = camps[i], past = c[0]<=alt+.5, d = a.campDates[c[1]], real = !ASC_GENERIC(a.key, c[1]);
-  return { cls:past ? "past" : i===ni ? "next" : "", html:`<div class="ab-k">Étape ${i+1} sur ${camps.length}${real ? " · lieu réel" : ""}</div>
+  const i = o.c.i, c = camps[i], past = c[0]<=alt+.5, d = a.campDates[c[1]], st = ascStory(a.key)[i];
+  return { cls:past ? "past" : i===ni ? "next" : "", html:`<div class="ab-k">Étape ${i+1} sur ${camps.length} · ${esc(st.t)}</div>
     <div class="ab-n"><span>${esc(c[1])}</span><b class="num">${fmtNum(c[2])} m</b></div>
-    ${past ? `<div class="ab-s ok">${ascIc("check")}Atteint${d ? ` le ${fmtDate(d)}` : ""}</div>` : ahead(c[0]-alt, i===ni)}` };
+    ${past ? `<div class="ab-s ok">${ascIc("check")}Atteint${d ? ` le ${fmtDate(d)}` : ""}</div><div class="ab-q">${esc(st.q)}</div>` : ahead(c[0]-alt, i===ni)}` };
 }
 // o : { kind:"camp", c } | { kind:"summit" } | { kind:"me" } ; ancrée au point de la scène (SVG → écran → scène)
 function ascBubble(o){
@@ -321,6 +323,103 @@ function ascBubbleHide(){
 }
 // toucher ailleurs que sur la scène referme la bulle
 document.addEventListener("pointerdown", e=>{ if(ascBubOn && !(e.target.closest && e.target.closest("#ascScene, [data-a='ascCamp']"))) ascBubbleHide(); }, { passive:true, capture:true });
+
+// ---------- carnet de route : une carte postale par camp atteint (et par sommet) ----------
+// Les cartes viennent de l'historique (le journal du moteur) : rien n'est enregistré à part. Une carte gagnée
+// le reste, même après une descente ou au 2ᵉ tour (on garde la date de la première fois).
+function ascCards(a){
+  if(a._cards) return a._cards;
+  const seen = new Set(), list = [];
+  for(const e of Object.values(a.log)){
+    const camps = ascCamps(e.key), add = (k, i)=>{ const id = k+"|"+i; if(seen.has(id)) return; seen.add(id); list.push({ k, i, date:e.date, sid:e.id }); };
+    e.camps.forEach(nm=>{ const i = camps.findIndex(c=>c[1]===nm); if(i>=0) add(e.key, i); });
+    if(e.summit) add(e.summit, -1);
+  }
+  return a._cards = list.sort((x, y)=>x.date<y.date ? -1 : x.date>y.date ? 1 : 0);
+}
+// le dessin : couleurs fixes, comme une carte imprimée (même rendu de jour et de nuit), tiré au sort une fois pour
+// toutes par camp ; la montagne grandit à mesure qu'on s'en approche
+const ASC_ART = {
+  pre:{ sky:["#8EC6EA","#EAF3E6"], far:"#A9B9CB", mid:"#86AE6C", fg:"#5F8C4C" },
+  roc:{ sky:["#94BFE3","#EEF0EB"], far:"#AEB8C4", mid:"#A69D90", fg:"#80766B" },
+  mor:{ sky:["#88B9E2","#EBF2F6"], far:"#BAC7D4", mid:"#C3CAD0", fg:"#99A2AA" },
+  nev:{ sky:["#6EA4DA","#EEF5FB"], far:"#C2D1E2", mid:"#F4F7FB", fg:"#D6E1EC" },
+  are:{ sky:["#35508F","#F3B78B"], far:"#6E7898", mid:"#A9B3C6", fg:"#E6EBF2" },
+  des:{ sky:["#7EB2DF","#F1E4C8"], far:"#BCAB93", mid:"#B19774", fg:"#8D7558" },
+  cen:{ sky:["#5C8FD0","#EADCC6"], far:"#A99F98", mid:"#7E7068", fg:"#5E524C" },
+  high:{ sky:["#0D1A44","#5372B4"], far:"#8C9CC0", mid:"#C9D3E6", fg:"#EEF2F8" },
+  top:{ sky:["#2B3F7A","#F6C08F"], far:"#F6ECE2", mid:"#B4BFD6", fg:"#93A0BD" },
+  lock:{ sky:["#D5DAE1","#EEF0F3"], far:"#C3C9D2", mid:"#D2D7DE", fg:"#C0C6CF" },
+};
+let ascPcN = 0;
+function ascPcArt(k, i, locked){
+  const top = i<0, kind = locked ? "lock" : top ? "top" : ascStory(k)[i].art, A = ASC_ART[kind], D = ASC_DATA[k], P = ascP1;
+  let h = 9; for(const ch of k) h = (h*31 + ch.charCodeAt(0))>>>0;
+  const rs = ascRng(h + (i+2)*7919), id = "pc"+(++ascPcN), rnd = (a, b)=>a + rs()*(b-a);
+  const rel = top ? 1 : Math.max(0, Math.min(1, (ascCamps(k)[i][0]-D.start)/(D.top-D.start)));
+  const sc = top ? 1.05 : .72 + .38*rel, sx = top ? 80 : rnd(64, 96), sy = top ? 26 : 20, sk = ascSky(k);
+  const far = sk.map(([x, y])=>`${P(sx + (x-D.sx)*sc)} ${P(sy + (y-D.sy)*sc)}`);
+  const midY = kind==="are" || kind==="high" || kind==="top" ? 70 : 63, ys = [-6, 22, 50, 80, 110, 138, 166].map(x=>[x, midY + rnd(-6, 6)]);
+  const f0 = rnd(80, 86), f1 = rnd(76, 84), f2 = rnd(80, 88), fy = x=>x<80 ? f0 + (f1-f0)*x/80 : f1 + (f2-f1)*(x-80)/80;
+  let deco = "", sky = "";
+  if(kind==="high") for(let n=0;n<16;n++) sky += `<circle cx="${P(rnd(2, 158))}" cy="${P(rnd(2, 34))}" r="${P(rnd(.35, .9))}" fill="#fff" opacity="${P(rnd(.4, .95))}"/>`;
+  else if(kind==="are" || kind==="top") sky += `<circle cx="${P(top ? sx : rnd(22, 100))}" cy="${top ? 34 : 48}" r="${top ? 30 : 15}" fill="url(#${id}g)"/>`;
+  else if(kind!=="lock") sky += `<circle cx="${P(rnd(14, 54))}" cy="${P(rnd(12, 20))}" r="6.5" fill="#FFF6DA" opacity=".95"/>`;   // à gauche : le cachet est à droite
+  if(kind==="pre") for(let n=0, m = 3 + Math.floor(rs()*4); n<m; n++){ const x = rnd(4, 156), y = midY + rnd(1, 9), s = rnd(3, 5.5);
+    deco += `<path d="M${P(x)} ${P(y-s*2.4)}L${P(x+s)} ${P(y)}H${P(x-s)}Z" fill="#3E6A3C"/>`; }
+  if(kind==="roc" || kind==="des" || kind==="cen") for(let n=0, m = 4 + Math.floor(rs()*4); n<m; n++){ const x = rnd(4, 156), y = fy(x) + rnd(4, 14), s = rnd(1.6, 3.6);
+    deco += `<path d="M${P(x-s)} ${P(y)}L${P(x-s*.4)} ${P(y-s)}L${P(x+s*.6)} ${P(y-s*.8)}L${P(x+s)} ${P(y)}Z" fill="#000" opacity=".16"/>`; }
+  if(kind==="mor") deco += `<ellipse cx="${P(rnd(40, 120))}" cy="${P(midY + 7)}" rx="${P(rnd(14, 22))}" ry="2.6" fill="#5CC3C8"/>`;
+  if(kind==="nev" || kind==="high") for(let n=0;n<3;n++){ const x = rnd(10, 140), y = fy(x) + rnd(5, 13);
+    deco += `<path d="M${P(x)} ${P(y)}l${P(rnd(6, 12))} ${P(rnd(-1, 1))}" stroke="#9DB7D4" stroke-width="1.1" stroke-linecap="round"/>`; }
+  if(kind==="are" || kind==="top") deco += `<path d="M-4 ${midY+3}q20 -3 40 0t40 0 40 0 40 0V${midY+7}H-4Z" fill="#fff" opacity=".55"/>`;
+  // le camp : tente (ou refuge pour un lieu réel), le drapeau pour le sommet
+  let glyph = "";
+  if(top) glyph = `<g transform="translate(${P(sx)} ${sy})"><path d="M0 0V-13" stroke="#F7F4EE" stroke-width="1.3" stroke-linecap="round"/><path d="M0 -13h9l-2.2 2.6L9 -7.8H0Z" fill="#FF6B3D"/></g>`;
+  else if(!locked){ const x = rs()<.5 ? rnd(20, 50) : rnd(110, 140), y = fy(x) + 3;
+    glyph = ascStory(k)[i].real ? `<path d="M${P(x-7)} ${P(y)}V${P(y-6)}L${P(x)} ${P(y-11.5)}L${P(x+7)} ${P(y-6)}V${P(y)}Z" fill="#C2703F"/><path d="M${P(x-8.5)} ${P(y-5.2)}L${P(x)} ${P(y-12.6)}L${P(x+8.5)} ${P(y-5.2)}" fill="none" stroke="#6B3A22" stroke-width="1.8" stroke-linejoin="round"/><rect x="${P(x-1.6)}" y="${P(y-4.6)}" width="3.2" height="4.6" fill="#4A2A18"/>`
+      : `<path d="M${P(x-7.5)} ${P(y)}L${P(x)} ${P(y-11)}L${P(x+7.5)} ${P(y)}Z" fill="#FF6B3D"/><path d="M${P(x)} ${P(y-11)}L${P(x-2.2)} ${P(y)}H${P(x+2.2)}Z" fill="#9E3412"/>`; }
+  return `<svg class="pc-svg" viewBox="0 0 160 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs>
+      <linearGradient id="${id}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${A.sky[0]}"/><stop offset="1" stop-color="${A.sky[1]}"/></linearGradient>
+      <radialGradient id="${id}g"><stop offset="0" stop-color="#FFE9C2"/><stop offset=".45" stop-color="#FFC98A" stop-opacity=".85"/><stop offset="1" stop-color="#FFB070" stop-opacity="0"/></radialGradient></defs>
+    <rect width="160" height="100" fill="url(#${id}s)"/>${sky}
+    <path d="M-12 ${far[0].split(" ")[1]}L${far.join("L")}L172 ${far[far.length-1].split(" ")[1]}V100H-12Z" fill="${A.far}"/>
+    <path d="M${ys.map(p=>P(p[0])+" "+P(p[1])).join("L")}V100H-6Z" fill="${A.mid}"/>
+    <path d="M-6 ${P(f0)}Q40 ${P(f0-6)} 80 ${P(f1)}T166 ${P(f2)}V100H-6Z" fill="${A.fg}"/>${deco}${glyph}</svg>`;
+}
+// une carte : o.date (gagnée ce jour-là), o.locked (la prochaine, à découvrir), o.big, o.btn (ouvrir en grand)
+function ascPostcardHTML(k, i, o){
+  o = o || {};
+  const D = ASC_DATA[k], top = i<0, c = top ? null : ascCamps(k)[i], st = top ? null : ascStory(k)[i], lock = !!o.locked;
+  const name = top ? D.n : c[1], alt = top ? D.top : c[2];
+  const sub = lock ? (top ? "Sommet · à découvrir" : `Étape ${i+1} · à découvrir`) : top ? `Sommet · ${D.region}` : `${st.t} · ${D.n}`;
+  const q = lock ? "" : top ? ASC_TOPS[k] || "" : st.q, tag = o.btn ? "button" : "span";
+  return `<${tag} class="pc${o.big ? " big" : ""}${lock ? " locked" : ""}${top ? " top" : ""}${st && st.real ? " real" : ""}"${o.btn ? ` data-a="ascCard" data-k="${k}" data-i="${i}" aria-label="Carte postale : ${esc(name)}, ${fmtNum(alt)} mètres"` : ""}>
+    <span class="pc-art">${ascPcArt(k, i, lock)}${o.date && !lock ? `<span class="pc-pm" aria-hidden="true"><b>${esc(fmtDate(o.date))}</b><i>${o.date.slice(0, 4)}</i></span>` : ""}${lock ? `<span class="pc-lock">${ascIc("lock")}</span>` : ""}</span>
+    <span class="pc-b"><span class="pc-n"><b>${esc(name)}</b><span class="num">${fmtNum(alt)} m</span></span><span class="pc-l">${esc(sub)}</span>${q ? `<span class="pc-q">${esc(q)}</span>` : ""}</span>
+  </${tag}>`;
+}
+// le carnet (une ligne repliable de l'écran) : la montagne en cours d'abord, avec la prochaine carte à découvrir ;
+// les deux plus récentes dépliées, les plus anciennes se déplient au toucher (des années de cartes restent légères)
+let ascCarnetOpen = new Set();
+function ascCarnetRow(a, k){
+  const L = ascCards(a).filter(c=>c.k===k).sort((x, y)=>(x.i<0 ? 1e3 : x.i) - (y.i<0 ? 1e3 : y.i));
+  const nx = k===a.key && !a.wait ? (a.nextCamp ? ascCamps(k).indexOf(a.nextCamp) : -1) : null, lock = nx!=null && !L.some(c=>c.i===nx);
+  return `<div class="pc-row">${L.map(c=>ascPostcardHTML(k, c.i, { date:c.date, btn:true })).join("")}${lock ? ascPostcardHTML(k, nx, { locked:true }) : ""}</div>`;
+}
+function ascCarnetHTML(a){
+  const cards = ascCards(a), last = {}, n = {}, cur = a.wait ? null : a.key;
+  cards.forEach(c=>{ last[c.k] = c.date; n[c.k] = (n[c.k] || 0) + 1; });
+  const keys = Object.keys(last).sort((x, y)=>last[x]<last[y] ? 1 : last[x]>last[y] ? -1 : 0).filter(k=>k!==cur);
+  if(cur) keys.unshift(cur);
+  return `<p class="sub">Une carte à chaque camp atteint : le terrain, une ligne du carnet, et l'histoire des lieux réels.</p>
+    ${keys.map((k, gi)=>{
+      const N = ascCamps(k).length + 1, cnt = `<span class="num">${n[k] || 0}/${N}</span>`, open = gi<2 || ascCarnetOpen.has(k);
+      if(gi<2) return `<div class="pc-grp"><div class="pc-gh"><b>${esc(ASC_DATA[k].n)}</b>${cnt}</div>${ascCarnetRow(a, k)}</div>`;
+      return `<div class="pc-grp"><button class="pc-gh tap${open ? " on" : ""}" data-a="ascCarnetGrp" data-k="${k}" aria-expanded="${open}"><b>${esc(ASC_DATA[k].n)}</b>${cnt}<span class="chev">${icon("chev")}</span></button>
+        <div class="clp" id="ascCg-${k}">${open ? ascCarnetRow(a, k) : ""}</div></div>`;
+    }).join("")}`;
+}
 
 // ---------- vignettes : pastille d'accueil, carte de Progrès, profil ----------
 function ascPillHTML(){
@@ -363,7 +462,7 @@ function ascStepsListHTML(a){
       else r = `<span class="st-r"><b>${esc(e.txt)}</b>${e.time ? `<small>${esc(e.time)}</small>` : ""}</span>`;
       if(top) node = ascIc("flag"); }
     return `<button class="st-i${past ? " past" : ""}${nx ? " next" : ""}${top ? " top" : ""}" data-a="ascCamp" data-i="${i}">
-      <span class="st-node">${node}</span><span class="st-t">${top ? "Sommet" : esc(c[1])}<small class="num">${fmtNum(c[2])} m</small></span>${r}</button>`;
+      <span class="st-node">${node}</span><span class="st-t">${top ? "Sommet" : esc(c[1])}<small>${top ? "" : esc(ascStory(k)[i].t)+" · "}<span class="num">${fmtNum(c[2])} m</span></small></span>${r}</button>`;
   };
   let idx;
   if(ascStepsAll) idx = Array.from({ length:N+1 }, (_, i)=>i);
@@ -431,6 +530,7 @@ const ASC_SECS = [
   ["speed", "gauge", "orange", "Vitesse", a=>`+${ascM(ascSpeedNow(a))} / séance`],
   ["reg", "calendar", "green", "Régularité", a=>`${a.series} sem. · ${ascX(a.reg)}`],
   ["itin", "compass", "teal", "Itinéraire", a=>`${new Set(a.summits.filter(s=>s.lap===a.lap).map(s=>s.key)).size} sur 13`],
+  ["carnet", "postcard", "indigo", "Carnet de route", a=>{ const n = ascCards(a).length; return n ? nb(n, "carte") : ""; }],
   ["rw", "trophy", "yellow", "Trophées", a=>a.summits.length ? String(a.summits.length) : ""],
 ];
 let ascOpen = new Set();
@@ -478,6 +578,7 @@ function ascSecBody(k, a){
       const right = isDone ? "atteint" : cur ? `en cours · ${Math.round(Math.max(0, Math.min(1, a.done))*100)} %` : locked ? `série de ${ASC_REQ[x]} sem.` : any.has(x) ? "déjà gravi" : "";
       return `<li class="${isDone ? "done" : cur ? "cur" : locked ? "locked" : ""}"><span class="node">${isDone ? ascIc("check") : locked ? ascIc("lock") : ""}</span><span class="stop-t">${esc(D.n)}<small>${esc(D.region)}</small></span><span class="stop-r"><b class="num">${fmtNum(D.top)} m</b>${right}</span></li>`; }).join("")}</ol>`).join("")}`;
   }
+  if(k==="carnet") return ascCarnetHTML(a);
   // trophées de sommet : ceux gagnés (touche pour revoir le sommet), puis celui à gagner
   const x = a.wait ? a.next : a.key, t = ASC_TIERS[ASC_TIER_OF(x)], mine = a.summits.slice().reverse();
   return `${mine.length ? `<div class="asc-trophies">${mine.map((s,i)=>`<button class="asc-tr" data-a="ascReplay" data-i="${a.summits.length-1-i}" aria-label="${esc(ASC_DATA[s.key].n)}, atteint le ${fmtDate(s.date)}">${ascMedalSVG(s.key, 56, true)}<b>${esc(ASC_DATA[s.key].n)}</b><small>${fmtDate(s.date)} ${s.date.slice(0,4)}</small></button>`).join("")}</div>` : ""}
@@ -587,26 +688,75 @@ function ascRefreshSheet(){
 }
 
 // ---------- sommet atteint : plein écran ----------
+// Une courte cinématique : la montagne monte, le grimpeur fait les derniers mètres sur l'arête (l'altitude défile),
+// le drapeau se plante (son, vibration, confettis) et le jour se lève derrière le sommet ; puis la montagne passe
+// en fond et le trophée arrive avec ses cadeaux. Toucher l'écran passe à la fin ; sans animations (réglage du
+// système) : la fin tout de suite.
+function ascPanoSVG(k){
+  const D = ASC_DATA[k], sk = ascSky(k), P = ascP1, line = sk.map(([x, y])=>`${x} ${y}`).join("L");
+  // les derniers mètres : l'arête de gauche jusqu'au sommet
+  const ridge = sk.filter(([x])=>x>=D.sx-40 && x<D.sx).concat([[D.sx, D.sy]]), rd = ridge.map(([x, y], i)=>`${i ? "L" : "M"}${x} ${P(y+.5)}`).join("");
+  return `<svg class="sm-svg" viewBox="0 30 156 158" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><defs>
+      <linearGradient id="smM" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#B7C3DC"/><stop offset=".28" stop-color="#4A5677"/><stop offset="1" stop-color="#121729"/></linearGradient>
+      <linearGradient id="smL" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE6C8"/><stop offset=".3" stop-color="#B98580"/><stop offset="1" stop-color="#1E1C33" stop-opacity="0"/></linearGradient>
+      <radialGradient id="smG"><stop offset="0" stop-color="#FFE9C0"/><stop offset=".35" stop-color="#FFB47A" stop-opacity=".6"/><stop offset="1" stop-color="#FF8A5C" stop-opacity="0"/></radialGradient></defs>
+    <circle class="sm-glow" cx="${D.sx}" cy="${D.sy}" r="74" fill="url(#smG)"/>
+    <path d="M${line}V188H0Z" fill="url(#smM)"/><path class="sm-lit" d="M${line}V188H0Z" fill="url(#smL)"/>
+    <path class="sm-rt" d="${rd}" fill="none" stroke="rgba(255,255,255,.55)" stroke-width=".7" stroke-dasharray="1.4 1.6"/>
+    <path class="sm-done" d="${rd}" pathLength="1" fill="none" stroke="#FF6B3D" stroke-width="1.2" stroke-linecap="round" stroke-dasharray="1 1" stroke-dashoffset="1"/>
+    <g transform="translate(${D.sx} ${D.sy})"><g class="sm-fl"><path d="M0 0V-15" stroke="#F7F4EE" stroke-width="1.1" stroke-linecap="round"/><path class="sm-cloth" d="M0 -15h9.5l-2.3 2.8 2.3 2.8H0Z" fill="#FF6B3D"/></g></g>
+    <circle class="sm-me" r="2.2" cx="${ridge[0][0]}" cy="${P(ridge[0][1]+.5)}" fill="#FF6B3D" stroke="#fff" stroke-width=".8"/></svg>`;
+}
 function ascShowSummit(s){
   if(!s) return;
   const D = ASC_DATA[s.key], t = ASC_TIERS[ASC_TIER_OF(s.key)], ni = (ASC_ORDER.indexOf(s.key)+1)%13, nk = ASC_ORDER[ni];
-  const gifts = [[ascMedalSVG(s.key, 26, false), `Trophée ${t[3].toLowerCase()} ${ascDu(s.key)}`, "Gravé de sa vraie silhouette"], [ascIc("card"), "Carte de sommet", "À garder ou à partager"],
+  const gifts = [[ascMedalSVG(s.key, 26, false), `Trophée ${t[3].toLowerCase()} ${ascDu(s.key)}`, "Gravé de sa vraie silhouette"], [ascIc("card"), "Carte postale du sommet", "Dans ton carnet de route"],
     [ascIc("flag"), ni===0 ? "Deuxième tour" : `Prochaine expédition : ${ASC_DATA[nk].n}`, ni===0 ? "L'itinéraire recommence, plus exigeant" : `${fmtNum(ASC_DATA[nk].top)} m · ${ASC_DATA[nk].region}${ASC_REQ[nk] ? ` · série de ${ASC_REQ[nk]} sem.` : ""}`]];
   let fl = ""; const rs = ascRng(3);
   for(let i=0;i<34;i++) fl += `<i class="flake" style="left:${(rs()*100).toFixed(1)}%;--dx:${((rs()-.5)*80).toFixed(0)}px;animation-duration:${(5+rs()*6).toFixed(1)}s;animation-delay:-${(rs()*8).toFixed(1)}s;width:${(2+rs()*4).toFixed(1)}px;height:${(2+rs()*4).toFixed(1)}px;opacity:${(.35+rs()*.5).toFixed(2)}"></i>`;
   let el = qs("#ascSummit"); if(el) el.remove();
   el = document.createElement("div"); el.id = "ascSummit"; el.className = "asc-summit"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", `Sommet ${ascDu(s.key)} atteint`);
-  el.innerHTML = `<div class="flakes">${fl}</div>
-    <div class="medal-wrap"><div class="rays"></div><div class="medal">${ascMedalSVG(s.key, 176, true)}</div></div>
-    <div class="k">Sommet atteint</div><h2>${esc(D.n)} · ${fmtNum(D.top)} m</h2>
-    <div class="facts"><b>${nb(s.weeks, "semaine")}</b> · <b>${nb(s.sessions, "séance")}</b> · série de <b>${nb(s.series, "semaine")}</b></div>
-    <div class="gifts">${gifts.map(([i, x, y], n)=>`<div class="gift" style="animation-delay:${(.7+n*.12).toFixed(2)}s"><span class="gi">${i}</span><span>${esc(x)}<small>${esc(y)}</small></span></div>`).join("")}</div>
-    <button class="btn asc-share" data-a="ascShare" data-i="${S.sessions.length ? ascent().summits.indexOf(s) : -1}">${ascIc("card")} Partager la carte de sommet</button>
-    <button class="btn asc-close" data-a="ascSummitClose">Continuer</button>`;
+  const a0 = Math.round(D.top - .1*(D.top - D.start));
+  el.innerHTML = `<div class="flakes">${fl}</div><div class="sm-stage">${ascPanoSVG(s.key)}</div><div class="rays"></div>
+    <div class="sm-count" aria-hidden="true"><small>${esc(D.n)}</small><b class="num">${fmtNum(a0)} m</b></div>
+    <div class="sm-main">
+      <div class="medal-wrap"><div class="medal">${ascMedalSVG(s.key, 176, true)}</div></div>
+      <div class="k">Sommet atteint</div><h2>${esc(D.n)} · ${fmtNum(D.top)} m</h2>
+      ${ASC_TOPS[s.key] ? `<p class="story">${esc(ASC_TOPS[s.key])}</p>` : ""}
+      <div class="facts"><b>${nb(s.weeks, "semaine")}</b> · <b>${nb(s.sessions, "séance")}</b> · série de <b>${nb(s.series, "semaine")}</b></div>
+      <div class="gifts">${gifts.map(([i, x, y], n)=>`<div class="gift" style="animation-delay:${(.45+n*.12).toFixed(2)}s"><span class="gi">${i}</span><span>${esc(x)}<small>${esc(y)}</small></span></div>`).join("")}</div>
+      <button class="btn asc-share" data-a="ascShare" data-i="${S.sessions.length ? ascent().summits.indexOf(s) : -1}">${ascIc("card")} Partager la carte de sommet</button>
+      <button class="btn asc-close" data-a="ascSummitClose">Continuer</button>
+    </div>`;
   document.body.appendChild(el);
+  const rt = el.querySelector(".sm-rt"), done = el.querySelector(".sm-done"), me = el.querySelector(".sm-me"), num = el.querySelector(".sm-count b"), timers = [];
+  let stage = 0;   // 1 : drapeau planté, 2 : la fin
+  const at = (f, ms)=>timers.push(setTimeout(f, ms));
+  const top = ()=>{ const L = rt.getTotalLength(), p = rt.getPointAtLength(L); me.setAttribute("cx", ascP1(p.x)); me.setAttribute("cy", ascP1(p.y)); done.style.strokeDashoffset = 0; num.textContent = fmtNum(D.top)+" m"; };
+  const plant = quiet=>{ if(stage>=1) return; stage = 1; top(); el.classList.add("planted");
+    if(quiet) return;
+    sfx("ascPlant"); haptic([30, 60, 30]);
+    const m = el.querySelector(".sm-svg").getScreenCTM();
+    if(m){ const p = new DOMPoint(D.sx, D.sy-8).matrixTransform(m); confettiBurst(p.x, p.y, 130); const cv = document.body.lastElementChild; if(cv && cv.classList.contains("confetti")) cv.style.zIndex = 320; } };
+  // les rayons tournent derrière le trophée, hors du contenu (qui défile sur un petit écran)
+  const reveal = ()=>{ if(stage>=2) return; plant(true); stage = 2; timers.forEach(clearTimeout);
+    const w = el.querySelector(".medal-wrap").getBoundingClientRect(); el.style.setProperty("--ry", Math.round(w.top + w.height/2)+"px"); el.classList.add("reveal");
+    setTimeout(()=>{ const b = el.querySelector(".asc-close"); if(b && el.isConnected) b.focus({ preventScroll:true }); }, 500); };
+  el._reveal = reveal;
+  if(reducedMotion()){ el.classList.add("on"); reveal(); sfx("ascSummit"); return; }
   requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add("on")));
-  sfx("ascSummit"); haptic([30, 60, 30]);
-  setTimeout(()=>{ const b = el.querySelector(".asc-close"); if(b) b.focus({ preventScroll:true }); }, 400);
+  // toucher pendant la cinématique : on passe à la fin (sans déclencher un bouton)
+  el.addEventListener("pointerdown", e=>{ if(stage<2){ e.preventDefault(); e.stopPropagation(); reveal(); } }, true);
+  at(()=>{
+    const L = rt.getTotalLength(), t0 = performance.now(), dur = 1500, ease = x=>x<.5 ? 2*x*x : 1-Math.pow(-2*x+2, 2)/2;
+    sfx("ascClimb", 1.3);
+    const f = now=>{ if(stage || !el.isConnected) return;
+      const k = Math.min(1, (now-t0)/dur), e = ease(k), p = rt.getPointAtLength(L*e);
+      me.setAttribute("cx", ascP1(p.x)); me.setAttribute("cy", ascP1(p.y)); done.style.strokeDashoffset = (1-e).toFixed(3);
+      num.textContent = fmtNum(Math.round(a0 + (D.top-a0)*e))+" m";
+      if(k<1) requestAnimationFrame(f); else { plant(); at(reveal, 1300); } };
+    requestAnimationFrame(f);
+  }, 750);
 }
 // carte de sommet en image (1080 × 1350), partagée par le menu d'iOS ou téléchargée
 function ascDrawCard(s){
@@ -724,9 +874,13 @@ function ascCelHTML(sessionId){
   const inner = camps.filter(c=>c[0]>L+.5 && c[0]<H-.5);
   const crossed = camps.filter(c=>e.camps.includes(c[1])), last = crossed[crossed.length-1];
   const end = (c, top)=>`<span class="ca-end ${top ? "r" : "l"}${top && e.summit ? " goal" : ""}" ${top ? `data-p="100"` : ""}>${top ? ascIc(hi ? (ASC_GENERIC(k, hi[1]) ? "tent" : "hut") : "flag") : ""}</span>`;
-  let badge = "";
-  if(e.summit) badge = ["flag", "Sommet atteint", D.n, `${fmtNum(D.top)} m · ${D.region}`];
-  else if(last) badge = [ASC_GENERIC(k, last[1]) ? "tent" : "hut", crossed.length>1 ? `${crossed.length} camps atteints` : "Camp atteint", last[1], `${fmtNum(last[2])} m · étape ${camps.indexOf(last)+1}/${camps.length}`];
+  // camp ou sommet atteint : sa carte postale se révèle (nouvelle si c'est la première fois) ; nouvelle expédition : un badge
+  let badge = "", pc = "";
+  if(e.summit || last){
+    const mine = ascCards(a).filter(c=>c.sid===sessionId).length;
+    const kick = e.summit ? "Sommet atteint" : crossed.length>1 ? `${crossed.length} camps atteints` : "Camp atteint";
+    pc = `<div class="ca-badge ca-pc" id="celBadge"><div class="ca-pc-k"><span>${ascIc(e.summit ? "flag" : "tent")}${kick}</span>${mine ? `<b>${ascIc("card")}${mine>1 ? `${mine} nouvelles cartes` : "Nouvelle carte"}</b>` : ""}</div>${ascPostcardHTML(k, e.summit ? -1 : camps.indexOf(last), { date:e.date, big:true })}</div>`;
+  }
   else if(e.started) badge = ["peak", "Nouvelle expédition", D.n, `${fmtNum(D.top)} m · ${D.region}`];
   // ce qui vient ensuite : le prochain camp, ou le sommet s'il n'en reste plus
   const nc = e.summit ? null : hi || [D.top, "Sommet", D.top], rest = nc ? nc[0]-e.to : 0;
@@ -739,7 +893,7 @@ function ascCelHTML(sessionId){
         ${end(lo, false)}${end(hi, true)}<i class="ca-me" style="left:${x(e.from)}%"></i></div>
       <div class="ca-ends"><span>${esc(lo ? lo[1] : D.from || "Départ")}<b class="num">${fmtNum(lo ? lo[2] : D.fromAlt || D.start)} m</b></span><span>${esc(hi ? hi[1] : "Sommet")}<b class="num">${fmtNum(hi ? hi[2] : D.top)} m</b></span></div>
     </div>
-    ${badge ? `<div class="ca-badge" id="celBadge"><span class="cb-ic"><i class="cb-rays"></i>${ascIc(badge[0])}</span><span class="cb-t"><small>${esc(badge[1])}</small><b>${esc(badge[2])}</b><span>${esc(badge[3])}</span></span></div>` : ""}
+    ${pc}${badge ? `<div class="ca-badge" id="celBadge"><span class="cb-ic"><i class="cb-rays"></i>${ascIc(badge[0])}</span><span class="cb-t"><small>${esc(badge[1])}</small><b>${esc(badge[2])}</b><span>${esc(badge[3])}</span></span></div>` : ""}
     ${nc ? `<div class="ca-next">${ascIc(!hi ? "flag" : ASC_GENERIC(k, nc[1]) ? "tent" : "hut")}<span><b>${esc(nc[1])}</b> dans <b class="num">${ascM(rest)}</b>${ascSessionsFor(rest, a)<=1 ? " : ta prochaine séance t'y amène." : ` · ${esc(ascEtaTxt(rest, a))}`}</span></div>` : ""}
   </button>`;
 }
@@ -784,7 +938,13 @@ function ascDescentNotice(){
 }
 
 Object.assign(ACT, {
-  openAscent(){ ascOpen = new Set(); ascStepsAll = false; ascPauseOpen = false; ascBubOn = null; openAscent(); },
+  openAscent(){ ascOpen = new Set(); ascStepsAll = false; ascPauseOpen = false; ascBubOn = null; ascCarnetOpen = new Set(); openAscent(); },
+  ascCarnetGrp(d, el){
+    const k = d.k, on = !ascCarnetOpen.has(k), box = qs("#ascCg-"+k); if(!box || !ASC_DATA[k]) return;
+    on ? ascCarnetOpen.add(k) : ascCarnetOpen.delete(k);
+    el.classList.toggle("on", on); el.setAttribute("aria-expanded", on); sfx(on ? "open" : "close");
+    animateCollapse(box, on, on ? ascCarnetRow(ascent(), k) : "");
+  },
   // comment ça marche : feuille empilée (retour vers l'écran ou vers À propos)
   ascHow(){
     openSheet(`<div class="sheet-hd"></div><div class="sheet-body how-body asc-how">${ascHowHTML()}</div>`, { child:true, restore:()=>ACT.ascHow() });
@@ -792,6 +952,13 @@ Object.assign(ACT, {
     hd.classList.toggle("te-hd", back);
     hd.innerHTML = back ? `<button class="te-cancel" data-a="sheetBack">${icon("chev")}<span>Retour</span></button><span class="t">Comment ça marche</span><span class="te-spacer"></span>`
       : `<span class="t">Comment ça marche</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button>`;
+  },
+  // une carte du carnet, en grand (feuille empilée, retour vers l'écran)
+  ascCard(d){
+    const k = d.k, i = +d.i, c = ascCards(ascent()).find(x=>x.k===k && x.i===i); if(!c || !ASC_DATA[k]) return;
+    openSheet(`<div class="sheet-hd te-hd"><button class="te-cancel" data-a="sheetBack">${icon("chev")}<span>Retour</span></button><span class="t">Carte postale</span><span class="te-spacer"></span></div>
+      <div class="sheet-body pc-view">${ascPostcardHTML(k, i, { date:c.date, big:true })}</div>`, { child:true, restore:()=>ACT.ascCard(d) });
+    if(!sheetCanGoBack()){ const hd = qs(".sheet .sheet-hd"); if(hd){ hd.classList.remove("te-hd"); hd.innerHTML = `<span class="t">Carte postale</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button>`; } }
   },
   ascPauseMenu(d, el){
     const box = qs("#ascPauseBox"); if(!box) return;
@@ -827,7 +994,7 @@ Object.assign(ACT, {
     toast(on ? (d.w===weekKey(todayISO()) ? "Semaine en pause : rien ne se perd" : "Semaine prochaine en pause") : "Pause annulée", on ? "check" : "undo");
   },
   ascReplay(d){ const s = ascent().summits[+d.i]; if(s) ascShowSummit(s); },
-  ascSummitClose(){ const el = qs("#ascSummit"); if(!el) return; el.classList.remove("on"); setTimeout(()=>el.remove(), 450); },
+  ascSummitClose(){ const el = qs("#ascSummit"); if(!el) return; if(el._reveal) el._reveal(); el.classList.remove("on"); setTimeout(()=>el.remove(), 450); },
   ascCelSummit(d){ closeSheet(); const s = ascCelSummit(d.id); if(s) setTimeout(()=>ascShowSummit(s), 320); },
   async ascShare(d){
     const a = ascent(), s = a.summits[+d.i] || a.summits[a.summits.length-1]; if(!s) return;
