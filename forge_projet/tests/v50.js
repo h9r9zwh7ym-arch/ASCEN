@@ -54,11 +54,14 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     const st = EXOS.find(isStretch).id; S.sessions = [ses(1, 0, 4, st)]; S.ascent = { pauses: [], seen: null, descSeen: '', intro: 0 }; save(); a = ascent();
     R.stretch = { alt: a.alt, weeks: a.weeks.length, log: Object.keys(a.log).length };
     // dernière ligne droite : à mi-vitesse si la force est sous 95 % de son meilleur niveau récent
+    // (sans l'élan de départ, testé par v51, pour garder le même calendrier)
+    const elan0 = ASC_ELAN[0]; ASC_ELAN[0] = 0;
     const reg2 = {}; for (let n = 16; n >= 1; n--) reg2[n] = 3;
     window.strengthAt = iso => ({ index: iso < wk(8) ? 140 : 110, muscles: [] });
     a = run(reg2, { sets: 10 }); R.push_low = Object.values(a.log).filter(e => e.push).length;
     window.strengthAt = () => ({ index: 120, muscles: [] });
     a = run(reg2, { sets: 10 }); R.push_ok = Object.values(a.log).filter(e => e.push).length; R.force = a.force;
+    ASC_ELAN[0] = elan0;
     window.strengthAt = realSA;
     // pauses : 2 par trimestre au plus
     S.ascent.pauses = []; const q0 = '2026-01-05'; R.pz = [ascTogglePause(q0), ascTogglePause('2026-01-12'), ascTogglePause('2026-01-19'), ascTogglePause('2026-04-06')];
@@ -80,13 +83,13 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   if (eng.stretch.alt !== 1516 || eng.stretch.weeks || eng.stretch.log) fail('étirements seuls : ne comptent pas');
   if (!(eng.push_low > 0) || eng.push_ok !== 0 || Math.abs(eng.force - 1.12) > .001) fail('dernière ligne droite et force amortie');
   if (eng.pz.join() !== 'true,true,false,true') fail('2 pauses par trimestre');
-  if (eng.first.passed < 1 || eng.campDates < 0 || !(eng.perWeek >= 2.9) || eng.camps.some(c => !c.ok || !c.real || c.n < 8) || eng.camps[0].n < 12) fail('camps rapprochés, datés, refuges réels conservés');
+  if (eng.first.passed < 1 || eng.campDates < 0 || !(eng.perWeek >= 2.9) || eng.camps.some((c, i) => !c.ok || !c.real || (i && c.n < 8)) || eng.camps[0].n < 5 || eng.first.camp1 - 1516 > 25) fail('camps rapprochés, datés, refuges réels conservés');
   if (eng.norm.pauses.join() !== '2026-01-05' || eng.norm.seen !== null || eng.norm.desc !== '' || !eng.norm2) fail('données abîmées nettoyées');
 
-  // 2. un historique réel : 14 semaines, 3 séances par semaine
+  // 2. un historique réel : 10 semaines, 3 séances par semaine (au Pilatus, avec l'élan de départ)
   await page.evaluate(() => {
     const W0 = weekKey(todayISO()); const ss = [];
-    for (let n = 14; n >= 1; n--) for (const d of [0, 2, 4]) ss.push({ id: 'h' + n + d, date: addDaysISO(W0, -7 * n + d), durationSec: 2700, exos: ['dc_haltere', 'squat_gobelet', 'rowing_haltere'].map(id => ({ exoId: id, sets: [1, 2, 3, 4, 5].map(() => ({ reps: 10, weight: 12 + Math.floor((14 - n) / 5), done: true })) })) });
+    for (let n = 10; n >= 1; n--) for (const d of [0, 2, 4]) ss.push({ id: 'h' + n + d, date: addDaysISO(W0, -7 * n + d), durationSec: 2700, exos: ['dc_haltere', 'squat_gobelet', 'rowing_haltere'].map(id => ({ exoId: id, sets: [1, 2, 3, 4, 5].map(() => ({ reps: 10, weight: 12 + Math.floor((14 - n) / 5), done: true })) })) });
     S.sessions = ss; S.goals.daysPerWeek = 3; S.ascent = { pauses: [], seen: null, descSeen: '', intro: 0 }; save(); renderView('today'); });
   await wait(500);
   const home = await page.evaluate(() => { const p = document.querySelector('#v-today .asc-pill'), a = ascent();

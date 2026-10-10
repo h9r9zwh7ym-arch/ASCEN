@@ -35,10 +35,24 @@ function ascHardSets(s){
 // force +20 à +40 %) monte ≈ 120 m par semaine, soit l'Everest en ≈ 4 ans (≈ 23 700 m sur 13 expéditions)
 function ascEffort(hard){ return 11*Math.min(hard, 20)/15; }
 function ascForceMult(index){ return Math.min(1.6, Math.max(.85, 1 + (index/100 - 1)*.6)); }
+// Élan de départ (1er tour seulement) : au moins ×3,5 à la 1re séance, qui s'estompe jusqu'à ×1 à la 45ᵉ. La
+// régularité part de ×0,5 : sans élan, le premier sommet (Moléson) demandait 31 séances ; avec, ≈ 14
+// (≈ 5 semaines à 3 séances), et le rythme vers l'Everest ne bouge presque pas (≈ 4 ans).
+const ASC_ELAN = [3.5, 45];
+// (0 au-delà : l'élan disparaît, la régularité seule compte ; 0 aussi au 2ᵉ tour)
+function ascElan(n, lap){ return lap || !ASC_ELAN[0] || n>ASC_ELAN[1] ? 0 : 1 + (ASC_ELAN[0]-1)*(1 - (n-1)/ASC_ELAN[1]); }
+const ascMulEff = (tier, n, lap)=>Math.max(ASC_MUL[tier], ascElan(n, lap));
+// Records et séries battues font monter plus haut : un record compte pour 3 séries de plus (3 au plus par
+// séance), une série « mieux que la dernière fois » pour 1 de plus (4 au plus). La vraie progression en
+// force se voit sur la montagne ; une récompense qui varie d'une séance à l'autre.
+const ASC_BONUS = { pr:3, prMax:3, beat:1, beatMax:4 };
+function ascPRs(s){ let n = 0; for(const ex of s.exos){ const def = EXO_MAP[ex.exoId]; if(def && isStretch(def)) continue; for(const st of ex.sets) if(st.done && st.pr) n++; } return n; }
+function ascBonusSets(prs, beats){ return ASC_BONUS.pr*Math.min(prs, ASC_BONUS.prMax) + ASC_BONUS.beat*Math.min(beats||0, ASC_BONUS.beatMax); }
 // ---------- camps : rapprochés, pour qu'on en atteigne souvent ----------
-// On simule un profil régulier (3 séances de 15 séries par semaine, série qui monte, force +12 % sur les 400
-// premières séances) sur tout l'itinéraire, et on pose un camp toutes les 2 séances sur les deux premières montagnes (le
-// premier camp du Moléson dès la 2ᵉ séance), puis toutes les 3. Les refuges réels (ASC_DATA) restent à leur
+// On simule un profil régulier (3 séances de 15 séries par semaine, série qui monte, élan de départ, force +12 %
+// sur les 400 premières séances) sur tout l'itinéraire, et on pose un camp toutes les 2 séances sur les deux
+// premières montagnes (le premier camp du Moléson dès la 1re séance, même courte : une victoire tout de suite),
+// puis toutes les 3. Les refuges réels (ASC_DATA) restent à leur
 // place ; les camps génériques trop proches d'un refuge sont retirés. Une semaine sans séance ne coûte donc
 // que 2 ou 3 séances (retour au camp précédent).
 const ASC_GENERIC = (k, n)=>/^Bivouac \d+$/.test(n) || (!/^(k2|everest)$/.test(k) && /^Camp \d+$/.test(n));
@@ -49,11 +63,13 @@ const ASC_CAMPS = (()=>{
     const pos = []; let alt = D.start;
     while(alt<D.top){
       n++; const third = n%3===0;
-      alt += ascEffort(15)*ASC_MUL[ascTier(series + (third ? 1 : 0))]*(1 + .12*Math.min(1, n/400));
+      alt += ascEffort(15)*ascMulEff(ascTier(series + (third ? 1 : 0)), n, 0)*(1 + .12*Math.min(1, n/400));
       pos.push(Math.min(alt, D.top)); if(third) series++;
     }
     const N = mi<2 ? 2 : 3, step = (D.top - D.start)/pos.length*N, gen = [];
-    for(let i=N; i<pos.length; i+=N) if(D.top - pos[i-1]>step*.5 && named.every(c=>Math.abs(c[0] - pos[i-1])>step*.5)) gen.push(pos[i-1]);
+    for(let i=mi ? N : 1; i<pos.length; i+=N) if(D.top - pos[i-1]>step*.5 && named.every(c=>Math.abs(c[0] - pos[i-1])>step*.5)) gen.push(pos[i-1]);
+    // tout premier camp aux 3/5 d'une séance type : atteint dès la 1re séance, même courte (≈ 9 séries)
+    if(!mi && gen.length) gen[0] = D.start + (gen[0] - D.start)*.6;
     const all = named.map(c=>({ p:c[0], n:c[1], r:c[2] })).concat(gen.map(p=>({ p:Math.round(p), n:null }))).sort((a, b)=>a.p-b.p);
     const numbered = named.some(c=>/^Camp \d/.test(c[1]));
     let g = 0;
@@ -71,22 +87,23 @@ function ascPauses(){ return (S.ascent && Array.isArray(S.ascent.pauses)) ? S.as
 function ascQuarter(w){ return w.slice(0,4)+"-"+(Math.floor((+w.slice(5,7)-1)/3)+1); }
 
 function ascent(){ return memo("ascent:"+todayISO(), ascent_raw); }
-function ascent_raw(){
+// extra : une séance de plus, aujourd'hui (la séance en cours, pour l'altitude en direct : même calcul exactement)
+function ascent_raw(extra){
   const goal = S.goals.daysPerWeek||3, today = todayISO(), thisWeek = weekKey(today);
   const pauses = new Set(ascPauses());
   // semaines allégées : celles du journal, la semaine en cours si elle l'est, et les séances marquées
   const deloads = new Set((S.deloadLog||[]).map(weekKey));
   if(S.deload) deloads.add(weekKey(S.deload.start));
   const byWeek = new Map(); let firstWeek = null;
-  for(const s of S.sessions){
+  for(const s of extra ? S.sessions.concat([extra]) : S.sessions){
     const hard = ascHardSets(s); if(!hard) continue;   // étirements seuls : ni montée ni séance comptée
     const w = weekKey(s.date); if(!firstWeek) firstWeek = w;
     (byWeek.get(w) || byWeek.set(w, []).get(w)).push({ s, hard });
     if(s.exos.some(ex=>ex.deload)) deloads.add(w);
   }
   const k0 = ASC_ORDER[0];
-  const st = { lap:0, i:0, alt:ASC_DATA[k0].start, wait:false, series:0, expFrom:null, expN:0, campDates:{} };
-  const out = { weeks:[], summits:[], descents:[], log:{}, last:null }, effs = [];
+  const st = { lap:0, i:0, alt:ASC_DATA[k0].start, wait:false, series:0, expFrom:null, expN:0, campDates:{}, n:0 };
+  const out = { weeks:[], summits:[], descents:[], log:{}, last:null }, effs = [], bons = [];
   // force : indice à la fin de la semaine précédente, recalculé toutes les 4 semaines ; forme = indice
   // rapporté à son meilleur niveau des 6 derniers mois (la dernière ligne droite la demande)
   // (blocs fixes de 4 semaines depuis la première : la valeur affichée est celle qu'utilisera la prochaine séance)
@@ -107,19 +124,20 @@ function ascent_raw(){
     const list = byWeek.get(w) || [];
     let n = 0;
     for(const { s, hard } of list){
-      n++;
+      n++; st.n++;
       const series = st.series + (n>=goal ? 1 : 0), tier = ascTier(series), f = forceFor(wi);
-      const lapF = 1/(1 + .25*st.lap);
-      let gain = ascEffort(hard)*ASC_MUL[tier]*f.mult*lapF;
-      effs.push(hard);
-      const e = { id:s.id, date:s.date, hard, eff:ascEffort(hard), mul:ASC_MUL[tier], series, force:f.mult, lapF, gain:0, from:st.alt, to:st.alt, camps:[], summit:null, started:null, key:key(), push:false, waiting:false };
+      const prs = ascPRs(s), beats = s.beats||0, bonus = ascEffort(ascBonusSets(prs, beats));
+      let lapF = 1/(1 + .25*st.lap), mul = ascMulEff(tier, st.n, st.lap);
+      let gain = (ascEffort(hard) + bonus)*mul*f.mult*lapF;
+      effs.push(hard); bons.push(ascBonusSets(prs, beats));
+      const e = { id:s.id, date:s.date, hard, eff:ascEffort(hard), bonus, prs, beats, mul, reg:ASC_MUL[tier], elan:ascElan(st.n, st.lap), series, force:f.mult, lapF, gain:0, from:st.alt, to:st.alt, camps:[], summit:null, started:null, key:key(), push:false, waiting:false };
       if(st.wait){
         const ni = nextIdx(), nk = ASC_ORDER[ni];
         if(series>=ASC_REQ[nk]){
           if(ni===0) st.lap++;
           st.i = ni; st.alt = ASC_DATA[nk].start; st.wait = false; st.expFrom = s.date; st.expN = 0; st.campDates = {};
           e.started = nk; e.key = nk; e.from = e.to = st.alt;
-          e.lapF = 1/(1 + .25*st.lap); gain = ascEffort(hard)*ASC_MUL[tier]*f.mult*e.lapF;
+          e.lapF = lapF = 1/(1 + .25*st.lap); e.mul = mul = ascMulEff(tier, st.n, st.lap); e.elan = ascElan(st.n, st.lap); gain = (ascEffort(hard) + bonus)*mul*f.mult*lapF;
         } else { e.waiting = true; out.log[s.id] = e; out.last = e; continue; }
       }
       const D = ASC_DATA[key()], pushFrom = D.top - ASC_PUSH*(D.top - D.start);
@@ -168,15 +186,18 @@ function ascent_raw(){
   const perWeek = recent.length ? Math.max(.5, recent.reduce((t, w)=>t + w.n, 0)/recent.length) : goal;
   // séance type : séries difficiles en moyenne sur les 6 dernières séances (une séance courte ne fausse pas les délais)
   const last6 = effs.slice(-6), hardAvg = last6.length ? last6.reduce((t, h)=>t + h, 0)/last6.length : 15;
+  const b6 = bons.slice(-6), bonusAvg = b6.length ? b6.reduce((t, h)=>t + h, 0)/b6.length : 0;
+  // la prochaine séance : élan (1er tour) ou régularité, le plus fort des deux
+  const elanNow = ascElan(st.n + 1, st.lap), regNow = ASC_MUL[ascTier(sNow)];
   // pauses du trimestre en cours (la semaine en cours et la suivante peuvent être déclarées)
   const q = ascQuarter(thisWeek), pausesQ = ascPauses().filter(w=>ascQuarter(w)===q).length;
   return Object.assign(out, {
     key:k, idx:st.i, lap:st.lap, alt:st.alt, start:D.start, top:D.top, wait:st.wait, done, passed, nextCamp,
     next:nk, nextReq:ASC_REQ[nk], nextLap:ni===0 ? st.lap+1 : st.lap,
-    series:sNow, tier:ascTier(sNow), mul:ASC_MUL[ascTier(sNow)], force:fNow.mult, form:fNow.form, index:fNow.index,
+    series:sNow, tier:ascTier(sNow), mul:Math.max(regNow, elanNow), reg:regNow, elan:elanNow, sessN:st.n, force:fNow.mult, form:fNow.form, index:fNow.index,
     pushOK:fNow.form>=ASC_FORM_OK, pushFrom:D.top - ASC_PUSH*(D.top - D.start),
     expFrom:st.expFrom, expN:st.expN, paused:pauses.has(thisWeek), pausesLeft:Math.max(0, ASC_PAUSE_MAX - pausesQ),
-    camps, campDates:st.campDates, perWeek, hardAvg, effAvg:ascEffort(hardAvg),
+    camps, campDates:st.campDates, perWeek, hardAvg, bonusAvg, effAvg:ascEffort(hardAvg) + ascEffort(bonusAvg),
     summitCount:out.summits.length, goal,
   });
 }

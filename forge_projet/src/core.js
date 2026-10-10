@@ -47,6 +47,7 @@ function packSession(s){
   const a = s.startedAt ? Date.parse(s.startedAt) : NaN; if(!isNaN(a)) o.a = a;
   const c = s.completedAt ? Date.parse(s.completedAt) : NaN; if(!isNaN(c)) o.c = c;
   if(s.durationSec) o.u = s.durationSec;
+  if(s.beats) o.b = s.beats;
   o.x = (s.exos||[]).map(ex=>{
     const sets = ex.sets.filter(st=>st.done).map(st=>{
       const f = (st.pr?1:0) | ((st.effort||0)<<1);
@@ -64,6 +65,7 @@ function unpackSession(o){
   if(o.n) s.name = o.n; if(o.p) s.tplId = o.p; if(o.l) s.planned = true; if(o.m) s.note = o.m;
   if(o.a) s.startedAt = new Date(o.a).toISOString(); if(o.c) s.completedAt = new Date(o.c).toISOString();
   if(o.u) s.durationSec = o.u;
+  if(o.b) s.beats = o.b;
   s.exos = (o.x||[]).map(([exoId, sets, targetReps])=>{
     const ex = { exoId, sets: sets.map(([reps, weight, f])=>{ const st = { reps:+reps||0, done:true }; if(weight!=null && isFinite(weight)) st.weight = +weight; if(f&1) st.pr = true; if(f>>1) st.effort = f>>1; return st; }) };
     if(targetReps) ex.targetReps = targetReps;
@@ -347,6 +349,8 @@ let persistTimer = null, persistBlocked = false, persistFailed = false;
 function compactSession(s){
   const out = {};
   ["id","date","source","type","resolvedType","name","tplId","planned","startedAt","completedAt","durationSec","note"].forEach(k=>{ if(s[k]!=null && s[k]!==false) out[k] = s[k]; });
+  // séries meilleures que la dernière fois : gardées, elles font monter l'ascension (bonus) ; entier borné
+  const b = Math.round(+s.beats||0); if(b>0) out.beats = Math.min(99, b);
   out.exos = (s.exos||[]).map(ex=>({
     exoId: ex.exoId,
     targetReps: ex.targetReps,

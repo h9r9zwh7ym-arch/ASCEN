@@ -418,7 +418,7 @@ function ascWeekHTML(a){
 // ---------- le détail, replié : une ligne par sujet ----------
 const ASC_SECS = [
   ["speed", "gauge", "orange", "Vitesse", a=>`+${ascM(ascSpeedNow(a))} / séance`],
-  ["reg", "calendar", "green", "Régularité", a=>`${a.series} sem. · ${ascX(a.mul)}`],
+  ["reg", "calendar", "green", "Régularité", a=>`${a.series} sem. · ${ascX(a.reg)}`],
   ["itin", "compass", "teal", "Itinéraire", a=>`${new Set(a.summits.filter(s=>s.lap===a.lap).map(s=>s.key)).size} sur 13`],
   ["rw", "trophy", "yellow", "Trophées", a=>a.summits.length ? String(a.summits.length) : ""],
 ];
@@ -431,18 +431,20 @@ function ascRowsHTML(a){
 const ascList = x=>x.length>2 ? x.slice(0,-1).join(", ")+" et "+x.slice(-1) : x.join(" et ");
 function ascSecBody(k, a){
   if(k==="speed"){
-    // une séance type (séries des 6 dernières en moyenne), facteur par facteur : la même que pour les délais estimés
+    // une séance type (6 dernières en moyenne), facteur par facteur : la même que pour les délais estimés
     const hard = S.sessions.length ? a.hardAvg : 15, eff = ascEffort(hard), lapF = 1/(1+.25*a.lap), pct = a.index==null ? null : Math.round(a.index-100);
     const row = (t, sub, v, cls)=>`<div class="fx-r${cls ? " "+cls : ""}"><span>${t}${sub ? `<small>${sub}</small>` : ""}</span><b class="num">${v}</b></div>`;
-    const near = !a.wait && a.index!=null && a.done>.7, L = a.last;
+    const near = !a.wait && a.index!=null && a.done>.7, L = a.last, elan = a.elan>a.reg+.005;
     return `<div class="fx">
         ${row("Effort", `${fmtDec(Math.round(hard*2)/2)} séries difficiles${S.sessions.length>1 ? " en moyenne" : ""}`, ascM(eff))}
-        ${row("Régularité", a.series ? `série de ${nb(a.series, "semaine")}` : "pas encore de série", ascX(a.mul))}
+        ${a.bonusAvg>.05 ? row("Records et progrès", `+${fmtDec(Math.round(a.bonusAvg*2)/2)} série${a.bonusAvg>=2 ? "s" : ""} en moyenne`, "+"+ascM(ascEffort(a.bonusAvg))) : ""}
+        ${elan ? row("Élan de départ", `s'estompe d'ici ta ${ASC_ELAN[1]}ᵉ séance`, ascX(Math.round(a.elan*10)/10)) : ""}
+        ${row("Régularité", (a.series ? `série de ${nb(a.series, "semaine")}` : "pas encore de série")+(elan ? " · l'élan compte à sa place" : ""), ascX(a.reg), elan ? "off" : "")}
         ${row("Force", pct==null ? "pas encore mesurée" : `${pct>=0 ? "+" : "−"}${Math.abs(pct)} % depuis tes débuts`, ascX(Math.round(a.force*100)/100))}
         ${lapF<.999 ? row(`${a.lap+1}ᵉ tour`, "plus exigeant", ascX(Math.round(lapF*100)/100)) : ""}
         ${row("Par séance", "", "+"+ascM(ascSpeedNow(a)), "tot")}
       </div>
-      <p class="note">${L && L.waiting ? "Ta dernière séance n'a pas fait monter : l'expédition suivante attend ta série. " : ""}Sans série ni progrès de force, la même séance ne vaudrait que <b class="num">+${ascM(eff*ASC_MUL[0])}</b>.</p>
+      <p class="note">${L && L.waiting ? "Ta dernière séance n'a pas fait monter : l'expédition suivante attend ta série. " : ""}Un record compte pour 3 séries de plus, une série mieux que la dernière fois pour 1 de plus.</p>
       ${near ? `<div class="wx ${a.pushOK ? "" : "warn"}">${ascIc("pulse", a.pushOK ? "" : "warn")}<span><b>Dernière ligne droite : ${a.pushOK ? "pleine vitesse" : "mi-vitesse"}</b><span>Ta force est à ${Math.round(a.form*100)} % de ton meilleur niveau récent${a.pushOK ? "." : ` (il faut ${Math.round(ASC_FORM_OK*100)} %).`}</span></span></div>` : ""}`;
   }
   if(k==="reg"){
@@ -487,6 +489,8 @@ function ascHowHTML(){
       <li><b>Effort</b> : tes séries difficiles, 20 au plus. Une série faite exprès facile compte moitié.</li>
       <li><b>Régularité</b> : ta série de semaines où tu tiens ton objectif, de ×0,5 au départ à ×3 après 20 semaines.</li>
       <li><b>Force</b> : ton indice de force. 10 % de force en plus, 6 % de vitesse en plus.</li>
+      <li><b>Records et progrès</b> : un record compte pour ${ASC_BONUS.pr} séries de plus (${ASC_BONUS.prMax} au plus par séance), une série mieux que la dernière fois pour ${ASC_BONUS.beat} de plus (${ASC_BONUS.beatMax} au plus).</li>
+      <li><b>Élan de départ</b> : tes premières séances montent au moins à ${ascX(ASC_ELAN[0])} ; l'élan s'estompe jusqu'à ta ${ASC_ELAN[1]}ᵉ séance, la régularité prend le relais.</li>
     </ul>
     <h3>Chaque semaine</h3>
     <ul class="how-list">
@@ -619,6 +623,79 @@ function ascDrawCard(s){
   return cv;
 }
 
+// ---------- séance en cours : la montagne monte à chaque série ----------
+// La séance en cours est comptée comme une séance de plus, aujourd'hui, par le même moteur (ascent_raw) :
+// l'altitude affichée pendant la séance est exactement celle de la fin de séance. Mémorisé par l'état des séries
+// validées (les +/− sur une série à faire ne recalculent rien).
+let ascLiveMemo = null, liveAscPrev = null;
+function ascLive(draft){
+  if(!draft || !draft.startedAt || typeof ascent_raw!=="function") return null;
+  const sig = DATA_VER+"|"+draft.exos.map(ex=>ex.exoId+":"+ex.sets.map(s=>s.done ? `${s.reps||0}x${s.weight||0}${s.pr ? "p" : ""}${s.effort===1 ? "e" : ""}` : "-").join(",")).join(";");
+  if(ascLiveMemo && ascLiveMemo.sig===sig) return ascLiveMemo.v;
+  const a = ascent_raw({ id:"__live", date:todayISO(), exos:draft.exos, beats:typeof draftBeats==="function" ? draftBeats(draft) : 0 });
+  const e = a.log.__live || null, k = a.key, D = ASC_DATA[k], camps = ascCamps(k), alt = a.wait ? D.top : a.alt;
+  const v = { k, alt, e, wait:a.wait, next:a.next, nextReq:a.nextReq, series:a.series };
+  if(e && e.waiting) v.waiting = true;
+  else if(!a.wait){
+    const nc = camps.find(c=>c[0]>alt+.5) || null, prev = camps.filter(c=>c[0]<=alt+.5).pop(), p0 = prev ? prev[0] : D.start;
+    v.target = nc || [D.top, "Sommet", D.top];
+    v.rest = Math.max(0, v.target[0]-alt); v.pct = Math.max(0, Math.min(1, (alt-p0)/Math.max(1, v.target[0]-p0)));
+    // mètres d'une série difficile de plus (0 au-delà de 20 séries : le plafond de l'effort)
+    const m = e ? e.mul*e.force*e.lapF : a.mul*a.force/(1+.25*a.lap);
+    v.perSet = (e && e.hard>=20) ? 0 : ascEffort(1)*m;
+  }
+  ascLiveMemo = { sig, v }; return v;
+}
+function liveSetsLeft(draft){ return draft.exos.reduce((t, ex)=>{ const def = EXO_MAP[ex.exoId]; return def && isStretch(def) ? t : t + ex.sets.filter(s=>!s.done).length; }, 0); }
+function liveAscHTML(draft){
+  const L = ascLive(draft); if(!L) return "";
+  // point de départ des « +X m » : l'état au premier affichage de cette séance (ou après un rechargement)
+  if(!liveAscPrev || liveAscPrev.id!==draft.id) liveAscPrev = { id:draft.id, gain:L.e ? L.e.gain : 0, alt:L.alt, camps:L.e ? L.e.camps.slice() : [], summit:!!(L.e && L.e.summit), key:L.k, pct:L.pct };
+  if(L.waiting) return `<div class="lv-asc wait" id="liveAsc">${ascIc("peak")}<span class="la-next">Au sommet ${esc(ascDu(L.k))} · la série de ${L.nextReq} sem. ouvre ${esc(ascLe(L.next))}</span></div>`;
+  const e = L.e, gain = e ? e.gain : 0;
+  let next;
+  if(L.wait) next = `<b>Sommet ${esc(ascDu(L.k))} atteint !</b>`;
+  else { const need = L.perSet ? Math.max(1, Math.ceil(L.rest/L.perSet)) : 0, left = liveSetsLeft(draft);
+    next = need && need<=left ? `${esc(L.target[1])} · plus que <b>${nb(need, "série")}</b>` : `${esc(L.target[1])} dans <b class="num">${ascM(L.rest)}</b>`; }
+  return `<div class="lv-asc${L.wait ? " top" : ""}" id="liveAsc" aria-label="Altitude ${fmtNum(L.alt)} mètres">
+      <span class="la-ic">${ascIc("peak")}</span>
+      <span class="la-alt"><b class="num">${fmtNum(L.alt)}</b> m</span>
+      ${gain>=.5 ? `<span class="la-gain num">+${ascM(gain)}</span>` : ""}
+      <span class="la-next">${next}</span>
+      ${L.wait ? "" : `<i class="la-bar"><i style="width:${(L.pct*100).toFixed(1)}%"></i></i>`}
+    </div>`;
+}
+// après chaque série : +X m qui s'envole, l'altitude qui compte, et le camp atteint fêté sur-le-champ
+function liveAscAfter(head){
+  const d = S.draft, L = d && ascLive(d); if(!L) return;
+  const cur = { id:d.id, gain:L.e ? L.e.gain : 0, alt:L.alt, camps:L.e ? L.e.camps.slice() : [], summit:!!(L.e && L.e.summit), key:L.k, pct:L.pct };
+  const prev = liveAscPrev; liveAscPrev = cur;
+  if(!prev || prev.id!==cur.id || prev.key!==cur.key || cur.gain<=prev.gain+.05) return;
+  const box = qs("#liveAsc", head), num = box && qs(".la-alt b", box); if(!box) return;
+  const r = box.getBoundingClientRect(), x = r.left+r.width/2, y = r.top+4;
+  const fresh = cur.camps.filter(c=>!prev.camps.includes(c)), top = cur.summit && !prev.summit;
+  if(!reducedMotion()){
+    floatText(x, y, `+${fmtDec(Math.round((cur.gain-prev.gain)*10)/10)} m`, "asc", "trendUp");
+    // l'altitude compte jusqu'à la nouvelle valeur
+    const a0 = prev.alt, a1 = cur.alt, t0 = performance.now();
+    if(num) (function step(t){ const p = Math.min(1, (t-t0)/700), k = 1-Math.pow(1-p, 3); if(!num.isConnected) return;
+      num.textContent = fmtNum(a0+(a1-a0)*k); if(p<1) requestAnimationFrame(step); })(t0);
+    box.classList.remove("up"); void box.offsetWidth; box.classList.add("up");
+    // la jauge vers le prochain camp part de l'ancienne valeur (sauf quand un camp vient d'être passé)
+    const bar = qs(".la-bar i", box);
+    if(bar && bar.animate && prev.pct!=null && cur.pct!=null && cur.pct>prev.pct) try{ bar.animate([{ width:(prev.pct*100).toFixed(1)+"%" }, { width:(cur.pct*100).toFixed(1)+"%" }], { duration:700, easing:"cubic-bezier(.32,.72,0,1)" }); }catch(e){}
+  }
+  if(fresh.length || top){
+    const name = top ? `Sommet ${ascDu(cur.key)}` : fresh[fresh.length-1], c = ascCamps(cur.key).find(x=>x[1]===name);
+    const nx = qs(".la-next", box); if(nx) nx.innerHTML = `<b>${esc(name)} atteint !</b>${c ? ` <span class="num">${fmtNum(c[2])} m</span>` : ""}`;
+    box.classList.add("camp");
+    setTimeout(()=>{ sfx("ascCampBig"); haptic([20, 40, 30]); const b = qs("#liveAsc"); if(b){ const rr = b.getBoundingClientRect(); confettiBurst(rr.left+40, rr.top+rr.height/2, top ? 120 : 60); } }, 250);
+    // l'annonce reste un moment, puis la bande repart vers l'étape suivante
+    clearTimeout(liveAscAfter._t);
+    liveAscAfter._t = setTimeout(()=>{ const h = qs("#liveHead"), b = qs("#liveAsc"); if(h && b && S.draft && S.draft.startedAt){ b.outerHTML = liveAscHTML(S.draft); } }, 2800);
+  }
+}
+
 // ---------- fin de séance : le gain d'altitude (remplace l'XP) ----------
 // Une piste zoomée sur le tronçon de la séance : du dernier camp sous le départ au premier camp au-dessus de
 // l'arrivée. Le grimpeur y avance franchement ; chaque camp franchi s'allume (son, vibration), puis le badge
@@ -642,6 +719,7 @@ function ascCelHTML(sessionId){
   const nc = e.summit ? null : hi || [D.top, "Sommet", D.top], rest = nc ? nc[0]-e.to : 0;
   return `<button class="cel-asc" data-a="ascFromCel" aria-label="Mon ascension : ${esc(D.n)}, +${fmtNum(e.gain)} mètres">
     <div class="ca-hd">${ascIc("peak")}<span>${esc(D.n)}<small class="num">${fmtNum(e.to)} m sur ${fmtNum(D.top)} m</small></span><b class="num" data-count="${Math.round(e.gain)}" data-unit="m" data-thin="1" data-pre="+">+${ascM(e.gain)}</b></div>
+    ${e.bonus>.05 ? `<div class="ca-bonus">${ii("bolt")}<span>Records et séries battues : <b class="num">+${ascM(e.bonus*e.mul*e.force*e.lapF)}</b></span></div>` : ""}
     <div class="ca-trk" id="celTrk" data-from="${x(e.from)}" data-to="${x(e.to)}" aria-hidden="true">
       <div class="ca-line"><i class="ca-fill" style="width:${x(e.from)}%"></i>
         ${inner.map(c=>`<i class="ca-tick" style="left:${x(c[0])}%" data-p="${x(c[0])}"><span>${esc(c[1])}</span></i>`).join("")}

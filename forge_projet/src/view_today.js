@@ -582,7 +582,8 @@ function liveHeadHTML(draft){
       <div class="lh-clock"><span id="liveClock">${fmtClock(elapsedSec(draft))}</span><small>${esc(liveName(draft))}</small></div>
       <div class="lh-pct"><b>${Math.round(pct*100)}<span>%</span></b><small>${c.left ? `${c.left} série${c.left>1?"s":""} à faire` : "tout est fait"}</small></div>
     </div>
-    <div class="lp-bar" aria-label="${c.done} séries sur ${c.total}">${segs}</div>`;
+    <div class="lp-bar" aria-label="${c.done} séries sur ${c.total}">${segs}</div>
+    ${typeof liveAscHTML==="function" ? liveAscHTML(draft) : ""}`;
 }
 function liveStripHTML(draft){
   const idx = Math.min(liveFocusIdx, draft.exos.length-1);
@@ -896,6 +897,8 @@ function refreshFocusRegion(){
       }
     }
   }
+  // l'altitude de la séance : +X m, compteur, camp atteint en pleine séance (view_ascent.js)
+  if(head && typeof liveAscAfter==="function") liveAscAfter(head);
   if(typeof renderRestBar==="function") renderRestBar();
 }
 
@@ -920,14 +923,20 @@ function overviewBodyHTML(){
 }
 
 let lastDoneForSave = null;
+// séries validées meilleures que la même série la dernière fois (hors records, qui ont déjà le leur) ; l'altitude
+// en direct et la fin de séance comptent les mêmes
+function draftBeats(draft){
+  if(S.settings.beat===false) return 0;
+  return draft.exos.reduce((t,ex)=>{ const def = EXO_MAP[ex.exoId]; if(!def || isStretch(def)) return t;
+    return t + ex.sets.filter((st,si)=>{ if(!st.done || st.pr) return false; const ref = beatRef(ex.exoId, si); return !!ref && daysBetween(ref.date, todayISO())<21 && beatCmp(def, st, ref)>0; }).length; }, 0);
+}
 function finalizeSession(){
   const draft = S.draft;
   draft.completedAt = new Date().toISOString();
   draft.durationSec = Math.round((Date.parse(draft.completedAt)-Date.parse(draft.startedAt))/1000);
   draft.exos = draft.exos.filter(ex=>ex.sets.some(s=>s.done));
   // séries meilleures que la même série la dernière fois (comptées avant d'ajouter la séance)
-  if(S.settings.beat!==false) draft.beats = draft.exos.reduce((t,ex)=>{ const def = EXO_MAP[ex.exoId]; if(!def || isStretch(def)) return t;
-    return t + ex.sets.filter((st,si)=>{ if(!st.done || st.pr) return false; const ref = beatRef(ex.exoId, si); return !!ref && daysBetween(ref.date, todayISO())<21 && beatCmp(def, st, ref)>0; }).length; }, 0);
+  if(S.settings.beat!==false) draft.beats = draftBeats(draft);
   // étirements : gardés à part (nom et secondes tenues), hors séries, volume et muscles travaillés
   const cool = draft.exos.filter(isStretchEntry);
   if(cool.length){
