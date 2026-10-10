@@ -63,12 +63,26 @@ function nextGoal(){
   const daysLeft = 7-weekdayIdx(todayISO()) - (sessionsToday().length ? 1 : 0);
   const week = left>0 && left<=daysLeft ? { ic:"target", pct:done/goal, act:'data-a="tab" data-id="progress"',
     t: left===1 ? "Une séance de plus et ta semaine est validée" : `Encore ${nb(left,"séance")} pour valider ta semaine` } : null;
+  const asc = typeof ascent==="function" ? ascent() : null;
+  // la série de semaines en jeu (plus de jour de marge) : ce qu'on a à perdre passe en premier
+  if(week && asc && asc.series>=2 && daysLeft-left<=1 && !asc.paused)
+    return { ic:"flame", pct:done/goal, warn:daysLeft===left, act:'data-a="openAscent"',
+      t:`Ta série de ${nb(asc.series, "semaine")} est en jeu : ${left===1 ? "une séance" : nb(left, "séance")} d'ici dimanche` };
+  // un muscle qui perd vraiment de la force (plus de 3 semaines sans séance) reste l'alerte la plus importante
+  const da = S.settings.trend!==false && typeof detrainAlerts==="function" ? detrainAlerts()[0] : null;
+  if(da && da.losing && da.pct>0) return { ic:"warn", pct:null, warn:true, act:'data-a="tab" data-id="progress"', t:`${da.label} : ${da.m.days} jours sans séance, force estimée −${da.pct} %` };
+  // après une semaine sans séance : revenir rapporte double (retour en force)
+  if(asc && asc.comeback && !sessionsToday().length)
+    return { ic:"repeat", pct:null, act:'data-a="openAscent"', t:`Retour en force : ta prochaine séance compte double jusqu'à ${fmtNum(asc.comeback)} m` };
+  // la promesse du jour : un camp (ou le sommet) à portée de la séance d'aujourd'hui
+  const promise = asc && !sessionsToday().length && typeof ascTodayPromise==="function" ? ascTodayPromise(asc) : null;
+  if(promise) return { ic:"trendUp", pct:promise.pct, act:'data-a="openAscent"', t:week && left===1 ? `${promise.t}, et ta semaine est validée` : promise.t };
   // l'avant-dernière séance de la semaine seulement : avant, la pastille « 1/3 cette semaine » le dit déjà
   if(week && left===1) return week;
   // un muscle délaissé : l'indice de force va baisser (ou baisse déjà), comme l'alerte d'une montre de sport
   if(S.settings.trend!==false && typeof detrainAlerts==="function"){ const a = detrainAlerts()[0];
     if(a) return { ic:a.losing ? "warn" : "clock", pct:null, warn:a.losing, act:'data-a="tab" data-id="progress"',
-      t: a.losing ? `${a.label} : ${a.m.days} jours sans séance, force estimée −${a.pct} %` : `${a.label} : ${a.m.days} jours sans séance, l'indice baisse dans ${nb(a.left,"jour")}` }; }
+      t: a.losing && a.pct>0 ? `${a.label} : ${a.m.days} jours sans séance, force estimée −${a.pct} %` : a.losing ? `${a.label} : ${a.m.days} jours sans séance, l'indice commence à baisser` : `${a.label} : ${a.m.days} jours sans séance, l'indice baisse dans ${nb(a.left,"jour")}` }; }
   // le record à battre dans la séance prête (composée ou prévue aujourd'hui)
   if(!sessionsToday().length){
     const ids = (S.custom.exos.length ? S.custom.exos : (plannedTemplate()||{exos:[]}).exos).map(e=>e.exoId);
@@ -85,7 +99,7 @@ function nextGoal(){
       t:`${TIERS[p.t+1].n} « ${m.n} » : plus que ${fmtMedalVal(m, rest)} ${medalUnit(m, rest)}` }; }
   // sinon : l'ascension (prochain camp, ou la série qui ouvre la montagne suivante)
   // la barre montre le chemin depuis le camp précédent : avec des camps rapprochés, elle se remplit à chaque séance
-  const a = ascent(), nc = a.nextCamp, c0 = nc ? (a.camps[a.passed-1] || [a.start])[0] : 0;
+  const a = asc || ascent(), nc = a.nextCamp, c0 = nc ? (a.camps[a.passed-1] || [a.start])[0] : 0;
   return { ic:"trendUp", pct:a.wait ? Math.min(1, a.series/Math.max(1, a.nextReq)) : nc ? Math.max(0, Math.min(1, (a.alt-c0)/Math.max(1, nc[0]-c0))) : a.done, act:'data-a="openAscent"', t:ascWhereTxt(a) };
 }
 function nextGoalHTML(){

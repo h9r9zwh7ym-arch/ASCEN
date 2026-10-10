@@ -30,15 +30,19 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   // 1. accueil : une ligne « Prochain cap », la plus proche du but
   const goal = await page.evaluate(() => { const g = document.querySelector('.goal-line'); return g ? { t: g.textContent.trim(), a: g.dataset.a, n: document.querySelectorAll('.goal-line').length } : null; });
   log('Next goal:', JSON.stringify(goal));
-  if (!goal || goal.n !== 1 || !/Prochain cap/.test(goal.t)) fail('prochain cap sur l\'accueil');
+  if (!goal || goal.n !== 1 || !/Prochain cap|À surveiller/.test(goal.t)) fail('prochain cap sur l\'accueil');
   const cands = await page.evaluate(() => {
     const out = {};
+    // l'ascension (série en jeu, camp à portée) passe avant : testée par v52 ; neutralisée ici
+    const realAsc = window.ascent, realP = window.ascTodayPromise;
+    window.ascent = () => Object.assign({}, realAsc(), { series: 0 }); window.ascTodayPromise = () => null;
     const save0 = JSON.stringify(S.sessions), cust0 = JSON.stringify(S.custom); const wkStart = weekKey(todayISO());
     S.sessions = S.sessions.filter(s => s.date < wkStart); DATA_VER++; out.week3 = nextGoal().t;     // 0/3 : la séance prête porte un record
     S.custom = { exos: [] }; DATA_VER++; out.weekOnly = nextGoal().t;
     // 4.0 (passe qualité) : l'objectif de la semaine n'apparaît qu'à une séance du but (la pastille dit déjà « 0/3 »)
     const g0 = S.goals.daysPerWeek; S.goals.daysPerWeek = sessionsThisWeek() + 1; DATA_VER++; out.oneLeft = nextGoal().t;
     out.daysLeft = 7 - weekdayIdx(todayISO()) - (sessionsToday().length ? 1 : 0); S.goals.daysPerWeek = g0;
+    window.ascent = realAsc; window.ascTodayPromise = realP;
     S.sessions = JSON.parse(save0); S.custom = JSON.parse(cust0); DATA_VER++; renderView('today');
     return out;
   });

@@ -242,6 +242,16 @@ function ascWhereTxt(a){ // une ligne : où l'on en est
   const m = nc ? nc[0]-a.alt : D.top-a.alt, s = ascSessionsFor(m, a);
   return `${nc ? nc[1] : "Sommet"} dans ${ascM(m)} : ${s<=1 ? "ta prochaine séance t'y amène" : `environ ${nb(s, "séance")}`}.`;
 }
+// La promesse du jour (accueil, « Prochain cap ») : ce que la séance d'aujourd'hui peut faire atteindre.
+// Null si rien n'est à portée d'une séance type.
+function ascTodayPromise(a){
+  a = a || ascent();
+  if(a.wait) return a.series>=a.nextReq ? { t:`Aujourd'hui commence ta prochaine expédition : ${ASC_DATA[a.next].n}`, pct:1 } : null;
+  const D = ASC_DATA[a.key], nc = a.nextCamp, target = nc ? nc[0] : D.top, back = a.comeback ? ASC_BACK : 1;
+  if(ascSessionsFor((target - a.alt)/back, a)>1) return null;
+  const c0 = nc ? (a.camps[a.passed-1] || [a.start])[0] : (a.camps[a.camps.length-1] || [a.start])[0];
+  return { t:nc ? `Aujourd'hui, ${nc[1]} est à ta portée` : `Aujourd'hui, le sommet ${ascDu(a.key)} est à ta portée`, pct:Math.max(0, Math.min(1, (a.alt-c0)/Math.max(1, target-c0))), summit:!nc };
+}
 // délai estimé : séances au rythme de montée actuel, durée au rythme des 4 dernières semaines
 function ascEta(m, a){
   const s = ascSessionsFor(m, a), w = s/Math.max(.5, a.perWeek || a.goal);
@@ -349,6 +359,7 @@ function ascStepsListHTML(a){
     else { const m = c[0]-alt, e = ascEta(m, a);
       if(nx){ const p0 = i ? camps[i-1][0] : D.start; node = `<i class="st-ring" style="--p:${Math.round(Math.max(0, Math.min(1, (alt-p0)/Math.max(1, c[0]-p0)))*100)}"></i>`;
         r = `<span class="st-r"><b class="num">dans ${ascM(m)}</b><small>${esc(e.time ? `${e.txt} · ${e.time}` : e.txt)}</small></span>`; }
+      else if(/\b(mois|ans)\b/.test(e.time)) r = `<span class="st-r"><b class="num">${ascM(m)}</b><small>à gravir</small></span>`;
       else r = `<span class="st-r"><b>${esc(e.txt)}</b>${e.time ? `<small>${esc(e.time)}</small>` : ""}</span>`;
       if(top) node = ascIc("flag"); }
     return `<button class="st-i${past ? " past" : ""}${nx ? " next" : ""}${top ? " top" : ""}" data-a="ascCamp" data-i="${i}">
@@ -442,7 +453,8 @@ function ascSecBody(k, a){
         ${row("Régularité", (a.series ? `série de ${nb(a.series, "semaine")}` : "pas encore de série")+(elan ? " · l'élan compte à sa place" : ""), ascX(a.reg), elan ? "off" : "")}
         ${row("Force", pct==null ? "pas encore mesurée" : `${pct>=0 ? "+" : "−"}${Math.abs(pct)} % depuis tes débuts`, ascX(Math.round(a.force*100)/100))}
         ${lapF<.999 ? row(`${a.lap+1}ᵉ tour`, "plus exigeant", ascX(Math.round(lapF*100)/100)) : ""}
-        ${row("Par séance", "", "+"+ascM(ascSpeedNow(a)), "tot")}
+        ${a.comeback ? row("Retour en force", `jusqu'à ${ascM(a.comeback)}, l'altitude perdue`, ascX(ASC_BACK)) : ""}
+        ${row("Par séance", "", "+"+ascM(ascSpeedNow(a)*(a.comeback ? ASC_BACK : 1)), "tot")}
       </div>
       <p class="note">${L && L.waiting ? "Ta dernière séance n'a pas fait monter : l'expédition suivante attend ta série. " : ""}Un record compte pour 3 séries de plus, une série mieux que la dernière fois pour 1 de plus.</p>
       ${near ? `<div class="wx ${a.pushOK ? "" : "warn"}">${ascIc("pulse", a.pushOK ? "" : "warn")}<span><b>Dernière ligne droite : ${a.pushOK ? "pleine vitesse" : "mi-vitesse"}</b><span>Ta force est à ${Math.round(a.form*100)} % de ton meilleur niveau récent${a.pushOK ? "." : ` (il faut ${Math.round(ASC_FORM_OK*100)} %).`}</span></span></div>` : ""}`;
@@ -496,7 +508,7 @@ function ascHowHTML(){
     <ul class="how-list">
       <li><b>Objectif tenu</b> : la série avance.</li>
       <li><b>Raté une fois</b> : la série est gelée ; une 2ᵉ fois en 4 semaines, un palier de moins.</li>
-      <li><b>Aucune séance</b> : un palier de moins et retour au camp précédent. Les sommets gagnés restent acquis.</li>
+      <li><b>Aucune séance</b> : un palier de moins et retour au camp précédent. Les sommets gagnés restent acquis, et la séance suivante compte double jusqu'à l'altitude perdue (retour en force).</li>
       <li><b>Pause ou semaine allégée</b> : rien ne se perd (${ASC_PAUSE_MAX} pauses par trimestre).</li>
     </ul>
     <h3>Les grandes montagnes</h3>
@@ -561,7 +573,7 @@ function ascMountScene(a, intro){
       ascAnimate(G, from, end, dur, c=>ascSceneToast(c.hut ? "hut" : "tent", `<b>${esc(c.name)}</b> atteint · ${fmtNum(c.real)} m`),
         v=>{ if(altEl) altEl.textContent = fmtNum(v)+" m"; bar(v); })
         .then(()=>{ G.set(end, a.wait); bar(end); if(altEl) altEl.textContent = fmtNum(end)+" m"; remember();
-          if(!up){ const d = a.descents[a.descents.length-1]; ascSceneToast("tent", d && d.camp ? `Semaine sans séance : retour à <b>${esc(d.camp)}</b>. Les sommets restent acquis.` : "Semaine sans séance : retour au départ. Les sommets restent acquis."); }
+          if(!up){ const d = a.descents[a.descents.length-1]; ascSceneToast("tent", `Semaine sans séance : retour ${d && d.camp ? `à <b>${esc(d.camp)}</b>` : "au départ"}. Ta prochaine séance compte <b>double</b> pour remonter.`, 4200); }
           introToast(); });
     }, reducedMotion() ? 0 : 450);
   }).catch(()=>{ const host = qs("#ascScene"); if(host){ host.classList.add("offline"); introToast(); } });
@@ -642,7 +654,8 @@ function ascLive(draft){
     v.rest = Math.max(0, v.target[0]-alt); v.pct = Math.max(0, Math.min(1, (alt-p0)/Math.max(1, v.target[0]-p0)));
     // mètres d'une série difficile de plus (0 au-delà de 20 séries : le plafond de l'effort)
     const m = e ? e.mul*e.force*e.lapF : a.mul*a.force/(1+.25*a.lap);
-    v.perSet = (e && e.hard>=20) ? 0 : ascEffort(1)*m;
+    v.perSet = (e && e.hard>=20) ? 0 : ascEffort(1)*m*(a.comeback ? ASC_BACK : 1);
+    v.back = !!(a.comeback || (e && e.back>0));
   }
   ascLiveMemo = { sig, v }; return v;
 }
@@ -660,7 +673,7 @@ function liveAscHTML(draft){
   return `<div class="lv-asc${L.wait ? " top" : ""}" id="liveAsc" aria-label="Altitude ${fmtNum(L.alt)} mètres">
       <span class="la-ic">${ascIc("peak")}</span>
       <span class="la-alt"><b class="num">${fmtNum(L.alt)}</b> m</span>
-      ${gain>=.5 ? `<span class="la-gain num">+${ascM(gain)}</span>` : ""}
+      ${gain>=.5 ? `<span class="la-gain num">+${ascM(gain)}</span>` : ""}${L.back ? `<span class="la-boost" title="Retour en force : la séance compte double jusqu'à l'altitude perdue">×2</span>` : ""}
       <span class="la-next">${next}</span>
       ${L.wait ? "" : `<i class="la-bar"><i style="width:${(L.pct*100).toFixed(1)}%"></i></i>`}
     </div>`;
@@ -719,7 +732,7 @@ function ascCelHTML(sessionId){
   const nc = e.summit ? null : hi || [D.top, "Sommet", D.top], rest = nc ? nc[0]-e.to : 0;
   return `<button class="cel-asc" data-a="ascFromCel" aria-label="Mon ascension : ${esc(D.n)}, +${fmtNum(e.gain)} mètres">
     <div class="ca-hd">${ascIc("peak")}<span>${esc(D.n)}<small class="num">${fmtNum(e.to)} m sur ${fmtNum(D.top)} m</small></span><b class="num" data-count="${Math.round(e.gain)}" data-unit="m" data-thin="1" data-pre="+">+${ascM(e.gain)}</b></div>
-    ${e.bonus>.05 ? `<div class="ca-bonus">${ii("bolt")}<span>Records et séries battues : <b class="num">+${ascM(e.bonus*e.mul*e.force*e.lapF)}</b></span></div>` : ""}
+    ${e.bonus>.05 || e.back>.05 ? `<div class="ca-chips">${e.back>.05 ? `<div class="ca-bonus back">${ii("repeat")}<span>Retour en force : <b class="num">+${ascM(e.back)}</b></span></div>` : ""}${e.bonus>.05 ? `<div class="ca-bonus">${ii("bolt")}<span>Records et séries battues : <b class="num">+${ascM(e.bonus*e.mul*e.force*e.lapF)}</b></span></div>` : ""}</div>` : ""}
     <div class="ca-trk" id="celTrk" data-from="${x(e.from)}" data-to="${x(e.to)}" aria-hidden="true">
       <div class="ca-line"><i class="ca-fill" style="width:${x(e.from)}%"></i>
         ${inner.map(c=>`<i class="ca-tick" style="left:${x(c[0])}%" data-p="${x(c[0])}"><span>${esc(c[1])}</span></i>`).join("")}
@@ -767,7 +780,7 @@ function ascDescentNotice(){
   if(S.ascent.descSeen && S.ascent.descSeen>=d.w) return;
   S.ascent.descSeen = d.w; save();
   if(daysBetween(d.w, todayISO())>21) return; // vieux souvenir : pas de message
-  toast(d.camp ? `Semaine sans séance : retour à ${d.camp} (${fmtNum(d.real)} m). Ta prochaine séance te remet en route.` : "Semaine sans séance : retour au départ de l'expédition. Ta prochaine séance te remet en route.", "repeat");
+  toast(`Semaine sans séance : retour ${d.camp ? `à ${d.camp} (${fmtNum(d.real)} m)` : "au départ de l'expédition"}. Ta prochaine séance compte double pour remonter.`, "repeat");
 }
 
 Object.assign(ACT, {

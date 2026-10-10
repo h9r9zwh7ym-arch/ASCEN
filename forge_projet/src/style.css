@@ -2563,3 +2563,10 @@ html,body{overscroll-behavior:none}
 .cel-asc .ca-bonus{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:4px 10px;border-radius:999px;background:var(--tint-bg);color:var(--tint-ink);font-size:var(--fs-foot);font-weight:600}
 .cel-asc .ca-bonus .ii{width:14px;height:14px}
 .cel-asc .ca-bonus b{font-family:var(--num);font-weight:700}
+/* retour en force (×2 après une semaine sans séance) */
+.lv-asc .la-boost{flex:none;font-family:var(--num);font-weight:800;font-size:var(--fs-cap);color:#fff;background:linear-gradient(135deg,#FF9A66,#FF5A2C);padding:1px 7px;border-radius:999px;animation:laBoost 1.6s ease-in-out infinite}
+@keyframes laBoost{50%{box-shadow:0 0 0 4px rgba(255,107,61,.18)}}
+.cel-asc .ca-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.cel-asc .ca-chips .ca-bonus{margin-top:0}
+.cel-asc .ca-bonus.back{background:linear-gradient(135deg,#FF9A66,#FF5A2C);color:#fff}
+@media (prefers-reduced-motion:reduce){.lv-asc .la-boost{animation:none!important}}

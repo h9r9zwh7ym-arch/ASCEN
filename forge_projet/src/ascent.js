@@ -47,6 +47,9 @@ const ascMulEff = (tier, n, lap)=>Math.max(ASC_MUL[tier], ascElan(n, lap));
 // force se voit sur la montagne ; une récompense qui varie d'une séance à l'autre.
 const ASC_BONUS = { pr:3, prMax:3, beat:1, beatMax:4 };
 function ascPRs(s){ let n = 0; for(const ex of s.exos){ const def = EXO_MAP[ex.exoId]; if(def && isStretch(def)) continue; for(const st of ex.sets) if(st.done && st.pr) n++; } return n; }
+// Retour en force : après une semaine sans séance (retour au camp précédent), chaque séance compte double
+// jusqu'à retrouver l'altitude perdue. Revenir doit être une récompense, pas une corvée.
+const ASC_BACK = 2;
 function ascBonusSets(prs, beats){ return ASC_BONUS.pr*Math.min(prs, ASC_BONUS.prMax) + ASC_BONUS.beat*Math.min(beats||0, ASC_BONUS.beatMax); }
 // ---------- camps : rapprochés, pour qu'on en atteigne souvent ----------
 // On simule un profil régulier (3 séances de 15 séries par semaine, série qui monte, élan de départ, force +12 %
@@ -135,12 +138,19 @@ function ascent_raw(extra){
         const ni = nextIdx(), nk = ASC_ORDER[ni];
         if(series>=ASC_REQ[nk]){
           if(ni===0) st.lap++;
-          st.i = ni; st.alt = ASC_DATA[nk].start; st.wait = false; st.expFrom = s.date; st.expN = 0; st.campDates = {};
+          st.i = ni; st.alt = ASC_DATA[nk].start; st.wait = false; st.expFrom = s.date; st.expN = 0; st.campDates = {}; st.comeback = null;
           e.started = nk; e.key = nk; e.from = e.to = st.alt;
           e.lapF = lapF = 1/(1 + .25*st.lap); e.mul = mul = ascMulEff(tier, st.n, st.lap); e.elan = ascElan(st.n, st.lap); gain = (ascEffort(hard) + bonus)*mul*f.mult*lapF;
         } else { e.waiting = true; out.log[s.id] = e; out.last = e; continue; }
       }
       const D = ASC_DATA[key()], pushFrom = D.top - ASC_PUSH*(D.top - D.start);
+      // retour en force : double jusqu'à l'altitude perdue, puis vitesse normale pour le reste de la séance
+      if(st.comeback && st.alt<st.comeback-.01){
+        const need = st.comeback - st.alt, dbl = gain*ASC_BACK;
+        const g = dbl<=need ? dbl : need + gain*(1 - need/dbl);
+        e.back = g - gain; gain = g;
+        if(dbl>=need) st.comeback = null;
+      } else st.comeback = null;
       let to = st.alt + gain;
       if(f.form<ASC_FORM_OK && to>pushFrom){ const before = Math.max(0, pushFrom - st.alt); to = st.alt + before + (gain - before)*.5; e.push = true; }
       if(!st.expFrom) st.expFrom = s.date;
@@ -148,7 +158,7 @@ function ascent_raw(extra){
       e.camps = ascCamps(key()).filter(c=>c[0]>st.alt+.5 && c[0]<=to+.5).map(c=>c[1]);   // même tolérance que « passed »
       e.camps.forEach(nm=>{ st.campDates[nm] = s.date; });
       if(to>=D.top){
-        to = D.top; e.summit = key(); st.wait = true;
+        to = D.top; e.summit = key(); st.wait = true; st.comeback = null;
         out.summits.push({ key:key(), lap:st.lap, date:s.date, sessions:st.expN, weeks:Math.max(1, Math.round(daysBetween(weekKey(st.expFrom), w)/7)+1), series });
       }
       e.gain = to - st.alt; e.to = to; st.alt = to;
@@ -169,7 +179,7 @@ function ascent_raw(extra){
         if(!st.wait){
           const D = ASC_DATA[key()], below = ascCamps(key()).filter(c=>c[0]<st.alt-.5), c = below[below.length-1];
           const to = c ? c[0] : D.start;
-          if(to<st.alt) out.descents.push({ w, key:key(), from:st.alt, to, camp:c ? c[1] : null, real:c ? c[2] : D.fromAlt });
+          if(to<st.alt){ out.descents.push({ w, key:key(), from:st.alt, to, camp:c ? c[1] : null, real:c ? c[2] : D.fromAlt }); st.comeback = Math.max(st.comeback || 0, st.alt); }
           st.alt = to;
         }
       }
@@ -197,7 +207,7 @@ function ascent_raw(extra){
     series:sNow, tier:ascTier(sNow), mul:Math.max(regNow, elanNow), reg:regNow, elan:elanNow, sessN:st.n, force:fNow.mult, form:fNow.form, index:fNow.index,
     pushOK:fNow.form>=ASC_FORM_OK, pushFrom:D.top - ASC_PUSH*(D.top - D.start),
     expFrom:st.expFrom, expN:st.expN, paused:pauses.has(thisWeek), pausesLeft:Math.max(0, ASC_PAUSE_MAX - pausesQ),
-    camps, campDates:st.campDates, perWeek, hardAvg, bonusAvg, effAvg:ascEffort(hardAvg) + ascEffort(bonusAvg),
+    camps, campDates:st.campDates, comeback:!st.wait && st.comeback && st.alt<st.comeback-.01 ? st.comeback : null, perWeek, hardAvg, bonusAvg, effAvg:ascEffort(hardAvg) + ascEffort(bonusAvg),
     summitCount:out.summits.length, goal,
   });
 }
