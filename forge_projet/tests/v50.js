@@ -103,6 +103,16 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   log('Progress/profil:', JSON.stringify(prog), JSON.stringify(prof));
   if (!prog.card || !prog.sky || prog.lv) fail('carte Mon ascension dans Progrès');
   if (!prof.asc || !/m/.test(prof.txt) || prof.badge) fail('profil : ascension au lieu du niveau');
+  // À propos : les sources des montagnes et le lien vers « Comment ça marche » (retour vers À propos)
+  await page.evaluate(() => ACT.openAbout()); await wait(500);
+  const ab = await page.evaluate(() => ({ src: /OpenStreetMap/.test(document.querySelector('.sheet-body').textContent) && /swisstopo/.test(document.querySelector('.sheet-body').textContent), link: !!document.querySelector('.about-link[data-a="ascHow"]') }));
+  await page.click('.about-link'); await wait(600);
+  const ab2 = await page.evaluate(() => (document.querySelector('.sheet-hd .t') || {}).textContent);
+  await page.click('.sheet-hd [data-a="sheetBack"]'); await wait(700);
+  const ab3 = await page.evaluate(() => (document.querySelector('.sheet-hd .t') || {}).textContent);
+  log('About:', JSON.stringify(ab), ab2, ab3);
+  if (!ab.src || !ab.link || ab2 !== 'Comment ça marche' || ab3 !== 'À propos') fail('À propos : sources et règles de l\'ascension');
+  await page.evaluate(() => closeSheet()); await wait(400);
   await page.click('.tabbtn[data-id="today"]'); await wait(500);
 
   // 3. l'écran « Mon ascension » : scène chargée à la demande
@@ -114,11 +124,12 @@ const APP = 'file://' + path.resolve(process.argv[2]);
       hud: h.querySelector('.hud-n').textContent, name: ASC_DATA[a.key].n, cards: [...document.querySelectorAll('.asc-body .asc-row .t')].map(x => x.textContent).join('|'),
       week: !!document.querySelector('#ascWeek .aw-msg'), next: (document.querySelector('#ascSteps .st-i.next, #ascSteps .exp-next-i') || {}).textContent || '', steps: document.querySelectorAll('#ascSteps .st-list .st-i').length, rowsH: Math.round(document.querySelector('.asc-rows').getBoundingClientRect().height),
       folded: document.querySelectorAll('.asc-body .stops li').length, me: !!svg.querySelector('.asc-me[transform]'), seen: S.ascent.seen && S.ascent.seen.key === a.key,
+      aspect: Math.round(780 / (h.getBoundingClientRect().width / h.getBoundingClientRect().height)), vh: ASC_DATA[a.key].vh,
       day: svg.innerHTML.includes('#78A8D6') || svg.innerHTML.includes('#6EA2D2') || svg.innerHTML.includes('#5A8CCD') || svg.innerHTML.includes('#2F62B4') }; });
   log('Sheet:', JSON.stringify(sheet));
   if (!sheet.ready || sheet.paths < 20 || sheet.camps !== sheet.exp || sheet.hud !== sheet.name || !sheet.me || !sheet.seen || !sheet.day) fail('écran Mon ascension : scène, camps, HUD');
   // lisibilité : où j'en suis (une phrase), cette semaine, puis le détail replié en lignes (visibles : la colonne ne les écrase pas)
-  if (sheet.cards !== 'Vitesse de montée|Régularité|Force|Itinéraire|Trophées de sommet|Comment ça marche' || !sheet.week || !/dans \d|Prochaine expédition/.test(sheet.next) || sheet.steps < 3 || sheet.steps > 6 || sheet.rowsH < 250 || sheet.folded) fail('écran : hiérarchie et détail replié');
+  if (sheet.cards !== 'Vitesse|Régularité|Itinéraire|Trophées' || !sheet.week || !/dans \d|Prochaine expédition/.test(sheet.next) || sheet.steps < 3 || sheet.steps > 5 || sheet.rowsH < 180 || sheet.folded || sheet.aspect !== sheet.vh) fail('écran : hiérarchie et détail replié');
   await page.click('.asc-row[data-k="itin"]'); await wait(700);
   const itin = await page.evaluate(() => ({ stops: document.querySelectorAll('#ascSec-itin .stops li').length, exp: document.querySelector('.asc-row[data-k="itin"]').getAttribute('aria-expanded') }));
   await page.click('.asc-row[data-k="itin"]'); await wait(600);
@@ -146,10 +157,19 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   if (all.n !== all.exp) fail('toutes les étapes');
   await page.click('[data-a="ascAllSteps"]'); await wait(500);
   await page.evaluate(() => { document.querySelector('.asc-body').scrollTop = 900; }); await wait(300); await shot('03_sheet_reg');
-  // pause : bouton, état, nombre restant
-  await page.click('[data-a="ascPause"]'); await wait(300);
+  // « comment ça marche » : feuille empilée, retour vers l'écran
+  await page.click('.sheet-hd .tr-how'); await wait(600);
+  const how = await page.evaluate(() => ({ t: (document.querySelector('.sheet-hd .t') || {}).textContent, back: !!document.querySelector('.sheet-hd [data-a="sheetBack"]'), req: document.querySelectorAll('.asc-how .how-req li').length }));
+  await page.click('.sheet-hd [data-a="sheetBack"]'); await wait(900);
+  const howBack = await page.evaluate(() => !!document.querySelector('#ascScene') && !document.querySelector('.asc-how'));
+  log('How:', JSON.stringify(how), howBack);
+  if (how.t !== 'Comment ça marche' || !how.back || how.req !== 5 || !howBack) fail('comment ça marche, puis retour');
+  // pause : repliée dans la carte de la semaine, cette semaine puis annulée
+  await page.evaluate(() => document.querySelector('#ascWeek').scrollIntoView({ block: 'center' })); await wait(200);
+  await page.click('[data-a="ascPauseMenu"]'); await wait(500);
+  await page.click('#ascPauseBox [data-a="ascPause"]'); await wait(300);
   const pz = await page.evaluate(() => ({ p: S.ascent.pauses.slice(), on: !!document.querySelector('[data-a="ascPause"][aria-pressed="true"]'), paused: ascent().paused }));
-  await page.click('[data-a="ascPause"][aria-pressed="true"]'); await wait(300);
+  await page.click('#ascPauseBox [data-a="ascPause"][aria-pressed="true"]'); await wait(300);
   const pz2 = await page.evaluate(() => S.ascent.pauses.length);
   log('Pause:', JSON.stringify(pz), pz2);
   if (pz.p.length !== 1 || !pz.on || !pz.paused || pz2 !== 0) fail('pause déclarée puis annulée');

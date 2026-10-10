@@ -16,7 +16,7 @@ const ASC_TH = [0, 2, 4, 8, 12, 20], ASC_MUL = [.5, 1, 1.5, 2, 2.5, 3];
 const ASC_PUSH = .12;          // dernière ligne droite : les 12 derniers % du dénivelé
 const ASC_FORM_OK = .95;       // … à pleine vitesse quand la force est à 95 % de son meilleur niveau des 6 derniers mois
 const ASC_PAUSE_MAX = 2;       // semaines de pause déclarées par trimestre (vacances, maladie)
-const ASC_GROUPS = [["Suisse", ASC_ORDER.slice(0, 8)], ["Alpes", ["montblanc"]], ["Le monde", ["kilimanjaro", "aconcagua", "k2", "everest"]]];
+const ASC_GROUPS = [["Suisse", ASC_ORDER.slice(0, 8)], ["Le monde", ASC_ORDER.slice(8)]];
 // trophées de sommet : métal selon la difficulté
 const ASC_TIER_OF = k=>({ moleson:"bronze", pilatus:"bronze", titlis:"silver", eiger:"silver" }[k] || (ASC_ORDER.indexOf(k)<9 ? "gold" : "diamond"));
 const ASC_TIERS = { bronze:["#7A4520","#A8672F","#E7B07A","Bronze","Préalpes"], silver:["#5E636B","#9AA0A8","#EEF0F3","Argent","les 3 000"],
@@ -86,7 +86,7 @@ function ascent_raw(){
   }
   const k0 = ASC_ORDER[0];
   const st = { lap:0, i:0, alt:ASC_DATA[k0].start, wait:false, series:0, expFrom:null, expN:0, campDates:{} };
-  const out = { weeks:[], summits:[], descents:[], log:{}, last:null };
+  const out = { weeks:[], summits:[], descents:[], log:{}, last:null }, effs = [];
   // force : indice à la fin de la semaine précédente, recalculé toutes les 4 semaines ; forme = indice
   // rapporté à son meilleur niveau des 6 derniers mois (la dernière ligne droite la demande)
   // (blocs fixes de 4 semaines depuis la première : la valeur affichée est celle qu'utilisera la prochaine séance)
@@ -111,6 +111,7 @@ function ascent_raw(){
       const series = st.series + (n>=goal ? 1 : 0), tier = ascTier(series), f = forceFor(wi);
       const lapF = 1/(1 + .25*st.lap);
       let gain = ascEffort(hard)*ASC_MUL[tier]*f.mult*lapF;
+      effs.push(hard);
       const e = { id:s.id, date:s.date, hard, eff:ascEffort(hard), mul:ASC_MUL[tier], series, force:f.mult, lapF, gain:0, from:st.alt, to:st.alt, camps:[], summit:null, started:null, key:key(), push:false, waiting:false };
       if(st.wait){
         const ni = nextIdx(), nk = ASC_ORDER[ni];
@@ -165,6 +166,8 @@ function ascent_raw(){
   // rythme récent (séances par semaine sur les 4 dernières semaines terminées) : pour les délais estimés
   const recent = out.weeks.filter(w=>w.state!=="cur" && w.state!=="pause").slice(-4);
   const perWeek = recent.length ? Math.max(.5, recent.reduce((t, w)=>t + w.n, 0)/recent.length) : goal;
+  // séance type : séries difficiles en moyenne sur les 6 dernières séances (une séance courte ne fausse pas les délais)
+  const last6 = effs.slice(-6), hardAvg = last6.length ? last6.reduce((t, h)=>t + h, 0)/last6.length : 15;
   // pauses du trimestre en cours (la semaine en cours et la suivante peuvent être déclarées)
   const q = ascQuarter(thisWeek), pausesQ = ascPauses().filter(w=>ascQuarter(w)===q).length;
   return Object.assign(out, {
@@ -173,14 +176,14 @@ function ascent_raw(){
     series:sNow, tier:ascTier(sNow), mul:ASC_MUL[ascTier(sNow)], force:fNow.mult, form:fNow.form, index:fNow.index,
     pushOK:fNow.form>=ASC_FORM_OK, pushFrom:D.top - ASC_PUSH*(D.top - D.start),
     expFrom:st.expFrom, expN:st.expN, paused:pauses.has(thisWeek), pausesLeft:Math.max(0, ASC_PAUSE_MAX - pausesQ),
-    camps, campDates:st.campDates, perWeek,
+    camps, campDates:st.campDates, perWeek, hardAvg, effAvg:ascEffort(hardAvg),
     summitCount:out.summits.length, goal,
   });
 }
-// séances moyennes pour un dénivelé donné, au rythme actuel (estimation affichée)
+// séances pour un dénivelé donné, avec une séance type au palier et à la force actuels (estimation affichée)
 function ascSessionsFor(m, a){
   a = a || ascent();
-  const per = (a.last && a.last.eff ? a.last.eff : ascEffort(15))*a.mul*a.force/(1 + .25*a.lap);
+  const per = (a.effAvg || ascEffort(15))*a.mul*a.force/(1 + .25*a.lap);
   return Math.max(1, Math.ceil(m/Math.max(1, per)));
 }
 // pauses : la semaine en cours ou la suivante, dans la limite du trimestre

@@ -28,6 +28,7 @@ Ils ne sont pas nécessaires pour construire l'app : les fichiers générés son
 5. **Export** (`export_app.py`) :
    - tracés en commandes relatives entières (rendu identique au pixel près, −55 %) ;
    - silhouette compacte pour les vignettes ;
+   - hauteur utile de chaque vue (`vh`) : l'app recadre la scène sous le point le plus bas de la voie visible ;
    - écriture des deux fichiers de l'app.
 
 ## Relancer

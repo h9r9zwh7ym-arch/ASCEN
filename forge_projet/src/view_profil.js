@@ -400,15 +400,18 @@ function openAppearance(){
 
 // ---------- À propos ----------
 function openAbout(){
+  // restore : la feuille « Comment ça marche » ouverte d'ici revient sur À propos
   openSheet(`<div class="sheet-hd"><span class="t">À propos</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
     <div class="sheet-body">
     <div class="about-logo">${ascenMark()}<span>Un cran plus haut, à chaque séance.</span></div>
     <p class="body" style="margin-top:4px">ASCEN est une app de suivi de musculation pensée pour un usage solo sur iPhone. Elle propose une séance chaque jour à partir de ton matériel, de tes objectifs et de ton historique, grâce à un moteur de règles 100 % local — aucune donnée n'est envoyée sur un serveur.</p>
     <h2 class="sh">Version</h2><p class="body">ASCEN v${APP_VERSION}</p>
     <h2 class="sh">Données</h2><p class="body">Toutes les données (séances, matériel, objectifs, trophées) restent stockées uniquement sur cet appareil, dans le stockage local du navigateur. Aucun compte, aucun serveur.</p>
+    <h2 class="sh">Mon ascension</h2><p class="body">Chaque séance fait gravir de vraies montagnes, du Moléson à l'Everest. Silhouettes calculées depuis le relief réel (swisstopo swissALTI3D en Suisse ; ailleurs Copernicus GLO-30, © DLR e.V. et Airbus, fourni par l'Union européenne et l'ESA). Voies d'ascension et refuges : © contributeurs OpenStreetMap (ODbL).</p>
+    <button class="about-link" data-a="ascHow">Comment fonctionne l'ascension ${icon("chev")}</button>
     <h2 class="sh">Avertissement</h2><p class="body">Les consignes d'exécution proposées sont des repères techniques généraux. Elles ne remplacent pas l'avis d'un professionnel de santé ou d'un coach pour toute question médicale ou en cas de douleur.</p>
     <h2 class="sh">Copyright</h2><p class="body">${COPYRIGHT}</p>
-    </div>`);
+    </div>`, { restore:openAbout });
 }
 
 Object.assign(ACT, {

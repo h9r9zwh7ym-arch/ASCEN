@@ -53,15 +53,18 @@ for k in ORDER:
     xs = list(range(0, W, 3)) + [W-1]
     ys = [int(np.argmax(idx[:, x] != 255)) for x in xs]
     sky = " ".join(f"{round(x/5)} {round(y/5)}" for x, y in dp(list(zip(xs, ys)), 3.0))
+    # vh : hauteur utile de la vue (l'app recadre la scène sous le point le plus bas de la voie visible, 640 au moins)
+    vh = int(min(v["H"], max(640, max(round(y) for x, y, a, h in v["route"] if h != 2) + 70)))
     small[k] = dict(n=v["name"], top=v["top"], region=v["region"], start=v["start"], from_=v.get("startName"), fromAlt=v.get("startReal") or v["start"],
-                    camps=[[c[0], c[1], c[2]] for c in v["camps"]], sky=sky, sx=round(v["summit"][0]/5), sy=round(v["summit"][1]/5), pal=v["pal"])
+                    camps=[[c[0], c[1], c[2]] for c in v["camps"]], sky=sky, sx=round(v["summit"][0]/5), sy=round(v["summit"][1]/5), pal=v["pal"], vh=vh)
     big[k] = dict(W=v["W"], H=v["H"], summit=[round(x) for x in v["summit"]],
                   paths=[[c, rel(p, tx, ty)] for c, p, tx, ty in v["paths"]], land=[rel(p, tx, ty) for p, tx, ty in v["land"]],
                   route=[[round(x), round(y), a, h] for x, y, a, h in v["route"]])
 js = json.dumps(small, separators=(",", ":"), ensure_ascii=False).replace('"from_"', '"from"')
 open(f"{ROOT}/src/data_ascent.js", "w").write(
     "// ================= ASCENSION : données des 13 sommets (générées par tools/ascent/export_app.py) =================\n"
-    "// start/top : altitudes de l'expédition ; camps : [progression, nom, altitude réelle] ; sky : silhouette (vue 156 × 188).\n"
+    "// start/top : altitudes de l'expédition ; camps : [progression, nom, altitude réelle] ; sky : silhouette (vue 156 × 188) ;\n"
+    "// vh : hauteur utile de la scène (vue 780 × vh, recadrée sous la voie).\n"
     f"const ASC_DATA = {js};\n")
 open(f"{ROOT}/vendor/ascent-scenes.js", "w").write(
     "/* ASCEN — scènes de l'ascension : relief swisstopo swissALTI3D / Copernicus GLO-30, voies © OpenStreetMap (ODbL). Généré par tools/ascent/export_app.py */\n"
