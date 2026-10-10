@@ -61,7 +61,7 @@ const path = require('path');
   await page.waitForTimeout(150);
 
   // open a few profil sheets
-  for (const sel of ['[data-a="openEquip"]', '[data-a="openGoals"]', '[data-a="openExoPrefs"]', '[data-a="openExportImport"]', '[data-a="openAbout"]']) {
+  for (const sel of ['[data-a="openEquip"]', '[data-a="openGoals"]', '[data-a="openExoPrefs"]', '[data-a="openDataMore"]', '[data-a="openAbout"]']) {
     const el = await page.$(sel);
     if (el) {
       await el.click();

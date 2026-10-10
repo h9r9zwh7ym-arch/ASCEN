@@ -436,6 +436,21 @@ function sessionWins(session){
   }
   return out;
 }
+// Les progrès de la séance : trois temps forts au plus (loi de Hick : peu d'éléments à lire d'un coup),
+// les plus marquants d'abord (records de force, zones atteintes, puis progrès par exercice) ; les autres
+// restent à un toucher (« Voir les N autres »). Ce qui n'est qu'un ressenti (forme du jour) passe en dernier.
+const CEL_MAX = 3;
+function celLinesHTML(session){
+  const wins = sessionWins(session), L = [];
+  wins.filter(w=>!w.soft).forEach(w=>L.push(`<div class="cel-prog cel-win">${ii(w.ic)}<span>${esc(w.t)}</span></div>`));
+  if(session.beats) L.push(`<div class="cel-prog cel-beat">${ii("trendUp")}<span>${session.beats>1 ? `${session.beats} séries mieux que la dernière fois` : "1 série mieux que la dernière fois"}</span></div>`);
+  sessionProgressLines(session).forEach(t=>L.push(`<div class="cel-prog">${ii("chart")}<span>${esc(t)}</span></div>`));
+  wins.filter(w=>w.soft).forEach(w=>L.push(`<div class="cel-prog cel-win soft">${ii(w.ic)}<span>${esc(w.t)}</span></div>`));
+  const st = (h, i)=>h.replace('class="cel-prog', `style="--i:${i}" class="cel-prog`);
+  const top = L.slice(0, CEL_MAX).map(st).join(""), rest = L.slice(CEL_MAX);
+  return top + (rest.length ? `<div class="cel-rest" hidden>${rest.map(st).join("")}</div>
+    <button class="cel-more" data-a="celMore">Voir ${rest.length>1 ? `les ${rest.length} autres progrès` : "1 autre progrès"}</button>` : "");
+}
 function showCelebration(session, ups, hits, won){
   const vol = Math.round(sessionVolume(session));
   const sets = sessionSetCount(session);
@@ -454,9 +469,7 @@ function showCelebration(session, ups, hits, won){
             : `<div><div class="n" data-count="${reps}">${reps}</div><div class="l">répétitions</div></div>`}
     </div>
     ${prs?`<div class="cel-pr">${ii("bolt")} ${prs} record${prs>1?"s":""} battu${prs>1?"s":""}</div>`:""}
-    ${session.beats ? `<div class="cel-prog cel-beat" style="--i:0">${ii("trendUp")}<span>${session.beats>1 ? `${session.beats} séries mieux que la dernière fois` : "1 série mieux que la dernière fois"}</span></div>` : ""}
-    ${sessionProgressLines(session).map((t,i)=>`<div class="cel-prog" style="--i:${i}">${ii("chart")}<span>${esc(t)}</span></div>`).join("")}
-    ${sessionWins(session).map((w,i)=>`<div class="cel-prog cel-win ${w.soft?"soft":""}" style="--i:${i+2}">${ii(w.ic)}<span>${esc(w.t)}</span></div>`).join("")}
+    ${celLinesHTML(session)}
     ${(hits||[]).map((t,i)=>`<div class="cel-target" style="--i:${i}">${ii("target")} Objectif atteint : ${esc(EXO_MAP[t.exoId].n)}, ${fmtTarget(t.kind, t.value)}</div>`).join("")}
     ${(won||[]).map((c,i)=>`<div class="cel-target cel-chal" style="--i:${(hits||[]).length+i}">${ii("star")} Défi réussi : ${esc(CHAL_MAP[c.id].n)}</div>`).join("")}
     ${typeof ascCelHTML==="function" ? ascCelHTML(session.id) : ""}
@@ -478,6 +491,11 @@ function showCelebration(session, ups, hits, won){
 }
 
 Object.assign(ACT, {
+  celMore(d, el){
+    const rest = el && el.previousElementSibling; if(!rest || !rest.classList.contains("cel-rest")) return;
+    sfx("open");
+    morphHeight(el.parentElement, ()=>{ rest.hidden = false; el.remove(); });
+  },
   showMedal(d, el){ showMedalModal(d.id, el); },
   // la note reste repliée : un appui l'ouvre, pour ne pas alourdir l'écran de fin
   celNote(d, el){

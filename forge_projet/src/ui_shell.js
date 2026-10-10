@@ -402,6 +402,14 @@ function showOverlay(inner, kind){
 let sheetStack = [], sheetRestore = null, sheetOnBack = null, sheetRestoring = false;
 function sheetShown(){ const ov = qs("#overlay"); return ov.classList.contains("show") && ov.dataset.kind==="sheet"; }
 function sheetCanGoBack(){ return sheetStack.length>0 || !!sheetOnBack; }
+// une feuille ouverte depuis une autre : « Retour » à gauche à la place de la croix (même geste que la croix,
+// qui revient déjà à la feuille d'avant ; le libellé le dit)
+function sheetBackHead(){
+  const hd = qs(".sheet .sheet-hd"); if(!hd || !sheetCanGoBack()) return;
+  const t = hd.querySelector(".t"), title = t ? t.textContent : "";
+  hd.classList.add("te-hd");
+  hd.innerHTML = `<button class="te-cancel" data-a="sheetBack">${icon("chev")}<span>Retour</span></button><span class="t">${esc(title)}</span><span class="te-spacer"></span>`;
+}
 function sheetBack(){
   if(sheetStack.length){
     const r = sheetStack.pop();

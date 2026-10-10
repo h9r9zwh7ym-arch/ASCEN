@@ -696,7 +696,7 @@ Mesures (`tests/tab_perf.js`, processeur ×4, 3 ans d'historique) :
   - « FACE / DOS » ne chevauchent plus les pieds (viewBox agrandie).
 - **Décimales** : `fmtNum`/`fmtDec` et les autres `toLocaleString` utilisent `fr-FR`. Safari iOS écrit « 0.5 » en `fr-CH`, d'où les points vus sur iPhone.
 - **Accueil** (`renderTodayPreview`, `heroKind`, `heroHTML`, `doneCardHTML`, `nudgeHTML`) :
-  - Ordre : en-tête, résumé de la semaine, (pourquoi), (séance du jour faite, en ligne compacte), sélecteur « Ma séance / Proposée par l'app », puis la carte principale du mode choisi et son détail.
+  - Ordre : en-tête, résumé de la semaine, (pourquoi), (séance du jour faite, en ligne compacte), sélecteur « Ma séance / Proposée par l'app », puis la carte principale du mode choisi et son détail. *(Le sélecteur a disparu depuis : voir « Moins de choix à la fois », 9 tertricies.)*
   - En mode « Ma séance », la carte principale est toujours celle de l'utilisateur :
     - « Compose ta séance » (Choisir mes exercices / Ou laisse l'app choisir) quand rien n'est composé ;
     - sinon la séance composée (ou prévue aujourd'hui) avec son unique « C'est parti ».
@@ -850,7 +850,7 @@ Mesures (`tests/tab_perf.js`, processeur ×4, 3 ans d'historique) :
 - Test : `tests/v45.js`.
 
 **Finitions : accueil, barre d'état iOS 26, carte des muscles, matériel dans les pictogrammes (toujours 4.0)** :
-- **Ma séance ↔ Proposée par l'app** (`ACT.todayMode`) : seul le contenu sous le sélecteur change, avec un glissé du côté de l'onglet et la hauteur qui suit. Avant, `renderViewAnimated` reconstruisait tout l'accueil et rejouait sa cascade d'entrée.
+- **Ma séance ↔ Proposée par l'app** (`ACT.todayMode`) : seul le contenu sous le sélecteur change, avec un glissé du côté de l'onglet et la hauteur qui suit. Avant, `renderViewAnimated` reconstruisait tout l'accueil et rejouait sa cascade d'entrée. *(Le sélecteur a disparu depuis : voir « Moins de choix à la fois », 9 tertricies.)*
 - **Barre d'état** :
   - Safari 26 ignore theme-color. Il colore la barre d'après l'élément fixe et opaque collé en haut de l'écran, à défaut d'après le fond de la page écrit en style direct ;
   - les coupables étaient l'écran de lancement (noir) et la bulle des graphiques (couleur du texte, posée en haut à gauche même invisible) ;
@@ -1021,10 +1021,43 @@ Demande de YaYa : une motivation « sympa », pas une app de montagne. Chaque s�
 **La scène** : la vraie montagne vue d'un point de vue classique, calculée par lancer de rayons sur le relief (swisstopo swissALTI3D 2 m en Suisse, Copernicus GLO-30 ailleurs), vectorisée en 27 aplats (plan × matière × lumière, palettes jour et nuit selon le thème), avec la **vraie voie d'ascension** (OpenStreetMap ; arête suivie sur le relief quand elle n'y est pas) projetée dans la vue : Hörnli au Cervin, Goûter au Mont Blanc, flanc ouest de l'Eiger, Nollen au Mönch, Guggi à la Jungfrau, Wandfluegrat à la Dent Blanche, Machame au Kilimandjaro (vu de Moshi), voie normale à l'Aconcagua (cachée depuis la face sud : en pointillé estompé), Abruzzes au K2, voie nord à l'Everest. Refuges à leur place et altitudes officielles ; camps génériques entre eux ; parties cachées par le relief estompées, hors cadre bornées au bord.
 - `src/data_ascent.js` (6 Ko, embarqué) : départs, sommets, camps `[progression, nom, altitude réelle]` (seuls les lieux réels en sont repris : les camps génériques de l'app viennent de `ASC_CAMPS`), silhouette compacte (`sky`) pour les vignettes et médailles.
 - `src/data_ascent_story.js` (≈ 14 Ko, embarqué, écrit à la main, pas généré) : le carnet de route (terrains par montagne, lignes, lieux réels, anecdotes des sommets). Une anecdote ajoutée doit être vraie : c'est une carte qu'on garde.
-- `vendor/ascent-scenes.js` (≈ 680 Ko, ≈ 140 Ko compressé) : les 13 scènes (tracés relatifs entiers) et les voies. Copié à côté de la page par `build.sh`, **chargé à la demande** (`ascLoadScenes`) comme Three.js, préchargé dans le cache dès le premier lancement en ligne (`ascPrefetch`), service worker `forge-v35`. Sans le fichier : la silhouette s'affiche, rien ne casse.
+- `vendor/ascent-scenes.js` (≈ 680 Ko, ≈ 140 Ko compressé) : les 13 scènes (tracés relatifs entiers) et les voies. Copié à côté de la page par `build.sh`, **chargé à la demande** (`ascLoadScenes`) comme Three.js, préchargé dans le cache dès le premier lancement en ligne (`ascPrefetch`), service worker `forge-v36`. Sans le fichier : la silhouette s'affiche, rien ne casse.
 - **Régénérer** : `tools/ascent/` (Python : relief, rendu, vectorisation, voies OSM, export) ; voir `tools/ascent/README.md`.
 
 **Tests** : `tests/v53.js` (carnet de route complet et stable, lieux réels, cartes tirées de l'historique sans doublon, ligne « Carnet de route », carte en grand et retour, bulle, frise, carte révélée en fin de séance, cinématique du sommet, toucher pour passer, petit écran, mouvement réduit) ; `tests/v52.js` (retour en force partout, série en jeu, promesse du jour, frise sans délai lointain) ; `tests/v51.js` (élan, premier camp, bonus et plafonds, séries battues gardées, altitude en direct identique à la fin de séance, camp atteint en pleine séance, mouvement réduit) ; `tests/v50.js` (règles du moteur, camps rapprochés et datés, données abîmées, écrans, À propos (sources, lien vers les règles, retour), scène recadrée, carte Étapes, bulle au toucher réel sur la scène et depuis la frise, « Comment ça marche » et retour, pause repliée, hiérarchie et détail replié, page en place après la fermeture, célébration avec piste animée et badge, sommet, nuit, descente, repli hors ligne) ; `v12`, `v25`, `v43` suivent la disparition du niveau.
+
+## 9 tertricies. Moins de choix à la fois (loi de Hick, toujours 4.0)
+
+Demande de YaYa : « l'app est devenue compliquée à utiliser, avec autant de choses et de choix ». Mesure avant/après
+(`tests/v54.js`, historique réaliste de 4 mois, nombre de boutons, interrupteurs et champs d'un écran entier) :
+accueil 25 → 22 (et un seul chemin pour démarrer au lieu de cinq), séance de l'app 51 → 26, Progrès › Objectifs
+55 → 14 (4 200 → 1 500 px de haut), Profil 29 → 17. Rien n'est supprimé : tout reste à un toucher.
+- **Accueil** : plus de bascule « Ma séance / Proposée par l'app ». La carte principale porte **une action forte et
+  une alternative** : « Choisir mes exercices » / « Ou laisse l'app choisir » ; une séance prête (prévue ou composée) :
+  « C'est parti » / « Ou laisse l'app choisir » ; la séance de l'app : « C'est parti » / « Express · 10 min » et
+  « Composer moi-même ». « Laisse l'app choisir » ouvre désormais la séance de l'app (moteur complet : type, récupération,
+  muscles en retard) ; remplir sa propre liste par l'app reste « Compléter ». `ACT.todayMode` est appelé par ces liens
+  (même glissé qu'avant). **Un message à la fois** au-dessus : semaine allégée ou séance manquée, sinon le prochain cap.
+- **Séance de l'app** : la liste seule (toucher = fiche), avec « Autre proposition » et **« Ajuster »** (`propAdjust`,
+  replié par défaut) qui déplie le type de séance, le nombre d'exercices, remplacer / retirer et ajouter.
+- **Fin de séance** : **trois temps forts** au plus (`celLinesHTML`, `CEL_MAX`), les plus marquants d'abord (records de
+  force, zones atteintes, séries battues, progrès par exercice ; le ressenti du jour en dernier) ; les autres derrière
+  « Voir les N autres progrès » (présents dans le DOM, `hidden`).
+- **Progrès › Objectifs** : le dernier trophée, le résumé par métal, les 3 prochains paliers et une ligne
+  « Tous les trophées » (feuille `ACT.allMedals` avec la collection complète et les secrets).
+- **Profil** : Entraînement = Matériel, Objectifs, Poids du corps, Mes exercices, **Réglages des séances** (repos,
+  étirements, semaine allégée, suggestions de l'app) et **Motivation** (les 4 aides) ; Mes données = Sauvegarder,
+  Installer (si besoin) et **Restaurer, exporter, stockage** (dont la réinitialisation, en dernier). Les feuilles
+  ouvertes depuis ces feuilles (semaine allégée, stockage, export/import) ont un vrai « Retour » (`sheetBackHead()` dans
+  ui_shell.js, avec `openSheet(…, { child:true, restore })`).
+- **Choix d'exercices** : **« Tes habituels »** en tête (`habitualExos()` : les plus faits sur 60 jours, au moins 2 séances,
+  6 au plus, après les favoris ; masqué pendant une recherche ou avec un filtre de matériel). Un exercice présent deux fois
+  (habituels ou favoris, et sa catégorie) se coche sur toutes ses lignes.
+- Règle pour la suite : avant d'ajouter un bouton à un écran, se demander ce qu'il remplace ; un réglage rare va dans une
+  feuille, une option avancée derrière « Ajuster » ou « Plus ». Le budget de choix de `v54` doit rester tenu.
+
+**Tests** : `tests/v54.js` (budgets de choix, chemins de l'accueil, Ajuster, Tous les trophées, feuilles du Profil et
+« Retour », habituels du sélecteur, trois temps forts) ; tests plus anciens adaptés (le chemin change, pas ce qu'ils vérifient).
 
 ## 10. Cahier des charges d'origine (résumé)
 

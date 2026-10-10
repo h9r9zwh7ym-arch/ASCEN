@@ -66,7 +66,8 @@ fs.mkdirSync(OUT, { recursive: true });
   const bk = JSON.parse(fs.readFileSync(file, 'utf8'));
   log('Backup file:', dl.suggestedFilename(), '| app:', bk.app, '| sessions:', bk.data.sessions.length, '| status:', await page.textContent('[data-a="backupData"] .s'));
   await page.evaluate(() => { S.sessions = []; save(); });
-  const [fc] = await Promise.all([page.waitForEvent('filechooser'), page.click('[data-a="restoreData"]')]);
+  await page.click('[data-a="openDataMore"]'); await wait(400);   // Profil › Restaurer, exporter, stockage
+  const [fc] = await Promise.all([page.waitForEvent('filechooser'), page.click('.sheet [data-a="restoreData"]')]);
   await fc.setFiles(file); await wait(500);
   await page.click('[data-a="confirmYes"]'); await wait(700);
   log('Restored sessions:', await page.evaluate(() => S.sessions.length), '| safety copy:', await page.evaluate(() => !!localStorage.getItem('forge.v1.avant-restauration')));

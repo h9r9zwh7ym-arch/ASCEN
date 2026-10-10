@@ -93,11 +93,13 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   if (!(await page.evaluate(() => document.querySelector('.wp-extra').offsetHeight > 10))) fail('semaine rouverte');
 
   // 6. suggestions de l'app désactivées : plus de « laisse l'app choisir », « Compléter », programme de la semaine
-  const before = await page.evaluate(() => document.querySelectorAll('#v-today [data-a="customFill"], #v-today [data-a="weekWizard"]').length);
+  const SUG = '#v-today [data-a="customFill"], #v-today [data-a="weekWizard"], #v-today [data-a="todayMode"][data-v="proposal"]';
+  const before = await page.evaluate(s => document.querySelectorAll(s).length, SUG);
   await page.click('.tabbtn[data-id="profil"]'); await wait(500);
-  await page.click('[data-a="toggleAppPicks"]'); await wait(300);
+  await page.click('[data-a="openSessionPrefs"]'); await wait(500);   // Profil › Réglages des séances
+  await page.click('.sheet [data-a="toggleAppPicks"]'); await wait(300); await page.evaluate(() => closeSheet()); await wait(400);
   await page.click('.tabbtn[data-id="today"]'); await wait(500);
-  const after = await page.evaluate(() => ({ n: document.querySelectorAll('#v-today [data-a="customFill"], #v-today [data-a="weekWizard"]').length, set: S.settings.appPicks }));
+  const after = await page.evaluate(s => ({ n: document.querySelectorAll(s).length, set: S.settings.appPicks }), SUG);
   await page.evaluate(() => { S.custom = { exos: [{ exoId: 'dc_haltere', sets: 3 }] }; save(); renderView('today'); }); await wait(400);
   const built = await page.evaluate(() => document.querySelectorAll('#v-today [data-a="customFill"]').length);
   log('App picks:', before, '→', JSON.stringify(after), '| with exercises:', built);

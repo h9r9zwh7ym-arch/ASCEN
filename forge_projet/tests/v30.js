@@ -19,11 +19,13 @@ const OUT = path.join(OUT_ROOT, 'v30'); fs.mkdirSync(OUT, { recursive: true });
   let c = await cool(); log('Default (off):', JSON.stringify(c)); if (c.cool.length) fail('pas d\'étirement par défaut');
   // 1. activer dans le Profil
   await page.evaluate(() => switchTab('profil')); await wait(500);
-  await page.click('[data-a="toggleStretching"]'); await wait(400);
+  await page.click('[data-a="openSessionPrefs"]'); await wait(500);   // Profil › Réglages des séances
+  await page.click('.sheet [data-a="toggleStretching"]'); await wait(400); await page.evaluate(() => closeSheet()); await wait(400);
   c = await cool(); log('After enabling:', JSON.stringify(c));
   if (c.cool.length < 2 || c.cool.length > 3 || !c.lastIsCool || !c.coolAtEnd) fail('bloc d\'étirements en fin de séance proposée');
   const main0 = c.n - c.cool.length;
   await page.evaluate(() => switchTab('today')); await wait(700);
+  await page.evaluate(() => { if (!document.querySelector('.exo-count')) ACT.propAdjust(); }); await wait(500);   // le compteur : derrière « Ajuster »
   const section = await page.$eval('.cool-h', e => e.textContent.trim()).catch(() => null); log('Section:', section);
   if (!/retour au calme/.test(section || '')) fail('section « retour au calme » affichée');
   const shown = await page.$eval('.exo-count .mini-step span', e => +e.textContent); if (shown !== main0) fail('compteur = exercices de force seulement');
@@ -48,7 +50,8 @@ const OUT = path.join(OUT_ROOT, 'v30'); fs.mkdirSync(OUT, { recursive: true });
   await page.evaluate(() => closeSheet()); await wait(400);
   // 6. désactiver : plus d'étirements dans la proposition
   await page.evaluate(() => { S.draft = null; switchTab('profil'); }); await wait(400);
-  await page.click('[data-a="toggleStretching"]'); await wait(300);
+  await page.click('[data-a="openSessionPrefs"]'); await wait(500);
+  await page.click('.sheet [data-a="toggleStretching"]'); await wait(300); await page.evaluate(() => closeSheet()); await wait(300);
   await page.evaluate(() => { getOrCreateDraft(); }); c = await cool(); log('After disabling:', JSON.stringify(c)); if (c.cool.length) fail('désactivé : pas d\'étirements');
   await browser.close();
   errors.forEach(e => log(e)); log(errors.length ? 'ERRORS: ' + errors.length : '=== NO ERRORS ===');

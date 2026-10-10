@@ -21,6 +21,85 @@ function profileHeroHTML(){
     </div>
   </div>`;
 }
+// ---------- réglages regroupés (loi de Hick : peu de choix sur l'écran, le détail à un toucher) ----------
+const MOTIV = [["beat","target","orange","Objectif à battre en séance","Ta série de la dernière fois et ce qu'il faut pour la dépasser"],
+  ["nextGoal","flag","red","Prochain cap sur l'accueil","Le but le plus proche : semaine, record, trophée, ascension"],
+  ["trend","trendUp","green","Progression de force","Ta courbe depuis tes débuts, ton statut et les alertes de pause"],
+  ["thenNow","chart","blue","Toi, il y a 3 mois","Tes séries d'avant face à celles de maintenant"]];
+function motivSummary(){ const on = MOTIV.filter(([k])=>S.settings[k]!==false).length; return on===MOTIV.length ? "Toutes les aides actives" : on ? `${on} aide${on>1?"s":""} sur ${MOTIV.length} active${on>1?"s":""}` : "Aides désactivées"; }
+function sessionPrefsSummary(){
+  const r = { court:"repos courts", normal:"repos conseillés", long:"repos longs" }[S.settings.rest||"normal"];
+  return [deloadActive() ? "semaine allégée en cours" : "", r, S.settings.stretching ? "étirements" : "", appPicksOn() ? "suggestions de l'app" : ""].filter(Boolean).join(" · ");
+}
+function sessionPrefsHTML(){
+  return `<div class="group">
+      <div class="row rest-row">
+        ${sfIcon("stopwatch","teal")}
+        <div class="grow"><div class="t">Temps de repos</div><div class="s">Appliqué à la durée conseillée de chaque exercice</div></div>
+      </div>
+      <div class="rest-seg">${[["court","Court"],["normal","Conseillé"],["long","Long"]].map(([k,l])=>`<button class="chip ${(S.settings.rest||"normal")===k?"on":""}" data-a="setRest" data-v="${k}" aria-pressed="${(S.settings.rest||"normal")===k}">${l}</button>`).join("")}</div>
+      <div class="row">
+        ${sfIcon("mat","indigo")}
+        <div class="grow"><div class="t">Étirements en fin de séance</div><div class="s">Ajoutés aux séances proposées par l'app</div></div>
+        <button class="switch ${S.settings.stretching?"on":""}" aria-label="Étirements en fin de séance" data-a="toggleStretching"></button>
+      </div>
+      <button class="row tap" style="width:100%" data-a="deloadHow">
+        ${sfIcon("leaf","green")}
+        <div class="grow"><div class="t">Semaine allégée</div><div class="s">${deloadActive() ? `En cours · jour ${Math.min(DELOAD.days, deloadDay())} sur ${DELOAD.days}` : S.settings.deloadTips===false ? "Pas de conseil automatique" : "Conseillée au bon moment"}</div></div>
+        <span class="chev">${icon("chev")}</span>
+      </button>
+      <div class="row">
+        ${sfIcon("sparkles","purple")}
+        <div class="grow"><div class="t">Suggestions de l'app</div><div class="s">« Laisse l'app choisir », « Compléter » et le programme de la semaine</div></div>
+        <button class="switch ${appPicksOn()?"on":""}" aria-label="Suggestions de l'app dans Ma séance" aria-pressed="${appPicksOn()}" data-a="toggleAppPicks"></button>
+      </div>
+    </div>`;
+}
+function motivHTML(){
+  return `<p class="sheet-note">Des aides pour garder l'envie. Toutes sont facultatives.</p><div class="group">
+      ${MOTIV.map(([k,ic,c,t,sub])=>`<div class="row">
+        ${sfIcon(ic,c)}
+        <div class="grow"><div class="t">${t}</div><div class="s">${sub}</div></div>
+        <button class="switch ${S.settings[k]!==false?"on":""}" aria-label="${t}" aria-pressed="${S.settings[k]!==false}" data-a="toggleMotiv" data-k="${k}"></button>
+      </div>`).join("")}
+    </div>`;
+}
+function dataMoreHTML(){
+  return `<div class="group">
+      <button class="row tap" style="width:100%" data-a="restoreData">
+        ${sfIcon("restore","teal")}
+        <div class="grow"><div class="t">Restaurer une sauvegarde</div><div class="s">Fichier .json créé par ASCEN (ou Forge)</div></div>
+        <span class="chev">${icon("chev")}</span>
+      </button>
+      <button class="row tap" style="width:100%" data-a="exportCSV">
+        ${sfIcon("list","teal")}
+        <div class="grow"><div class="t">Exporter l'historique (tableur)</div><div class="s">Toutes les séries, à ouvrir dans Numbers ou Excel</div></div>
+        <span class="chev">${icon("chev")}</span>
+      </button>
+      <button class="row tap" style="width:100%" data-a="openExportImport">
+        ${sfIcon("sparkles","purple")}
+        <div class="grow"><div class="t">Exporter / importer un programme</div><div class="s">${S.importedProgram.length? S.importedProgram.length+" séance(s) importée(s) en attente" : "Aucun programme importé"}</div></div>
+        <span class="chev">${icon("chev")}</span>
+      </button>
+      <button class="row tap" style="width:100%" data-a="openStorage">
+        ${sfIcon("storage","gray")}
+        <div class="grow"><div class="t">Espace de stockage</div><div class="s">${storageRowText()}</div></div>
+        <span class="chev">${icon("chev")}</span>
+      </button>
+    </div>
+    <div class="group" style="margin-top:14px">
+      <button class="row tap" style="width:100%" data-a="confirmReset">
+        ${sfIcon("trash","red")}
+        <div class="grow"><div class="t">Réinitialiser toutes les données</div></div>
+        <span class="chev">${icon("chev")}</span>
+      </button>
+    </div>`;
+}
+function prefsSheet(title, body, again){
+  openSheet(`<div class="sheet-hd"><span class="t">${title}</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
+    <div class="sheet-body prefs-body">${body}</div>`, { child:true, restore:again });
+  sheetBackHead();
+}
 function renderProfil(){
   return `<div class="navbar"><div class="nb-title">Profil</div></div><div class="content">
     <h1 class="lt">Profil</h1>
@@ -48,65 +127,23 @@ function renderProfil(){
         <div class="grow"><div class="t">Mes exercices</div><div class="s">${nb(S.prefs.included.length,"favori")} · ${nb(S.prefs.excluded.length,"exclu")}</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
-      <div class="row rest-row">
+      <button class="row tap" style="width:100%" data-a="openSessionPrefs">
         ${sfIcon("stopwatch","teal")}
-        <div class="grow"><div class="t">Temps de repos</div><div class="s">Appliqué à la durée conseillée de chaque exercice</div></div>
-      </div>
-      <div class="rest-seg">${[["court","Court"],["normal","Conseillé"],["long","Long"]].map(([k,l])=>`<button class="chip ${(S.settings.rest||"normal")===k?"on":""}" data-a="setRest" data-v="${k}" aria-pressed="${(S.settings.rest||"normal")===k}">${l}</button>`).join("")}</div>
-      <div class="row">
-        ${sfIcon("mat","indigo")}
-        <div class="grow"><div class="t">Étirements en fin de séance</div><div class="s">Ajoutés aux séances proposées par l'app</div></div>
-        <button class="switch ${S.settings.stretching?"on":""}" aria-label="Étirements en fin de séance" data-a="toggleStretching"></button>
-      </div>
-      <button class="row tap" style="width:100%" data-a="deloadHow">
-        ${sfIcon("leaf","green")}
-        <div class="grow"><div class="t">Semaine allégée</div><div class="s">${deloadActive() ? `En cours · jour ${Math.min(DELOAD.days, deloadDay())} sur ${DELOAD.days}` : S.settings.deloadTips===false ? "Pas de conseil automatique" : "Conseillée au bon moment"}</div></div>
+        <div class="grow"><div class="t">Réglages des séances</div><div class="s">${sessionPrefsSummary()}</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
-      <div class="row">
-        ${sfIcon("sparkles","purple")}
-        <div class="grow"><div class="t">Suggestions de l'app</div><div class="s">Dans Ma séance : « laisse l'app choisir », « Compléter » et le programme de la semaine</div></div>
-        <button class="switch ${appPicksOn()?"on":""}" aria-label="Suggestions de l'app dans Ma séance" aria-pressed="${appPicksOn()}" data-a="toggleAppPicks"></button>
-      </div>
-    </div>
-
-    <h2 class="sh">Motivation</h2>
-    <div class="group">
-      ${[["beat","target","orange","Objectif à battre en séance","Ta série de la dernière fois et ce qu'il faut pour la dépasser"],
-         ["nextGoal","flag","red","Prochain cap sur l'accueil","Le but le plus proche : semaine, record, trophée, niveau"],
-         ["trend","trendUp","green","Progression de force","Ta courbe depuis tes débuts, ton statut et les alertes de pause"],
-         ["thenNow","chart","blue","Toi, il y a 3 mois","Tes séries d'avant face à celles de maintenant"]].map(([k,ic,c,t,sub])=>`<div class="row">
-        ${sfIcon(ic,c)}
-        <div class="grow"><div class="t">${t}</div><div class="s">${sub}</div></div>
-        <button class="switch ${S.settings[k]!==false?"on":""}" aria-label="${t}" aria-pressed="${S.settings[k]!==false}" data-a="toggleMotiv" data-k="${k}"></button>
-      </div>`).join("")}
+      <button class="row tap" style="width:100%" data-a="openMotivation">
+        ${sfIcon("flame","orange")}
+        <div class="grow"><div class="t">Motivation</div><div class="s">${motivSummary()}</div></div>
+        <span class="chev">${icon("chev")}</span>
+      </button>
     </div>
 
     <h2 class="sh">Mes données</h2>
     <div class="group">
-      <button class="row tap" style="width:100%" data-a="openExportImport">
-        ${sfIcon("sparkles","purple")}
-        <div class="grow"><div class="t">Exporter / importer un programme</div><div class="s">${S.importedProgram.length? S.importedProgram.length+" séance(s) importée(s) en attente" : "Aucun programme importé"}</div></div>
-        <span class="chev">${icon("chev")}</span>
-      </button>
       <button class="row tap" style="width:100%" data-a="backupData">
         ${sfIcon("download","green")}
         <div class="grow"><div class="t">Sauvegarder mes données</div><div class="s">${backupStatusText()}</div></div>
-        <span class="chev">${icon("chev")}</span>
-      </button>
-      <button class="row tap" style="width:100%" data-a="exportCSV">
-        ${sfIcon("list","teal")}
-        <div class="grow"><div class="t">Exporter l'historique (tableur)</div><div class="s">Toutes les séries, à ouvrir dans Numbers ou Excel</div></div>
-        <span class="chev">${icon("chev")}</span>
-      </button>
-      <button class="row tap" style="width:100%" data-a="openStorage">
-        ${sfIcon("storage","gray")}
-        <div class="grow"><div class="t">Espace de stockage</div><div class="s">${storageRowText()}</div></div>
-        <span class="chev">${icon("chev")}</span>
-      </button>
-      <button class="row tap" style="width:100%" data-a="restoreData">
-        ${sfIcon("restore","teal")}
-        <div class="grow"><div class="t">Restaurer une sauvegarde</div><div class="s">Fichier .json créé par ASCEN (ou Forge)</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
       ${isStandalone() ? "" : `<button class="row tap" style="width:100%" data-a="openInstall">
@@ -114,9 +151,9 @@ function renderProfil(){
         <div class="grow"><div class="t">Installer sur l'écran d'accueil</div><div class="s">Plein écran, hors ligne, données protégées</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>`}
-      <button class="row tap" style="width:100%" data-a="confirmReset">
-        ${sfIcon("trash","red")}
-        <div class="grow"><div class="t">Réinitialiser toutes les données</div></div>
+      <button class="row tap" style="width:100%" data-a="openDataMore">
+        ${sfIcon("storage","gray")}
+        <div class="grow"><div class="t">Restaurer, exporter, stockage</div><div class="s">${S.importedProgram.length ? `${nb(S.importedProgram.length, "séance importée")} en attente · ` : ""}${storageRowText()}</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
     </div>
@@ -386,7 +423,8 @@ function exportImportBodyHTML(){
     ${S.importedProgram.length? `<h2 class="sh">Programme importé</h2><div class="group">${importedRows}</div><div class="btnrow"><button class="btn ghost" data-a="clearImported">Supprimer le programme importé</button></div>`:""}`;
 }
 function openExportImport(){
-  openSheet(`<div class="sheet-hd"><span class="t">Suggestion par IA</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body">${exportImportBodyHTML()}</div>`);
+  openSheet(`<div class="sheet-hd"><span class="t">Suggestion par IA</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body">${exportImportBodyHTML()}</div>`, { child:true, restore:openExportImport });
+  sheetBackHead();
 }
 
 // ---------- Apparence ----------
@@ -424,7 +462,12 @@ Object.assign(ACT, {
       </div>`);
     setTimeout(()=>{ const i=qs("#nameInput"); if(i) i.focus(); }, 80);
   },
-  setRest(d){ if(!REST_SCALE[d.v]) return; S.settings.rest = d.v; save(); changed(); toast(d.v==="normal" ? "Repos conseillés" : d.v==="court" ? "Repos plus courts (≈ −30 %)" : "Repos plus longs (≈ +35 %)", "timer"); },
+  openSessionPrefs(){ prefsSheet("Réglages des séances", sessionPrefsHTML(), ()=>ACT.openSessionPrefs()); },
+  openMotivation(){ prefsSheet("Motivation", motivHTML(), ()=>ACT.openMotivation()); },
+  openDataMore(){ prefsSheet("Restaurer, exporter, stockage", dataMoreHTML(), ()=>ACT.openDataMore()); },
+  setRest(d){ if(!REST_SCALE[d.v]) return; S.settings.rest = d.v; save(); changed();
+    qsa('[data-a="setRest"]').forEach(b=>{ const on = b.dataset.v===d.v; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
+    toast(d.v==="normal" ? "Repos conseillés" : d.v==="court" ? "Repos plus courts (≈ −30 %)" : "Repos plus longs (≈ +35 %)", "timer"); },
   editWhy(){
     openModal(`<div style="font-weight:700;font-size:calc(17rem/17);margin-bottom:6px">Ton pourquoi</div>
       <div class="hr-note" style="margin-bottom:12px">Ce qui te pousse à t'entraîner. ASCEN te le rappelle quand tu reviens après quelques jours sans séance.</div>
@@ -504,15 +547,15 @@ Object.assign(ACT, {
   toggleMotiv(d, el){
     if(!["beat","nextGoal","trend","thenNow"].includes(d.k)) return;
     S.settings[d.k] = S.settings[d.k]===false; el.classList.toggle("on", S.settings[d.k]); el.setAttribute("aria-pressed", S.settings[d.k]);
-    save();
+    changed();   // le résumé du profil suit à la fermeture de la feuille
   },
   toggleAppPicks(d, el){
     S.settings.appPicks = !appPicksOn(); el.classList.toggle("on", S.settings.appPicks); el.setAttribute("aria-pressed", S.settings.appPicks);
-    save(); renderView("today");
+    changed(); renderView("today");
   },
   toggleStretching(d, el){
     S.settings.stretching = !S.settings.stretching; el.classList.toggle("on", S.settings.stretching);
-    applyStretchSetting(); save(); renderView("today");
+    applyStretchSetting(); changed(); renderView("today");
     toast(S.settings.stretching ? "Étirements ajoutés en fin de séance proposée" : "Plus d'étirements dans les séances proposées", "check");
   },
   toggleUiSound(d, el){ S.settings.uiSound = S.settings.uiSound===false; save(); el.classList.toggle("on", S.settings.uiSound); if(S.settings.uiSound) setTimeout(()=>sfx("tick"), 80); },
@@ -601,7 +644,8 @@ Object.assign(ACT, {
         </div>
         <p class="hr-note" style="margin:12px 20px 0">Rien ne quitte ton téléphone. Pour ne rien perdre en changeant d'appareil, garde une sauvegarde dans Fichiers ou iCloud.</p>
         <div class="btnrow"><button class="btn secondary" data-a="backupData">${icon("bookmark")} Faire une sauvegarde</button></div>
-      </div>`, { tall:true });
+      </div>`, { tall:true, child:true, restore:()=>ACT.openStorage() });
+    sheetBackHead();
     idbGet().then(r=>{ const e = qs("#stoIdb"); if(e && r && r.data) e.textContent = fmtBytes(typeof r.data==="string" ? r.data.length*2 : r.data.size); }).catch(()=>{});
     try{ if(navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(x=>{ const e = qs("#stoTotal"); if(e && x.usage) e.textContent = fmtBytes(x.usage + u); }); }catch(e){}
     const el = qs("#stoPersist");

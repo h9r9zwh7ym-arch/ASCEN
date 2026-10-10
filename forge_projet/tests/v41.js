@@ -92,7 +92,9 @@ const APP = 'file://' + path.resolve(process.argv[2]);
 
   // 4. Profil > Motivation : chaque option se coupe et disparaît de l'app
   await page.evaluate(() => switchTab('profil')); await wait(500);
+  await page.click('[data-a="openMotivation"]'); await wait(500);   // Profil › Motivation
   for (const k of ['beat', 'nextGoal', 'trend']) { await page.click(`[data-a="toggleMotiv"][data-k="${k}"]`); await wait(150); }
+  await page.evaluate(() => closeSheet()); await wait(400);
   const off = await page.evaluate(() => ({ s: [S.settings.beat, S.settings.nextGoal, S.settings.trend], stored: JSON.parse(localStorage.getItem('forge.v1') || '{}').settings }));
   await page.evaluate(() => switchTab('today')); await wait(500);
   const offHome = await page.evaluate(() => !!document.querySelector('.goal-line'));

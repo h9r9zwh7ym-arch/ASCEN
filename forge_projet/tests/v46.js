@@ -34,11 +34,11 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   log('Status strip:', JSON.stringify(s0), '→ scrolled', s1.bg);
   if (s0.bg !== 'rgb(244, 243, 241)' || s0.top !== 0 || s0.w !== 390 || s0.pos !== 'fixed' || s0.body !== 'rgb(244, 243, 241)' || s0.meta !== '#f4f3f1' || s1.bg !== 'rgb(247, 246, 244)' || s0.tipTop !== '-400px') fail('barre d\'état à la couleur de l\'app (bandeau fixe, fond en style direct)');
 
-  // 2. Ma séance ↔ Proposée : seul le contenu sous le sélecteur change, sans cascade de tout l'écran
-  const before = await page.evaluate(() => { window.__head = document.querySelector('#v-today .home-head'); window.__seg = document.querySelector('#v-today .home-seg'); return document.querySelector('#v-today .seg-pane').className; });
+  // 2. Ma séance ↔ séance de l'app (liens de la carte principale) : seul le bloc de la séance change, sans cascade de tout l'écran
+  const before = await page.evaluate(() => { window.__head = document.querySelector('#v-today .home-head'); window.__seg = null; return document.querySelector('#v-today .seg-pane').className; });
   await page.click('[data-a="todayMode"][data-v="proposal"]'); await wait(80);
-  const mid = await page.evaluate(() => ({ same: document.querySelector('#v-today .home-head') === window.__head && document.querySelector('#v-today .home-seg') === window.__seg, enter: document.querySelector('#v-today').classList.contains('enter'),
-    pane: document.querySelector('#v-today .seg-pane').className, start: !!document.querySelector('#v-today .seg-pane [data-a="startSession"]'), on: document.querySelector('[data-seg="today"] .on').dataset.v }));
+  const mid = await page.evaluate(() => ({ same: document.querySelector('#v-today .home-head') === window.__head && !document.querySelector('#v-today .home-seg'), enter: document.querySelector('#v-today').classList.contains('enter'),
+    pane: document.querySelector('#v-today .seg-pane').className, start: !!document.querySelector('#v-today .seg-pane [data-a="startSession"]'), on: S.settings.todayTab }));
   await wait(500); await shot('01_proposal');
   await page.click('[data-a="todayMode"][data-v="custom"]'); await wait(500);
   const back = await page.evaluate(() => ({ same: document.querySelector('#v-today .home-head') === window.__head, pane: document.querySelector('#v-today .seg-pane').className }));

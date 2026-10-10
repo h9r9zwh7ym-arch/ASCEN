@@ -26,7 +26,7 @@ const OUT = path.join(OUT_ROOT, 'v31'); fs.mkdirSync(OUT, { recursive: true });
   if (create || wizardOnly.some(a => a !== 'weekWizard')) fail('une seule façon de créer une séance');
   await shot('01_compose');
   // 2. composer, puis choisir de l'enregistrer (facultatif) avec un jour → planning
-  await page.click('[data-a="customFill"]'); await wait(500);
+  await page.evaluate(() => ACT.customFill()); await wait(500);   // (le remplissage par l'app : « Compléter »)
   const row = await page.$eval('.save-row', e => e.textContent.replace(/\s+/g, ' ').trim()).catch(() => null); log('Save row:', row);
   if (!/Enregistrer cette séance/.test(row || '') || !/Facultatif/.test(row || '')) fail('ligne « Enregistrer cette séance » facultative');
   await page.$eval('.save-row', e => e.scrollIntoView({ block: 'center' })); await wait(200); await shot('02_composed');
@@ -51,7 +51,7 @@ const OUT = path.join(OUT_ROOT, 'v31'); fs.mkdirSync(OUT, { recursive: true });
   const pend = await page.evaluate(() => ({ days: S.custom.pendingDays, tab: S.settings.todayTab, n: S.custom.exos.length }));
   const be = await page.$eval('.hero.compose .hero-sub, .be-s', e => e.textContent).catch(() => ''); log('Plan new:', JSON.stringify(pend), '|', be);
   if (!/Composer/.test(planBtn) || String(pend.days) !== '5' || !/samedi/.test(be)) fail('composer pour un jour');
-  await page.click('[data-a="customFill"]'); await wait(500);
+  await page.evaluate(() => ACT.customFill()); await wait(500);   // (le remplissage par l'app : « Compléter »)
   const row3 = await page.$eval('.save-row', e => e.textContent); await page.click('.save-row'); await wait(500);
   const pre = await page.$$eval('[data-a="tplEdDay"].on', e => e.map(x => x.dataset.d).join()); log('Pending row:', /samedi/.test(row3), '| pre-checked:', pre);
   if (!/samedi/.test(row3) || pre !== '5') fail('jour pré-coché à l\'enregistrement');

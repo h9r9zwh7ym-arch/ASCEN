@@ -218,7 +218,16 @@ function medalsPaneHTML(){
       <div class="mc-bar" style="margin-top:6px"><span style="width:${Math.round(x.p.pct*100)}%"></span></div>
       <div class="s" style="margin-top:4px">${fmtMedalVal(x.m,x.p.v)} / ${fmtMedalVal(x.m,x.p.next)} ${esc(medalUnit(x.m,x.p.next))}</div></div>
     </button>`).join("")}</div>`:""}
-    ${MEDAL_CATS.map(([cat,label])=>{
+    ${allMedalsRowHTML()}`;
+}
+// Toute la collection (≈ 45 trophées) n'est plus dépliée sous les objectifs : une ligne y mène (loi de Hick :
+// l'onglet garde le résumé et les 3 prochains paliers, les seuls qui demandent une action)
+function allMedalsRowHTML(){
+  const all = MEDALS, won = all.filter(m=>medalTier(m)).length;
+  return `<div class="group all-medals-g"><button class="row tap" data-a="allMedals">${sfIcon("trophy","yellow")}<div class="grow"><div class="t">Tous les trophées</div><div class="s">${won} gagnés sur ${all.length}, dont ${nb(SECRETS.length, "secret")}</div></div><span class="chev">${icon("chev")}</span></button></div>`;
+}
+function allMedalsHTML(){
+  return `${MEDAL_CATS.map(([cat,label])=>{
       const list = MEDALS.filter(m=>m.cat===cat);
       const done = list.reduce((t,m)=>t+medalTier(m),0);
       return `<h2 class="sh">${label}<span class="more" style="color:var(--label2)">${done}/${list.length*4}</span></h2>
@@ -246,6 +255,10 @@ Object.assign(ACT, {
     if(pane && pane.animate && !reducedMotion()) try{ pane.animate([{ opacity:0, transform:"translateY(6px)" }, { opacity:1, transform:"none" }], { duration:200, easing:"cubic-bezier(.2,.8,.2,1)" }); }catch(e){}
   },
   openExoChart(d){ exoChartSheet(d.id); },
+  allMedals(){
+    openSheet(`<div class="sheet-hd"><span class="t">Tous les trophées</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
+      <div class="sheet-body all-medals">${allMedalsHTML()}</div>`, { tall:true, restore:()=>ACT.allMedals() });
+  },
 });
 // ---------- objectifs personnels chiffrés ----------
 // Un objectif précis et un peu ambitieux (« 10 tractions ») motive davantage qu'un vague

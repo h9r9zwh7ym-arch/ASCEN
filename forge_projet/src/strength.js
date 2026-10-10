@@ -401,7 +401,8 @@ Object.assign(ACT, {
       <h3>Sources</h3>
       <ul class="how-src">${DELOAD_SOURCES.map(([t,u])=>`<li><a href="${u}" target="_blank" rel="noopener">${esc(t)}</a></li>`).join("")}</ul>
       <p class="hr-note">Des repères issus de la recherche et de l'expérience d'entraîneurs, pas une règle : écoute aussi ta fatigue.</p>
-    </div>`, { tall:true });
+    </div>`, { tall:true, child:true, restore:()=>ACT.deloadHow() });
+    sheetBackHead();
   },
 });
 

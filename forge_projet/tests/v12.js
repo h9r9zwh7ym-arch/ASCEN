@@ -19,6 +19,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.goto('file://' + path.resolve(process.argv[2]));
   await page.waitForSelector('#splash', { state: 'detached', timeout: 6000 }); await page.evaluate(() => { if (document.querySelector('.ob-body')) ACT.obSkip(); persistNow(); }).catch(() => {}); await page.waitForTimeout(350);
   { const b = await page.$('[data-a="todayMode"][data-v="proposal"]'); if (b) { await b.click(); await page.waitForTimeout(300); } }
+  await page.evaluate(() => { if (!document.querySelector('[data-a="setType"]')) ACT.propAdjust(); });   // types de séance : derrière « Ajuster »
   await wait(600);
   await shot('01_proposal');
 
@@ -171,11 +172,12 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.click('[data-a="progressTab"][data-v="medals"]');
   await wait(1000);
   await shot('17_medals');
+  await page.evaluate(() => ACT.allMedals()); await wait(900);   // la collection : feuille « Tous les trophées »
   log('Medal cards:', await page.$$eval('.medal-card', e => e.length), 'tiers:', await page.$$eval('.ms-n', e => e.map(x => x.textContent)));
   await page.click('.medal-card >> nth=0');
   await page.waitForSelector('.center-modal, .t3d-full.show', { timeout: 20000 }); await wait(600);
   await shot('18_medal_modal');
-  await page.evaluate(() => { if (qs('.t3d-full')) t3dClose(); else closeSheet(); }); await wait(600);
+  await page.evaluate(() => { if (qs('.t3d-full')) t3dClose(); closeSheet(); }); await wait(600);
   await wait(350);
 
   await page.emulateMedia({ colorScheme: 'dark' });

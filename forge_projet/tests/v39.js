@@ -37,9 +37,11 @@ const APP = 'file://' + path.resolve(process.argv[2]);
 
   // 2. repos réglable
   await page.evaluate(() => switchTab('profil')); await wait(300);
+  await page.click('[data-a="openSessionPrefs"]'); await wait(500);   // Profil › Réglages des séances
   await page.click('[data-a="setRest"][data-v="long"]'); await wait(300);
   const rest = await page.evaluate(() => ({ s: S.settings.rest, v: restFor(EXO_MAP.dc_haltere), base: EXO_MAP.dc_haltere.restSec, on: document.querySelector('[data-a="setRest"].on').dataset.v }));
   log('Rest:', JSON.stringify(rest)); if (rest.s !== 'long' || rest.on !== 'long' || rest.v !== Math.max(20, Math.round(rest.base * 1.35 / 5) * 5)) fail('repos plus long');
+  await page.evaluate(() => closeSheet()); await wait(300);
 
   // 3. séance en cours : corriger une série validée (reps, charge, annulation)
   await page.evaluate(async () => { switchTab('today'); S.custom = { exos: [{ exoId: 'dc_haltere', sets: 3 }, { exoId: 'pompes', sets: 2 }] }; ACT.startCustom();

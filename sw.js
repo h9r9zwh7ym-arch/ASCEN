@@ -2,7 +2,7 @@
 // Stratégie « cache d'abord, mise à jour en arrière-plan » : la page s'ouvre depuis la
 // copie locale (aucune attente même avec un réseau lent ou absent), puis la dernière
 // version est téléchargée discrètement et servie au lancement suivant.
-const CACHE = "forge-v35"; // nom interne gardé (données et caches existants)
+const CACHE = "forge-v36"; // nom interne gardé (données et caches existants)
 // seulement l'indispensable au démarrage ; le reste (Three.js des trophées, grandes icônes)
 // est mis en cache à la première utilisation, pour ne pas occuper l'appareil inutilement
 // (les scènes de l'ascension, ascent-scenes.js, sont demandées par la page au premier lancement en ligne)

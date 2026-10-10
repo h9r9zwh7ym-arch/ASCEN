@@ -18,7 +18,8 @@ const OUT = path.join(OUT_ROOT, 'v33'); fs.mkdirSync(OUT, { recursive: true });
   await page.waitForSelector('#splash', { state: 'detached', timeout: 8000 }); await wait(500);
   // 1. carte principale « Compose ta séance » : Choisir + L'app choisit, rien d'autre
   const card = await page.$$eval('.hero.compose button', b => b.map(x => x.dataset.a));
-  log('Compose card buttons:', card.join(',')); if (card.join() !== 'customAddOpen,customFill') fail('un seul « L\'app choisit »');
+  // (loi de Hick : « L'app choisit » ouvre la séance de l'app, une seule voie au lieu de deux)
+  log('Compose card buttons:', card.join(',')); if (card.join() !== 'customAddOpen,todayMode') fail('un seul « L\'app choisit »');
   await shot('01_compose');
   // 2. carte du jour : chaque pictogramme ouvre la fiche de l'exercice
   await page.evaluate(() => { S.settings.todayTab = 'proposal'; getOrCreateDraft(); renderView('today'); document.getElementById('v-today').scrollTop = 0; }); await wait(500);

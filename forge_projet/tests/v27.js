@@ -36,6 +36,7 @@ const OUT = path.join(OUT_ROOT, 'v27'); fs.mkdirSync(OUT, { recursive: true });
   const backPx = await page.evaluate(() => { const c = T3D.ctx; c.running = false; c.medal.rotation.set(0, Math.PI, 0); c.renderer.render(c.scene, c.camera); const g = c.renderer.getContext(); const px = new Uint8Array(4); g.readPixels(g.drawingBufferWidth >> 1, g.drawingBufferHeight >> 1, 1, 1, g.RGBA, g.UNSIGNED_BYTE, px); t3dStart(); return Array.from(px); });
   log('Back center pixel:', JSON.stringify(backPx)); if (backPx[3] < 250) fail('dos transparent');
   // vignettes 3D de la grille (dessinées quand elles approchent de l'écran ; la grille est sous les objectifs et les défis)
+  await page.evaluate(() => ACT.allMedals()); await wait(1200);   // la grille complète : feuille « Tous les trophées »
   await page.evaluate(() => { const g = document.querySelector('.medal-grid'); if (g) g.scrollIntoView({ block: 'start' }); });
   await page.waitForFunction(() => document.querySelectorAll('.medal.m3d-on img.medal-3d').length >= 5, null, { timeout: 60000 }).catch(() => {});
   const thumbs = await page.evaluate(() => document.querySelectorAll('.medal.m3d-on img.medal-3d').length); log('3D thumbnails shown:', thumbs);
@@ -65,8 +66,10 @@ const OUT = path.join(OUT_ROOT, 'v27'); fs.mkdirSync(OUT, { recursive: true });
   await page.click('.secret-card:not(.found)'); await page.waitForSelector('.t3d-full.show', { timeout: 15000 }); await wait(700); await shot('07_secret_locked');
   const hint = await page.$eval('.t3d-desc', e => e.textContent); log('Secret hint:', hint); if (!/^Indice/.test(hint)) fail('indice du secret');
   await page.keyboard.press('Escape'); await wait(700);
+  await page.evaluate(() => closeSheet()); await wait(500);
   // hors écran : la boucle s'arrête
-  await page.evaluate(() => { document.querySelector('#v-progress').scrollTop = 99999; }); await wait(800);
+  // (l'onglet est plus court depuis que la collection est dans sa feuille : on l'allonge pour sortir la carte de l'écran)
+  await page.evaluate(() => { const c = document.querySelector('#v-progress .content'); if (c) c.style.paddingBottom = '1600px'; document.querySelector('#v-progress').scrollTop = 99999; }); await wait(800);
   const idle = await page.evaluate(() => T3D.ctx.running); log('Render loop running when scrolled away:', idle);
   if (idle) fail('boucle de rendu active hors écran');
   // changement d'onglet et retour : un seul canvas vivant

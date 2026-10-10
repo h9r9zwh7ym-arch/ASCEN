@@ -32,10 +32,10 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.waitForSelector('#splash', { state: 'detached', timeout: 6000 }); await page.evaluate(() => { if (document.querySelector('.ob-body')) ACT.obSkip(); persistNow(); }).catch(() => {}); await page.waitForTimeout(350);
   await wait(300);
   await shot('04_today_custom_default');
-  log('Default tab is Ma séance:', await page.$eval('.seg button.on', e => e.textContent));
+  log('Default tab is Ma séance:', await page.evaluate(() => S.settings.todayTab), !!(await page.$('.hero.compose')));
 
   // l'app choisit
-  await page.click('.hero.compose [data-a="customFill"]');
+  await page.evaluate(() => ACT.customFill());   // « L'app choisit » ouvre maintenant sa séance ; le remplissage reste « Compléter »
   await wait(500);
   log('Rows after app fill:', await page.$$eval('#v-today .group .row', e => e.length), 'app badges:', await page.$$eval('.app-badge', e => e.length));
   await shot('05_filled');
@@ -140,12 +140,13 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await wait(400);
   await page.click('[data-a="progressTab"][data-v="medals"]');
   await wait(900);
+  await page.evaluate(() => ACT.allMedals()); await wait(900);   // la collection : feuille « Tous les trophées »
   log('Medal families:', await page.$$eval('.medal-card', e => e.length));
   await shot('18_medals');
   await page.click('.medal-card >> nth=4');
   await page.waitForSelector('.center-modal, .t3d-full.show', { timeout: 20000 }); await wait(500);
   await shot('19_medal_ironyear');
-  await page.evaluate(() => { if (qs('.t3d-full')) t3dClose(); else closeSheet(); }); await wait(600);
+  await page.evaluate(() => { if (qs('.t3d-full')) t3dClose(); closeSheet(); }); await wait(600);
   await wait(350);
 
   await page.emulateMedia({ colorScheme: 'dark' });

@@ -62,7 +62,8 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     lastData: (() => { const g = [...document.querySelectorAll('#v-profil h2.sh')].find(h => /Mes données/.test(h.textContent)).nextElementSibling; const rows = g.querySelectorAll('[data-a]'); return rows[rows.length - 1].dataset.a; })(),
     exRow: (document.querySelector('[data-a="openExoPrefs"] .t') || {}).textContent }));
   log('Profile:', JSON.stringify(pf));
-  if (pf.secs.join('|') !== 'Entraînement|Motivation|Mes données|Apparence et sons' || pf.medals || pf.lastData !== 'confirmReset' || pf.exRow !== 'Mes exercices') fail('Profil réorganisé');
+  // (loi de Hick : Motivation et les options de données sont regroupées derrière une ligne ; la réinitialisation reste la dernière, dans sa feuille)
+  if (pf.secs.join('|') !== 'Entraînement|Mes données|Apparence et sons' || pf.medals || pf.lastData !== 'openDataMore' || pf.exRow !== 'Mes exercices') fail('Profil réorganisé');
 
   // 5. favoris : étoile dans la fiche, en tête du choix d'exercices, filtre, menu de séance
   await page.evaluate(() => ACT.showExoInfo({ id: 'pompes_diamant' })); await wait(600);

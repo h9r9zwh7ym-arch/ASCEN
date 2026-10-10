@@ -67,7 +67,8 @@ const OUT = path.join(OUT_ROOT, 'v25'); fs.mkdirSync(OUT, { recursive: true });
     S.medals.s_friday13 = { t: 1, d: { 1: now } }; S.medals.s_phoenix = { t: 1, d: { 1: now } }; S.medals.s_week7 = { t: 1, d: { 1: now } }; save();
     progressTab = 'medals'; switchTab('progress'); });
   await wait(900); await shot('03_medals_top');
-  const info = await page.evaluate(() => ({ svgs: document.querySelectorAll('#v-progress .medal-svg').length, defs: !!document.getElementById('medal-defs'),
+  await page.evaluate(() => ACT.allMedals()); await wait(1200);   // la collection complète : feuille « Tous les trophées »
+  const info = await page.evaluate(() => ({ svgs: document.querySelectorAll('.medal-svg').length, defs: !!document.getElementById('medal-defs'),
     secretCards: document.querySelectorAll('.secret-card').length, found: document.querySelectorAll('.secret-card.found').length, emoji: /[\u{1F300}-\u{1FAFF}]/u.test(document.querySelector('.medal-grid').textContent) }));
   log('Medals:', JSON.stringify(info));
   if (!info.defs || info.svgs < 40 || info.secretCards !== 10 || info.found !== 3 || info.emoji) fail('rendu des trophées');

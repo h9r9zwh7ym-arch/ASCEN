@@ -61,7 +61,8 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     acts: [...document.querySelectorAll('.hero.compose button')].map(b => b.dataset.a), propose: !!document.querySelector('#v-today [data-a="startSession"]'),
     next: !!document.querySelector('.hero-next'), sep: !!document.querySelector('.home-sep'), nudges: document.querySelectorAll('#v-today .backup-nudge').length, tab: S.settings.todayTab }));
   log('Home (empty):', JSON.stringify(home));
-  if (!/compose/.test(home.hero || '') || home.acts.join() !== 'customAddOpen,customFill' || home.propose) fail('accueil : composer sa séance en premier');
+  // (loi de Hick : la séance de l'app s'ouvre depuis la carte, « Ou laisse l'app choisir »)
+  if (!/compose/.test(home.hero || '') || home.acts.join() !== 'customAddOpen,todayMode' || home.propose) fail('accueil : composer sa séance en premier');
   if (home.next || home.sep || home.nudges > 1) fail('accueil allégé (pas de « Ensuite », un seul rappel)');
   await shot('02_home_compose');
   await page.evaluate(() => { S.custom = { exos: [{ exoId: 'pompes', sets: 3 }, { exoId: 'squat_pdc', sets: 3 }], name: 'Ma routine' }; save(); renderView('today'); }); await wait(400);
@@ -71,6 +72,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   if (filled.title !== 'Ma routine' || filled.go !== 'startCustom' || filled.starts !== 1 || filled.list !== 2) fail('« Ma séance » en carte principale, un seul « C\'est parti »');
   await shot('03_home_custom');
   await page.click('[data-a="todayMode"][data-v="proposal"]'); await wait(500);
+  await page.evaluate(() => { if (!document.querySelector('.type-chip')) ACT.propAdjust(); }); await wait(500);   // types : derrière « Ajuster »
   const prop = await page.evaluate(() => ({ hero: document.querySelector('#v-today .hero').className, express: !!document.querySelector('.hero [data-a="startExpress"]'),
     starts: document.querySelectorAll('#v-today [data-a="startSession"]').length, chips: [...document.querySelectorAll('.type-chip')].map(b => b.dataset.v) }));
   log('Proposal:', JSON.stringify(prop));

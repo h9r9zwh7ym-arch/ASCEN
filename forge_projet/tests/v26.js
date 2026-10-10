@@ -47,9 +47,10 @@ const OUT = path.join(OUT_ROOT, 'v26'); fs.mkdirSync(OUT, { recursive: true });
   log('Recovered from IndexedDB:', JSON.stringify(rec)); if (rec.n !== st.n || !rec.ls) fail('reprise depuis IndexedDB');
   // espace affiché dans le Profil
   await page.evaluate(() => switchTab('profil')); await wait(500);
-  const usage = await page.$eval('[data-a="openStorage"] .s', e => e.textContent).catch(() => null);
+  const usage = await page.$eval('[data-a="openDataMore"] .s', e => e.textContent).catch(() => null);
   log('Usage row:', usage); if (!usage || !/Ko|Mo/.test(usage)) fail('indicateur d\'espace');
-  await page.click('[data-a="openStorage"]'); await wait(700); await shot('01_storage');
+  await page.click('[data-a="openDataMore"]'); await wait(400);
+  await page.click('.sheet [data-a="openStorage"]'); await wait(700); await shot('01_storage');
   const sto = await page.$eval('#stoBody', e => e.textContent.replace(/\s+/g, ' ').slice(0, 200)); log('Storage sheet:', sto);
   if (!/ans d'entraînement/.test(sto)) fail('estimation de durée');
   const idbSize = await page.evaluate(async () => { const r = await idbGet(); return { compressed: typeof r.data !== 'string', bytes: typeof r.data === 'string' ? r.data.length * 2 : (r.data.byteLength ?? r.data.size), ls: (localStorage.getItem('forge.v1') || '').length * 2 }; });

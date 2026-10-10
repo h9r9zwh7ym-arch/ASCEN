@@ -156,7 +156,7 @@ function heroHTML(mode, draft){
       <span class="hero-title">Compose ta séance</span>
       <span class="hero-sub">${pend ? `Pour le ${pendingDaysLabel()} : choisis tes exercices, puis enregistre-la.` : "Choisis tes exercices : séries, charges et repos sont calculés pour toi."}</span>
       <button class="hero-go" data-a="customAddOpen"><span class="hg-ico">${icon("plus")}</span>Choisir mes exercices</button>
-      ${appPicksOn() ? `<button class="hero-alt" data-a="customFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Ou laisse l'app choisir</button>` : ""}
+      ${appPicksOn() ? `<button class="hero-alt" data-a="todayMode" data-v="proposal"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Ou laisse l'app choisir</button>` : ""}
     </div>`;
   }
   let eyebrow, title, meta, ids, act, extra = "";
@@ -180,8 +180,10 @@ function heroHTML(mode, draft){
     ids = draft.exos.map(e=>e.exoId);
     meta = [nb(ids.length, "exercice"), nb(draft.exos.reduce((t,e)=>t+e.sets.length,0), "série"), `≈ ${estimateMinutes(draft)} min`];
     act = `data-a="startSession"`;
-    extra = `<button class="hero-alt" data-a="startExpress">${icon("timer")} Pas le temps ? Express · 10 min</button>`;
+    extra = `<span class="hero-alts"><button class="hero-alt" data-a="startExpress">${icon("timer")} Express · 10 min</button><button class="hero-alt" data-a="todayMode" data-v="custom">${icon("edit")} Composer moi-même</button></span>`;
   }
+  // une séance prête (prévue ou composée) : la seule autre voie est de laisser l'app choisir
+  if(kind!=="proposal" && appPicksOn()) extra = `<button class="hero-alt" data-a="todayMode" data-v="proposal"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Ou laisse l'app choisir</button>`;
   return `<div class="hero ${kind} stagger" style="--i:2">
     <span class="hero-eyebrow">${eyebrow}</span>
     <span class="hero-title">${title}</span>
@@ -208,12 +210,10 @@ function renderTodayPreview(draft){
       <h1 class="lt">${greeting()}</h1>
     </div>
     ${statPillsHTML()}
-    ${deloadCardHTML() || missedCardHTML()}
-    ${nextGoalHTML()}
+    ${deloadCardHTML() || missedCardHTML() || nextGoalHTML()}
     ${sessionsToday().length ? thenNowCardHTML() : ""}
     ${whyReminder() && !sessionsToday().length ? `<div class="why-card stagger" style="--i:2"><div class="why-k">${ii("flame")} Ton pourquoi</div><div class="why-t">« ${esc(whyReminder())} »</div><div class="why-s">${daysSinceLastSession()} jours sans séance : une seule suffit pour reprendre le fil.</div><button class="btn secondary sm why-go" data-a="startExpress">${icon("timer")} Séance express · 10 min</button></div>` : ""}
     ${sessionsToday().length ? doneCardHTML() : ""}
-    <div class="home-seg stagger" style="--i:2">${segHTML("today", [["custom","Ma séance"],["proposal","Proposée par l'app"]], mode, "todayMode")}</div>
     <div class="seg-pane ${mode} ${paneDir?"from-"+paneDir:""}">${sessionsToday().length ? "" : heroHTML(mode, draft)}${mode==="custom" ? customPaneHTML() : proposalPaneHTML(draft)}</div>
     ${sessionsToday().length ? "" : thenNowCardHTML()}
     ${nudgeHTML()}
@@ -233,8 +233,12 @@ function exoRowHTML(def, sub, i, actions, app){
 }
 function catLabel(def){ const c = EXO_CATS.find(c=>c.id===exoCategory(def)); return c ? c.n : ""; }
 
+// La séance proposée : d'abord la liste, simple (toucher un exercice ouvre sa fiche), avec deux gestes à portée :
+// « Autre proposition » et « Ajuster ». Ajuster déplie les réglages fins (type de séance, nombre d'exercices,
+// remplacer ou retirer un exercice, en ajouter un) : peu de choix à la fois (loi de Hick), tout reste à un toucher.
+let propAdjust = false;
 function proposalPaneHTML(draft){
-  const imported = draft.source==="imported";
+  const imported = draft.source==="imported", adj = propAdjust || !draft.exos.length;
   const heroShown = !sessionsToday().length; // sinon la carte principale porte déjà le « C'est parti »
   const typeChips = SESSION_TYPES.map(t=>`<button class="type-chip ${!imported&&draft.type===t.id?"on":""}" data-a="setType" data-v="${t.id}">${t.n}</button>`).join("");
   let hero;
@@ -258,32 +262,34 @@ function proposalPaneHTML(draft){
       <div class="pc-muscles">${focus.map(m=>`<span>${MUSCLE_MAP[m].n}</span>`).join("")}</div>`:""}
     </div>`;
   }
+  const types = adj && !imported ? `<div class="type-scroll">${typeChips}</div>` : "";
   if(!draft.exos.length){
-    return `<div class="type-scroll">${typeChips}</div>${hero}
+    return `${types}${hero}
       <div class="empty-state"><span class="em">${sfIcon("toolbox","gray","lg")}</span>Pas d'exercice disponible pour ce type de séance avec ton matériel.<br>Essaie un autre type, ou complète ton matériel dans l'onglet Profil.</div>`;
   }
   // exercices de force, puis (si le réglage est actif) le bloc d'étirements dans sa propre section
   const doseOf = ex=>{ const def = EXO_MAP[ex.exoId];
     return isStretch(def) ? `${repsLabel(ex.targetReps)} s${def.uni ? " · chaque côté" : ""}` : `${ex.targetSets} × ${repsLabel(ex.targetReps)}${ex.sets[0]&&ex.sets[0].weight?" · "+fmtLoad(def, ex.sets[0].weight):""}`; };
-  const rowOf = (ex,i)=>exoRowHTML(EXO_MAP[ex.exoId], doseOf(ex), i,
+  const rowOf = (ex,i)=>exoRowHTML(EXO_MAP[ex.exoId], doseOf(ex), i, adj ?
     `<button class="icon-btn" aria-label="Remplacer" data-a="swapExoOpen" data-idx="${i}">${icon("swap")}</button>
-     <button class="icon-btn" aria-label="Retirer" data-a="removeExo" data-idx="${i}">${icon("close")}</button>`);
+     <button class="icon-btn" aria-label="Retirer" data-a="removeExo" data-idx="${i}">${icon("close")}</button>` : "");
   const main = mainExos(draft), mainN = main.length;
   const rows = draft.exos.map((ex,i)=>isStretchEntry(ex) ? "" : rowOf(ex,i)).join("");
   const coolRows = draft.exos.map((ex,i)=>isStretchEntry(ex) ? rowOf(ex,i) : "").join("");
   freshIds = new Set();
-  return `<div class="type-scroll">${typeChips}</div>
+  return `${types}
     ${hero}
-    <div class="exo-count">
+    ${adj ? `<div class="exo-count">
       <div class="ec-t"><b>${mainN}</b> exercice${mainN>1?"s":""} · ${main.reduce((t,e)=>t+e.sets.length,0)} séries · ≈ ${estimateMinutes(draft)} min</div>
       <div class="mini-step"><button aria-label="Un exercice de moins" data-a="draftCount" data-d="-1" ${mainN<=1?"disabled":""}>−</button><span>${mainN}</span><button aria-label="Un exercice de plus" data-a="draftCount" data-d="1" ${draft.exos.length>=10?"disabled":""}>+</button></div>
     </div>
-    ${!imported && mainN < Math.min(sessionSize(), draft.resolvedType==="core"?5:10) ? `<div class="ec-limit">Ton matériel limite ce type de séance à ${mainN} exercice${mainN>1?"s":""}. Le « + » ajoute un exercice d'un autre groupe.</div>` : ""}
-    <div class="group" style="margin-top:8px">${rows}</div>
+    ${!imported && mainN < Math.min(sessionSize(), draft.resolvedType==="core"?5:10) ? `<div class="ec-limit">Ton matériel limite ce type de séance à ${mainN} exercice${mainN>1?"s":""}. Le « + » ajoute un exercice d'un autre groupe.</div>` : ""}` : ""}
+    <div class="group prop-list ${adj?"adj":""}" style="margin-top:8px">${rows}</div>
     ${coolRows ? `<div class="cool-h">${ii("leaf")}<span>Étirements · retour au calme</span></div><div class="group cool-group">${coolRows}</div>` : ""}
     <div class="btnrow">
-      <button class="btn tertiary sm" data-a="addExoOpen">${icon("plus")} Ajouter</button>
+      ${adj ? `<button class="btn tertiary sm" data-a="addExoOpen">${icon("plus")} Ajouter</button>` : ""}
       ${imported?"":`<button class="btn tertiary sm" data-a="regenSession">${icon("repeat")} Autre proposition</button>`}
+      <button class="btn tertiary sm ${adj?"strong":""}" data-a="propAdjust" aria-expanded="${adj}">${adj ? `${icon("check")} Terminé` : `${icon("edit")} Ajuster`}</button>
     </div>
     ${heroShown ? "" : `<div class="btnrow"><button class="btn big" data-a="startSession">${icon("play")} Commencer cette séance</button></div>`}`;
 }
@@ -533,7 +539,11 @@ function pickerListHTML(){
   // favoris en tête (sans recherche ni filtre de matériel) : ils restent aussi dans leur catégorie
   const favs = favOnly || picker.cat ? [] : pool.filter(e=>isIncluded(e.id)).sort((a,b)=>a.n.localeCompare(b.n,"fr"));
   const favBlock = favs.length ? `<div class="pick-h fav">${sfIcon("star","yellow","sm")} Favoris <span class="pick-n">${favs.length}</span></div><div class="group">${favs.map(e=>pickRowHTML(e)).join("")}</div>` : "";
-  return favBlock + EXO_CATS.map(c=>{
+  // tes habituels : les exercices que tu fais le plus ces deux derniers mois, en tête (loi de Hick : on choisit
+  // d'abord parmi quelques exercices connus, le catalogue complet reste en dessous)
+  const ids = new Set(pool.map(e=>e.id)), hab = q || picker.cat ? [] : habitualExos().filter(id=>ids.has(id) && !isIncluded(id)).slice(0, 6).map(id=>EXO_MAP[id]);
+  const habBlock = hab.length ? `<div class="pick-h hab">${sfIcon("history","blue","sm")} Tes habituels <span class="pick-n">${hab.length}</span></div><div class="group">${hab.map(e=>pickRowHTML(e)).join("")}</div>` : "";
+  return favBlock + habBlock + EXO_CATS.map(c=>{
     const list = pool.filter(e=>exoCategory(e)===c.id).sort((a,b)=>muscleOrder[a.muscles[0]]-muscleOrder[b.muscles[0]] || a.n.localeCompare(b.n,"fr"));
     if(!list.length) return "";
     let lastM = null;
@@ -542,6 +552,14 @@ function pickerListHTML(){
       return sub + pickRowHTML(e);
     }).join("")}</div>`;
   }).join("");
+}
+// exercices les plus faits sur les 60 derniers jours (au moins 2 séances), du plus fréquent au moins fréquent
+function habitualExos(){
+  return memo("habitual:"+todayISO(), ()=>{
+    const from = addDaysISO(todayISO(), -60), c = {};
+    S.sessions.forEach(s=>{ if(s.date<from) return; new Set(s.exos.map(ex=>ex.exoId)).forEach(id=>{ c[id] = (c[id]||0) + 1; }); });
+    return Object.keys(c).filter(id=>c[id]>=2 && EXO_MAP[id]).sort((a, b)=>c[b]-c[a]);
+  });
 }
 function pickRowHTML(e){
   const on = picker.selected.includes(e.id), fav = isIncluded(e.id);
@@ -1084,18 +1102,14 @@ document.addEventListener("pointercancel", endSwipe);
 document.addEventListener("ascen:suspend", endSwipe);
 
 Object.assign(ACT, {
-  // Ma séance ↔ Proposée par l'app : seul le contenu sous le sélecteur change. Le sélecteur glisse,
-  // la hauteur suit, le nouveau contenu arrive du côté de l'onglet choisi ; le reste de l'accueil
-  // ne bouge pas (avant : tout l'écran était reconstruit et rejouait sa cascade d'entrée)
-  todayMode(d, el){
+  // Ma séance ↔ séance de l'app (liens de la carte principale) : seul le bloc de la séance change ; sa hauteur
+  // suit et le nouveau contenu arrive du côté choisi, le reste de l'accueil ne bouge pas
+  todayMode(d){
     if(S.settings.todayTab===d.v) return;
-    S.settings.todayTab = d.v; save();
-    const v = qs("#v-today"), pane = v && qs(".seg-pane", v), seg = el && el.closest(".seg");
-    const draft = getOrCreateDraft();
-    if(!pane || !seg || draft.startedAt){ paneDir = d.v==="proposal" ? "r" : "l"; renderViewAnimated("today"); paneDir = ""; return; }
-    seg.dataset.cur = d.v==="proposal" ? 1 : 0;
-    qsa("button", seg).forEach(b=>{ const on = b.dataset.v===d.v; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
-    settleSegs(seg.parentElement);
+    S.settings.todayTab = d.v; propAdjust = false; save();
+    const v = qs("#v-today"), pane = v && qs(".seg-pane", v), draft = getOrCreateDraft();
+    if(!pane || draft.startedAt){ renderView("today"); return; }
+    sfx("swipe");
     const html = `${sessionsToday().length ? "" : heroHTML(d.v, draft)}${d.v==="custom" ? customPaneHTML() : proposalPaneHTML(draft)}`;
     morphHeight(pane, ()=>{ pane.className = "seg-pane "+d.v; pane.innerHTML = html; });
     if(pane.animate && !reducedMotion()){
@@ -1103,6 +1117,15 @@ Object.assign(ACT, {
       try{ pane.animate([{ opacity:0, transform:`translateX(${dx}px)` }, { opacity:1, transform:"none" }], { duration:320, easing:"cubic-bezier(.2,.8,.2,1)" }); }catch(e){}
     }
     v._ver = DATA_VER; // l'écran reste à jour : pas de reconstruction au prochain passage
+  },
+  // la séance proposée : réglages fins dépliés ou repliés, sur place
+  propAdjust(){
+    propAdjust = !propAdjust; sfx(propAdjust ? "open" : "close");
+    const v = qs("#v-today"), pane = v && qs(".seg-pane", v), draft = getOrCreateDraft();
+    if(!pane || draft.startedAt){ renderView("today"); return; }
+    const html = `${sessionsToday().length ? "" : heroHTML("proposal", draft)}${proposalPaneHTML(draft)}`;
+    morphHeight(pane, ()=>{ pane.innerHTML = html; });
+    v._ver = DATA_VER;
   },
   pickerCat(d){
     picker.cat = d.v || null;
@@ -1266,8 +1289,8 @@ Object.assign(ACT, {
     if(!picker.multi){ picker.onDone([d.id]); return; }
     const i = picker.selected.indexOf(d.id);
     if(i>=0) picker.selected.splice(i,1); else picker.selected.push(d.id);
-    const row = qs(`.pick-row[data-id="${d.id}"]`);
-    if(row){ row.classList.toggle("on", i<0); const c = qs(".pick-check",row); if(c) c.innerHTML = i<0 ? icon("check") : ""; }
+    // un exercice peut figurer deux fois (favoris ou habituels, et sa catégorie) : toutes ses lignes suivent
+    qsa(`.pick-row[data-id="${d.id}"]`).forEach(row=>{ row.classList.toggle("on", i<0); const c = qs(".pick-check",row); if(c) c.innerHTML = i<0 ? icon("check") : ""; });
     if(navigator.vibrate) try{ navigator.vibrate(6); }catch(e){}
     refreshPickerFooter();
   },
