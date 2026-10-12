@@ -25,7 +25,7 @@ function trophiesCardHTML(){
   const recent = Object.keys(S.medals||{}).map(id=>{ const m = MEDAL_MAP[id], st = S.medals[id]; return m && st.t ? { m, t:st.t, d:(st.d||{})[st.t]||"" } : null; })
     .filter(Boolean).sort((a,b)=>b.d.localeCompare(a.d)).slice(0,3);
   const next = MEDALS.filter(m=>!m.secret).map(m=>({ m, p:medalProgress(m) })).filter(x=>x.p.next!=null).sort((a,b)=>b.p.pct-a.p.pct).slice(0, 4-recent.length);
-  const thumbs = recent.map(r=>`<span class="pt-th">${medalHTML(r.m, r.t, "sm")}</span>`).join("") + next.map(x=>`<span class="pt-th next">${medalHTML(x.m, x.p.t+1, "sm")}</span>`).join("");
+  const thumbs = recent.map(r=>`<span class="pt-th">${medalHTML(r.m, r.t, "sm", true)}</span>`).join("") + next.map(x=>`<span class="pt-th next">${medalHTML(x.m, x.p.t+1, "sm", true)}</span>`).join("");
   return `<h2 class="sh">Trophées</h2>
     <button class="pt-card stagger" style="--i:1" data-a="openTrophies" aria-label="Trophées : ${won} gagnés sur ${total}. Voir tous les trophées">
       <span class="pt-thumbs" aria-hidden="true">${thumbs}</span>

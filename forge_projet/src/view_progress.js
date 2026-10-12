@@ -121,6 +121,14 @@ function forceSumHTML(){
     <span class="fs-ax"><span>${esc(fmtDate(pts[0].wk))}</span><span>Aujourd'hui</span></span>
   </button>`;
 }
+// animation signature n° 2 : la courbe se trace et le chiffre défile, une fois par version des données,
+// quand le Résumé est réellement à l'écran (pas pendant un rendu en coulisses)
+let fsDrawn = -1;
+function fsDraw(el){
+  if(currentTab!=="progress" || progressTab!=="overview" || fsDrawn===DATA_VER) return;
+  const c = qs(".fs-card", el); if(!c) return;
+  fsDrawn = DATA_VER; c.classList.add("draw"); animateCounts(c);
+}
 // courbe pleine largeur, sans axes : la forme suffit (le détail a le vrai graphique)
 function forceSparkSVG(vals){
   const W = 326, H = 100, top = 10, bot = 96, lo = Math.min(...vals), hi = Math.max(...vals), span = Math.max(1, hi-lo);

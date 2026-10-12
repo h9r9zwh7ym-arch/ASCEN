@@ -1059,7 +1059,7 @@ accueil 25 → 22 (et un seul chemin pour démarrer au lieu de cinq), séance de
 **Tests** : `tests/v54.js` (budgets de choix, chemins de l'accueil, Ajuster, Tous les trophées, feuilles du Profil et
 « Retour », habituels du sélecteur, trois temps forts) ; tests plus anciens adaptés (le chemin change, pas ce qu'ils vérifient).
 
-## 9 quatertricies. Refonte du design (toujours 4.0, en cours)
+## 9 quatertricies. Refonte du design (toujours 4.0)
 
 YaYa trouvait l'interface encore peu claire. Une maquette complète (10 écrans, Artifact « ASCEN — nouveau design »)
 a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est appliquée par étapes ; ce qui est fait :
@@ -1172,8 +1172,32 @@ a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est
     leurs styles.
   - Test : `tests/v57.js`.
 
-À venir : animations signatures. Les sections plus haut qui parlent de Geist, Barlow, `#F4F3F1` ou `#FF6B3D` décrivent l'état
-d'avant cette refonte.
+- **Étape 6, animations signatures et accessibilité** : quatre animations, pas plus, avec le même langage (départ
+  vif, arrivée douce `cubic-bezier(.2,.8,.2,1)`, petit rebond pour ce qui se pose) et toutes coupées par
+  « Réduire les animations » :
+  1. **les gros chiffres défilent** jusqu'à leur valeur (`animateCounts`, ui_shell.js : `data-count`, et désormais
+     `data-from` pour partir d'une valeur ; une seule boucle par élément ; chiffres à chasse fixe) ;
+  2. **les courbes se dessinent** : fin de séance (Tonnage, déjà là) et « Ta force » du Résumé (`fsDraw`, classe
+     `.draw`, une fois par version des données et seulement quand le Résumé est à l'écran, pas au retour d'un
+     sous-écran) ;
+  3. **le grimpeur avance** : sur la piste de fin de séance (petits pas pendant la montée, `caStep`) et sur la carte
+     « Cette semaine » au retour sur l'accueil (`wkClimb` / `wkSeen`, view_today.js) : la barre part de là où on
+     l'avait laissée, va au bout si un camp est franchi puis repart, l'altitude défile en orange. Elle attend que la
+     carte soit vraiment vue (onglet Aujourd'hui, fin de séance fermée, carte visible) ;
+  4. **la coche franche** de la série validée : le rond vert se pose, la coche se trace (`ckPop` / `ckDraw`, sur la
+     case de la série et sur « Série N enregistrée », seulement à l'arrivée sur le repos : `savedFresh`), avec une
+     seule vibration (`haptic(18)`, deux pour un record), qui passe aussi sur iPhone. Les autres retours tactiles
+     (glisser d'exercice, choix d'exercices) passent par `haptic()`.
+  - Hook commun `afterRenderView` (ui_shell.js) : `fsDraw` pour Progrès, `wkClimb` pour l'accueil (la carte 3D des
+    trophées est montée par sa feuille).
+  - La scène de Mon ascension et le Rewind prennent l'orange de la marque (`#E07A55`, lisible de jour comme de nuit)
+    au lieu de l'ancien `#FF6B3D`.
+  - Accessibilité : titres de section et grands chiffres en hauteur de ligne relative (rien ne se chevauche en très
+    grands caractères), chevrons des listes centrés (`.row>.chev`), calendrier lisible au lecteur d'écran (jours avec
+    séance nommés, autres jours masqués, aujourd'hui annoncé).
+  - Test : `tests/v58.js`.
+
+Les sections plus haut qui parlent de Geist, Barlow, `#F4F3F1` ou `#FF6B3D` décrivent l'état d'avant cette refonte.
 
 ## 10. Cahier des charges d'origine (résumé)
 

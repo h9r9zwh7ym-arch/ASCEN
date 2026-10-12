@@ -78,13 +78,14 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.evaluate(() => { S.draft = null; S.custom = { exos: [] }; save(); renderView('today'); }); await wait(300);
   // Profil : la ligne montre la semaine en cours ; on l'arrête depuis la feuille
   await page.click('.tabbtn[data-id="profil"]'); await wait(500);
-  const prof = await page.evaluate(() => (document.querySelector('[data-a="openSessionPrefs"] .s') || {}).textContent);
+  // (refonte 5 : la ligne du Profil n'a plus de sous-titre ; l'état est dans la feuille, sur la ligne Semaine allégée)
   await page.click('#v-profil [data-a="openSessionPrefs"]'); await wait(500);   // Profil › Réglages des séances
+  const prof = await page.evaluate(() => (document.querySelector('.sheet [data-a="deloadHow"] .s') || {}).textContent);
   await page.click('.sheet [data-a="deloadHow"]'); await wait(600);
   await page.click('#overlay [data-a="deloadStop"]'); await wait(500);
   const off = await page.evaluate(() => ({ active: deloadActive(), log: S.deloadLog.length, n: sessionEntryFor(EXO_MAP.dc_haltere).sets.length, advice: deloadAdvice() }));
   log('Profile row:', prof, '| stopped:', JSON.stringify(off));
-  if (!/allégée en cours/.test(prof || '') || off.active || off.log !== 1 || off.n !== before.n || off.advice) fail('arrêt et pas de nouveau conseil tout de suite');
+  if (!/^En cours · jour \d sur 7$/.test(prof || '') || off.active || off.log !== 1 || off.n !== before.n || off.advice) fail('arrêt et pas de nouveau conseil tout de suite');
 
   // 5. fin naturelle : mot de reprise sur l'accueil ; « Plus tard » repousse d'une semaine
   const end = await page.evaluate(() => { S.deload = { start: addDaysISO(todayISO(), -8), end: addDaysISO(todayISO(), -1) }; save(); switchTab('today'); renderView('today');

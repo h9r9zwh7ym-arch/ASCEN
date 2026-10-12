@@ -615,6 +615,5 @@ Object.assign(ACT, {
 });
 document.addEventListener("keydown", e=>{ if(e.key==="Escape" && qs(".t3d-full")) t3dClose(); });
 
-// après chaque rendu d'onglet : carte mise en avant + vignettes 3D
-// les vignettes 3D des médailles sont posées par l'observateur plus haut, au calme
-function afterRenderView(id, el){ if(id==="progress") mountTrophy3D(el); }
+// (la carte 3D mise en avant vit dans la feuille Trophées du Profil, qui la monte à l'ouverture ;
+// les vignettes 3D des médailles sont posées par l'observateur plus haut, au calme)

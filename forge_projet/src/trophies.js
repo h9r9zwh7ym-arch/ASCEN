@@ -265,9 +265,10 @@ function medalSVG(m, tier, big){
     <path d="${P}" transform="${sc(.985)}" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="1.1"/>
   </svg>`;
 }
-function medalHTML(m, tier, size){
-  // data-mid / data-tier : la vignette 3D remplace le dessin SVG dès qu'elle est prête (trophy3d.js)
-  return `<div class="medal t${tier} ${m.secret?"secret":""} ${size||""}" ${m.id?`data-mid="${m.id}" data-tier="${tier}"`:""}>${medalSVG(m, tier, size==="big")}</div>`;
+function medalHTML(m, tier, size, flat){
+  // data-mid / data-tier : la vignette 3D remplace le dessin SVG dès qu'elle est prête (trophy3d.js) ;
+  // flat : dessin seul (carte Trophées du Profil : ouvrir l'onglet ne charge pas le moteur 3D)
+  return `<div class="medal t${tier} ${m.secret?"secret":""} ${size||""}" ${m.id && !flat?`data-mid="${m.id}" data-tier="${tier}"`:""}>${medalSVG(m, tier, size==="big")}</div>`;
 }
 function pipsHTML(tier){
   return `<div class="pips">${[1,2,3,4].map(k=>`<span class="pip ${k<=tier?"t"+k:""}"></span>`).join("")}</div>`;

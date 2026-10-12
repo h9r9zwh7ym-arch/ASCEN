@@ -3003,13 +3003,13 @@ body.live-focus #v-today{padding-bottom:0}
 .home .tpl-empty{border-radius:var(--r-hero)}
 
 /* ===== Refonte : Progrès › Résumé ===== */
-#v-progress h2.sh{font-size:var(--fs-t2);line-height:28px;margin:28px 20px 8px}
+#v-progress h2.sh{font-size:var(--fs-t2);line-height:1.25;margin:28px 20px 8px}
 .fs-card{display:flex;flex-direction:column;align-items:stretch;width:calc(100% - 2 * var(--gutter));margin:0 var(--gutter);padding:16px;border-radius:var(--r-hero);background:var(--bg2);color:var(--label);text-align:left}
 .fs-card:active{opacity:.8}
 .fs-h{display:flex;align-items:center;justify-content:space-between;font-size:var(--fs-body);font-weight:600}
 .fs-h .chev{display:grid;color:var(--label3)}
 .fs-h .chev svg{width:14px;height:14px}
-.fs-v{margin-top:4px;font-family:var(--num);font-size:var(--fs-lt);line-height:41px;font-weight:700;font-variant-numeric:tabular-nums}
+.fs-v{margin-top:4px;font-family:var(--num);font-size:var(--fs-lt);line-height:1.2;font-weight:700;font-variant-numeric:tabular-nums}
 .fs-s{font-size:var(--fs-sub);color:var(--label2)}
 .fs-chart{display:block;width:100%;height:auto;margin-top:16px;overflow:visible}
 .fs-base{fill:none;stroke:var(--sep);stroke-width:.5}
@@ -3067,7 +3067,7 @@ body.live-focus #v-today{padding-bottom:0}
 .hc-on:active{transform:scale(.92)}
 #v-history .rc-entry{margin-top:16px}
 #v-history .rc-entry .row{min-height:52px}
-#v-history h2.sh{font-size:var(--fs-t2);line-height:28px;margin:28px 20px 8px}
+#v-history h2.sh{font-size:var(--fs-t2);line-height:1.25;margin:28px 20px 8px}
 .hs-row{min-height:64px}
 .hs-row .t{font-weight:600}
 .hs-dur{flex:none;font-family:var(--num);font-size:var(--fs-body);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -3081,10 +3081,10 @@ body.live-focus #v-today{padding-bottom:0}
 .profile-hero .ph-avatar span{background:none;color:var(--tint-ink);font-size:var(--fs-t2)}
 .profile-hero .ph-person{width:30px;height:30px;color:var(--tint-ink)}
 .profile-hero .ph-main{display:flex;flex-direction:column;gap:1px}
-.profile-hero .ph-name{display:block;font-size:var(--fs-t2);line-height:28px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.profile-hero .ph-name{display:block;font-size:var(--fs-t2);line-height:1.25;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .profile-hero .ph-name::before{display:none}
 .profile-hero .ph-sub{margin:0;font-size:var(--fs-sub);color:var(--label2);font-variant-numeric:tabular-nums}
-#v-profil h2.sh{font-size:var(--fs-t2);line-height:28px;margin:28px 20px 8px}
+#v-profil h2.sh{font-size:var(--fs-t2);line-height:1.25;margin:28px 20px 8px}
 .pt-card{display:flex;flex-direction:column;gap:12px;width:calc(100% - 2 * var(--gutter));margin:0 var(--gutter);padding:16px;border-radius:var(--r-hero);background:var(--bg2);color:var(--label);text-align:left}
 .pt-card:active{opacity:.8}
 .pt-thumbs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;justify-items:center}
@@ -3123,3 +3123,37 @@ body.live-focus #v-today{padding-bottom:0}
 .wk-n small.wk-hot{color:var(--tint-ink);font-weight:600;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .wk-risk{display:inline-flex;align-items:center;gap:4px;color:var(--tint-ink);font-weight:600}
 .wk-risk .ii{width:14px;height:14px}
+
+/* ===== Refonte 6 : animations signatures (4, pas plus) =====
+   1. les gros chiffres défilent jusqu'à leur valeur (animateCounts, chiffres à chasse fixe : rien ne saute) ;
+   2. les courbes se dessinent (fin de séance, « Ta force ») ;
+   3. le grimpeur avance jusqu'au camp atteint (fin de séance, carte « Cette semaine » au retour sur l'accueil) ;
+   4. la coche franche de la série validée, avec une vibration.
+   Même langage partout : départ vif, arrivée douce (cubic-bezier(.2,.8,.2,1)), un petit rebond pour ce qui « se pose ». */
+[data-count]{font-variant-numeric:tabular-nums}
+/* 4. la coche : le rond vert se pose, le trait se trace */
+.sx-set.just .sx-ck path,.sx-saved.fresh .sx-ck path{stroke-dasharray:1;stroke-dashoffset:1;animation:ckDraw .34s cubic-bezier(.4,0,.2,1) .14s forwards}
+.sx-saved.fresh .sx-okdot{animation:ckPop .5s cubic-bezier(.32,1.6,.4,1) both}
+.sx-saved.fresh span:last-child{animation:fadeIn .35s ease .1s both}
+@keyframes ckDraw{to{stroke-dashoffset:0}}
+@keyframes ckPop{0%{transform:scale(.3);opacity:0}55%{transform:scale(1.18);opacity:1}100%{transform:none}}
+/* 2. « Ta force » : la courbe se trace, la zone se remplit, le point se pose au bout */
+.fs-card.draw .fs-line{stroke-dasharray:1;stroke-dashoffset:1;animation:ctDraw 1.1s cubic-bezier(.4,0,.2,1) .25s forwards}
+.fs-card.draw .fs-area{animation:fadeIn .6s ease 1s both}
+.fs-card.draw .fs-dot{transform-box:fill-box;transform-origin:center;animation:ctDot .45s cubic-bezier(.32,1.6,.4,1) 1.25s both}
+/* 3. le grimpeur avance : petits pas pendant la montée (fin de séance), la barre de la semaine qui avance */
+.cel-asc .ca-trk.go .ca-me{animation:caStep .34s ease-in-out infinite alternate}
+@keyframes caStep{from{transform:translateY(0)}to{transform:translateY(-2.5px)}}
+.wk-bar i.climb{transition:width 1.1s cubic-bezier(.2,.8,.2,1)}
+.wk-alt{transition:color .6s ease}
+.wk-alt.climb{color:var(--tint-ink)}
+@media (prefers-reduced-motion:reduce){
+  .sx-set.just .sx-ck path,.sx-saved.fresh .sx-ck path{stroke-dasharray:none;stroke-dashoffset:0;animation:none}
+  .sx-saved.fresh .sx-okdot,.sx-saved.fresh span:last-child,.fs-card.draw .fs-area,.fs-card.draw .fs-dot,.cel-asc .ca-trk.go .ca-me{animation:none}
+  .fs-card.draw .fs-line{stroke-dasharray:none;stroke-dashoffset:0;animation:none}
+  .wk-bar i.climb{transition:none}
+}
+
+/* accessibilité : le chevron des lignes reste centré quelle que soit la taille du texte (Dynamic Type) */
+.row>.chev{display:grid;place-items:center}
+.row>.chev svg{width:15px;height:15px}

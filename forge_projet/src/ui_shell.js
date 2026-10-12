@@ -306,18 +306,25 @@ function settleSegs(root){
   });
 }
 
-// ---------- compteurs animés ----------
+// après chaque rendu d'onglet : les animations signatures qui dépendent de l'écran affiché
+function afterRenderView(id, el){
+  if(id==="progress" && typeof fsDraw==="function") fsDraw(el);
+  if(id==="today" && typeof wkClimb==="function") wkClimb(el);
+}
+// ---------- compteurs animés (animation signature n° 1 : les gros chiffres défilent jusqu'à leur valeur) ----------
+// data-from : point de départ (sinon 0) ; un élément déjà en cours repart proprement (une seule boucle par élément)
 function animateCounts(root){
   const els = qsa("[data-count]", root);
   const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   els.forEach(el=>{
-    const target = parseFloat(el.dataset.count), dec = +(el.dataset.dec||0), unit = el.dataset.unit, pre = el.dataset.pre||"";
+    const target = parseFloat(el.dataset.count), from = parseFloat(el.dataset.from)||0, dec = +(el.dataset.dec||0), unit = el.dataset.unit, pre = el.dataset.pre||"";
     const fmt = v => pre + (dec ? v.toLocaleString("fr-FR",{minimumFractionDigits:dec,maximumFractionDigits:dec}) : fmtNum(v)) + (unit?(el.dataset.thin?"\u202f":" ")+unit:"");
-    if(reduce || !(target>0)){ el.textContent = fmt(target||0); return; }
-    const t0 = performance.now(), dur = 800;
+    if(reduce || !(target>0) || target===from){ el.textContent = fmt(target||0); return; }
+    const t0 = performance.now(), dur = 800, run = el._count = {};
     (function step(t){
+      if(el._count!==run) return; // relancé entre-temps
       const p = Math.min(1,(t-t0)/dur), e = 1-Math.pow(1-p,3);
-      el.textContent = fmt(target*e);
+      el.textContent = fmt(from+(target-from)*e);
       if(p<1) requestAnimationFrame(step);
     })(t0);
   });

@@ -108,7 +108,7 @@ function histMonthHTML(){
   for(let n=1;n<=nDays;n++){
     const iso = key+"-"+String(n).padStart(2,"0"), ss = byDay[iso], cls = iso===today ? " today" : iso>today ? " fut" : "";
     cells += ss ? `<span class="hc-d"><button class="hc-on${cls}" data-a="histDay" data-d="${iso}" aria-label="${esc(fmtDate(iso,"long"))} : ${ss.length>1 ? nb(ss.length,"séance") : esc(sessionTitle(ss[0]))}">${n}</button></span>`
-      : `<span class="hc-d"><span class="hc-n${cls}"${iso===today ? ` aria-label="Aujourd'hui"` : ""}>${n}</span></span>`;
+      : `<span class="hc-d"><span class="hc-n${cls}"${iso===today ? ` aria-label="Aujourd'hui, pas encore de séance"` : ` aria-hidden="true"`}>${n}</span></span>`;   // lecteur d'écran : seuls les jours avec séance et aujourd'hui
   }
   const prev = monthKeyAdd(key, -1), next = monthKeyAdd(key, 1);
   // le Rewind du mois affiché ; pour le mois en cours, celui du mois écoulé s'il existe
@@ -128,7 +128,7 @@ function histMonthHTML(){
         <div class="hc-title"><b>${esc(title)}</b><span>${list.length ? `${nb(list.length,"séance")}${dur ? " · "+fmtDuration(dur) : ""}` : "Aucune séance"}${adh ? ` · ${adh.done} ${adh.planned>1 ? "des" : "de la"} ${adh.planned>1 ? adh.planned+" prévues" : "prévue"}` : ""}</span></div>
         <button class="hc-nav" data-a="histNav" data-d="1" aria-label="Mois suivant : ${MOIS_LONG[parseISO(next+"-01").getMonth()]}" ${key>=cur ? "disabled" : ""}>${icon("chev")}</button>
       </div>
-      <div class="hc-grid"><span class="hc-w" aria-hidden="true">L</span><span class="hc-w" aria-hidden="true">M</span><span class="hc-w" aria-hidden="true">M</span><span class="hc-w" aria-hidden="true">J</span><span class="hc-w" aria-hidden="true">V</span><span class="hc-w" aria-hidden="true">S</span><span class="hc-w" aria-hidden="true">D</span>${cells}</div>
+      <div class="hc-grid" role="group" aria-label="Jours de ${esc(title)}"><span class="hc-w" aria-hidden="true">L</span><span class="hc-w" aria-hidden="true">M</span><span class="hc-w" aria-hidden="true">M</span><span class="hc-w" aria-hidden="true">J</span><span class="hc-w" aria-hidden="true">V</span><span class="hc-w" aria-hidden="true">S</span><span class="hc-w" aria-hidden="true">D</span>${cells}</div>
     </section>
     ${rk ? `<div class="group rc-entry stagger" style="--i:1"><button class="row tap" style="width:100%" data-a="openRecap" data-kind="month" data-key="${rk}">${sfIcon("sparkles","gray")}<div class="grow"><div class="t">Rewind ${deMois(MOIS_LONG[parseISO(rk+"-01").getMonth()])}</div></div><span class="chev">${icon("chev")}</span></button></div>` : ""}
     ${list.length ? `<h2 class="sh">Séances</h2><div class="group hs-group">${rows}</div>` : `<p class="hr-note center hs-none">Aucune séance en ${mName}.</p>`}`;

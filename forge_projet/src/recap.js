@@ -98,7 +98,7 @@ function drawRecap(kind, key){
   ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
   const glow = ctx.createRadialGradient(W*0.78, 90, 20, W*0.78, 90, 720); glow.addColorStop(0,"rgba(255,107,61,.32)"); glow.addColorStop(1,"rgba(255,107,61,0)");
   ctx.fillStyle = glow; ctx.fillRect(0,0,W,H);
-  const X = 84, orange = "#FF6B3D", white = "#FFFFFF", mute = "rgba(255,255,255,.62)";
+  const X = 84, orange = "#E07A55", white = "#FFFFFF", mute = "rgba(255,255,255,.62)";
   ctx.textBaseline = "alphabetic";
   // en-tête
   // logotype ASCEN au trait (mêmes tracés que ascenMark)

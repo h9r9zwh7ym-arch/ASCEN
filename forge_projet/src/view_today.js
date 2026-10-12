@@ -9,6 +9,7 @@ let valRoll = {};       // sens du défilement du chiffre modifié (+/−)
 let restReady = false;  // le repos vient de se terminer
 let stripBump = -1; // pastille du bandeau qui « rebondit » après une série validée
 let justDone = null; // {exi, si} : série qui vient d'être validée (animation du point)
+let savedFresh = false; // repos qui suit une validation : la coche « Série N enregistrée » se dessine une fois
 let customEdit = false; // carte du jour : « Modifier » rend la liste éditable (séries, retrait, ajout, enregistrement)
 let heroAll = false;    // carte du jour : « Voir les N exercices » déplié
 
@@ -331,6 +332,11 @@ function weekCardHTML(){
   // la série en jeu : plus de jour de marge pour valider la semaine
   const left = goal-done, daysLeft = 7-weekdayIdx(today) - (doneToday ? 1 : 0);
   const risk = streak>=2 && !a.paused && left>0 && left<=daysLeft && daysLeft-left<=1;
+  // animation signature n° 3 : de retour sur l'accueil après une séance, la carte part de là où on l'avait
+  // laissée (barre et altitude) et le grimpeur avance (wkClimb, une fois la carte visible)
+  wkNow = { key:a.key, alt:a.alt, pct, camp:nc ? nc[1] : "" };
+  if(!wkSeen || wkSeen.key!==a.key || a.alt<wkSeen.alt-.5) wkSeen = wkNow;
+  const climb = a.alt>wkSeen.alt+.5, via = climb && wkSeen.camp!==wkNow.camp;
   const days = JOURS_COURTS.map((j,i)=>{
     const iso = addDaysISO(monday,i), t = S.templates.find(t=>(t.days||[]).includes(i)), isToday = iso===today;
     // « manquée » seulement si la séance était déjà prévue ce jour-là (pas pour un programme créé après)
@@ -344,8 +350,8 @@ function weekCardHTML(){
     <div class="wk-card">
       <button class="wk-asc" data-a="openAscent" aria-label="Mon ascension : ${esc(D.n)}, ${fmtNum(a.alt)} mètres. ${esc(where)}">
         ${ascStripHTML(a)}
-        <span class="wk-row"><span class="wk-n"><b>${esc(D.n)}</b><small${promise || (a.comeback && !doneToday) ? ' class="wk-hot"' : ""}>${esc(where)}</small></span><span class="wk-alt">${fmtNum(a.alt)} m</span><span class="chev">${icon("chev")}</span></span>
-        <span class="wk-bar"><i style="width:${(pct*100).toFixed(1)}%"></i></span>
+        <span class="wk-row"><span class="wk-n"><b>${esc(D.n)}</b><small${promise || (a.comeback && !doneToday) ? ' class="wk-hot"' : ""}>${esc(where)}</small></span><span class="wk-alt"${climb ? ` data-count="${Math.round(a.alt)}" data-from="${Math.round(wkSeen.alt)}" data-unit="m"` : ""}>${fmtNum(climb ? wkSeen.alt : a.alt)} m</span><span class="chev">${icon("chev")}</span></span>
+        <span class="wk-bar"><i style="width:${((climb ? wkSeen.pct : pct)*100).toFixed(1)}%"${climb ? ` data-to="${(pct*100).toFixed(1)}"${via ? ` data-via="1"` : ""}` : ""}></i></span>
       </button>
       <div class="wk-week">
         <div class="wk-days">${days}</div>
@@ -353,6 +359,35 @@ function weekCardHTML(){
       </div>
     </div>
   </section>`;
+}
+let wkSeen = null, wkNow = null; // { key, alt, pct, camp } : ce que la carte a montré / montre maintenant
+function wkClimb(el){
+  const bar = qs(".wk-bar i[data-to]", el); if(!bar) return;
+  const alt = qs(".wk-alt", el), now = wkNow, t0 = Date.now();
+  const go = ()=>{
+    if(!bar.isConnected) return;
+    wkSeen = now;
+    const to = bar.dataset.to+"%";
+    if(reducedMotion()){ bar.style.width = to; animateCounts(alt.parentElement); return; }
+    bar.classList.add("climb"); alt.classList.add("climb"); animateCounts(alt.parentElement);
+    sfx("ascClimb", .9);
+    if(bar.dataset.via){
+      // un camp franchi : la barre va au bout, puis repart vers le camp suivant
+      bar.style.width = "100%";
+      setTimeout(()=>{ if(!bar.isConnected) return; bar.classList.remove("climb"); bar.style.width = "0%"; void bar.offsetWidth; bar.classList.add("climb"); bar.style.width = to; sfx("ascCamp"); }, 700);
+    } else bar.style.width = to;
+    setTimeout(()=>alt.classList.remove("climb"), 1700);
+  };
+  // la carte doit être réellement vue : onglet Aujourd'hui, rien par-dessus (fin de séance), app au premier plan
+  const wait = ()=>{
+    if(!bar.isConnected) return;
+    if(Date.now()-t0>300000){ wkSeen = now; bar.style.width = bar.dataset.to+"%"; return; }
+    if(currentTab!=="today" || document.hidden || qs("#overlay.open") || (S.draft && S.draft.startedAt)){ setTimeout(wait, 400); return; }
+    if(!window.IntersectionObserver){ setTimeout(go, 350); return; }
+    const io = new IntersectionObserver(es=>{ if(es.some(x=>x.isIntersecting)){ io.disconnect(); setTimeout(go, 350); } }, { threshold:.6 });
+    io.observe(bar.parentElement);
+  };
+  wait();
 }
 function tplCardHTML(t, i){
   const open = openTpls.has(t.id), region = tplRegion(t), loaded = S.custom.tplId===t.id;
@@ -791,7 +826,7 @@ function beatLineHTML(ex, def, si, st){
   return `<div class="fc-beat">${ii("target")}<span>À battre : <b>${tgt}${isTimed(def) ? " s" : " reps"}</b>${at} <small>(la dernière fois : ${refTxt})</small></span></div>`;
 }
 const SX_PM = d=>`<svg viewBox="0 0 18 18" aria-hidden="true"><path d="${d>0?"M9 3v12M3 9h12":"M3 9h12"}" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>`;
-const SX_CHECK = `<svg class="sx-ck" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.3l2.3 2.3 4.7-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const SX_CHECK = `<svg class="sx-ck" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.3l2.3 2.3 4.7-5" pathLength="1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const SX_DOTS = `<svg viewBox="0 0 20 4" aria-hidden="true"><circle cx="2" cy="2" r="2" fill="currentColor"/><circle cx="10" cy="2" r="2" fill="currentColor"/><circle cx="18" cy="2" r="2" fill="currentColor"/></svg>`;
 // le mouvement, joué deux fois à l'arrivée sur l'exercice puis au repos (rien ne tourne en boucle pendant une heure)
 function sxAnim(def){ return def._sxa || (def._sxa = exoAnimSVG(def).replace(/repeatCount="indefinite"/g, 'repeatCount="2"')); }
@@ -836,7 +871,8 @@ function renderFocusCard(idx, ex, def){
     const tIdx = restTarget(restState.exoIdx, restState.arrived), tEx = tIdx>=0 ? S.draft.exos[tIdx] : null;
     const next = tEx && tEx.sets.find(s=>!s.done), nDef = tEx && EXO_MAP[tEx.exoId];
     const src = restState.src, srcEx = src && S.draft.exos[src.exi];
-    const saved = srcEx && srcEx.sets[src.si] ? `<button class="sx-saved" data-a="editDoneSets" data-exi="${src.exi}" aria-label="Série ${src.si+1} enregistrée. Corriger ou annuler"><span class="sx-okdot">${SX_CHECK}</span><span>Série ${src.si+1} enregistrée</span></button>` : "";
+    const fresh = savedFresh; savedFresh = false;
+    const saved = srcEx && srcEx.sets[src.si] ? `<button class="sx-saved${fresh ? " fresh" : ""}" data-a="editDoneSets" data-exi="${src.exi}" aria-label="Série ${src.si+1} enregistrée. Corriger ou annuler"><span class="sx-okdot">${SX_CHECK}</span><span>Série ${src.si+1} enregistrée</span></button>` : "";
     const upcoming = next ? `<div class="sx-upcard fc-next"><span class="sx-uptile">${exoPicto(nDef)}</span><div class="grow"><b>${esc(nDef.n)}</b>
         <small>À suivre · série ${tEx.sets.indexOf(next)+1} · ${sxSetVal(nDef, next)}${loadableTypeOf(nDef) && loadableTypeOf(nDef)!=="bands" && next.weight ? " kg" : isTimed(nDef) ? "" : " reps"}</small></div></div>` : "";
     return `<div class="focus-card resting sx-card sx-rest r-${regionOf(def)} ${animClass}">
@@ -1094,7 +1130,7 @@ function endSwipe(e){
   if(go){
     s.card.classList.add(go>0?"fly-l":"fly-r");
     sfx("swipe");
-    if(navigator.vibrate) try{ navigator.vibrate(8); }catch(err){}
+    haptic(8);
     setTimeout(()=>{ liveFocusIdx = (liveFocusIdx+go+n)%n; focusAnimDir = go>0?"r":"l"; refreshFocusRegion(); }, 170);
   } else {
     s.card.classList.add("snap");
@@ -1324,7 +1360,7 @@ Object.assign(ACT, {
     if(i>=0) picker.selected.splice(i,1); else picker.selected.push(d.id);
     // un exercice peut figurer deux fois (favoris ou habituels, et sa catégorie) : toutes ses lignes suivent
     qsa(`.pick-row[data-id="${d.id}"]`).forEach(row=>{ row.classList.toggle("on", i<0); const c = qs(".pick-check",row); if(c) c.innerHTML = i<0 ? icon("check") : ""; });
-    if(navigator.vibrate) try{ navigator.vibrate(6); }catch(e){}
+    haptic(6);
     refreshPickerFooter();
   },
   pickerMuscle(d){
@@ -1541,7 +1577,6 @@ Object.assign(ACT, {
     const si = ex.sets.findIndex(s=>!s.done);
     if(si<0) return;
     const st = ex.sets[si];
-    haptic(12);
     let [bx,by] = centerOf(".validate");
     if(bx==null){ [bx,by] = centerOf(".focus-card .sx-sets"); if(bx==null){ bx = innerWidth/2; by = innerHeight/2; } }
     // les textes flottants partent de la série validée (sa case), sinon de la rangée des séries
@@ -1566,8 +1601,8 @@ Object.assign(ACT, {
     st.done = true;
     { const fin = ex.sets.every(s=>s.done), rest = S.draft.exos.some(e=>e.sets.some(s=>!s.done));
       sfx(!rest ? "complete" : st.pr ? "pr" : fin ? "exo" : "set"); }
-    if(navigator.vibrate) try{ navigator.vibrate(18); }catch(e){}
-    justDone = { exi, si };
+    haptic(st.pr ? [25, 40, 25] : 18); // la coche franche : une vibration nette (deux pour un record)
+    justDone = { exi, si }; savedFresh = true;
     stripBump = exi;
     if(!st.pr && !beat && !exoFinished0(ex)) floatText(fx0, fy0, `Série ${si+1}`, "", "check");
     const exoFinished = !ex.sets.some(s=>!s.done);
