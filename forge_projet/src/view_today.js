@@ -350,7 +350,7 @@ function weekCardHTML(){
     <div class="wk-card">
       <button class="wk-asc" data-a="openAscent" aria-label="Mon ascension : ${esc(D.n)}, ${fmtNum(a.alt)} mètres. ${esc(where)}">
         ${ascStripHTML(a)}
-        <span class="wk-row"><span class="wk-n"><b>${esc(D.n)}</b><small${promise || (a.comeback && !doneToday) ? ' class="wk-hot"' : ""}>${esc(where)}</small></span><span class="wk-alt"${climb ? ` data-count="${Math.round(a.alt)}" data-from="${Math.round(wkSeen.alt)}" data-unit="m"` : ""}>${fmtNum(climb ? wkSeen.alt : a.alt)} m</span><span class="chev">${icon("chev")}</span></span>
+        <span class="wk-row"><span class="wk-n"><b>${esc(D.n)}</b><small${promise || (a.comeback && !doneToday) ? ' class="wk-hot"' : ""}>${esc(where)}</small></span><span class="wk-alt"${climb ? ` data-climb="${Math.round(a.alt)}" data-from="${Math.round(wkSeen.alt)}" data-unit="m"` : ""}>${fmtNum(climb ? wkSeen.alt : a.alt)} m</span><span class="chev">${icon("chev")}</span></span>
         <span class="wk-bar"><i style="width:${((climb ? wkSeen.pct : pct)*100).toFixed(1)}%"${climb ? ` data-to="${(pct*100).toFixed(1)}"${via ? ` data-via="1"` : ""}` : ""}></i></span>
       </button>
       <div class="wk-week">
@@ -368,6 +368,7 @@ function wkClimb(el){
     if(!bar.isConnected) return;
     wkSeen = now;
     const to = bar.dataset.to+"%";
+    alt.dataset.count = alt.dataset.climb; // le défilement ne part que maintenant (pas au rendu, sous la fin de séance)
     if(reducedMotion()){ bar.style.width = to; animateCounts(alt.parentElement); return; }
     bar.classList.add("climb"); alt.classList.add("climb"); animateCounts(alt.parentElement);
     sfx("ascClimb", .9);
@@ -381,7 +382,7 @@ function wkClimb(el){
   // la carte doit être réellement vue : onglet Aujourd'hui, rien par-dessus (fin de séance), app au premier plan
   const wait = ()=>{
     if(!bar.isConnected) return;
-    if(Date.now()-t0>300000){ wkSeen = now; bar.style.width = bar.dataset.to+"%"; return; }
+    if(Date.now()-t0>300000){ wkSeen = now; bar.style.width = bar.dataset.to+"%"; alt.textContent = fmtNum(+alt.dataset.climb)+" m"; return; }
     if(currentTab!=="today" || document.hidden || qs("#overlay.open") || (S.draft && S.draft.startedAt)){ setTimeout(wait, 400); return; }
     if(!window.IntersectionObserver){ setTimeout(go, 350); return; }
     const io = new IntersectionObserver(es=>{ if(es.some(x=>x.isIntersecting)){ io.disconnect(); setTimeout(go, 350); } }, { threshold:.6 });
