@@ -422,13 +422,58 @@ function ascCarnetHTML(a){
 }
 
 // ---------- vignettes : pastille d'accueil, carte de Progrès, profil ----------
-function ascPillHTML(){
-  const a = ascent(), D = ASC_DATA[a.key], pct = Math.round(Math.max(0, Math.min(1, a.done))*100);
-  return `<button class="spill asc-pill" data-a="openAscent" aria-label="Mon ascension : ${esc(D.n)}, ${fmtNum(a.alt)} mètres sur ${fmtNum(D.top)}">
-      <span class="sp-v"><b data-count="${Math.round(a.alt)}">${fmtNum(a.alt)}</b><i>m</i></span>
-      <span class="sp-l">${esc(a.wait ? "au sommet" : D.n)}</span>
-      <span class="spg"><i style="width:${pct}%"></i></span>
-    </button>`;
+// ---------- la montagne en bandeau (carte « Cette semaine » de l'accueil) ----------
+// La vraie scène, sans voie ni grimpeur, recadrée autour du sommet. Les scènes pèsent ~700 Ko : elles se chargent
+// après l'affichage, l'image est alors calculée une fois (JPEG ~30 Ko) et gardée pour les lancements suivants ;
+// en attendant, la silhouette de la montagne.
+const ASC_STRIP_KEY = STORAGE_KEY+".strip"; // effacée avec le reste à la réinitialisation
+let ascStripMem = null;
+function ascStripId(k){ return k+":"+(ascDark() ? "n" : "d")+":1"; }
+function ascStripCached(id){
+  if(ascStripMem && ascStripMem.id===id) return ascStripMem.url;
+  try{ const o = JSON.parse(localStorage.getItem(ASC_STRIP_KEY)||"null"); if(o && o.id===id && /^data:image\//.test(o.url)){ ascStripMem = o; return o.url; } }catch(e){}
+  return null;
+}
+function ascStripHTML(a){
+  const id = ascStripId(a.key), url = ascStripCached(id);
+  if(!url && S.meta.onboarded) setTimeout(ascStripHydrate, 0);
+  return `<span class="wk-scene" data-strip="${id}">${url ? `<img src="${url}" alt="">` : `<span class="wk-ph">${ascSkySVG(a.key, "wk-sil", true)}</span>`}</span>`;
+}
+function ascStripSVG(k){
+  const sc = ASC_SCENES[k], D = ASC_DATA[k], night = ascDark(), mode = night ? "night" : "day", P = ASC_PAL[D.pal][mode], W = sc.W;
+  const fills = Array.from({ length:27 }, (_,i)=>`.ak${i}{fill:${ascClassColor(D.pal, mode, i)}}`).join("");
+  const h = 264, y0 = Math.round(Math.max(0, Math.min(sc.H-h, sc.summit[1]-104)));
+  const ox = W*.8, oy = Math.max(y0+60, sc.H*.3);
+  const orb = night ? `<circle cx="${ox}" cy="${oy}" r="22" fill="#EEF2FA"/><circle cx="${ox+9}" cy="${oy-6}" r="20" fill="${P.sky[0]}" opacity=".9"/>` : `<circle cx="${ox}" cy="${oy}" r="110" fill="url(#sg)"/><circle cx="${ox}" cy="${oy}" r="28" fill="#FFF6DD"/>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 ${y0} ${W} ${h}" width="${W}" height="${h}" preserveAspectRatio="xMidYMid slice"><defs>
+    <linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.sky[0]}"/><stop offset="1" stop-color="${P.sky[1]}"/></linearGradient>
+    <radialGradient id="sg"><stop offset="0" stop-color="rgba(255,224,160,.6)"/><stop offset="1" stop-color="rgba(255,224,160,0)"/></radialGradient>
+    <clipPath id="ld">${sc.land.map(d=>`<path d="${d}"/>`).join("")}</clipPath></defs><style>${fills}</style>
+    <rect y="${y0}" width="${W}" height="${h}" fill="url(#sk)"/>${orb}
+    <g clip-path="url(#ld)">${sc.paths.map(([c, d])=>`<path class="ak${c}" d="${d}"/>`).join("")}</g>
+    <g transform="translate(${sc.summit[0]} ${sc.summit[1]})"><line x1="0" y1="0" x2="0" y2="-40" stroke="${night || D.pal==="hima" ? "#F4F6FA" : "#0F1B28"}" stroke-width="3" stroke-linecap="round"/><path d="M0 -40h26l-6 8 6 8H0Z" fill="#BC5736"/></g></svg>`;
+}
+let ascStripBusy = "";
+function ascStripHydrate(){
+  const host = qs("#v-today .wk-scene"); if(!host || host.querySelector("img")) return;
+  const id = host.dataset.strip, k = id.split(":")[0]; if(ascStripBusy===id) return; ascStripBusy = id;
+  const show = url=>{ const h = qs(`#v-today .wk-scene[data-strip="${id}"]`); if(!h || h.querySelector("img")) return;
+    h.insertAdjacentHTML("beforeend", `<img class="wk-in" src="${url}" alt="">`); const ph = qs(".wk-ph", h); if(ph) setTimeout(()=>ph.remove(), 500); };
+  const go = ()=>ascLoadScenes().then(()=>{
+    if(!window.ASC_SCENES || !ASC_SCENES[k]) return;
+    const blob = URL.createObjectURL(new Blob([ascStripSVG(k)], { type:"image/svg+xml" })), img = new Image();
+    img.onload = ()=>{
+      try{ const c = document.createElement("canvas"); c.width = 780; c.height = 264; c.getContext("2d").drawImage(img, 0, 0, 780, 264);
+        const url = c.toDataURL("image/jpeg", .82); URL.revokeObjectURL(blob); ascStripMem = { id, url };
+        try{ localStorage.setItem(ASC_STRIP_KEY, JSON.stringify(ascStripMem)); }catch(e){}
+        show(url);
+      }catch(e){ show(blob); } // image non exportable : on l'affiche telle quelle, sans la garder
+      ascStripBusy = "";
+    };
+    img.onerror = ()=>{ URL.revokeObjectURL(blob); ascStripBusy = ""; };
+    img.src = blob;
+  }).catch(()=>{ ascStripBusy = ""; });
+  if(window.requestIdleCallback) requestIdleCallback(go, { timeout:2500 }); else setTimeout(go, 400);
 }
 function ascCardHTML(){
   const a = ascent(), D = ASC_DATA[a.key], pct = Math.round(Math.max(0, Math.min(1, a.done))*100);
@@ -885,7 +930,8 @@ function ascCelHTML(sessionId){
   // ce qui vient ensuite : le prochain camp, ou le sommet s'il n'en reste plus
   const nc = e.summit ? null : hi || [D.top, "Sommet", D.top], rest = nc ? nc[0]-e.to : 0;
   return `<button class="cel-asc" data-a="ascFromCel" aria-label="Mon ascension : ${esc(D.n)}, +${fmtNum(e.gain)} mètres">
-    <div class="ca-hd">${ascIc("peak")}<span>${esc(D.n)}<small class="num">${fmtNum(e.to)} m sur ${fmtNum(D.top)} m</small></span><b class="num" data-count="${Math.round(e.gain)}" data-unit="m" data-thin="1" data-pre="+">+${ascM(e.gain)}</b></div>
+    <div class="ca-hd"><span class="ca-t">Mon ascension</span><span class="ca-mt">${esc(D.n)}${icon("chev")}</span></div>
+    <div class="ca-gain"><b class="num" data-count="${Math.round(e.gain)}" data-unit="m" data-thin="1" data-pre="+">+${ascM(e.gain)}</b><span>aujourd'hui · <span class="num">${fmtNum(e.to)} m</span> sur ${fmtNum(D.top)} m</span></div>
     ${e.bonus>.05 || e.back>.05 ? `<div class="ca-chips">${e.back>.05 ? `<div class="ca-bonus back">${ii("repeat")}<span>Retour en force : <b class="num">+${ascM(e.back)}</b></span></div>` : ""}${e.bonus>.05 ? `<div class="ca-bonus">${ii("bolt")}<span>Records et séries battues : <b class="num">+${ascM(e.bonus*e.mul*e.force*e.lapF)}</b></span></div>` : ""}</div>` : ""}
     <div class="ca-trk" id="celTrk" data-from="${x(e.from)}" data-to="${x(e.to)}" aria-hidden="true">
       <div class="ca-line"><i class="ca-fill" style="width:${x(e.from)}%"></i>

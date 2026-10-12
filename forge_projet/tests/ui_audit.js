@@ -33,7 +33,7 @@ const OUT = path.join(OUT_ROOT, process.env.AUDIT_DIR || 'audit_ui'); fs.mkdirSy
   const sheet = async (n, fn, ms = 800) => { try { await page.evaluate(fn); } catch (e) { errors.push(n + ': ' + e.message.split('\n')[0]); return; } await wait(ms); await shot(n); await page.evaluate(() => { try { closeSheet(); } catch (e) {} }); await wait(450); };
 
   await shot('today'); await full('today'); await bottom('today');
-  await page.click('[data-a="todayMode"][data-v="proposal"]').catch(e => errors.push('mode ' + e.message)); await wait(700); await full('today_proposal'); await page.click('[data-a="todayMode"][data-v="custom"]').catch(() => {}); await wait(500);
+  await page.evaluate(() => ACT.todayMode({ v: 'proposal' })).catch(e => errors.push('mode ' + e.message)); await wait(700); await full('today_proposal'); await page.evaluate(() => ACT.todayMode({ v: 'custom' })).catch(() => {}); await wait(500);
   await sheet('picker', () => openPicker({ title: 'Choisir des exercices', multi: true, onDone: () => {} }), 900);
   await sheet('exo_info', () => ACT.showExoInfo({ id: 'dc_haltere' }), 900);
   await page.evaluate(() => switchTab('history')); await wait(600); await shot('history'); await full('history');

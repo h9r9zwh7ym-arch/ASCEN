@@ -9,6 +9,8 @@ let valRoll = {};       // sens du défilement du chiffre modifié (+/−)
 let restReady = false;  // le repos vient de se terminer
 let stripBump = -1; // pastille du bandeau qui « rebondit » après une série validée
 let justDone = null; // {exi, si} : série qui vient d'être validée (animation du point)
+let customEdit = false; // carte du jour : « Modifier » rend la liste éditable (séries, retrait, ajout, enregistrement)
+let heroAll = false;    // carte du jour : « Voir les N exercices » déplié
 
 function fmtDuration(sec){
   if(sec<60) return `${sec} s`;
@@ -30,23 +32,6 @@ function greeting(){
   const h = new Date().getHours(), name = (S.settings.name||"").trim().split(" ")[0];
   const w = h<5 ? "Bonne nuit" : h<12 ? "Bonjour" : h<18 ? "Salut" : "Bonsoir";
   return name ? `${w} ${esc(name)}` : "Aujourd'hui";
-}
-function statPillsHTML(){
-  // résumé de la semaine : trois colonnes de même structure (valeur, libellé, jauge)
-  const goal = S.goals.daysPerWeek||3, done = sessionsThisWeek(), si = streakInfo(), streak = si.n;
-  return `<div class="stat-pills stagger" style="--i:1">
-    <button class="spill ${done>=goal?"full":""}" data-a="tab" data-id="progress" aria-label="${done} séances sur ${goal} cette semaine">
-      <span class="sp-v"><b data-count="${done}">${done}</b><i>/${goal}</i></span>
-      <span class="sp-l">cette semaine</span>
-      <span class="spg"><i style="width:${Math.min(100,Math.round(done/goal*100))}%"></i></span>
-    </button>
-    <button class="spill ${streak>0?"hot":""}" data-a="tab" data-id="progress" aria-label="${streak} semaines d'affilée${si.recent?", joker utilisé":""}">
-      <span class="sp-v"><b data-count="${streak}">${streak}</b><i>sem.</i></span>
-      <span class="sp-l">${si.recent ? "joker utilisé" : "d'affilée"}</span>
-      <span class="spg spg-dots">${[0,1,2,3,4].map(k=>`<i class="${k<Math.min(streak,5)?"on":""}"></i>`).join("")}</span>
-    </button>
-    ${ascPillHTML()}
-  </div>`;
 }
 // ---------- prochain cap (réglage Motivation) ----------
 // Une seule ligne, la plus proche d'être atteinte : on se motive davantage quand l'arrivée est en vue.
@@ -120,11 +105,23 @@ function missedCardHTML(){
       <div class="dl-act"><button class="btn sm" data-a="missCatchUp" data-id="${m.t.id}">La faire aujourd'hui</button><button class="btn tertiary sm" data-a="missSkip" data-iso="${m.iso}" data-id="${m.t.id}">Laisser passer</button></div></div>
   </div>`;
 }
-function heroPicts(ids){
-  const defs = ids.map(id=>EXO_MAP[id]).filter(Boolean);
-  // chaque pictogramme ouvre la fiche de l'exercice ; « +N » mène à la liste complète
-  const more = defs.length>5 ? `<button class="hp-more" data-a="heroShowAll" aria-label="Voir les ${defs.length} exercices">+${defs.length-5}</button>` : "";
-  return `<div class="hero-picts">${defs.slice(0,5).map((d,i)=>`<button class="hp" style="--k:${i}" data-a="showExoInfo" data-id="${d.id}" aria-label="${esc(d.n)} : voir la fiche">${exoPicto(d)}</button>`).join("")}${more}</div>`;
+// dose d'un exercice : « 3 × 8–12 reps », « 3 × 30 s », étirements en secondes
+function tplDose(exoId, sets){
+  const d = EXO_MAP[exoId]; if(!d) return "";
+  if(isStretch(d)) return `${d.repsMin===d.repsMax ? d.repsMin : d.repsMin+"–"+d.repsMax} s${d.uni ? " · chaque côté" : ""}`;
+  return `${sets} × ${d.repsMin===d.repsMax ? d.repsMin : d.repsMin+"–"+d.repsMax}${isTimed(d) ? " s" : " reps"}`;
+}
+function propDose(ex){
+  const def = EXO_MAP[ex.exoId], r = ex.targetReps, rl = r[0]===r[1] ? `${r[0]}` : `${r[0]}–${r[1]}`;
+  return isStretch(def) ? `${rl} s${def.uni ? " · chaque côté" : ""}` : `${ex.targetSets} × ${rl}${isTimed(def) ? " s" : " reps"}${ex.sets[0]&&ex.sets[0].weight?" · "+fmtLoad(def, ex.sets[0].weight):""}`;
+}
+// la liste de la carte du jour : trois exercices, puis « Voir les N exercices » (déplié sur place) ;
+// toucher un exercice ouvre sa fiche
+function heroListHTML(entries){
+  const rows = entries.map((e,i)=>{ const d = EXO_MAP[e.id]; if(!d) return "";
+    return `<button class="hl-row${i>=3?" more":""}" data-a="showExoInfo" data-id="${d.id}" aria-label="${esc(d.n)}, ${esc(e.dose)} : voir la fiche">${exoIcon(d)}<span class="hl-txt"><span class="t">${esc(d.n)}</span><span class="s">${esc(e.dose)}</span></span></button>`; }).join("");
+  const n = entries.length;
+  return `<div class="hero-list${heroAll ? " all" : ""}">${rows}${n>3 ? `<button class="hl-toggle" data-a="heroMore" aria-expanded="${heroAll}">${heroAll ? "Voir moins" : `Voir les ${n} exercices`}</button>` : ""}</div>`;
 }
 // Séance du jour déjà faite : une ligne d'état compacte (le détail est à un toucher)
 function doneCardHTML(){
@@ -152,45 +149,47 @@ function heroHTML(mode, draft){
   if(kind==="compose"){
     const pend = S.custom.pendingDays && S.custom.pendingDays.length;
     return `<div class="hero compose stagger" style="--i:2">
-      <span class="hero-eyebrow">Ma séance</span>
+      <div class="hero-hd"><span class="hero-eyebrow">Ma séance</span></div>
       <span class="hero-title">Compose ta séance</span>
       <span class="hero-sub">${pend ? `Pour le ${pendingDaysLabel()} : choisis tes exercices, puis enregistre-la.` : "Choisis tes exercices : séries, charges et repos sont calculés pour toi."}</span>
-      <button class="hero-go" data-a="customAddOpen"><span class="hg-ico">${icon("plus")}</span>Choisir mes exercices</button>
-      ${appPicksOn() ? `<button class="hero-alt" data-a="todayMode" data-v="proposal"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Ou laisse l'app choisir</button>` : ""}
+      <button class="hero-go" data-a="customAddOpen">Choisir mes exercices</button>
+      ${appPicksOn() ? `<button class="hero-alt" data-a="todayMode" data-v="proposal">Ou laisse l'app choisir</button>` : S.templates.length ? `<button class="hero-alt" data-a="chooseSession">Choisir une autre séance</button>` : ""}
     </div>`;
   }
-  let eyebrow, title, meta, ids, act, extra = "";
+  let eyebrow, title, meta, entries, act, mod = "";
   const planned = plannedTemplate();
   if(kind==="planned"){
     eyebrow = "Prévu aujourd'hui"; title = esc(planned.n);
-    ids = planned.exos.map(e=>e.exoId);
+    entries = planned.exos.map(e=>({ id:e.exoId, dose:tplDose(e.exoId, e.sets) }));
     meta = [nb(planned.exos.length, "exercice"), nb(planned.exos.reduce((a,e)=>a+e.sets,0), "série"), `≈ ${tplMinutes(planned)} min`];
     act = `data-a="startTemplate" data-id="${planned.id}"`;
+    mod = `<button class="hero-mod" data-a="tplOpenEditor" data-id="${planned.id}">Modifier</button>`;
   } else if(kind==="custom"){
     eyebrow = planned && S.custom.tplId===planned.id ? "Prévu aujourd'hui" : "Prête à démarrer";
     title = esc(S.custom.name||"Ma séance");
-    ids = S.custom.exos.map(e=>e.exoId);
-    meta = [nb(ids.length, "exercice"), nb(S.custom.exos.reduce((a,e)=>a+e.sets,0), "série"), `≈ ${estimateMinutes({ exos:S.custom.exos.map(e=>({ exoId:e.exoId, sets:new Array(e.sets).fill(0) })) })} min`];
+    entries = S.custom.exos.map(e=>({ id:e.exoId, dose:tplDose(e.exoId, e.sets) }));
+    meta = [nb(entries.length, "exercice"), nb(S.custom.exos.reduce((a,e)=>a+e.sets,0), "série"), `≈ ${estimateMinutes({ exos:S.custom.exos.map(e=>({ exoId:e.exoId, sets:new Array(e.sets).fill(0) })) })} min`];
     act = `data-a="startCustom"`;
+    mod = `<button class="hero-mod${customEdit ? " on" : ""}" data-a="heroEdit" aria-pressed="${customEdit}">${customEdit ? "OK" : "Modifier"}</button>`;
   } else {
     const t = SESSION_TYPE_MAP[draft.type]||SESSION_TYPES[0], rt = SESSION_TYPE_MAP[draft.resolvedType];
     const lastS = S.sessions[S.sessions.length-1], away = lastS ? daysBetween(lastS.date, todayISO()) : 0;
     eyebrow = draft.source==="imported" ? "Programme importé" : away>=10 ? "Bon retour !" : "Proposée par l'app";
     title = draft.source==="imported" ? esc(draft.name||"Séance importée") : draft.type==="auto" && rt ? rt.n : t.n;
-    ids = draft.exos.map(e=>e.exoId);
-    meta = [nb(ids.length, "exercice"), nb(draft.exos.reduce((t,e)=>t+e.sets.length,0), "série"), `≈ ${estimateMinutes(draft)} min`];
+    entries = draft.exos.map(ex=>({ id:ex.exoId, dose:propDose(ex) }));
+    meta = [nb(mainExos(draft).length, "exercice"), nb(mainExos(draft).reduce((t,e)=>t+e.sets.length,0), "série"), `≈ ${estimateMinutes(draft)} min`];
     act = `data-a="startSession"`;
-    extra = `<span class="hero-alts"><button class="hero-alt" data-a="startExpress">${icon("timer")} Express · 10 min</button><button class="hero-alt" data-a="todayMode" data-v="custom">${icon("edit")} Composer moi-même</button></span>`;
+    mod = `<button class="hero-mod${propAdjust ? " on" : ""}" data-a="propAdjust" aria-expanded="${propAdjust}">${propAdjust ? "OK" : "Ajuster"}</button>`;
   }
-  // une séance prête (prévue ou composée) : la seule autre voie est de laisser l'app choisir
-  if(kind!=="proposal" && appPicksOn()) extra = `<button class="hero-alt" data-a="todayMode" data-v="proposal"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Ou laisse l'app choisir</button>`;
+  // en édition (Modifier, Ajuster), la liste éditable suit la carte : la carte ne la répète pas
+  const editing = (kind==="custom" && customEdit) || (kind==="proposal" && (propAdjust || !draft.exos.length));
   return `<div class="hero ${kind} stagger" style="--i:2">
-    <span class="hero-eyebrow">${eyebrow}</span>
+    <div class="hero-hd"><span class="hero-eyebrow">${eyebrow}</span>${mod}</div>
     <span class="hero-title">${title}</span>
     <span class="hero-meta">${meta.map(m=>`<span>${m}</span>`).join("")}</span>
-    ${heroPicts(ids)}
-    <button class="hero-go" ${act}><span class="hg-ico">${icon("play")}</span>C'est parti</button>
-    ${extra}
+    ${editing ? "" : heroListHTML(entries)}
+    <button class="hero-go" ${act}>Commencer</button>
+    <button class="hero-alt" data-a="chooseSession">Choisir une autre séance</button>
   </div>`;
 }
 // Un seul rappel à la fois, en bas de l'accueil : la sauvegarde d'abord, sinon le Rewind du mois écoulé
@@ -209,12 +208,13 @@ function renderTodayPreview(draft){
       <div class="eyebrow">${fmtDate(todayISO(),"long")}</div>
       <h1 class="lt">${greeting()}</h1>
     </div>
-    ${statPillsHTML()}
     ${deloadCardHTML() || missedCardHTML() || nextGoalHTML()}
     ${sessionsToday().length ? thenNowCardHTML() : ""}
     ${whyReminder() && !sessionsToday().length ? `<div class="why-card stagger" style="--i:2"><div class="why-k">${ii("flame")} Ton pourquoi</div><div class="why-t">« ${esc(whyReminder())} »</div><div class="why-s">${daysSinceLastSession()} jours sans séance : une seule suffit pour reprendre le fil.</div><button class="btn secondary sm why-go" data-a="startExpress">${icon("timer")} Séance express · 10 min</button></div>` : ""}
     ${sessionsToday().length ? doneCardHTML() : ""}
     <div class="seg-pane ${mode} ${paneDir?"from-"+paneDir:""}">${sessionsToday().length ? "" : heroHTML(mode, draft)}${mode==="custom" ? customPaneHTML() : proposalPaneHTML(draft)}</div>
+    ${weekCardHTML()}
+    ${templatesHTML()}
     ${sessionsToday().length ? "" : thenNowCardHTML()}
     ${nudgeHTML()}
   </div>`;
@@ -268,9 +268,8 @@ function proposalPaneHTML(draft){
       <div class="empty-state"><span class="em">${sfIcon("toolbox","gray","lg")}</span>Pas d'exercice disponible pour ce type de séance avec ton matériel.<br>Essaie un autre type, ou complète ton matériel dans l'onglet Profil.</div>`;
   }
   // exercices de force, puis (si le réglage est actif) le bloc d'étirements dans sa propre section
-  const doseOf = ex=>{ const def = EXO_MAP[ex.exoId];
-    return isStretch(def) ? `${repsLabel(ex.targetReps)} s${def.uni ? " · chaque côté" : ""}` : `${ex.targetSets} × ${repsLabel(ex.targetReps)}${ex.sets[0]&&ex.sets[0].weight?" · "+fmtLoad(def, ex.sets[0].weight):""}`; };
-  const rowOf = (ex,i)=>exoRowHTML(EXO_MAP[ex.exoId], doseOf(ex), i, adj ?
+  if(heroShown && !adj) return hero; // « Autre proposition » est dans « Choisir une autre séance »
+  const rowOf = (ex,i)=>exoRowHTML(EXO_MAP[ex.exoId], propDose(ex), i, adj ?
     `<button class="icon-btn" aria-label="Remplacer" data-a="swapExoOpen" data-idx="${i}">${icon("swap")}</button>
      <button class="icon-btn" aria-label="Retirer" data-a="removeExo" data-idx="${i}">${icon("close")}</button>` : "");
   const main = mainExos(draft), mainN = main.length;
@@ -289,7 +288,7 @@ function proposalPaneHTML(draft){
     <div class="btnrow">
       ${adj ? `<button class="btn tertiary sm" data-a="addExoOpen">${icon("plus")} Ajouter</button>` : ""}
       ${imported?"":`<button class="btn tertiary sm" data-a="regenSession">${icon("repeat")} Autre proposition</button>`}
-      <button class="btn tertiary sm ${adj?"strong":""}" data-a="propAdjust" aria-expanded="${adj}">${adj ? `${icon("check")} Terminé` : `${icon("edit")} Ajuster`}</button>
+      ${heroShown ? "" : `<button class="btn tertiary sm ${adj?"strong":""}" data-a="propAdjust" aria-expanded="${adj}">${adj ? `${icon("check")} Terminé` : `${icon("edit")} Ajuster`}</button>`}
     </div>
     ${heroShown ? "" : `<div class="btnrow"><button class="btn big" data-a="startSession">${icon("play")} Commencer cette séance</button></div>`}`;
 }
@@ -332,38 +331,40 @@ function sectionHead(title, key, extra){
   </button>`;
 }
 
-// repliée (classe « mini » sur .week-plan), la semaine garde ses 7 jours (couleur, fait, manqué) :
-// seuls les noms et le bas se resserrent, en CSS, sans reconstruire la liste
-function weekPlanBodyHTML(){
-  const today = todayISO(), monday = weekKey(today);
-  const doneDays = new Set(S.sessions.map(s=>s.date));
-  return `<div class="wp-days">${JOURS_COURTS.map((j,i)=>{
-      const iso = addDaysISO(monday,i);
-      const t = S.templates.find(t=>(t.days||[]).includes(i));
-      // « manquée » seulement si la séance était déjà prévue ce jour-là (pas pour un programme créé après)
-      const done = doneDays.has(iso), missed = t && iso<today && !done && (!t.since || iso>=t.since);
-      return `<button class="wp-day ${iso===today?"today":""} ${t?"has r-"+tplRegion(t):""} ${done?"done":""} ${missed?"missed":""}" style="--k:${i}" data-a="planDay" data-d="${i}" aria-label="${JOURS[(i+1)%7]} ${parseISO(iso).getDate()} : ${t?esc(t.n):"rien de prévu"}${done?", séance faite":""}${missed?", séance manquée":""}">
-        <span class="wp-j">${j}</span><span class="wp-n">${parseISO(iso).getDate()}</span>
-        <span class="wp-t">${t?esc(t.n):"—"}</span>
-        ${done?`<span class="wp-check">${icon("check")}</span>`:missed?`<span class="wp-miss" title="Séance prévue non faite"></span>`:""}
-      </button>`;
-    }).join("")}</div>
-    <div class="wp-extra"><div>
-    <div class="wp-foot">${S.templates.length ? "Touche un jour pour y placer une séance enregistrée." : "Enregistre une séance, puis place-la sur un ou plusieurs jours."}</div>
-    ${S.templates.length && appPicksOn() ? `<button class="tpl-add wp-wizard" data-a="weekWizard"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg><span>Programme de la semaine</span></button>` : ""}
-    </div></div>`;
+// ---------- « Cette semaine » : la montagne et la semaine dans une seule carte ----------
+// En haut, la vraie scène de la montagne (view_ascent.js : chargée après l'affichage, puis gardée en image),
+// où l'on en est et la jauge vers le prochain camp (toucher = Mon ascension). En bas, les 7 jours : fait, prévu,
+// manqué (toucher un jour = y placer une séance enregistrée), le compte de la semaine et la série.
+function weekCardHTML(){
+  const a = ascent(), D = ASC_DATA[a.key], nc = a.nextCamp;
+  const c0 = nc ? (a.camps[a.passed-1] || [a.start])[0] : 0;
+  const pct = a.wait ? Math.min(1, a.series/Math.max(1, a.nextReq)) : nc ? Math.max(0, Math.min(1, (a.alt-c0)/Math.max(1, nc[0]-c0))) : Math.max(0, Math.min(1, a.done));
+  const where = !S.sessions.length ? "Ta première séance te met en route" : a.wait ? `Au sommet ${ascDu(a.key)}` : nc ? `${nc[1]} dans ${ascM(nc[0]-a.alt)}` : `Sommet dans ${ascM(D.top-a.alt)}`;
+  const goal = S.goals.daysPerWeek||3, done = sessionsThisWeek(), si = streakInfo(), streak = si.n;
+  const today = todayISO(), monday = weekKey(today), doneDays = new Set(S.sessions.map(s=>s.date));
+  const days = JOURS_COURTS.map((j,i)=>{
+    const iso = addDaysISO(monday,i), t = S.templates.find(t=>(t.days||[]).includes(i)), isToday = iso===today;
+    // « manquée » seulement si la séance était déjà prévue ce jour-là (pas pour un programme créé après)
+    const ok = doneDays.has(iso), missed = t && iso<today && !ok && (!t.since || iso>=t.since);
+    const st = ok ? "done" : missed ? "missed" : t ? "plan" : "";
+    return `<button class="wk-day ${st}${isToday ? " today" : ""}" data-a="planDay" data-d="${i}" aria-label="${JOURS[(i+1)%7]} ${parseISO(iso).getDate()}${isToday ? ", aujourd'hui" : ""} : ${t ? esc(t.n) : "rien de prévu"}${ok ? ", séance faite" : ""}${missed ? ", séance manquée" : ""}">
+      <span class="wk-j" aria-hidden="true">${j.charAt(0)}</span><span class="wk-o">${ok ? icon("check") : ""}</span></button>`;
+  }).join("");
+  return `<section class="wk-sec stagger" style="--i:4">
+    <h2 class="sh wk-h"><span class="sh-t">Cette semaine</span></h2>
+    <div class="wk-card">
+      <button class="wk-asc" data-a="openAscent" aria-label="Mon ascension : ${esc(D.n)}, ${fmtNum(a.alt)} mètres. ${esc(where)}">
+        ${ascStripHTML(a)}
+        <span class="wk-row"><span class="wk-n"><b>${esc(D.n)}</b><small>${esc(where)}</small></span><span class="wk-alt">${fmtNum(a.alt)} m</span><span class="chev">${icon("chev")}</span></span>
+        <span class="wk-bar"><i style="width:${(pct*100).toFixed(1)}%"></i></span>
+      </button>
+      <div class="wk-week">
+        <div class="wk-days">${days}</div>
+        <div class="wk-foot"><span class="wk-cnt"><b>${done}</b> sur ${goal} séances</span>${streak>0 ? `<span>${nb(streak, "semaine")} d'affilée${si.recent ? " · joker utilisé" : ""}</span>` : ""}</div>
+      </div>
+    </div>
+  </section>`;
 }
-function weekPlanHTML(){
-  const nxt = nextPlanned();
-  const open = uiState().planOpen;
-  const todayT = plannedTemplate();
-  const summary = todayT ? `Aujourd'hui : ${esc(todayT.n)}` : nxt ? `Prochaine : ${JOURS_COURTS[weekdayIdx(nxt.iso)].toLowerCase()}. · ${esc(nxt.t.n)}` : (S.templates.length ? "Aucun jour planifié" : "");
-  return `<div class="week-plan ${open?"":"mini"} stagger" style="--i:6">
-    ${sectionHead(`${icon("clock")}<span>Ma semaine</span>`, "planOpen", summary?`<span class="sec-sum">${summary}</span>`:"")}
-    <div class="clp">${weekPlanBodyHTML()}</div>
-  </div>`;
-}
-
 function tplCardHTML(t, i){
   const open = openTpls.has(t.id), region = tplRegion(t), loaded = S.custom.tplId===t.id;
   const sets = t.exos.reduce((a,e)=>a+e.sets,0);
@@ -414,6 +415,7 @@ function templatesHTML(){
       ${sectionHead(`${icon("bookmark")}<span>Mes séances</span><span class="sec-count">${S.templates.length}</span>`, "tplOpen")}
     </div>
     <div class="clp">${tplListHTML()}</div>
+    ${appPicksOn() ? `<button class="tpl-add wp-wizard" data-a="weekWizard"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg><span>Programme de la semaine</span></button>` : ""}
   </div>`;
 }
 
@@ -432,8 +434,9 @@ function saveRowHTML(){
 }
 function customPaneHTML(){
   const c = S.custom.exos;
-  const tail = weekPlanHTML() + templatesHTML();
+  const tail = "";
   const done = sessionsToday().length;
+  if(c.length && !done && !customEdit) return "";
   if(!c.length){
     // la carte « Compose ta séance » est la carte principale ; ici seulement si une autre l'occupe
     if(!done && !plannedTemplate()) return tail;
@@ -463,7 +466,7 @@ function customPaneHTML(){
   const inHero = !done;
   const sets = c.reduce((t,e)=>t+e.sets,0);
   const preview = { exos: c.map(e=>({ exoId:e.exoId, sets:new Array(e.sets).fill(0) })) };
-  return `<h2 class="sh"><span class="sh-t">${inHero ? "Exercices" : esc(S.custom.name||"Ma séance")}</span><span class="sh-actions">${reorderMode?`<button class="more danger" data-a="customClear">Vider</button><button class="more strong" data-a="toggleReorder">OK</button>`:`<button class="more" data-a="toggleReorder">Modifier</button>`}</span></h2>
+  return `<h2 class="sh"><span class="sh-t">${inHero ? "Exercices" : esc(S.custom.name||"Ma séance")}</span><span class="sh-actions">${reorderMode?`<button class="more danger" data-a="customClear">Vider</button><button class="more strong" data-a="toggleReorder">OK</button>`:`<button class="more" data-a="toggleReorder">${inHero ? "Réordonner" : "Modifier"}</button>`}</span></h2>
     ${inHero ? "" : `<div class="sh-sub">${nb(c.length, "exercice")} · ${nb(sets, "série")} · ≈ ${estimateMinutes(preview)} min</div>`}
     <div class="group builder ${reorderMode?"reorder":""}">${rows}</div>
     <div class="btnrow">
@@ -1121,7 +1124,7 @@ Object.assign(ACT, {
   // suit et le nouveau contenu arrive du côté choisi, le reste de l'accueil ne bouge pas
   todayMode(d){
     if(S.settings.todayTab===d.v) return;
-    S.settings.todayTab = d.v; propAdjust = false; save();
+    S.settings.todayTab = d.v; propAdjust = false; heroAll = false; customEdit = false; save();
     const v = qs("#v-today"), pane = v && qs(".seg-pane", v), draft = getOrCreateDraft();
     if(!pane || draft.startedAt){ renderView("today"); return; }
     sfx("swipe");
@@ -1132,6 +1135,33 @@ Object.assign(ACT, {
       try{ pane.animate([{ opacity:0, transform:`translateX(${dx}px)` }, { opacity:1, transform:"none" }], { duration:320, easing:"cubic-bezier(.2,.8,.2,1)" }); }catch(e){}
     }
     v._ver = DATA_VER; // l'écran reste à jour : pas de reconstruction au prochain passage
+  },
+  // carte du jour : « Voir les N exercices » déplié sur place, sans reconstruire
+  heroMore(d, el){
+    heroAll = !heroAll; const list = el && el.closest(".hero-list"); if(!list){ changed(); return; }
+    const n = qsa(".hl-row", list).length;
+    morphHeight(list, ()=>{ list.classList.toggle("all", heroAll); el.textContent = heroAll ? "Voir moins" : `Voir les ${n} exercices`; el.setAttribute("aria-expanded", heroAll); });
+    sfx(heroAll ? "open" : "close");
+  },
+  // « Modifier » : la liste devient éditable (séries, retrait, ajout, enregistrement) ; « OK » la referme
+  heroEdit(){
+    customEdit = !customEdit; reorderMode = false; sfx(customEdit ? "open" : "close");
+    const v = qs("#v-today"), pane = v && qs(".seg-pane", v), draft = getOrCreateDraft();
+    if(!pane || draft.startedAt){ renderView("today"); return; }
+    morphHeight(pane, ()=>{ pane.innerHTML = `${sessionsToday().length ? "" : heroHTML("custom", draft)}${customPaneHTML()}`; });
+    v._ver = DATA_VER;
+  },
+  // « Choisir une autre séance » : tes séances enregistrées, la séance de l'app, l'express, composer
+  chooseSession(){
+    const cur = S.settings.todayTab==="proposal" ? null : S.custom.exos.length ? S.custom.tplId : (plannedTemplate()||{}).id;
+    const prop = S.settings.todayTab==="proposal", draft = getOrCreateDraft();
+    const acts = prop && draft.source!=="imported" ? [{ t:"Autre proposition de l'app", run:()=>ACT.regenSession() }] : [];
+    S.templates.filter(t=>t.id!==cur).forEach(t=>acts.push({ t:t.n, run:()=>ACT.loadTemplate({ id:t.id }) }));
+    if(appPicksOn() && S.settings.todayTab!=="proposal") acts.push({ t:"Laisse l'app choisir", run:()=>ACT.todayMode({ v:"proposal" }) });
+    if(S.settings.todayTab==="proposal" && (S.custom.exos.length || plannedTemplate())) acts.push({ t:"Revenir à ma séance", run:()=>ACT.todayMode({ v:"custom" }) });
+    acts.push({ t:"Séance express · 10 min", run:()=>ACT.startExpress() });
+    acts.push({ t:"Composer moi-même", run:()=>{ customEdit = false; S.custom = { exos:[] }; S.settings.todayTab = "custom"; save(); renderTodaySoft(); ACT.customAddOpen(); } });
+    actionSheet({ label:"Choisir une autre séance", msg:"Choisir une autre séance", actions:acts });
   },
   // la séance proposée : réglages fins dépliés ou repliés, sur place
   propAdjust(){
@@ -1155,6 +1185,7 @@ Object.assign(ACT, {
     const add = suggestComplement(have, Math.min(n, 4));
     if(!add.length){ toast("Aucun exercice disponible avec ton matériel"); return; }
     add.forEach(e=>{ S.custom.exos.push({ exoId:e.id, sets:e.sets, app:true }); freshIds.add(e.id); });
+    customEdit = true; // la liste composée reste éditable jusqu'à « OK »
     save(); changed();
     // ce que l'app a visé : les muscles en retard sur la semaine, s'il y en a
     const t = stimTargets(add);
@@ -1184,7 +1215,7 @@ Object.assign(ACT, {
   },
   toggleSection(d, el){
     const u = uiState(); u[d.k] = !u[d.k]; save();
-    const sec = el && el.closest(".tpl-section, .week-plan");
+    const sec = el && el.closest(".tpl-section");
     if(!sec) return changed();
     setSectionOpen(sec, el, u[d.k]);
   },
@@ -1320,6 +1351,7 @@ Object.assign(ACT, {
   customAddOpen(){
     openPicker({ title:"Choisir des exercices", multi:true, exclude:new Set(S.custom.exos.map(e=>e.exoId)), onDone:ids=>{
       ids.forEach(id=>{ S.custom.exos.push({ exoId:id, sets:EXO_MAP[id].sets }); freshIds.add(id); });
+      customEdit = true; // en train de composer : la liste reste éditable (séries, retrait, Compléter) jusqu'à « OK »
       closeSheet(); save(); changed();
     }});
   },
@@ -1380,7 +1412,7 @@ Object.assign(ACT, {
   missSkip(d){ S.meta.missSkip = d.iso+":"+d.id; save(); changed(); },
   loadTemplate(d){
     const t = S.templates.find(x=>x.id===d.id); if(!t) return;
-    S.custom = { exos: clone(t.exos), name: t.n, tplId: t.id };
+    S.custom = { exos: clone(t.exos), name: t.n, tplId: t.id }; S.settings.todayTab = "custom"; customEdit = false; heroAll = false;
     t.exos.forEach(e=>freshIds.add(e.exoId));
     closeSheet(); save(); renderTodaySoft(); toast(`« ${t.n} » chargée dans Ma séance`);
     setTimeout(()=>{ const g = qs("#v-today .group.builder"); if(g) g.scrollIntoView({ behavior:"smooth", block:"center" }); }, 260);

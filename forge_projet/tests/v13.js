@@ -41,7 +41,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await shot('05_filled');
 
   // sélecteur par matériel
-  await page.click('[data-a="customAddOpen"]');
+  await page.evaluate(() => ACT.customAddOpen());
   await wait(450);
   log('Picker groups:', await page.$$eval('.pick-h', e => e.map(x => x.textContent.replace(/\s+/g, ' ').trim())));
   await page.click('[data-a="pickerCat"][data-v="dumbbells"]');

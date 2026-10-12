@@ -18,15 +18,15 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.goto('file://' + path.resolve(process.argv[2]));
   await page.waitForSelector('#splash', { state: 'detached', timeout: 6000 }); await page.evaluate(() => { if (document.querySelector('.ob-body')) ACT.obSkip(); persistNow(); }).catch(() => {}); await page.waitForTimeout(350);
   log('Exercises:', await page.evaluate(() => EXOS.length), 'all pictos:', await page.evaluate(() => EXOS.every(e => PICTO_OF[e.id])));
-  await page.click('[data-a="todayMode"][data-v="proposal"]'); await wait(400);
+  await page.evaluate(() => ACT.todayMode({ v: 'proposal' })); await wait(400);
   log('Audio ctx:', await page.evaluate(() => AC ? AC.state : 'none'));
   // chaque son se joue sans erreur
   log('All sounds ok:', await page.evaluate(() => { try { Object.keys(SFX).forEach(k => sfx(k, true)); return Object.keys(SFX).length; } catch (e) { return 'ERR ' + e.message; } }));
   await shot('01_proposal');
   log('Primary buttons in view:', await page.$$eval('#v-today .btn.big, #v-today .hero-go', e => e.length));
   // picker nouvelles entrées
-  await page.click('[data-a="todayMode"][data-v="custom"]'); await wait(400);
-  await page.click('[data-a="customAddOpen"]'); await wait(400);
+  await page.evaluate(() => ACT.todayMode({ v: 'custom' })); await wait(400);
+  await page.evaluate(() => ACT.customAddOpen()); await wait(400);
   await page.fill('#pickerSearch', 'pallof'); await wait(200);
   log('Search pallof (needs bands -> maybe 0):', await page.$$eval('.pick-row', e => e.length));
   await page.fill('#pickerSearch', 'archer'); await wait(200);

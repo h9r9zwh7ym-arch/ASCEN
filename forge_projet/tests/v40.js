@@ -67,13 +67,13 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await shot('02_home_compose');
   await page.evaluate(() => { S.custom = { exos: [{ exoId: 'pompes', sets: 3 }, { exoId: 'squat_pdc', sets: 3 }], name: 'Ma routine' }; save(); renderView('today'); }); await wait(400);
   const filled = await page.evaluate(() => ({ title: document.querySelector('.hero-title').textContent, go: document.querySelector('.hero .hero-go').dataset.a,
-    starts: document.querySelectorAll('#v-today [data-a="startCustom"]').length, list: document.querySelectorAll('.group.builder .row').length, head: document.querySelector('#v-today .sh-t').textContent }));
+    starts: document.querySelectorAll('#v-today [data-a="startCustom"]').length, list: document.querySelectorAll('.hero-list .hl-row').length, head: document.querySelector('#v-today .sh-t').textContent }));
   log('Home (filled):', JSON.stringify(filled));
   if (filled.title !== 'Ma routine' || filled.go !== 'startCustom' || filled.starts !== 1 || filled.list !== 2) fail('« Ma séance » en carte principale, un seul « C\'est parti »');
   await shot('03_home_custom');
-  await page.click('[data-a="todayMode"][data-v="proposal"]'); await wait(500);
+  await page.evaluate(() => ACT.todayMode({ v: 'proposal' })); await wait(500);
   await page.evaluate(() => { if (!document.querySelector('.type-chip')) ACT.propAdjust(); }); await wait(500);   // types : derrière « Ajuster »
-  const prop = await page.evaluate(() => ({ hero: document.querySelector('#v-today .hero').className, express: !!document.querySelector('.hero [data-a="startExpress"]'),
+  const prop = await page.evaluate(() => ({ hero: document.querySelector('#v-today .hero').className, express: !!document.querySelector('.hero [data-a="chooseSession"]'),   // l'express est dans « Choisir une autre séance »
     starts: document.querySelectorAll('#v-today [data-a="startSession"]').length, chips: [...document.querySelectorAll('.type-chip')].map(b => b.dataset.v) }));
   log('Proposal:', JSON.stringify(prop));
   if (!/proposal/.test(prop.hero) || !prop.express || prop.starts !== 1 || !prop.chips.includes('pilates')) fail('proposition de l\'app en second choix');
@@ -106,8 +106,8 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   log('Pilates session:', JSON.stringify(pil));
   if (pil.n < 4 || pil.bad.length || !pil.muscles.includes('abdos') || !pil.muscles.includes('fessiers')) fail('séance Pilates & sol');
   // recherche : « pilates » trouve les exercices de Pilates
-  await page.click('[data-a="todayMode"][data-v="custom"]'); await wait(400);
-  await page.click('[data-a="customAddOpen"]'); await wait(500);
+  await page.evaluate(() => ACT.todayMode({ v: 'custom' })); await wait(400);
+  await page.evaluate(() => ACT.customAddOpen()); await wait(500);
   await page.fill('#pickerSearch', 'pilates'); await wait(300);
   const found = await page.$$eval('#overlay .pick-row, #overlay .row', r => r.map(x => x.textContent));
   log('Search "pilates":', found.length); if (found.length < 6 || !found.some(t => /Cent/.test(t))) fail('recherche « pilates »');

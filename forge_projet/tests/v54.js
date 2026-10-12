@@ -31,22 +31,30 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     const els = [...R.querySelectorAll('button, [data-a], input, select, [role=button], a[href]')].filter(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden' && !e.closest('[aria-hidden=true]') && !e.closest('[hidden]'); });
     return els.filter(e => !els.some(p => p !== e && p.contains(e))).length; }, root);
 
-  // 1. accueil : pas de bascule, une action forte et une alternative, un seul message
+  // 1. accueil : pas de bascule, une action forte et une alternative (« Choisir une autre séance »), un seul message
   const home = await page.evaluate(() => ({ seg: !!document.querySelector('#v-today .home-seg, #v-today [data-seg="today"]'), go: document.querySelectorAll('#v-today .hero .hero-go').length,
     alt: [...document.querySelectorAll('#v-today .hero .hero-alt')].map(b => b.textContent.trim()), msgs: document.querySelectorAll('#v-today .dl-card, #v-today .goal-line').length }));
   const cHome = await choices();
   log('Home:', JSON.stringify(home), 'choices', cHome);
-  if (home.seg || home.go !== 1 || home.alt.length !== 1 || !/laisse l'app choisir/.test(home.alt[0]) || home.msgs > 1) fail('accueil : un seul chemin, un seul message');
+  if (home.seg || home.go !== 1 || home.alt.length !== 1 || !/Choisir une autre séance|laisse l'app choisir/.test(home.alt[0]) || home.msgs > 1) fail('accueil : un seul chemin, un seul message');
   if (cHome > 24) fail('accueil : trop de choix (' + cHome + ')');
   await shot('01_home');
-  // 2. la séance de l'app : liste simple, réglages fins derrière « Ajuster », retour à « Composer moi-même »
-  await page.click('#v-today [data-a="todayMode"][data-v="proposal"]'); await wait(800);
+  // 2. la séance de l'app (via « Choisir une autre séance ») : la liste dans la carte, réglages fins derrière « Ajuster »,
+  // « Autre proposition », l'express et le retour à sa séance dans « Choisir une autre séance »
+  // (sans séance prête, la carte « Compose ta séance » mène directement à la séance de l'app)
+  if (await page.$('#v-today .hero [data-a="chooseSession"]')) {
+    await page.click('#v-today .hero [data-a="chooseSession"]'); await wait(450);
+    const sheet = await page.evaluate(() => [...document.querySelectorAll('.action-sheet .as-btn')].map(b => b.textContent.trim()));
+    log('Choose sheet:', JSON.stringify(sheet));
+    if (!sheet.includes("Laisse l'app choisir") || !sheet.some(t => /Séance express/.test(t)) || !sheet.includes('Composer moi-même') || sheet[sheet.length - 1] !== 'Annuler') fail('« Choisir une autre séance » : app, express, composer, annuler');
+    await page.click(".action-sheet .as-btn >> text=Laisse l'app choisir"); await wait(900);
+  } else { await page.click('#v-today .hero [data-a="todayMode"][data-v="proposal"]'); await wait(900); }
   const prop = await page.evaluate(() => ({ mode: S.settings.todayTab, alts: [...document.querySelectorAll('#v-today .hero .hero-alt')].map(b => b.textContent.trim()),
     chips: document.querySelectorAll('#v-today .type-chip').length, swap: document.querySelectorAll('#v-today [data-a="swapExoOpen"]').length, count: !!document.querySelector('#v-today [data-a="draftCount"]'),
-    rows: document.querySelectorAll('#v-today .prop-list .row').length, adj: !!document.querySelector('#v-today [data-a="propAdjust"]'), regen: !!document.querySelector('#v-today [data-a="regenSession"]') }));
+    rows: document.querySelectorAll('#v-today .hero-list .hl-row').length, adj: !!document.querySelector('#v-today [data-a="propAdjust"]'), regen: !!document.querySelector('#v-today .hero [data-a="chooseSession"]') }));
   const cProp = await choices();
   log('Proposal:', JSON.stringify(prop), 'choices', cProp);
-  if (prop.mode !== 'proposal' || prop.alts.length !== 2 || !prop.alts.some(t => /Express/.test(t)) || !prop.alts.some(t => /Composer moi-même/.test(t))) fail('séance de l\'app : C\'est parti, Express, Composer moi-même');
+  if (prop.mode !== 'proposal' || prop.alts.length !== 1 || !/Choisir une autre séance/.test(prop.alts[0])) fail('séance de l\'app : Commencer et « Choisir une autre séance »');
   if (prop.chips || prop.swap || prop.count || !(prop.rows >= 3) || !prop.adj || !prop.regen) fail('séance de l\'app : liste simple, Ajuster et Autre proposition');
   if (cProp > 30) fail('séance de l\'app : trop de choix (' + cProp + ')');
   await page.evaluate(() => document.querySelector('#v-today [data-a="propAdjust"]').scrollIntoView({ block: 'center' })); await page.click('#v-today [data-a="propAdjust"]'); await wait(700);
@@ -57,7 +65,12 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   log('Adjust:', JSON.stringify(adj), adj2);
   if (adj.chips < 5 || adj.swap < 3 || !adj.count || !adj.add || adj2) fail('Ajuster : types, nombre, remplacer, ajouter ; puis replié');
   await page.evaluate(() => document.querySelector('#v-today').scrollTop = 0); await wait(200);
-  await page.click('#v-today [data-a="todayMode"][data-v="custom"]'); await wait(800);
+  await page.click('#v-today .hero [data-a="chooseSession"]'); await wait(450);
+  const sheet2 = await page.evaluate(() => [...document.querySelectorAll('.action-sheet .as-btn')].map(b => b.textContent.trim()));
+  log('Choose sheet (app):', JSON.stringify(sheet2));
+  if (!sheet2.includes('Autre proposition de l\'app') || !sheet2.some(t => /Séance express/.test(t)) || !(sheet2.includes('Revenir à ma séance') || sheet2.includes('Composer moi-même'))) fail('« Choisir une autre séance » depuis la séance de l\'app : autre proposition, express, revenir');
+  await page.click(sheet2.includes('Revenir à ma séance') ? '.action-sheet .as-btn >> text=Revenir à ma séance' : '.action-sheet .as-btn >> text=Composer moi-même'); await wait(900);
+  await page.evaluate(() => closeSheet()); await wait(500);
   if ((await page.evaluate(() => S.settings.todayTab)) !== 'custom' || !(await page.$('#v-today .hero.compose, #v-today .hero.planned, #v-today .hero.custom'))) fail('retour à Ma séance');
 
   // 3. Progrès › Objectifs : les trophées derrière une ligne

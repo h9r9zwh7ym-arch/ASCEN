@@ -1102,8 +1102,33 @@ a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est
     Tout est fait : « Terminer » enregistre directement.
 - Le mouvement animé (`exoAnimSVG`) est d'une seule couleur partout (`--tint-ink`), sans la zone de muscle foncée.
 
-À venir : accueil, fin de séance (tonnage, record seulement s'il y en a un, ascension), Progrès, Historique,
-Profil › Apparence (vignettes de thème), animations signatures. Les sections plus haut qui parlent de Geist, Barlow, `#F4F3F1` ou `#FF6B3D` décrivent l'état
+- **Étape 4, accueil, fin de séance, ascension** :
+  - **accueil** (`renderTodayPreview`) : l'en-tête, un seul message (semaine allégée, séance manquée ou prochain
+    cap), la **carte du jour** blanche, la carte **« Cette semaine »**, « Mes séances », puis « Toi, il y a 3 mois »
+    et le rappel de sauvegarde. Les pastilles du haut (semaine, série, altitude) ont disparu : tout est dans la
+    carte de la semaine ;
+  - carte du jour (`heroHTML`) : étiquette, titre, durée, la liste des exercices (3, puis « Voir les N exercices »
+    sur place, `heroListHTML` / `heroMore`), « Commencer », « Choisir une autre séance » (`chooseSession` : feuille
+    d'actions avec tes séances enregistrées, « Laisse l'app choisir » ou « Revenir à ma séance », « Autre
+    proposition de l'app », « Séance express », « Composer moi-même »). En haut à droite : « Modifier »
+    (`heroEdit` : la liste éditable d'avant — séries, retrait, ajout, Compléter, Enregistrer —, « Réordonner »),
+    l'éditeur de la séance prévue, ou « Ajuster » pour la séance de l'app (`propAdjust`) ;
+  - « Cette semaine » (`weekCardHTML`) : la **vraie scène** de la montagne (`ascStripHTML` dans view_ascent.js :
+    scène sans voie ni grimpeur, calculée une fois en JPEG ~30 Ko au premier affichage puis gardée dans
+    `forge.v1.strip`, silhouette en attendant ; jour ou nuit selon le thème), le prochain camp, la jauge, les
+    7 jours (fait, prévu, manqué ; toucher = placer une séance enregistrée, `planDay`), le compte et la série.
+    Toucher le haut ouvre Mon ascension. L'ancienne section « Ma semaine » est remplacée ; « Programme de la
+    semaine » reste dans « Mes séances » (liste groupée blanche) ;
+  - **fin de séance** (`showCelebration`, trophies.js) : page pleine claire (`openModal(…, "cel-page")`) :
+    « Séance terminée / Bien joué, prénom », la ligne résumé, la carte **Tonnage** (`celTonnageHTML` : valeur,
+    écart avec la même séance la dernière fois, courbe des 8 dernières séances comparables qui se dessine ;
+    répétitions si pas de charge), **« Nouveau record »** seulement s'il y en a un (`celRecordHTML` : le plus
+    grand saut, avec l'ancien meilleur), les objectifs et défis atteints, la carte **Mon ascension** (`ascCelHTML`
+    restylée), les trophées gagnés, puis « Voir les N progrès de la séance » (tout replié), la note, « Garder
+    cette séance ? » et « Terminé » collé en bas ;
+  - Mon ascension : inchangé sur le fond (déjà conforme à la maquette), tailles de l'en-tête alignées.
+
+À venir : Progrès, Historique, Profil › Apparence (vignettes de thème), animations signatures. Les sections plus haut qui parlent de Geist, Barlow, `#F4F3F1` ou `#FF6B3D` décrivent l'état
 d'avant cette refonte.
 
 ## 10. Cahier des charges d'origine (résumé)

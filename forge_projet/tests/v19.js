@@ -21,7 +21,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await shot('01_empty');
   // --- séance 1 : composée dans Ma séance, puis enregistrée ; l'éditeur complet la modifie
   log('No create button in Mes séances:', !(await page.$('[data-a="tplNew"], .sec-add')));
-  await page.evaluate(() => { S.custom = { exos: [{ exoId: 'pompes', sets: 3 }] }; save(); renderView('today'); });
+  await page.evaluate(() => { S.custom = { exos: [{ exoId: 'pompes', sets: 3 }] }; customEdit = true; save(); renderView('today'); });   // « Modifier » ouvert
   await page.click('.save-row'); await wait(450);
   log('Save sheet:', await page.textContent('.te-hd .t'), '| no exercise editing:', !(await page.$('[data-a="tplEdAdd"]')));
   await page.fill('#tplEdName', 'Haut A'); await page.click('#tplEdSaveBtn'); await wait(700);
@@ -80,7 +80,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await shot('06_home');
   log('Hero next line:', await page.$eval('.hero-next', e => e.textContent).catch(() => 'none'));
   // jour du planning avec séance
-  await page.click('.wp-day.has'); await wait(400);
+  await page.click('.wk-day.plan, .wk-day.done, .wk-day.missed'); await wait(400);
   log('Plan day current card:', !!(await page.$('.pd-cur')));
   await shot('07_planday');
   await page.click('.pd-cur [data-a="tplOpenEditor"]'); await wait(400);

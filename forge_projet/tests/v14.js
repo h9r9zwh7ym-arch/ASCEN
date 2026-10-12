@@ -57,6 +57,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await tap('.tpl-card2 >> nth=1 >> .tc-head'); await wait(300);
   await tap('.tpl-card2.open [data-a="templateMenu"] >> nth=0'); await wait(350);
   await tap('.center-modal [data-a="loadTemplate"]'); await wait(700);
+  await page.evaluate(() => { if (!customEdit) ACT.heroEdit(); }); await wait(500); // la liste éditable est derrière « Modifier »
   log('Builder rows:', await page.$$eval('.group.builder .row', e => e.length), 'region legend:', await page.$$eval('.region-legend span', e => e.map(x => x.textContent).join(', ')));
   const first = await page.$eval('.group.builder .row .t', e => e.textContent);
   await tap('[data-a="toggleReorder"]'); await wait(300);
@@ -70,7 +71,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await tap('.sheet-hd [data-a="closesheet"]'); await wait(350);
 
   // sélecteur : info puis retour sans perdre la sélection
-  await tap('[data-a="customAddOpen"]'); await wait(450);
+  await page.evaluate(() => ACT.customAddOpen()); await wait(450);
   await tap('.pick-row >> nth=0 >> .row-main'); await wait(150);
   await tap('.pick-row >> nth=2 >> .info-btn'); await wait(450);
   await shot('06_picker_info');
@@ -92,7 +93,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   // planning : composer une séance pour un jour
   await page.evaluate(() => { S.draft = null; save(); renderViewAnimated('today'); });
   await wait(400);
-  await tap('.wp-day >> nth=5'); await wait(400);
+  await tap('.wk-day >> nth=5'); await wait(400);
   await tap('[data-a="planNew"]'); await wait(700);
   await page.evaluate(() => { S.custom.exos = [{ exoId: 'pompes', sets: 3 }]; save(); renderView('today'); }); await wait(300);
   await tap('.save-row'); await wait(600);

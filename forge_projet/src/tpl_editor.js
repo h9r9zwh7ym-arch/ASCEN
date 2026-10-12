@@ -211,7 +211,7 @@ Object.assign(ACT, {
     made.forEach((id,k)=>{ const c = qs(`#v-today .tpl-card2[data-id="${id}"]`); if(!c) return;
       c.style.setProperty("--k", k); c.classList.add("pop-in"); setTimeout(()=>c.classList.remove("pop-in"), 1200); });
     toast(`${made.length} séances créées et placées dans ta semaine`, "sparkle");
-    setTimeout(()=>{ const w = qs("#v-today .week-plan"); if(w) w.scrollIntoView({ behavior:"smooth", block:"center" }); }, 420);
+    setTimeout(()=>{ const w = qs("#v-today .wk-card"); if(w) w.scrollIntoView({ behavior:"smooth", block:"center" }); }, 420);
   },
   pickerCancel(){ const p = picker; if(p && p.onCancel) p.onCancel(); else closeSheet(); },
 });

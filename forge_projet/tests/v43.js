@@ -84,11 +84,11 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   log('Prefs first section:', pr); if (!/^Favoris/.test(pr)) fail('Mes exercices : favoris en tête');
   await page.evaluate(() => closeSheet()); await wait(400);
 
-  // 6. accueil : « Ma semaine » d'abord, le programme de la semaine dedans ; séance : pas de note en double
-  const home = await page.evaluate(() => { const heads = [...document.querySelectorAll('#v-today .sec-h span')].map(e => e.textContent.trim()).filter(Boolean);
-    return { heads, wizardIn: !!document.querySelector('.week-plan [data-a="weekWizard"]') }; });
+  // 6. accueil : « Cette semaine » (la semaine et la montagne) puis « Mes séances », le programme de la semaine dedans ; séance : pas de note en double
+  const home = await page.evaluate(() => { const heads = [...document.querySelectorAll('#v-today .wk-h, #v-today .tpl-section .sec-h > span:first-child')].map(e => e.textContent.trim()).filter(Boolean);
+    return { heads, wizardIn: !!document.querySelector('.tpl-section [data-a="weekWizard"]') }; });
   log('Home sections:', JSON.stringify(home));
-  if (home.heads.indexOf('Ma semaine') < 0 || home.heads.indexOf('Ma semaine') > home.heads.indexOf('Mes séances') || !home.wizardIn) fail('accueil : Ma semaine puis Mes séances');
+  if (home.heads[0] !== 'Cette semaine' || !/^Mes séances/.test(home.heads[1] || '') || !home.wizardIn) fail('accueil : Cette semaine puis Mes séances');
   const notes = await page.evaluate(() => [{ note: 'Objectif du jour : une répétition de plus par série que la dernière fois.' }, { note: 'Objectif : +1 répétition par série par rapport à la dernière fois.' }, { note: 'Objectif : +5 s par rapport à la dernière fois.' }, { note: 'Reprise après 30 jours : charge un peu allégée.' }].map(noteIsBeat));
   log('Duplicate notes hidden:', JSON.stringify(notes)); if (notes.join() !== 'true,true,true,false') fail('note de progression en double');
   await page.evaluate(() => { S.custom = { exos: [{ exoId: 'pompes_diamant', sets: 2 }] }; ACT.startCustom(); }); await wait(4400);

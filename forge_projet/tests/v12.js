@@ -47,10 +47,10 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await wait(350);
 
   // --- Ma séance ---
-  await page.click('[data-a="todayMode"][data-v="custom"]');
+  await page.evaluate(() => ACT.todayMode({ v: 'custom' }));
   await wait(450);
   await shot('03_custom_empty');
-  await page.click('[data-a="customAddOpen"]');
+  await page.evaluate(() => ACT.customAddOpen());
   await wait(400);
   await page.fill('#pickerSearch', 'fente');
   await wait(200);

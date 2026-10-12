@@ -67,8 +67,8 @@ const APP = 'file://' + path.resolve(process.argv[2]);
 
   // 4. séance express
   await page.evaluate(() => { S.settings.todayTab = 'proposal'; renderView('today'); }); await wait(300);
-  const hasBtn = await page.evaluate(() => !!document.querySelector('.hero [data-a="startExpress"]'));
-  await page.click('.hero [data-a="startExpress"]'); await wait(4500); await page.evaluate(() => { const l = document.querySelector('#launch'); if (l) l.click(); }); await wait(500);
+  const hasBtn = await page.evaluate(() => !!document.querySelector('.hero [data-a="chooseSession"]'));   // l'express est dans « Choisir une autre séance »
+  await page.click('.hero [data-a="chooseSession"]'); await wait(450); await page.click('.action-sheet .as-btn >> text=Séance express'); await wait(4500); await page.evaluate(() => { const l = document.querySelector('#launch'); if (l) l.click(); }); await wait(500);
   const ex = await page.evaluate(() => ({ n: S.draft.exos.length, sets: S.draft.exos.map(e => e.sets.length), name: S.draft.name, express: S.draft.express, live: !!S.draft.startedAt, uniq: new Set(S.draft.exos.map(e => e.exoId)).size }));
   await page.evaluate(() => ACT.validateSet({ exi: '0' })); await wait(300);
   const exRest = await page.evaluate(() => restState && restState.totalSec);

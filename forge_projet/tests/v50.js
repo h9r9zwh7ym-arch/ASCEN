@@ -92,10 +92,10 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     for (let n = 10; n >= 1; n--) for (const d of [0, 2, 4]) ss.push({ id: 'h' + n + d, date: addDaysISO(W0, -7 * n + d), durationSec: 2700, exos: ['dc_haltere', 'squat_gobelet', 'rowing_haltere'].map(id => ({ exoId: id, sets: [1, 2, 3, 4, 5].map(() => ({ reps: 10, weight: 12 + Math.floor((14 - n) / 5), done: true })) })) });
     S.sessions = ss; S.goals.daysPerWeek = 3; S.ascent = { pauses: [], seen: null, descSeen: '', intro: 0 }; save(); renderView('today'); });
   await wait(500);
-  const home = await page.evaluate(() => { const p = document.querySelector('#v-today .asc-pill'), a = ascent();
+  const home = await page.evaluate(() => { const p = document.querySelector('#v-today .wk-asc'), a = ascent();   // la carte « Cette semaine » remplace la pastille
     return { pill: !!p, act: p && p.dataset.a, txt: p ? p.textContent.replace(/\s+/g, ' ').trim() : '', key: a.key, alt: Math.round(a.alt), summits: a.summits.length, niv: /niv\./.test(document.querySelector('#v-today').textContent) }; });
   log('Home:', JSON.stringify(home));
-  if (!home.pill || home.act !== 'openAscent' || !(home.txt.includes(ASC_NAME(home.key)) || /au sommet/.test(home.txt)) || !/\d m /.test(home.txt + ' ') && !/\dm/.test(home.txt.replace(/\s/g, '')) || home.niv) fail('pastille d\'accueil : altitude et montagne, plus de niveau');
+  if (!home.pill || home.act !== 'openAscent' || !(home.txt.includes(ASC_NAME(home.key)) || /au sommet/.test(home.txt)) || !/\d m /.test(home.txt + ' ') && !/\dm/.test(home.txt.replace(/\s/g, '')) || home.niv) fail('carte « Cette semaine » : altitude et montagne, plus de niveau');
   await shot('01_home');
   function ASC_NAME(k) { return { moleson: 'Moléson', pilatus: 'Pilatus', titlis: 'Titlis', eiger: 'Eiger' }[k] || ''; }
   // Progrès › Objectifs et profil

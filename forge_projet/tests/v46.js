@@ -36,11 +36,11 @@ const APP = 'file://' + path.resolve(process.argv[2]);
 
   // 2. Ma séance ↔ séance de l'app (liens de la carte principale) : seul le bloc de la séance change, sans cascade de tout l'écran
   const before = await page.evaluate(() => { window.__head = document.querySelector('#v-today .home-head'); window.__seg = null; return document.querySelector('#v-today .seg-pane').className; });
-  await page.click('[data-a="todayMode"][data-v="proposal"]'); await wait(80);
+  await page.evaluate(() => ACT.todayMode({ v: 'proposal' })); await wait(80);
   const mid = await page.evaluate(() => ({ same: document.querySelector('#v-today .home-head') === window.__head && !document.querySelector('#v-today .home-seg'), enter: document.querySelector('#v-today').classList.contains('enter'),
     pane: document.querySelector('#v-today .seg-pane').className, start: !!document.querySelector('#v-today .seg-pane [data-a="startSession"]'), on: S.settings.todayTab }));
   await wait(500); await shot('01_proposal');
-  await page.click('[data-a="todayMode"][data-v="custom"]'); await wait(500);
+  await page.evaluate(() => ACT.todayMode({ v: 'custom' })); await wait(500);
   const back = await page.evaluate(() => ({ same: document.querySelector('#v-today .home-head') === window.__head, pane: document.querySelector('#v-today .seg-pane').className }));
   log('Mode switch:', before, '→', JSON.stringify(mid), '→', JSON.stringify(back));
   if (!mid.same || mid.enter || !/proposal/.test(mid.pane) || !mid.start || mid.on !== 'proposal' || !back.same || !/custom/.test(back.pane)) fail('bascule sans reconstruire l\'accueil');

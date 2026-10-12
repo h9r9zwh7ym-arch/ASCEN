@@ -81,14 +81,14 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   if (!first.pin || !first.n || back.pin || backN || again) fail('graphiques de Progrès dessinés une fois par sous-onglet');
   await wait(400);
 
-  // 5. accueil : « Autre proposition » n'anime que le bloc de la séance (pas de cascade de tout l'écran)
+  // 5. accueil : « Autre proposition » (dans « Choisir une autre séance ») n'anime que le bloc de la séance (pas de cascade de tout l'écran)
   await page.click('.tabbtn[data-id="today"]'); await wait(500);
   await page.evaluate(() => { S.settings.todayTab = 'proposal'; save(); renderView('today'); }); await wait(300);
   const regen = await page.evaluate(() => { const seen = new Set(document.getAnimations()); ACT.regenSession();
     const v = document.querySelector('#v-today'), news = document.getAnimations().filter(a => !seen.has(a));
     return { enter: v.classList.contains('enter'), pane: news.some(a => a.effect.target.classList && a.effect.target.classList.contains('seg-pane')),
       spin: news.some(a => a.effect.target.closest && a.effect.target.closest('[data-a="regenSession"]')), cascade: news.filter(a => a.animationName === 'fadeUp').length }; });
-  log('Regen:', JSON.stringify(regen)); if (regen.enter || !regen.pane || !regen.spin || regen.cascade > 1) fail('nouvelle proposition sans cascade de l\'écran');
+  log('Regen:', JSON.stringify(regen)); if (regen.enter || !regen.pane || regen.cascade > 1) fail('nouvelle proposition sans cascade de l\'écran');
   await wait(700);
 
   // 6. séance terminée : sa ligne s'éclaire à l'arrivée dans l'historique

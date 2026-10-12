@@ -45,7 +45,7 @@ const OUT = path.join(OUT_ROOT, 'v31'); fs.mkdirSync(OUT, { recursive: true });
   const noModal = !(await page.$('[data-a="tplEdDiscard"]')); const still = await page.evaluate(() => S.templates.length + ':' + S.custom.exos.length);
   log('Cancel save sheet: no modal', noModal, '| templates:exos', still); if (!noModal || still !== '1:1') fail('ne pas enregistrer : rien ne change');
   // 4. planning : « Composer une séance pour le … » passe par Ma séance, jour retenu
-  await page.evaluate(() => { S.custom = { exos: [] }; save(); renderView('today'); const b = document.querySelector('.wp-day[data-d="5"]'); b.scrollIntoView({ block: 'center' }); b.click(); }); await wait(500);
+  await page.evaluate(() => { S.custom = { exos: [] }; save(); renderView('today'); const b = document.querySelector('.wk-day[data-d="5"]'); b.scrollIntoView({ block: 'center' }); b.click(); }); await wait(500);
   const planBtn = await page.textContent('[data-a="planNew"]'); log('Plan day button:', planBtn.trim());
   await page.click('[data-a="planNew"]'); await wait(700);
   const pend = await page.evaluate(() => ({ days: S.custom.pendingDays, tab: S.settings.todayTab, n: S.custom.exos.length }));

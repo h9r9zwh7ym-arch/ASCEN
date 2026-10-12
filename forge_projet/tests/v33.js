@@ -21,11 +21,11 @@ const OUT = path.join(OUT_ROOT, 'v33'); fs.mkdirSync(OUT, { recursive: true });
   // (loi de Hick : « L'app choisit » ouvre la séance de l'app, une seule voie au lieu de deux)
   log('Compose card buttons:', card.join(',')); if (card.join() !== 'customAddOpen,todayMode') fail('un seul « L\'app choisit »');
   await shot('01_compose');
-  // 2. carte du jour : chaque pictogramme ouvre la fiche de l'exercice
+  // 2. carte du jour : chaque exercice de la liste ouvre sa fiche
   await page.evaluate(() => { S.settings.todayTab = 'proposal'; getOrCreateDraft(); renderView('today'); document.getElementById('v-today').scrollTop = 0; }); await wait(500);
-  const hp = await page.$$eval('.hero-picts .hp', b => b.map(x => x.dataset.a + ':' + x.dataset.id));
+  const hp = await page.$$eval('.hero-list .hl-row', b => b.map(x => x.dataset.a + ':' + x.dataset.id));
   log('Hero pictos:', hp.length, hp[0]); if (!hp.length || !hp.every(x => x.startsWith('showExoInfo:'))) fail('pictogrammes touchables');
-  await page.click('.hero-picts .hp >> nth=0'); await wait(600);
+  await page.click('.hero-list .hl-row >> nth=0'); await wait(600);
   const sheet = await page.$eval('#overlay .sheet .t, #overlay .sheet-hd .t', e => e.textContent).catch(() => null);
   log('Sheet after tap:', sheet); if (!/Fiche exercice/.test(sheet || '')) fail('fiche ouverte depuis la carte du jour');
   await shot('02_hero_info'); await page.evaluate(() => closeSheet()); await wait(400);

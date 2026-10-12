@@ -436,55 +436,100 @@ function sessionWins(session){
   }
   return out;
 }
-// Les progrès de la séance : trois temps forts au plus (loi de Hick : peu d'éléments à lire d'un coup),
-// les plus marquants d'abord (records de force, zones atteintes, puis progrès par exercice) ; les autres
-// restent à un toucher (« Voir les N autres »). Ce qui n'est qu'un ressenti (forme du jour) passe en dernier.
-const CEL_MAX = 3;
+// Refonte (fin de séance) : un écran plein, clair, sans liste d'exercices. En haut « Bien joué » et le résumé
+// en une ligne ; la carte Tonnage (valeur, écart avec la même séance la dernière fois, courbe des 8 dernières) ;
+// la carte « Nouveau record » seulement s'il y en a un ; l'ascension ; « Terminé ». Les autres progrès
+// (records de force, zones atteintes, séries battues…) restent à un toucher.
 function celLinesHTML(session){
   const wins = sessionWins(session), L = [];
   wins.filter(w=>!w.soft).forEach(w=>L.push(`<div class="cel-prog cel-win">${ii(w.ic)}<span>${esc(w.t)}</span></div>`));
   if(session.beats) L.push(`<div class="cel-prog cel-beat">${ii("trendUp")}<span>${session.beats>1 ? `${session.beats} séries mieux que la dernière fois` : "1 série mieux que la dernière fois"}</span></div>`);
   sessionProgressLines(session).forEach(t=>L.push(`<div class="cel-prog">${ii("chart")}<span>${esc(t)}</span></div>`));
   wins.filter(w=>w.soft).forEach(w=>L.push(`<div class="cel-prog cel-win soft">${ii(w.ic)}<span>${esc(w.t)}</span></div>`));
-  const st = (h, i)=>h.replace('class="cel-prog', `style="--i:${i}" class="cel-prog`);
-  const top = L.slice(0, CEL_MAX).map(st).join(""), rest = L.slice(CEL_MAX);
-  return top + (rest.length ? `<div class="cel-rest" hidden>${rest.map(st).join("")}</div>
-    <button class="cel-more" data-a="celMore">Voir ${rest.length>1 ? `les ${rest.length} autres progrès` : "1 autre progrès"}</button>` : "");
+  if(!L.length) return "";
+  return `<div class="cel-rest" hidden>${L.map((h,i)=>h.replace('class="cel-prog', `style="--i:${i}" class="cel-prog`)).join("")}</div>
+    <button class="cel-more" data-a="celMore">${L.length>1 ? `Voir les ${L.length} progrès de la séance` : "Voir le progrès de la séance"}</button>`;
+}
+// séances comparables : même séance enregistrée, sinon même nom, sinon toutes ; tonnage (ou répétitions sans charge)
+function celSeries(session){
+  const vol = sessionVolume(session)>0, title = sessionTitle(session), generic = /^(Ma séance|Séance)$/.test(title);
+  const same = s=>session.tplId ? s.tplId===session.tplId : !generic ? sessionTitle(s)===title : true;
+  const pts = S.sessions.filter(s=>s.id===session.id || (s.date<=session.date && same(s) && (vol ? sessionVolume(s)>0 : sessionReps(s)>0)))
+    .slice(-8).map(s=>({ id:s.id, date:s.date, v:vol ? Math.round(sessionVolume(s)) : sessionReps(s) }));
+  return { vol, title, generic, pts };
+}
+function celTonnageHTML(session){
+  const { vol, title, generic, pts } = celSeries(session); if(!pts.length) return "";
+  const cur = pts[pts.length-1], prev = pts.length>1 ? pts[pts.length-2] : null;
+  const unit = vol ? "kg" : "reps", val = vol ? fmtNum(cur.v) : String(cur.v);
+  const d = prev && prev.v ? Math.round((cur.v/prev.v-1)*100) : null;
+  const chip = d==null ? "" : `<div class="ct-delta"><span class="ct-chip ${d>0 ? "up" : d<0 ? "down" : ""}">${d>0 ? "+" : d<0 ? "−" : ""}${Math.abs(d)} %</span><span>par rapport au ${fmtDate(prev.date)}</span></div>`;
+  let chart = "";
+  if(pts.length>1){
+    const W = 326, H = 96, P = 5, lo = Math.min(...pts.map(p=>p.v)), hi = Math.max(...pts.map(p=>p.v)), span = Math.max(1, hi-lo);
+    const xy = pts.map((p,i)=>[P+i*(W-2*P)/(pts.length-1), H-10-(p.v-lo)/span*(H-22)]);
+    const path = "M"+xy.map(q=>q[0].toFixed(1)+" "+q[1].toFixed(1)).join("L"), last = xy[xy.length-1];
+    chart = `<svg class="ct-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${vol ? "Tonnage" : "Répétitions"} des ${pts.length} dernières séances : de ${fmtNum(pts[0].v)} ${unit} le ${fmtDate(pts[0].date)} à ${fmtNum(cur.v)} ${unit} aujourd'hui">
+      <path class="ct-line" d="${path}" pathLength="1"/><circle class="ct-dot" cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="5"/></svg>
+      <div class="ct-x"><span>${fmtDate(pts[0].date)}</span><span>Aujourd'hui</span></div>`;
+  }
+  const scope = pts.length>1 ? (generic ? `${pts.length} dernières séances` : `${pts.length} dernières « ${esc(title)} »`) : "";
+  return `<section class="cel-card cel-ton">
+    <div class="ct-hd"><h2>${vol ? "Tonnage" : "Répétitions"}</h2>${scope ? `<span>${scope}</span>` : ""}</div>
+    <div class="ct-v"><b class="num" data-count="${cur.v}">${val}</b><span>${unit}</span></div>
+    ${chip || (pts.length<2 ? `<div class="ct-delta"><span>${generic ? "Ta courbe commence ici" : `Première « ${esc(title)} » : ta courbe commence ici`}</span></div>` : "")}
+    ${chart}
+  </section>`;
+}
+// le meilleur record de la séance (le plus grand saut), ou rien
+function celRecord(session){
+  let best = null;
+  session.exos.forEach(ex=>{ const def = EXO_MAP[ex.exoId]; if(!def || isStretch(def)) return;
+    const prs = ex.sets.filter(st=>st.done && st.pr); if(!prs.length) return;
+    const sc = st=>kgType(def) && st.weight ? estimated1RM(st.weight, st.reps||0) : (st.reps||0);
+    const top = prs.reduce((a,b)=>sc(b)>sc(a) ? b : a);
+    let prev = null;
+    S.sessions.forEach(x=>{ if(x.id===session.id || x.date>session.date) return; const e = x.exos.find(e=>e.exoId===ex.exoId); if(!e) return;
+      e.sets.forEach(st=>{ if(st.done && st.reps>0 && (!prev || sc(st)>sc(prev))) prev = st; }); });
+    const gain = prev && sc(prev) ? sc(top)/sc(prev) : 9;
+    if(!best || gain>best.gain) best = { def, top, prev, gain };
+  });
+  return best;
+}
+function celSetTxt(def, st){ return isTimed(def) ? `${st.reps} s` : kgType(def) && st.weight ? `${st.reps} × ${fmtDec(st.weight)} kg` : `${st.reps} reps`; }
+function celRecordHTML(session){
+  const r = celRecord(session); if(!r) return "";
+  return `<section class="cel-card cel-rec"><span class="cr-ic">${exoPicto(r.def)}</span>
+    <span class="cr-txt"><small>${ii("star")}Nouveau record</small><b>${esc(r.def.n)}</b><span class="num">${celSetTxt(r.def, r.top)}${r.prev ? ` · avant ${celSetTxt(r.def, r.prev)}` : ""}</span></span></section>`;
 }
 function showCelebration(session, ups, hits, won){
-  const vol = Math.round(sessionVolume(session));
   const sets = sessionSetCount(session);
-  const prs = sessionPRCount(session);
-  const reps = sessionReps(session);
   // l'ascension remplace l'XP : altitude gagnée, camps franchis, sommet
   const asc = typeof ascent==="function" ? ascent().log[session.id] : null, summit = asc && asc.summit, moved = !!(asc && (asc.camps.length || asc.summit || asc.started));
+  const name = (S.settings.name||"").trim().split(" ")[0];
   const medalsHTML = ups.length ? `<div class="cel-medals">${ups.map((u,i)=>`<div class="cel-medal" style="--i:${i}">${medalHTML(u.m,u.tier)}<div class="cm-t">${esc(u.m.n)}</div><div class="cm-tier">${tierLabel(u.m, u.tier)}</div></div>`).join("")}</div>` : "";
   openModal(`<div class="cel">
-    <div class="celebrate-ring">${icon("check")}</div>
-    <div class="cel-title">Séance terminée !</div>
-    <div class="cel-stats">
-      <div><div class="n">${fmtDuration(session.durationSec||0)}</div><div class="l">durée</div></div>
-      <div><div class="n" data-count="${sets}">${sets}</div><div class="l">série${sets>=2?"s":""}</div></div>
-      ${vol ? `<div><div class="n" data-count="${vol}" data-unit="kg">${fmtNum(vol)} kg</div><div class="l">soulevés</div></div>`
-            : `<div><div class="n" data-count="${reps}">${reps}</div><div class="l">répétitions</div></div>`}
-    </div>
-    ${prs?`<div class="cel-pr">${ii("bolt")} ${prs} record${prs>1?"s":""} battu${prs>1?"s":""}</div>`:""}
-    ${celLinesHTML(session)}
+    <div class="cel-hd"><div class="cel-k">Séance terminée</div><h1 class="cel-title">Bien joué${name ? `, ${esc(name)}` : " !"}</h1>
+      <div class="cel-sub">${esc(sessionTitle(session))} · ${fmtDuration(session.durationSec||0)} · ${nb(sets, "série")}</div></div>
+    ${celTonnageHTML(session)}
+    ${celRecordHTML(session)}
     ${(hits||[]).map((t,i)=>`<div class="cel-target" style="--i:${i}">${ii("target")} Objectif atteint : ${esc(EXO_MAP[t.exoId].n)}, ${fmtTarget(t.kind, t.value)}</div>`).join("")}
     ${(won||[]).map((c,i)=>`<div class="cel-target cel-chal" style="--i:${(hits||[]).length+i}">${ii("star")} Défi réussi : ${esc(CHAL_MAP[c.id].n)}</div>`).join("")}
     ${typeof ascCelHTML==="function" ? ascCelHTML(session.id) : ""}
     ${medalsHTML}
+    ${celLinesHTML(session)}
     <button class="cel-note-btn" data-a="celNote" data-id="${esc(session.id)}">${icon("edit")} Ajouter une note</button>
     ${typeof lastDoneForSave!=="undefined" && lastDoneForSave ? `<div class="cel-save">
       <div class="cs-t">Garder cette séance ?</div>
       <div class="cs-s">Enregistre-la pour la refaire ou la placer dans ta semaine.</div>
       <button class="btn secondary" data-a="saveDoneSession">${icon("bookmark")} Enregistrer cette séance</button>
     </div>` : ""}
-    <button class="btn" style="margin-top:14px" ${summit ? `data-a="ascCelSummit" data-id="${esc(session.id)}"` : 'data-a="closesheet"'}>${summit ? "Voir le sommet" : "Continuer"}</button>
-  </div>`);
+    <div class="cel-ft"><button class="btn big" ${summit ? `data-a="ascCelSummit" data-id="${esc(session.id)}"` : 'data-a="closesheet"'}>${summit ? "Voir le sommet" : "Terminé"}</button></div>
+  </div>`, "cel-page");
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     if(typeof ascCelAnimate==="function") ascCelAnimate();
     animateCounts(qs(".cel"));
+    const ln = qs(".cel .ct-line"); if(ln) ln.classList.add("draw");
   }));
   setTimeout(()=>confettiBurst(null, innerHeight*0.3, ups.length||moved||(hits&&hits.length) ? 150 : 90), 150);
   setTimeout(()=>sfx(ups.length||moved||(hits&&hits.length) ? "medal" : "exo"), 200);

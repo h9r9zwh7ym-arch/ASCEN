@@ -442,12 +442,13 @@ function openModal(html, cls){
   showOverlay(`<div class="center-modal${cls ? " "+cls : ""}" role="dialog">${html}</div>`, "modal");
 }
 // feuille d'actions iOS (en bas de l'écran) : un message, des actions, et « Continuer » à part
+// une action est { t, a } (action existante) ou { t, run } (fonction, appelée après fermeture)
 function actionSheet({ msg, label, actions, cancel, onYes }){
-  openModal(`<div class="as-group">${msg ? `<div class="as-msg">${msg}</div>` : ""}${actions.map(a=>`<button class="as-btn${a.danger?" danger":""}" data-a="${a.a}">${esc(a.t)}</button>`).join("")}</div>
+  openModal(`<div class="as-group">${msg ? `<div class="as-msg">${msg}</div>` : ""}${actions.map((a,i)=>`<button class="as-btn${a.danger?" danger":""}" data-a="${a.run ? "asRun" : a.a}" data-i="${i}">${esc(a.t)}</button>`).join("")}</div>
     <button class="as-btn as-cancel" data-a="closesheet">${esc(cancel||"Annuler")}</button>`, "action-sheet");
   const ov = qs("#overlay"), m = qs(".center-modal", ov);
   if(m && label) m.setAttribute("aria-label", label);
-  ov._onYes = onYes || null;
+  ov._onYes = onYes || null; ov._asActs = actions;
 }
 // La page elle-même ne doit jamais défiler (#app est fixé, chaque onglet défile seul). Sur iPhone, un geste
 // qui s'échappe d'une feuille qui se ferme pouvait pourtant la décaler : barre d'onglets remontée, haut de
@@ -588,6 +589,7 @@ const ACT = {
   sheetBack(){ if(!sheetBack()) closeSheet(); },
   dismisssheet(){ if(Date.now()>suppressSheetClick) dismissSheet(); },
   confirmYes(){ const fn = qs("#overlay")._onYes; closeSheet(); if(fn) fn(); },
+  asRun(d){ const ov = qs("#overlay"), act = ov._asActs && ov._asActs[+d.i]; closeSheet(); if(act && act.run) act.run(); },
   numOk(){
     const fn = qs("#overlay")._onNum, v = parseFloat((qs("#numInput")||{}).value);
     closeSheet();

@@ -54,7 +54,7 @@ const W = +(process.env.W || 375), DARK = process.env.DARK === '1', wk = process
         if (!vis(el) || el.closest('svg') || el.closest('.confetti') || el.closest('.ripple')) return;
         const r = el.getBoundingClientRect();
         if ((r.right > W + 1 || r.left < -1) && !scroller(el) && !clipped(el)) out.push('HORS ÉCRAN ' + name(el) + ` [${Math.round(r.left)}→${Math.round(r.right)}]`);
-        if (el.matches('button, a, [data-a]') && !el.closest('.wp-day') && (r.height < 28 || r.width < 28) && !scroller(el)) out.push(`PETITE CIBLE ${Math.round(r.width)}×${Math.round(r.height)} ` + name(el) + " " + (el.dataset.a||"") + " in " + (el.parentElement.className||""));
+        if (el.matches('button, a, [data-a]') && !el.closest('.wk-day') && (r.height < 28 || r.width < 28) && !scroller(el)) out.push(`PETITE CIBLE ${Math.round(r.width)}×${Math.round(r.height)} ` + name(el) + " " + (el.dataset.a||"") + " in " + (el.parentElement.className||""));
         // texte coupé sans points de suspension
         if (el.children.length === 0 && el.textContent.trim() && el.scrollWidth > el.clientWidth + 2) { const s = getComputedStyle(el); if (s.textOverflow !== 'ellipsis' && s.overflow !== 'visible') out.push('TEXTE COUPÉ ' + name(el)); }
       });
@@ -68,8 +68,8 @@ const W = +(process.env.W || 375), DARK = process.env.DARK === '1', wk = process
 
   await audit('today_custom');
   await page.evaluate(() => document.querySelector('#v-today').scrollTo(0, 99999)); await audit('today_custom_bottom');
-  await page.click('[data-a="todayMode"][data-v="proposal"]'); await audit('today_proposal');
-  await page.click('[data-a="todayMode"][data-v="custom"]'); await wait(300);
+  await page.evaluate(() => ACT.todayMode({ v: 'proposal' })); await audit('today_proposal');
+  await page.evaluate(() => ACT.todayMode({ v: 'custom' })); await wait(300);
   await act('customAddOpen'); await audit('picker');
   await close();
   await act('showExoInfo', { id: 'squat_bulgare_halteres' }); await audit('info'); await close();
