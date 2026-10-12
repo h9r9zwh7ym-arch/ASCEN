@@ -1197,6 +1197,33 @@ a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est
     séance nommés, autres jours masqués, aujourd'hui annoncé).
   - Test : `tests/v58.js`.
 
+- **Harmonisation des écrans secondaires** (fiches, éditeur et enregistrement de séance, programme de la semaine,
+  jour du planning, premier lancement, feuilles du Profil, Rewind), sans rien retirer :
+  - **Un seul orange** : les régions (poussée, tirage, jambes, gainage) ne colorent plus rien (`.r-push` … pointent
+    sur `--tint` : carte des muscles de la fiche, fond de l'animation, cartes) ; la pastille de couleur des
+    étiquettes de région et des régions de « Ta force » est retirée (le nom suffit). Le jeton `--orange` vaut
+    l'orange de la marque (`--tint-ink`), donc avertissements, records (`.chip.pr`, `.pr-badge`, `.cel-pr`), encadré
+    « Sécurité » et statuts de force passent dans la même teinte ; les favoris aussi (`--fav`, plus de jaune).
+    Statuts de force : orange (surcharge, fatigue…), rouge (désentraînement), vert (productif), gris (maintien,
+    récupération, calibrage). Seul le vert des interrupteurs reste (convention iOS).
+  - **Choix exclusifs en encre** partout (puces, nombres, jours de l'éditeur `.tpl-daypick`) ; les éléments cochés
+    d'une liste (matériel, objectif du premier lancement, exercices choisis) en orange.
+  - **Éditeur de séance** : la barre de couleurs par région devient une ligne lisible « Séries : Poussée 5 · Tirage 3 »
+    (`.te-split`, seulement quand la séance touche au moins deux régions) ; « Supprimer cette séance » et « Supprimer le programme importé » en rouge ; libellés de section
+    alignés sur le texte. Programme de la semaine : plus de barres de couleur.
+  - **Champs de texte** (prénom, « Ton pourquoi », nom de séance, liste des haltères) alignés à gauche en taille
+    normale (`.num-field.txt`) ; les grands chiffres centrés restent pour les nombres (poids du corps, valeurs).
+  - **Bugs corrigés** : au premier lancement, le matériel coché et l'objectif choisi n'avaient aucun état visible
+    (`box-shadow: inset … , var(--shadow)` avec `--shadow:none` rendait la règle invalide ; même cas pour
+    `.tpl-card2.loaded/.open`) ; « Copie de secours » affichait « NaN Mo » (la copie compressée est un
+    `ArrayBuffer` : `byteLength`) ; les étapes d'« Installer ASCEN » étaient coupées (« fais d'abord une
+    sauvegarde » invisible) et le texte d'intro collé au bord.
+  - Semaine allégée : icône et barre dans l'orange de la marque (plus de vert).
+  - **Rewind** : palette de la marque (braise, encre, rouille, pierre, nuit ; l'or reste pour la diapo des
+    trophées), au lieu du bleu, violet, vert et turquoise.
+  - Code retiré : `EQUIP_COLOR` (les icônes de matériel étaient déjà grises).
+  - Test : `tests/v59.js` (balaye les écrans en clair et en sombre à la recherche des anciennes couleurs).
+
 Les sections plus haut qui parlent de Geist, Barlow, `#F4F3F1` ou `#FF6B3D` décrivent l'état d'avant cette refonte.
 
 ## 10. Cahier des charges d'origine (résumé)

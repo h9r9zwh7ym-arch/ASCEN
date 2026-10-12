@@ -71,14 +71,14 @@ function rwSlides(kind, key){
   // temps
   if(d.dur){
     const h = d.dur/3600, matches = Math.round(d.dur/5400);
-    slides.push({ bg:"teal", html:`<div class="rw-label">Temps passé à t'entraîner</div>
+    slides.push({ bg:"ink", html:`<div class="rw-label">Temps passé à t'entraîner</div>
       <div class="rw-ring"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52"/><circle class="p" cx="60" cy="60" r="52" style="--p:${Math.min(1, h/(kind==="year"?100:12)).toFixed(3)}"/></svg>
         <div><div class="rw-big sm" data-to="${round1(h)}" data-dec="${h<10?1:0}">0</div><div class="rw-unit">heures</div></div></div>
       ${matches>=1 ? `<p class="rw-note rw-d2">Soit la durée de <b>${nb(matches,"match")}</b> de foot.</p>` : `<p class="rw-note rw-d2">Chaque minute compte.</p>`}` });
   }
   // tonnage
   if(d.volume>=50){
-    slides.push({ bg:"violet", html:`<div class="rw-label">Au total, tu as soulevé</div>
+    slides.push({ bg:"rust", html:`<div class="rw-label">Au total, tu as soulevé</div>
       <div class="rw-big" data-to="${Math.round(d.volume)}">0</div><div class="rw-unit">kilos</div>
       <div class="rw-plates" aria-hidden="true">${Array.from({ length:Math.min(8, Math.max(3, Math.round(Math.log10(d.volume)*2))) }, (_,i)=>`<i style="--k:${i}"></i>`).join("")}</div>
       <p class="rw-note rw-d2">Autant que <b>${tonnageCompare(d.volume)}</b>.</p>` });
@@ -86,7 +86,7 @@ function rwSlides(kind, key){
   // exercice favori
   if(d.top.length){
     const f = d.top[0];
-    slides.push({ bg:"green", html:`<div class="rw-label">Ton exercice favori</div>
+    slides.push({ bg:"stone", html:`<div class="rw-label">Ton exercice favori</div>
       <div class="rw-stage r-${regionOf(f.def)}">${exoAnimSVG(f.def)}</div>
       <div class="rw-title">${esc(f.def.n.replace(/\s*\([^)]*\)/g,""))}</div>
       <div class="rw-unit">${nb(f.n,"série")}</div>
@@ -106,7 +106,7 @@ function rwSlides(kind, key){
   if(d.bestDay>=0) habits.push([ "calendar", `Ton jour préféré : les <b>${JOURS_PLURIEL[d.bestDay]}</b>`]);
   if(d.morningPct!=null) habits.push([ d.morningPct>=50 ? "sunrise" : "moon", d.morningPct>=50 ? `Plutôt du matin : <b>${d.morningPct} %</b> avant midi` : `Plutôt l'après-midi ou le soir : <b>${100-d.morningPct} %</b>`]);
   habits.push([ "person", `<b>${nb(d.activeDays,"jour")}</b> d'entraînement`]);
-  slides.push({ bg:"blue", html:`<div class="rw-label">Tes habitudes</div>
+  slides.push({ bg:"ink", html:`<div class="rw-label">Tes habitudes</div>
     <div class="rw-habits">${habits.map(([g,t],i)=>`<div style="--k:${i}">${sfIcon(g, ["red","blue","orange","green"][i%4])}<span>${t}</span></div>`).join("")}</div>` });
   // trophées
   if(d.medalList.length){

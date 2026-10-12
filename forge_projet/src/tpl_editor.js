@@ -23,7 +23,9 @@ function tplEdBodyHTML(){
   const e = tplEdit, taken = tplEdTakenDays();
   const sets = e.exos.reduce((a,x)=>a+x.sets,0);
   const regions = {}; e.exos.forEach(x=>{ const d=EXO_MAP[x.exoId]; if(d) regions[regionOf(d)]=(regions[regionOf(d)]||0)+x.sets; });
-  const balance = Object.keys(REGIONS).filter(r=>regions[r]).map(r=>`<span class="rb r-${r}" style="flex:${regions[r]}"></span>`).join("");
+  // répartition en clair (séries par région), seulement si elle apprend quelque chose (au moins 2 régions)
+  const regs = Object.keys(REGIONS).filter(r=>regions[r]);
+  const balance = regs.length>1 ? `<div class="te-split">Séries : ${regs.map(r=>`${r==="core" ? "Gainage" : REGIONS[r].n} ${regions[r]}`).join(" · ")}</div>` : "";
   const stolen = e.days.filter(d=>taken[d]);
   const rows = e.exos.map((x,i)=>{
     const d = EXO_MAP[x.exoId]; if(!d) return "";
@@ -36,7 +38,7 @@ function tplEdBodyHTML(){
   e.exos.forEach(x=>delete x.fresh);
   return `
     <div class="te-sec">Nom</div>
-    <div class="num-field te-name"><input id="tplEdName" type="text" maxlength="40" placeholder="Ex. Haut du corps A" value="${esc(e.n)}" autocomplete="off"></div>
+    <div class="num-field txt te-name"><input id="tplEdName" type="text" maxlength="40" placeholder="Ex. Haut du corps A" value="${esc(e.n)}" autocomplete="off"></div>
     <div class="te-sec">Jours dans la semaine</div>
     <div class="tpl-daypick te-days">${JOURS_COURTS.map((j,i)=>{
       const on = e.days.includes(i);
@@ -44,10 +46,10 @@ function tplEdBodyHTML(){
     }).join("")}</div>
     <div class="te-hint">${stolen.length ? `${ii("warn","warn")} ${stolen.map(d=>JOURS[(d+1)%7]).join(", ")} : remplacera « ${esc(taken[stolen[0]])} ».` : e.days.length ? `Ajoutée à ton planning : elle s'affichera directement ${e.days.length>1?"ces jours-là":"ce jour-là"} à l'ouverture de l'app.` : "Aucun jour : elle restera disponible dans Mes séances, hors planning."}</div>
     ${e.lite ? `<div class="te-sec te-sec-row"><span>Exercices</span><span class="te-sum">${e.exos.length} · ${sets} séries · ≈ ${tplMinutes(e)} min</span></div>
-      <div class="region-bar te-bar" aria-hidden="true">${balance}</div>
+      ${balance}
       <div class="te-lite">${e.exos.map(x=>EXO_MAP[x.exoId]?`<span>${esc(EXO_MAP[x.exoId].n)} <b>${x.sets}×</b></span>`:"").join("")}</div>` : `
     <div class="te-sec te-sec-row"><span>Exercices</span>${e.exos.length?`<span class="te-sum">${e.exos.length} · ${sets} séries · ≈ ${tplMinutes(e)} min</span>`:""}</div>
-    ${e.exos.length ? `<div class="region-bar te-bar" aria-hidden="true">${balance}</div>
+    ${e.exos.length ? `${balance}
       <div class="group builder te-list ${e.order?"reorder":""}">${rows}</div>` : `<div class="te-empty">${appPicksOn() ? "Ajoute des exercices, ou laisse l'app en proposer." : "Ajoute des exercices à cette séance."}</div>`}
     <div class="te-actions">
       <button class="btn secondary sm" data-a="tplEdAdd">${icon("plus")} Ajouter</button>
@@ -100,8 +102,7 @@ function weekWizardBody(){
     <div class="te-sec">Ta semaine</div>
     <div class="group wz-list">${split.map(([type,name,day],i)=>{
       const t = SESSION_TYPE_MAP[type];
-      const region = type==="bas" ? "legs" : type==="pull" ? "pull" : type==="push" || type==="haut" ? "push" : "core";
-      return `<div class="row wz-row" style="--k:${i}"><span class="wz-day">${JOURS_COURTS[day]}</span><span class="tc-bar-s r-${region}"></span><div class="grow"><div class="t">${esc(name)}</div><div class="s">${esc(t.n)}</div></div></div>`;
+      return `<div class="row wz-row" style="--k:${i}"><span class="wz-day">${JOURS_COURTS[day]}</span><div class="grow"><div class="t">${esc(name)}</div><div class="s">${esc(t.n)}</div></div></div>`;
     }).join("")}</div>
     ${clash.length?`<div class="te-hint">${ii("warn","warn")} Ces jours sont déjà pris par ${clash.map(t=>`« ${esc(t.n)} »`).join(", ")} : ces séances seront gardées mais retirées de ces jours.</div>`:""}`;
 }

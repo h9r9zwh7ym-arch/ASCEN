@@ -297,11 +297,11 @@ function restoreData(){
 function openInstall(){
   openSheet(`<div class="sheet-hd"><span class="t">Installer ASCEN</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
     <div class="sheet-body">
-      <p class="body" style="margin:0 4px 14px">Installée sur l'écran d'accueil, ASCEN s'ouvre en plein écran comme une vraie app, fonctionne sans réseau, et Safari ne peut plus effacer tes données après quelques jours sans visite.</p>
+      <p class="body" style="margin:0 20px 14px">Installée sur l'écran d'accueil, ASCEN s'ouvre en plein écran comme une vraie app, fonctionne sans réseau, et Safari ne peut plus effacer tes données après quelques jours sans visite.</p>
       <div class="group install-steps">
-        <div class="row"><span class="step-n">1</span><div class="grow"><div class="t">Touche le bouton Partager</div><div class="s">Le carré avec une flèche vers le haut, dans la barre de Safari</div></div></div>
-        <div class="row"><span class="step-n">2</span><div class="grow"><div class="t">Choisis « Sur l'écran d'accueil »</div><div class="s">Fais défiler la liste si besoin</div></div></div>
-        <div class="row"><span class="step-n">3</span><div class="grow"><div class="t">Ouvre ASCEN depuis son icône</div><div class="s">Tes séances actuelles ne sont pas transférées automatiquement : fais d'abord une sauvegarde, puis restaure-la dans l'app installée</div></div></div>
+        <div class="row"><span class="step-n">1</span><div class="grow"><div class="t">Touche le bouton Partager</div><div class="s wrap">Le carré avec une flèche vers le haut, dans la barre de Safari</div></div></div>
+        <div class="row"><span class="step-n">2</span><div class="grow"><div class="t">Choisis « Sur l'écran d'accueil »</div><div class="s wrap">Fais défiler la liste si besoin</div></div></div>
+        <div class="row"><span class="step-n">3</span><div class="grow"><div class="t">Ouvre ASCEN depuis son icône</div><div class="s wrap">Tes séances actuelles ne sont pas transférées automatiquement : fais d'abord une sauvegarde, puis restaure-la dans l'app installée</div></div></div>
       </div>
       <div class="btnrow"><button class="btn secondary" data-a="backupData">${icon("bookmark")} Faire une sauvegarde d'abord</button></div>
     </div>`);
@@ -309,12 +309,11 @@ function openInstall(){
 
 // ---------- Matériel ----------
 const EQUIP_GLYPH = { stretch:"leaf", dumbbells:"dumbbell", barbell:"barbell", kettlebell:"kettlebell", bench:"bench", bench_incline:"benchIncline", bench_press:"benchPress", rack:"rack", pullup_bar:"bar", dip_bars:"dips", suspension:"straps", ab_roller:"wheel", bands:"band", jump_rope:"rope", mat:"mat", bodyweight:"person" };
-const EQUIP_COLOR = { stretch:"mint", dumbbells:"orange", barbell:"indigo", kettlebell:"brown", bench:"teal", bench_incline:"teal", bench_press:"indigo", rack:"gray", pullup_bar:"blue", dip_bars:"blue", suspension:"yellow", ab_roller:"red", bands:"green", jump_rope:"pink", mat:"purple", bodyweight:"mint" };
 function equipBodyHTML(){
   const rows = EQUIP_TYPES.filter(e=>!e.always).map(e=>{
     const on = S.equipment.owned[e.id];
     return `<div class="row">
-      ${sfIcon(EQUIP_GLYPH[e.id]||"wrench", EQUIP_COLOR[e.id]||"gray")}
+      ${sfIcon(EQUIP_GLYPH[e.id]||"wrench", "gray")}
       <div class="grow"><div class="t">${esc(e.n)}</div>${e.hint && !e.loadable ? `<div class="s wrap">${esc(e.hint)}</div>` : ""}</div>
       <button class="switch ${on?"on":""}" data-a="toggleEquip" data-id="${e.id}"></button>
     </div>`;
@@ -414,7 +413,7 @@ function exoPrefsBodyHTML(){
     const list = all.filter(e=>hasEquip(S.equipment, e.equip));
     all.forEach(e=>{ if(!list.includes(e)) unavail.push(e); });
     if(!list.length) return "";
-    return `<h2 class="sh"><span class="sh-ico">${sfIcon(EQUIP_GLYPH[c.id]||"wrench", EQUIP_COLOR[c.id]||"gray","sm")}${esc(c.n)}</span><span class="more" style="color:var(--label2)">${list.length}</span></h2><div class="group">${list.map(e=>exoPrefRow(e)).join("")}</div>`;
+    return `<h2 class="sh"><span class="sh-ico">${sfIcon(EQUIP_GLYPH[c.id]||"wrench", "gray","sm")}${esc(c.n)}</span><span class="more" style="color:var(--label2)">${list.length}</span></h2><div class="group">${list.map(e=>exoPrefRow(e)).join("")}</div>`;
   }).join("");
   const more = unavail.length ? `<details class="pref-more"><summary class="sh"><span>Sans ton matériel</span><span class="more">${unavail.length} ${icon("chev")}</span></summary>
       <p class="hr-note" style="margin:0 20px 8px">Jamais proposés tant que le matériel manque. Tu peux déjà les exclure ou les mettre en favori pour plus tard.</p>
@@ -441,7 +440,7 @@ function exportImportBodyHTML(){
     <div class="btnrow" style="margin-top:16px"><button class="btn" data-a="copyPrompt">Copier le prompt</button></div>
     <div class="field" style="margin-top:12px"><textarea readonly rows="6" style="width:100%;border:0;background:transparent;font-size:calc(13rem/17);padding:10px 0;resize:vertical">${esc(buildExportPrompt())}</textarea></div>
     <div class="btnrow"><button class="btn secondary" data-a="triggerImport">Importer le fichier JSON reçu</button></div>
-    ${S.importedProgram.length? `<h2 class="sh">Programme importé</h2><div class="group">${importedRows}</div><div class="btnrow"><button class="btn ghost" data-a="clearImported">Supprimer le programme importé</button></div>`:""}`;
+    ${S.importedProgram.length? `<h2 class="sh">Programme importé</h2><div class="group">${importedRows}</div><div class="btnrow"><button class="btn ghost te-del" data-a="clearImported">Supprimer le programme importé</button></div>`:""}`;
 }
 function openExportImport(){
   openSheet(`<div class="sheet-hd"><span class="t">Suggestion par IA</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body">${exportImportBodyHTML()}</div>`, { child:true, restore:openExportImport });
@@ -491,7 +490,7 @@ let whyFrom = null; // « Ton pourquoi » ouvert depuis Motivation : on y revien
 Object.assign(ACT, {
   editName(){
     openModal(`<div style="font-weight:700;font-size:calc(17rem/17);margin-bottom:12px">Ton prénom</div>
-      <div class="num-field"><input id="nameInput" type="text" maxlength="30" placeholder="Prénom" value="${esc(S.settings.name||"")}"></div>
+      <div class="num-field txt"><input id="nameInput" type="text" maxlength="30" placeholder="Prénom" value="${esc(S.settings.name||"")}"></div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
         <button class="btn" data-a="saveName">Enregistrer</button>
         <button class="btn ghost" data-a="closesheet" style="height:40px">Annuler</button>
@@ -513,7 +512,7 @@ Object.assign(ACT, {
     whyFrom = d && d.from;
     openModal(`<div style="font-weight:700;font-size:calc(17rem/17);margin-bottom:6px">Ton pourquoi</div>
       <div class="hr-note" style="margin-bottom:12px">Ce qui te pousse à t'entraîner. ASCEN te le rappelle quand tu reviens après quelques jours sans séance.</div>
-      <div class="num-field"><input id="whyInput" type="text" maxlength="120" placeholder="Ex. être en forme pour la randonnée d'été" value="${esc(S.settings.why||"")}"></div>
+      <div class="num-field txt"><input id="whyInput" type="text" maxlength="120" placeholder="Ex. être en forme pour la randonnée d'été" value="${esc(S.settings.why||"")}"></div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
         <button class="btn" data-a="saveWhy">Enregistrer</button>
         <button class="btn ghost" data-a="closesheet" style="height:40px">Annuler</button>
@@ -686,7 +685,7 @@ Object.assign(ACT, {
         </div>
         <div class="group" style="margin-top:14px">
           <div class="row">${sfIcon("storage","green")}<div class="grow"><div class="t">Format compact</div><div class="s wrap">L'historique est enregistré sous une forme condensée, environ 2,5 fois plus légère.</div></div></div>
-          <div class="row">${sfIcon("shield","blue")}<div class="grow"><div class="t">Copie de secours compressée</div><div class="s wrap">Chaque enregistrement est aussi copié, compressé, dans une seconde base (IndexedDB). Si l'espace principal est plein ou effacé, l'app repart de cette copie.</div></div><div class="val" id="stoIdb"></div></div>
+          <div class="row">${sfIcon("shield","blue")}<div class="grow"><div class="t">Copie de secours</div><div class="s wrap">Chaque enregistrement est aussi copié, compressé, dans une seconde base (IndexedDB). Si l'espace principal est plein ou effacé, l'app repart de cette copie.</div></div><div class="val" id="stoIdb"></div></div>
           <div class="row">${sfIcon("phone","gray")}<div class="grow"><div class="t">Total sur l'appareil</div><div class="s wrap">Données, copie de secours et fichiers de l'app gardés pour le hors ligne. Les trophées 3D sont dessinés à la volée : aucune image n'est stockée.</div></div><div class="val" id="stoTotal"></div></div>
           <div class="row">${sfIcon("lock","indigo")}<div class="grow"><div class="t">Protection</div><div class="s wrap" id="stoPersist">Vérification…</div></div></div>
         </div>
@@ -694,7 +693,7 @@ Object.assign(ACT, {
         <div class="btnrow"><button class="btn secondary" data-a="backupData">${icon("bookmark")} Faire une sauvegarde</button></div>
       </div>`, { tall:true, child:true, restore:()=>ACT.openStorage() });
     sheetBackHead();
-    idbGet().then(r=>{ const e = qs("#stoIdb"); if(e && r && r.data) e.textContent = fmtBytes(typeof r.data==="string" ? r.data.length*2 : r.data.size); }).catch(()=>{});
+    idbGet().then(r=>{ const e = qs("#stoIdb"); if(e && r && r.data) e.textContent = fmtBytes(typeof r.data==="string" ? r.data.length*2 : (r.data.byteLength || r.data.size || 0)); }).catch(()=>{});
     try{ if(navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(x=>{ const e = qs("#stoTotal"); if(e && x.usage) e.textContent = fmtBytes(x.usage + u); }); }catch(e){}
     const el = qs("#stoPersist");
     const setTxt = t=>{ if(el) el.textContent = t; };

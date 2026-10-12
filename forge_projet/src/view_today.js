@@ -573,7 +573,7 @@ function pickerListHTML(){
     const list = pool.filter(e=>exoCategory(e)===c.id).sort((a,b)=>muscleOrder[a.muscles[0]]-muscleOrder[b.muscles[0]] || a.n.localeCompare(b.n,"fr"));
     if(!list.length) return "";
     let lastM = null;
-    return `<div class="pick-h">${sfIcon(EQUIP_GLYPH[c.id]||"wrench", EQUIP_COLOR[c.id]||"gray","sm")} ${esc(c.n)} <span class="pick-n">${list.length}</span></div><div class="group">${list.map(e=>{
+    return `<div class="pick-h">${sfIcon(EQUIP_GLYPH[c.id]||"wrench", "gray","sm")} ${esc(c.n)} <span class="pick-n">${list.length}</span></div><div class="group">${list.map(e=>{
       const m = e.muscles[0], sub = m!==lastM ? `<div class="pick-m">${esc(MUSCLE_MAP[m].n)}</div>` : ""; lastM = m;
       return sub + pickRowHTML(e);
     }).join("")}</div>`;
@@ -1651,7 +1651,7 @@ Object.assign(ACT, {
       <div class="exo-hero r-${region}">
         <div class="exo-stage r-${region}">${exoAnimSVG(e)}</div>
         <div class="nm">${esc(e.n)}</div>
-        <div class="exo-tags"><span class="rtag r-${region}">${REGIONS[region].n}</span><span class="etag">${sfIcon(EQUIP_GLYPH[cat.id]||"wrench", EQUIP_COLOR[cat.id]||"gray", "xs")} ${esc(cat.n)}</span>${e.equip.includes("bench")?`<span class="etag">+ banc</span>`:""}</div>
+        <div class="exo-tags"><span class="rtag r-${region}">${REGIONS[region].n}</span><span class="etag">${sfIcon(EQUIP_GLYPH[cat.id]||"wrench", "gray", "xs")} ${esc(cat.n)}</span>${e.equip.includes("bench")?`<span class="etag">+ banc</span>`:""}</div>
       </div>
       <div class="exo-muscle-chips">${e.muscles.map((m,i)=>`<span class="chip mchip ${i===0?"main":""}">${MUSCLE_MAP[m].n}${i===0?" <small>principal</small>":""}</span>`).join("")}</div>
       ${e.muscles.some(m=>m!=="cardio") ? `<div class="exo-mm">${exoMuscleMap(e)}</div>` : ""}

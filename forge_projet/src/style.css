@@ -6,7 +6,7 @@
   --tint:#BC5736; --tint-ink:#B4532F; --tint-bg:rgba(188,87,54,.1); --on-tint:#FFFFFF;
   --ink:#1C1C1E; --on-ink:#FFFFFF;
   --ember:#BC5736; --ember2:#E0896A;
-  --green:#1E7A35; --red:#D70015; --orange:#B25000; --blue:#0066CC; --purple:#7A3FC4; --switch:#34C759;
+  --green:#1E7A35; --red:#D70015; --orange:#B4532F; --blue:#0066CC; --purple:#7A3FC4; --switch:#34C759;
   --bar:rgba(249,249,249,.8); --shadow:none;
   --r-push:#eb6834; --r-push-ink:#fff; --r-pull:#2a78d6; --r-pull-ink:#fff; --r-legs:#1baf7a; --r-legs-ink:#06291c; --r-core:#7a55d6; --r-core-ink:#fff;
   --grad:linear-gradient(180deg,#BC5736 0%,#BC5736 100%); --glow:rgba(188,87,54,.28);
@@ -32,7 +32,7 @@
     --label:#FFFFFF; --label2:#A1A1A6; --label3:#8E8E93; --sep:rgba(84,84,88,.6);
     --tint:#BC5736; --tint-ink:#E07A55; --tint-bg:rgba(224,122,85,.16); --on-tint:#FFFFFF; --ink:#2C2C2E; --on-ink:#FFFFFF;
     --ember:#E07A55; --ember2:#F0A585;
-    --green:#30D158; --red:#FF453A; --orange:#FF9F0A; --blue:#409CFF; --purple:#BF80FF; --switch:#30D158;
+    --green:#30D158; --red:#FF453A; --orange:#E07A55; --blue:#409CFF; --purple:#BF80FF; --switch:#30D158;
     --bar:rgba(22,22,24,.8); --shadow:none;
     --r-push:#d95926; --r-push-ink:#fff; --r-pull:#3987e5; --r-pull-ink:#fff; --r-legs:#199e70; --r-legs-ink:#fff; --r-core:#8a63e8; --r-core-ink:#fff;
     --grad:linear-gradient(180deg,#BC5736 0%,#BC5736 100%); --glow:rgba(224,122,85,.3);
@@ -43,7 +43,7 @@
     --label:#FFFFFF; --label2:#A1A1A6; --label3:#8E8E93; --sep:rgba(84,84,88,.6);
     --tint:#BC5736; --tint-ink:#E07A55; --tint-bg:rgba(224,122,85,.16); --on-tint:#FFFFFF; --ink:#2C2C2E; --on-ink:#FFFFFF;
     --ember:#E07A55; --ember2:#F0A585;
-    --green:#30D158; --red:#FF453A; --orange:#FF9F0A; --blue:#409CFF; --purple:#BF80FF; --switch:#30D158;
+    --green:#30D158; --red:#FF453A; --orange:#E07A55; --blue:#409CFF; --purple:#BF80FF; --switch:#30D158;
     --bar:rgba(22,22,24,.8); --shadow:none;
     --r-push:#d95926; --r-push-ink:#fff; --r-pull:#3987e5; --r-pull-ink:#fff; --r-legs:#199e70; --r-legs-ink:#fff; --r-core:#8a63e8; --r-core-ink:#fff;
     --grad:linear-gradient(180deg,#BC5736 0%,#BC5736 100%); --glow:rgba(224,122,85,.3);
@@ -626,7 +626,7 @@ h2.sh button.more{font-size:var(--fs-sub);font-weight:500;color:var(--tint-ink)}
 .tpl-section>.sec-h{padding:0 4px 10px}
 .tpl-list{display:flex;flex-direction:column;gap:10px}
 .tpl-card2{position:relative;background:var(--bg2);border-radius:18px;overflow:hidden;box-shadow:var(--shadow);transition:box-shadow .2s}
-.tpl-card2.loaded{box-shadow:inset 0 0 0 2px var(--tint),var(--shadow)}
+.tpl-card2.loaded{box-shadow:inset 0 0 0 2px var(--tint)}
 .tc-head{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:13px 14px 13px 18px}
 .tc-head:active{background:var(--fill2)}
 .tc-bar{position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--rc)}
@@ -767,7 +767,7 @@ h2.sh button.more{font-size:var(--fs-sub);font-weight:500;color:var(--tint-ink)}
 .clp-out>*{transition:opacity .2s;opacity:0}
 .tpl-card2.pop-in{animation:clpIn .45s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--k,0) * 55ms)}
 .tpl-card2{transition:box-shadow .25s,transform .15s}
-.tpl-card2.open{box-shadow:0 12px 28px -14px color-mix(in srgb,var(--rc) 60%,transparent),var(--shadow)}
+.tpl-card2.open{box-shadow:0 12px 28px -14px color-mix(in srgb,var(--rc) 60%,transparent)}
 .tc-head:active{background:transparent}
 .tpl-card2:has(.tc-head:active){transform:scale(.985)}
 .tpl-list{display:flex;flex-direction:column;gap:10px}
@@ -1210,7 +1210,7 @@ h2.sh .more.strong{font-weight:700}
 .ob-equip{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .ob-eq{position:relative;display:flex;align-items:center;gap:10px;min-height:56px;padding:10px 12px;border-radius:16px;background:var(--bg2);box-shadow:var(--shadow);text-align:left;font-weight:600;font-size:var(--fs-sub);transition:transform .15s cubic-bezier(.32,1.4,.4,1),box-shadow .2s}
 .ob-eq:active{transform:scale(.96)}
-.ob-eq.on{box-shadow:inset 0 0 0 2px var(--tint),var(--shadow)}
+.ob-eq.on{box-shadow:inset 0 0 0 2px var(--tint)}
 .ob-eq em{position:absolute;top:6px;right:6px;width:18px;height:18px;border-radius:9px;background:var(--tint);color:var(--on-tint);display:grid;place-items:center;opacity:0;transform:scale(.4);transition:opacity .2s,transform .3s cubic-bezier(.32,1.5,.4,1)}
 .ob-eq em svg{width:11px;height:11px}
 .ob-eq.on em{opacity:1;transform:none}
@@ -1219,7 +1219,7 @@ h2.sh .more.strong{font-weight:700}
 .ob-goal:active{transform:scale(.98)}
 .ob-goal b{font-size:var(--fs-callout)}
 .ob-goal small{color:var(--label2);font-size:var(--fs-foot)}
-.ob-goal.on{box-shadow:inset 0 0 0 2px var(--tint),var(--shadow)}
+.ob-goal.on{box-shadow:inset 0 0 0 2px var(--tint)}
 .ob-note{font-size:var(--fs-foot);color:var(--label2);margin:8px 4px 0;line-height:1.4}
 .sheet-ft .btn.ghost{margin-top:4px}
 @media (prefers-reduced-motion:reduce){.ob-body.ob-in>*,.ob-hero img,.ob-logo{animation:none}}
@@ -2026,9 +2026,7 @@ button.set-dots::before{content:"";position:absolute;left:50%;top:50%;width:max(
 .stim-sum b{color:var(--label);font-family:var(--num)}
 .stim-sum .sz-ok{background:color-mix(in srgb,var(--green) 15%,transparent)}
 /* Favoris (4.0) : une étoile, au même endroit partout */
-:root{--fav:#C98A00}
-@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){--fav:#FFD60A} }
-:root[data-theme="dark"]{--fav:#FFD60A}
+:root{--fav:var(--tint-ink)} /* favoris : l'orange de la marque (plus de jaune à part) */
 .hd-acts{display:flex;align-items:center;gap:4px;margin-left:auto;flex:none}
 .te-hd .hd-acts{justify-self:end;margin-left:0}
 .te-hd .t{text-align:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -3157,3 +3155,36 @@ body.live-focus #v-today{padding-bottom:0}
 /* accessibilité : le chevron des lignes reste centré quelle que soit la taille du texte (Dynamic Type) */
 .row>.chev{display:grid;place-items:center}
 .row>.chev svg{width:15px;height:15px}
+
+/* ===== Harmonisation : écrans secondaires (fiches, éditeur, programme, premier lancement, Rewind) =====
+   Un seul orange : les régions (poussée, tirage, jambes, gainage) ne colorent plus rien, leur nom suffit.
+   Choix exclusifs (puces, nombres, jours) en encre ; éléments cochés d'une liste en orange.
+   Champs de texte alignés à gauche, en taille normale ; les grands chiffres centrés restent pour les nombres. */
+.r-push,.r-pull,.r-legs,.r-core{--rc:var(--tint);--ri:#fff}
+.rtag::before,.tr-reg i{display:none}
+.tpl-daypick button.on{background:var(--label);color:var(--bg2)}
+.tpl-daypick button.on small .ii{color:inherit}
+.num-field.txt input{text-align:left;font-size:var(--fs-body);font-weight:400;height:48px}
+.num-field.txt input::placeholder{color:var(--label3)}
+#tplEdBody>.te-sec,#wzBody>.te-sec,#obBody>.te-sec{margin-left:4px;margin-right:4px}
+.te-split{margin:-2px 4px 10px;font-size:var(--fs-foot);color:var(--label2);font-variant-numeric:tabular-nums}
+.btn.ghost.te-del{color:var(--red)}
+/* premier lancement : le matériel coché prend l'orange, comme une case cochée */
+.ob-eq.on .sfi{color:var(--tint-ink)}
+/* conseils et alertes : la même teinte que le reste */
+.dl-ic{background:var(--tint-bg);color:var(--tint-ink)}
+.dl-card.on{background:var(--bg2)}
+.dl-bar i.on{background:var(--tint)}
+.st-orange{--sc:var(--tint)} .st-blue,.st-teal{--sc:var(--label3)}
+.safety-box{margin:6px 16px 4px;padding:12px 14px;border-left:0;border-radius:14px;background:var(--tint-bg)}
+.safety-box .lbl{color:var(--tint-ink)}
+.pr-badge,.chip.pr,.set-chips .chip.pr,.cel-pr{background:var(--tint-bg);color:var(--tint-ink)}
+.set-dots .sd.pr{box-shadow:0 0 0 3px color-mix(in srgb,var(--tint) 35%,transparent)}
+.ii.star{color:var(--fav)}
+.secret-card .mc-done{color:var(--tint-ink)}
+/* Rewind : la palette de la marque (braise, encre, rouille, pierre) ; l'or reste aux trophées */
+#rewind[data-bg="ink"]{--a:#E07A55;--b:#2C2C2E;--c:#0B0B0C}
+#rewind[data-bg="rust"]{--a:#D9785A;--b:#7A2E1A;--c:#1A0905}
+#rewind[data-bg="stone"]{--a:#C9B8A8;--b:#5C524B;--c:#161311}
+#rewind[data-bg="gold"]{--a:#E9BE6A;--b:#A86E1C;--c:#2A1A06}
+.rw-habits .sfi{color:#fff}
