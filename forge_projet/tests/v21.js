@@ -61,18 +61,18 @@ fs.mkdirSync(OUT, { recursive: true });
   await shot('03_volume');
   // ---- sauvegarde / restauration
   await page.click('.tabbtn[data-id="profil"]'); await wait(600);
-  const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 8000 }), page.click('[data-a="backupData"]')]);
+  await page.click('[data-a="openData"]'); await wait(500);   // Profil › Données et sauvegarde
+  const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 8000 }), page.click('.sheet [data-a="backupData"]')]);
   const file = OUT + '/backup.json'; await dl.saveAs(file);
   const bk = JSON.parse(fs.readFileSync(file, 'utf8'));
   log('Backup file:', dl.suggestedFilename(), '| app:', bk.app, '| sessions:', bk.data.sessions.length, '| status:', await page.textContent('[data-a="backupData"] .s'));
   await page.evaluate(() => { S.sessions = []; save(); });
-  await page.click('[data-a="openDataMore"]'); await wait(400);   // Profil › Restaurer, exporter, stockage
   const [fc] = await Promise.all([page.waitForEvent('filechooser'), page.click('.sheet [data-a="restoreData"]')]);
   await fc.setFiles(file); await wait(500);
   await page.click('[data-a="confirmYes"]'); await wait(700);
   log('Restored sessions:', await page.evaluate(() => S.sessions.length), '| safety copy:', await page.evaluate(() => !!localStorage.getItem('forge.v1.avant-restauration')));
   await shot('04_profil_data');
-  await page.click('[data-a="openInstall"]'); await wait(400); await shot('05_install'); await page.evaluate(() => closeSheet()); await wait(350);
+  await page.click('[data-a="openData"]'); await wait(500); await page.click('.sheet [data-a="openInstall"]'); await wait(400); await shot('05_install'); await page.evaluate(() => closeSheet()); await wait(350);
   // ---- plus d'export Calendrier (retiré en v3.2)
   await page.evaluate(() => { S.templates = [{ id: 't1', n: 'Haut, du corps', days: [0, 3], exos: [{ exoId: 'pompes', sets: 3 }], since: todayISO() }]; save(); });
   await page.click('.tabbtn[data-id="today"]'); await wait(500);

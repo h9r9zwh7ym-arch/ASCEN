@@ -234,17 +234,7 @@ Object.assign(SFX, {
 });
 
 // ---------- textes ----------
-function ascWhereTxt(a){ // une ligne : où l'on en est
-  const D = ASC_DATA[a.key];
-  if(!S.sessions.length) return `Ta première séance te met en route vers ${ascLe(a.key)}.`;
-  if(a.wait){ const N = ASC_DATA[a.next];
-    return a.series>=a.nextReq ? `Au sommet ${ascDu(a.key)}. Ta prochaine séance te lance vers ${ascLe(a.next)}.`
-      : `Au sommet ${ascDu(a.key)}. Une série de ${nb(a.nextReq, "semaine")} ouvre ${ascLe(a.next)} (tu en as ${a.series}).`; }
-  const nc = a.nextCamp;
-  const m = nc ? nc[0]-a.alt : D.top-a.alt, s = ascSessionsFor(m, a);
-  return `${nc ? nc[1] : "Sommet"} dans ${ascM(m)} : ${s<=1 ? "ta prochaine séance t'y amène" : `environ ${nb(s, "séance")}`}.`;
-}
-// La promesse du jour (accueil, « Prochain cap ») : ce que la séance d'aujourd'hui peut faire atteindre.
+// La promesse du jour (accueil, carte « Cette semaine ») : ce que la séance d'aujourd'hui peut faire atteindre.
 // Null si rien n'est à portée d'une séance type.
 function ascTodayPromise(a){
   a = a || ascent();
@@ -475,19 +465,6 @@ function ascStripHydrate(){
   }).catch(()=>{ ascStripBusy = ""; });
   if(window.requestIdleCallback) requestIdleCallback(go, { timeout:2500 }); else setTimeout(go, 400);
 }
-function ascCardHTML(){
-  const a = ascent(), D = ASC_DATA[a.key], pct = Math.round(Math.max(0, Math.min(1, a.done))*100);
-  return `<button class="card asc-card stagger" style="--i:0" data-a="openAscent">
-    <div class="ac-sky">${ascSkySVG(a.key, "ac-svg", true)}</div>
-    <div class="ac-main">
-      <div class="ac-k">Mon ascension · ${a.idx+1} sur 13${a.lap ? ` · ${a.lap+1}ᵉ tour` : ""}</div>
-      <div class="ac-n">${esc(D.n)} <span class="num">${fmtNum(a.alt)} m</span></div>
-      <div class="xpbar"><span style="width:${pct}%"></span></div>
-      <div class="ac-s">${esc(ascWhereTxt(a))}</div>
-    </div><span class="chev">${icon("chev")}</span>
-  </button>`;
-}
-
 // ---------- l'écran « Mon ascension » ----------
 let ascG = null;
 // ---------- les étapes : barre de l'expédition, prochain camp mis en avant, quelques suivants, le sommet ----------

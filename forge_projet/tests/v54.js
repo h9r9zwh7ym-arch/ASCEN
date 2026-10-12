@@ -73,13 +73,12 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.evaluate(() => closeSheet()); await wait(500);
   if ((await page.evaluate(() => S.settings.todayTab)) !== 'custom' || !(await page.$('#v-today .hero.compose, #v-today .hero.planned, #v-today .hero.custom'))) fail('retour à Ma séance');
 
-  // 3. Progrès › Objectifs : les trophées derrière une ligne
-  await page.click('.tabbtn[data-id="progress"]'); await wait(600); await page.evaluate(() => ACT.progressTab({ v: 'medals' })); await wait(1200);
-  const obj = await page.evaluate(() => ({ grid: document.querySelectorAll('#v-progress .medal-card').length, next: document.querySelectorAll('#v-progress [data-a="showMedal"]').length, row: (document.querySelector('#v-progress [data-a="allMedals"]') || {}).textContent || '' }));
-  const cObj = await choices();
-  log('Objectifs:', JSON.stringify({ ...obj, row: obj.row.replace(/\s+/g, ' ').trim() }), 'choices', cObj);
-  if (obj.grid || obj.next > 3 || !/Tous les trophées/.test(obj.row) || cObj > 18) fail('Objectifs : 3 prochains paliers et une ligne vers tous les trophées');
-  await page.click('#v-progress [data-a="allMedals"]'); await wait(1200);
+  // 3. Profil › Trophées (refonte 5) : les trophées derrière une ligne
+  await page.click('.tabbtn[data-id="profil"]'); await wait(600); await page.click('#v-profil .pt-card'); await wait(1200);
+  const obj = await page.evaluate(() => ({ grid: document.querySelectorAll('.trophies-body .medal-card').length, next: document.querySelectorAll('.trophies-body [data-a="showMedal"]').length, row: (document.querySelector('.trophies-body [data-a="allMedals"]') || {}).textContent || '' }));
+  log('Trophées:', JSON.stringify({ ...obj, row: obj.row.replace(/\s+/g, ' ').trim() }));
+  if (obj.grid || obj.next > 3 || !/Tous les trophées/.test(obj.row)) fail('Trophées : 3 prochains paliers et une ligne vers tous les trophées');
+  await page.click('.trophies-body [data-a="allMedals"]'); await wait(1200);
   const all = await page.evaluate(() => ({ t: (document.querySelector('.sheet-hd .t') || {}).textContent, cards: document.querySelectorAll('.sheet .medal-card').length, total: MEDALS.length }));
   log('All medals:', JSON.stringify(all)); if (all.t !== 'Tous les trophées' || all.cards !== all.total) fail('feuille : tous les trophées');
   await shot('03_all_medals');
@@ -88,7 +87,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   // 4. Profil : réglages regroupés, feuilles empilées avec « Retour »
   await page.click('.tabbtn[data-id="profil"]'); await wait(700);
   const cProf = await choices();
-  const prof = await page.evaluate(() => ({ motivSwitches: document.querySelectorAll('#v-profil [data-a="toggleMotiv"]').length, rest: document.querySelectorAll('#v-profil [data-a="setRest"]').length, reset: !!document.querySelector('#v-profil [data-a="confirmReset"]'), backup: !!document.querySelector('#v-profil [data-a="backupData"]') }));
+  const prof = await page.evaluate(() => ({ motivSwitches: document.querySelectorAll('#v-profil [data-a="toggleMotiv"]').length, rest: document.querySelectorAll('#v-profil [data-a="setRest"]').length, reset: !!document.querySelector('#v-profil [data-a="confirmReset"]'), backup: !!document.querySelector('#v-profil [data-a="openData"]') }));
   log('Profil:', JSON.stringify(prof), 'choices', cProf);
   if (prof.motivSwitches || prof.rest || prof.reset || !prof.backup || cProf > 19) fail('Profil : réglages regroupés, la sauvegarde reste visible');
   await page.click('#v-profil [data-a="openSessionPrefs"]'); await wait(700);
@@ -106,12 +105,12 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const mot = await page.evaluate(() => document.querySelectorAll('.sheet [data-a="toggleMotiv"]').length);
   await page.click('.sheet [data-a="toggleMotiv"][data-k="thenNow"]'); await wait(200);
   await page.evaluate(() => closeSheet()); await wait(700);
-  const sum = await page.evaluate(() => ({ s: (document.querySelector('#v-profil [data-a="openMotivation"] .s') || {}).textContent, v: S.settings.thenNow }));
+  const sum = await page.evaluate(() => ({ v: S.settings.thenNow }));
   log('Motivation:', mot, JSON.stringify(sum));
-  if (mot !== 4 || sum.v !== false || !/3 aides sur 4/.test(sum.s || '')) fail('Motivation : 4 aides, le résumé suit');
+  if (mot !== 4 || sum.v !== false) fail('Motivation : 4 aides');
   await page.evaluate(() => { S.settings.thenNow = true; save(); });
-  await page.click('#v-profil [data-a="openDataMore"]'); await wait(700);
-  const data = await page.evaluate(() => ['restoreData', 'exportCSV', 'openExportImport', 'openStorage', 'confirmReset'].every(a => document.querySelector(`.sheet [data-a="${a}"]`)));
+  await page.click('#v-profil [data-a="openData"]'); await wait(700);
+  const data = await page.evaluate(() => ['backupData', 'restoreData', 'exportCSV', 'openExportImport', 'openStorage', 'confirmReset'].every(a => document.querySelector(`.sheet [data-a="${a}"]`)));
   await page.click('.sheet [data-a="openStorage"]'); await wait(700);
   const sto = await page.evaluate(() => ({ t: (document.querySelector('.sheet-hd .t') || {}).textContent, back: !!document.querySelector('.sheet-hd [data-a="sheetBack"]') }));
   await page.evaluate(() => closeSheet()); await wait(500);

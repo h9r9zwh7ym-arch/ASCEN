@@ -22,11 +22,8 @@ const OUT = OUT_ROOT + '/v23'; fs.mkdirSync(OUT, { recursive: true });
   if (!mig.inc || !mig.rack) fail('migration banc/rack'); if (JSON.stringify(mig.bands) !== '[1,3,5]') fail('migration élastiques');
   if (JSON.stringify(mig.bandSets) !== '[5,3]') fail('migration séries élastique');
   if (mig.reps !== 40) fail('sessionReps compte les secondes'); if (!Array.isArray(mig.body)) fail('body');
-  // 2) historique : écart mensuel + note
-  await page.click('.tab[data-tab="history"], [data-a="tab"][data-v="history"]').catch(() => page.evaluate(() => switchTab('history'))); await wait(500);
-  const md = await page.$$eval('.sh-sub .md', els => els.map(e => e.textContent));
-  log('Month deltas:', JSON.stringify(md));
-  if (!md.some(t => /\+1 vs juil/.test(t))) fail('écart mensuel');
+  // 2) historique : note (refonte 5 : un mois à la fois, on remonte jusqu'en août ; l'écart mensuel est dans Statistiques)
+  await page.evaluate(() => { switchTab('history'); while (histMonth > '2026-08') ACT.histNav({ d: -1 }); }); await wait(500);
   await page.click('[data-a="openSessionDetail"][data-id="c"]'); await wait(500);
   await page.fill('.sheet-body .note-in', 'Épaule un peu raide, rien de grave'); await page.locator('.sheet-body .note-in').blur(); await wait(200);
   await shot('01_detail_note');
@@ -49,7 +46,7 @@ const OUT = OUT_ROOT + '/v23'; fs.mkdirSync(OUT, { recursive: true });
   await page.click('[data-a="bodyDel"]'); await wait(200);
   if ((await page.evaluate(() => S.body.length)) !== 3) fail('suppression pesée');
   await page.evaluate(() => closeSheet()); await wait(600);
-  log('Profil row:', await page.$eval('[data-a="openBody"] .s', e => e.textContent));
+  log('Profil row:', await page.$eval('[data-a="openBody"] .val', e => e.textContent).catch(() => '-'));   // refonte 5 : la dernière pesée à droite
   // 4) niveau + nombre d'exercices
   await page.evaluate(() => { S.settings.todayTab = 'engine'; S.goals.level = 'debutant'; S.goals.exoCount = 7; regenerateDraft(); save(); });
   const gen = await page.evaluate(() => ({ n: S.draft.exos.length, lvl3: S.draft.exos.filter(e => EXO_MAP[e.exoId].level === 3).length, noRack: S.draft.exos.every(e => hasEquip(S.equipment, EXO_MAP[e.exoId].equip)) }));

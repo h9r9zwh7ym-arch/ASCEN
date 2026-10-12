@@ -22,9 +22,9 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.goto(APP); await page.waitForSelector('#splash', { state: 'detached', timeout: 9000 }); await page.waitForTimeout(600);
   const wait = ms => page.waitForTimeout(ms), shot = n => page.screenshot({ path: `${OUT}/${wk ? 'wk_' : ''}${n}.png` });
 
-  // 1. Progrès : la carte de force vide ne colle plus aux chiffres clés, et dit où on en est
+  // 1. Progrès : la carte de force vide ne colle pas au bloc suivant, et dit où on en est
   await page.click('.tabbtn[data-id="progress"]'); await wait(800);
-  const ov = await page.evaluate(() => { const c = document.querySelector('.trend-card').getBoundingClientRect(), k = document.querySelector('.kpi-grid').getBoundingClientRect();
+  const ov = await page.evaluate(() => { const t = document.querySelector('.trend-card'), c = t.getBoundingClientRect(), k = t.nextElementSibling.getBoundingClientRect();
     return { gap: Math.round(k.top - c.bottom), dots: document.querySelectorAll('.tr-dots i.on').length, txt: document.querySelector('.tr-empty b').textContent }; });
   log('Empty strength card:', JSON.stringify(ov)); if (ov.gap < 10 || ov.dots !== 1 || !/Encore 2 séances/.test(ov.txt)) fail('carte de force vide : écart et progression');
   await shot('01_empty_strength');
@@ -55,8 +55,8 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   log('Formulas:', JSON.stringify(calc));
   if (calc.pushIdx !== 125 || calc.triDays !== 3 || calc.triF !== 1 || calc.pect !== 1.5) fail('1RM relatif, muscle secondaire, séries faciles');
 
-  // 4. historique : en changeant de mesure, les barres glissent (mêmes colonnes, animation en cours)
-  await page.evaluate(() => switchTab('history')); await wait(600);
+  // 4. Statistiques : en changeant de mesure, les barres glissent (mêmes colonnes, animation en cours)
+  await page.evaluate(() => { switchTab('progress'); ACT.progressTab({ v: 'stats' }); }); await wait(600);
   await page.click('[data-a="histRange"][data-v="3m"]'); await wait(700);
   await page.click('[data-a="histMetric"][data-v="minutes"]'); await wait(60);
   const morph = await page.evaluate(() => ({ cls: document.querySelector('#histChart').className, anims: document.getAnimations().filter(a => a.effect && a.effect.target && a.effect.target.classList && a.effect.target.classList.contains('cc-bar')).length }));

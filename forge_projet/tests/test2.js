@@ -59,7 +59,7 @@ const fs = require('fs');
   // --- Export prompt sanity ---
   await page.click('.tabbtn[data-id="profil"]');
   await page.waitForTimeout(150);
-  await page.click('[data-a="openDataMore"]'); await page.waitForTimeout(400);   // Profil › Restaurer, exporter, stockage
+  await page.click('[data-a="openData"]'); await page.waitForTimeout(400);   // Profil › Restaurer, exporter, stockage
   await page.click('.sheet [data-a="openExportImport"]');
   await page.waitForTimeout(150);
   const promptText = await page.$eval('textarea', el => el.value);
@@ -79,7 +79,7 @@ const fs = require('fs');
   };
   const tmpFile = (OUT_ROOT + '/sample.json');
   fs.writeFileSync(tmpFile, JSON.stringify(sample));
-  await page.click('[data-a="openDataMore"]'); await page.waitForTimeout(400);
+  await page.click('[data-a="openData"]'); await page.waitForTimeout(400);
   await page.click('.sheet [data-a="openExportImport"]');
   await page.waitForTimeout(150);
   const [fileChooser] = await Promise.all([

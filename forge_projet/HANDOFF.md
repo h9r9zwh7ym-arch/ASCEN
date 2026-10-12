@@ -1104,8 +1104,8 @@ a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est
 
 - **Étape 4, accueil, fin de séance, ascension** :
   - **accueil** (`renderTodayPreview`) : l'en-tête, un seul message (semaine allégée, séance manquée ou prochain
-    cap), la **carte du jour** blanche, la carte **« Cette semaine »**, « Mes séances », puis « Toi, il y a 3 mois »
-    et le rappel de sauvegarde. Les pastilles du haut (semaine, série, altitude) ont disparu : tout est dans la
+    cap), la **carte du jour** blanche, la carte **« Cette semaine »**, « Mes séances », puis le rappel de
+    sauvegarde (« Toi, il y a 3 mois » a quitté l'accueil à l'étape 5). Les pastilles du haut (semaine, série, altitude) ont disparu : tout est dans la
     carte de la semaine ;
   - carte du jour (`heroHTML`) : étiquette, titre, durée, la liste des exercices (3, puis « Voir les N exercices »
     sur place, `heroListHTML` / `heroMore`), « Commencer », « Choisir une autre séance » (`chooseSession` : feuille
@@ -1128,7 +1128,51 @@ a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est
     cette séance ? » et « Terminé » collé en bas ;
   - Mon ascension : inchangé sur le fond (déjà conforme à la maquette), tailles de l'en-tête alignées.
 
-À venir : Progrès, Historique, Profil › Apparence (vignettes de thème), animations signatures. Les sections plus haut qui parlent de Geist, Barlow, `#F4F3F1` ou `#FF6B3D` décrivent l'état
+- **Étape 5, Progrès, Historique, Profil, Apparence, et chasse aux doublons** (demande de YaYa : une information à
+  un seul endroit, sauf bonne raison) :
+  - **Progrès › Résumé** (`overviewPaneHTML`) : quatre blocs, puis trois lignes.
+    - « Ta force » (`forceSumHTML`) : le chiffre, « depuis tes débuts, en <mois> », la forme de la courbe
+      (`forceSparkSVG`) ; toucher = l'écran poussé « Ta force » avec la carte complète d'avant (statut, régions,
+      alertes, projections). En calibrage, les trois pastilles restent sur place.
+    - « Muscles · 7 derniers jours » (`muscleSumHTML`) : jusqu'à 4 barres (les plus travaillés et, s'il y en a un,
+      le muscle en retard qu'on travaille d'habitude), un repère en pied ; toucher = l'écran Muscles.
+    - « Derniers records » (3, `recordsSumHTML`) : ils ne sont plus répétés en tête de l'écran Exercices.
+    - « Avant et maintenant » (`thenNowListHTML`, liste groupée) : il n'est **plus sur l'accueil**.
+    - Lignes : Tous les exercices, **Statistiques** (nouvel écran poussé : le graphique séances / durée / séries /
+      tonnage qui était dans l'Historique, puis Tes habitudes), Objectifs et défis (« N en cours »).
+    - Retirés : la grille de chiffres clés (le graphique de Statistiques les donne), la Régularité sur 18 semaines
+      (la série est sur l'accueil, les jours dans le calendrier de l'Historique).
+  - **Objectifs et défis** : objectifs chiffrés et défis seulement. La carte « Mon ascension » (doublon de la carte
+    de la semaine) et les trophées (partis dans le Profil, comme sur la maquette) n'y sont plus.
+  - **Historique** (`renderHistory` / `histMonthHTML`) : un mois à la fois (`histMonth`, revient au mois en cours
+    après une nouvelle séance). Calendrier avec ‹ › (`histNav`, sans reconstruire la page), « N séances · durée »,
+    jours d'entraînement en pastilles orange (toucher = la séance, `histDay` ; plusieurs = feuille d'actions),
+    aujourd'hui cerclé ; « Rewind de <mois> » (le mois affiché, ou le mois écoulé depuis le mois en cours) ; puis
+    les séances du mois : nom, « Samedi 10 · 1 record », durée. Plus de pagination par 25 ni d'écart mensuel.
+  - **Profil** (`renderProfil`) : carte d'identité (initiale, prénom, « N séances depuis <mois> » ; toucher =
+    prénom) **sans l'ascension** ; carte **Trophées** (`trophiesCardHTML` : 3 derniers gagnés + le prochain, grisé ;
+    « N gagnés sur M » ; toucher = feuille Trophées avec la carte 3D, le compte par palier, les prochains paliers et
+    « Tous les trophées », qui s'ouvre en feuille enfant avec « Retour ») ; « Réglages » en deux groupes :
+    Objectifs (« 3 par semaine »), Réglages des séances, Matériel, Mes exercices, Poids du corps / Sons, Clics,
+    Apparence, Motivation, **Données et sauvegarde** (une seule feuille : sauvegarder, installer, restaurer,
+    exporter, stockage, réinitialiser ; à droite « il y a N j », en orange quand c'est le moment), À propos.
+    « Ton pourquoi » est en tête de Motivation (on y revient après l'enregistrement).
+  - **Apparence** : trois vignettes radio (Clair, Sombre, Automatique, `themeThumb`), puis « Pendant la séance » :
+    « Séance en sombre » (Recommandé / Toujours en sombre avec le thème Sombre / La séance suit le thème de l'app).
+  - **Accueil, doublons retirés** :
+    - « Prochain cap » (`nextGoal`) ne garde que ce que rien d'autre ne dit : alerte de force (toucher = Ta force),
+      record à battre, trophée presque gagné. La semaine (« Une séance de plus… »), la série en jeu, le retour en
+      force, la promesse du jour et l'ascension en repli en sont sortis ;
+    - la carte « Cette semaine » les porte : sous le nom de la montagne, « Retour en force : séance ×2 jusqu'à … »
+      ou « Camp X à ta portée aujourd'hui » (en orange), sinon la distance au prochain camp ; en pied, « Série de
+      N sem. en jeu » quand il n'y a plus de jour de marge ;
+    - « Mes séances » ne répète plus « N exercices · N séries · ≈ N min » (la durée est sur la carte du jour, la liste
+      des exercices à un toucher) : nom, jours, pictos.
+  - Code retiré : `ascCardHTML`, `ascWhereTxt`, `thenNowCardHTML`, la pagination de l'Historique (`histMore`) et
+    leurs styles.
+  - Test : `tests/v57.js`.
+
+À venir : animations signatures. Les sections plus haut qui parlent de Geist, Barlow, `#F4F3F1` ou `#FF6B3D` décrivent l'état
 d'avant cette refonte.
 
 ## 10. Cahier des charges d'origine (résumé)

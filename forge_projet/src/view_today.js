@@ -43,31 +43,16 @@ function bestSetEver(exoId, def){
         if(!b || sc>b.sc) b = { sc, r:st.reps, w:st.weight||0 }; } }
     return b; });
 }
+// Ce que la carte « Cette semaine » ne dit pas déjà : la semaine, la série en jeu, le retour en force et la
+// promesse du jour sont dans la carte (refonte 5.0 : pas de doublon) ; restent les alertes de force,
+// le record à battre et le trophée presque gagné.
 function nextGoal(){
-  const goal = S.goals.daysPerWeek||3, done = sessionsThisWeek(), left = goal-done;
-  const daysLeft = 7-weekdayIdx(todayISO()) - (sessionsToday().length ? 1 : 0);
-  const week = left>0 && left<=daysLeft ? { ic:"target", pct:done/goal, act:'data-a="tab" data-id="progress"',
-    t: left===1 ? "Une séance de plus et ta semaine est validée" : `Encore ${nb(left,"séance")} pour valider ta semaine` } : null;
-  const asc = typeof ascent==="function" ? ascent() : null;
-  // la série de semaines en jeu (plus de jour de marge) : ce qu'on a à perdre passe en premier
-  if(week && asc && asc.series>=2 && daysLeft-left<=1 && !asc.paused)
-    return { ic:"flame", pct:done/goal, warn:daysLeft===left, act:'data-a="openAscent"',
-      t:`Ta série de ${nb(asc.series, "semaine")} est en jeu : ${left===1 ? "une séance" : nb(left, "séance")} d'ici dimanche` };
-  // un muscle qui perd vraiment de la force (plus de 3 semaines sans séance) reste l'alerte la plus importante
   const da = S.settings.trend!==false && typeof detrainAlerts==="function" ? detrainAlerts()[0] : null;
-  if(da && da.losing && da.pct>0) return { ic:"warn", pct:null, warn:true, act:'data-a="tab" data-id="progress"', t:`${da.label} : ${da.m.days} jours sans séance, force estimée −${da.pct} %` };
-  // après une semaine sans séance : revenir rapporte double (retour en force)
-  if(asc && asc.comeback && !sessionsToday().length)
-    return { ic:"repeat", pct:null, act:'data-a="openAscent"', t:`Retour en force : ta prochaine séance compte double jusqu'à ${fmtNum(asc.comeback)} m` };
-  // la promesse du jour : un camp (ou le sommet) à portée de la séance d'aujourd'hui
-  const promise = asc && !sessionsToday().length && typeof ascTodayPromise==="function" ? ascTodayPromise(asc) : null;
-  if(promise) return { ic:"trendUp", pct:promise.pct, act:'data-a="openAscent"', t:week && left===1 ? `${promise.t}, et ta semaine est validée` : promise.t };
-  // l'avant-dernière séance de la semaine seulement : avant, la pastille « 1/3 cette semaine » le dit déjà
-  if(week && left===1) return week;
+  // un muscle qui perd vraiment de la force (plus de 3 semaines sans séance) reste l'alerte la plus importante
+  if(da && da.losing && da.pct>0) return { ic:"warn", pct:null, warn:true, act:'data-a="progressGo" data-v="force"', t:`${da.label} : ${da.m.days} jours sans séance, force estimée −${da.pct} %` };
   // un muscle délaissé : l'indice de force va baisser (ou baisse déjà), comme l'alerte d'une montre de sport
-  if(S.settings.trend!==false && typeof detrainAlerts==="function"){ const a = detrainAlerts()[0];
-    if(a) return { ic:a.losing ? "warn" : "clock", pct:null, warn:a.losing, act:'data-a="tab" data-id="progress"',
-      t: a.losing && a.pct>0 ? `${a.label} : ${a.m.days} jours sans séance, force estimée −${a.pct} %` : a.losing ? `${a.label} : ${a.m.days} jours sans séance, l'indice commence à baisser` : `${a.label} : ${a.m.days} jours sans séance, l'indice baisse dans ${nb(a.left,"jour")}` }; }
+  if(da) return { ic:da.losing ? "warn" : "clock", pct:null, warn:da.losing, act:'data-a="progressGo" data-v="force"',
+    t: da.losing ? `${da.label} : ${da.m.days} jours sans séance, l'indice commence à baisser` : `${da.label} : ${da.m.days} jours sans séance, l'indice baisse dans ${nb(da.left,"jour")}` };
   // le record à battre dans la séance prête (composée ou prévue aujourd'hui)
   if(!sessionsToday().length){
     const ids = (S.custom.exos.length ? S.custom.exos : (plannedTemplate()||{exos:[]}).exos).map(e=>e.exoId);
@@ -82,10 +67,7 @@ function nextGoal(){
   if(best){ const { m, p } = best, rest = p.next - p.v;
     return { ic:"trophy", pct:p.pct, act:`data-a="showMedal" data-id="${m.id}"`,
       t:`${TIERS[p.t+1].n} « ${m.n} » : plus que ${fmtMedalVal(m, rest)} ${medalUnit(m, rest)}` }; }
-  // sinon : l'ascension (prochain camp, ou la série qui ouvre la montagne suivante)
-  // la barre montre le chemin depuis le camp précédent : avec des camps rapprochés, elle se remplit à chaque séance
-  const a = asc || ascent(), nc = a.nextCamp, c0 = nc ? (a.camps[a.passed-1] || [a.start])[0] : 0;
-  return { ic:"trendUp", pct:a.wait ? Math.min(1, a.series/Math.max(1, a.nextReq)) : nc ? Math.max(0, Math.min(1, (a.alt-c0)/Math.max(1, nc[0]-c0))) : a.done, act:'data-a="openAscent"', t:ascWhereTxt(a) };
+  return null;
 }
 function nextGoalHTML(){
   if(S.settings.nextGoal===false) return "";
@@ -196,7 +178,7 @@ function heroHTML(mode, draft){
 function nudgeHTML(){
   if(backupDue()) return `<div class="backup-nudge stagger" style="--i:7">${sfIcon("download","green")}<div class="grow"><div class="t">Sauvegarde conseillée</div><div class="s">${S.sessions.length} séances sont stockées uniquement sur ce téléphone.</div></div><div class="bn-act"><button data-a="backupData">Sauvegarder</button><button class="later" data-a="backupLater">Plus tard</button></div></div>`;
   const rk = recapNudgeKey();
-  if(rk) return `<div class="backup-nudge rc-nudge stagger" style="--i:7">${sfIcon("sparkles","orange")}<div class="grow"><div class="t">Ton Rewind de ${MOIS_LONG[parseISO(rk+"-01").getMonth()]} est prêt</div><div class="s">Revis ton mois en une minute.</div></div><div class="bn-act"><button data-a="openRewind" data-kind="month" data-key="${rk}">Lancer</button><button class="later" data-a="recapLater">Plus tard</button></div></div>`;
+  if(rk) return `<div class="backup-nudge rc-nudge stagger" style="--i:7">${sfIcon("sparkles","orange")}<div class="grow"><div class="t">Ton Rewind ${deMois(MOIS_LONG[parseISO(rk+"-01").getMonth()])} est prêt</div><div class="s">Revis ton mois en une minute.</div></div><div class="bn-act"><button data-a="openRewind" data-kind="month" data-key="${rk}">Lancer</button><button class="later" data-a="recapLater">Plus tard</button></div></div>`;
   return "";
 }
 
@@ -209,13 +191,11 @@ function renderTodayPreview(draft){
       <h1 class="lt">${greeting()}</h1>
     </div>
     ${deloadCardHTML() || missedCardHTML() || nextGoalHTML()}
-    ${sessionsToday().length ? thenNowCardHTML() : ""}
     ${whyReminder() && !sessionsToday().length ? `<div class="why-card stagger" style="--i:2"><div class="why-k">${ii("flame")} Ton pourquoi</div><div class="why-t">« ${esc(whyReminder())} »</div><div class="why-s">${daysSinceLastSession()} jours sans séance : une seule suffit pour reprendre le fil.</div><button class="btn secondary sm why-go" data-a="startExpress">${icon("timer")} Séance express · 10 min</button></div>` : ""}
     ${sessionsToday().length ? doneCardHTML() : ""}
     <div class="seg-pane ${mode} ${paneDir?"from-"+paneDir:""}">${sessionsToday().length ? "" : heroHTML(mode, draft)}${mode==="custom" ? customPaneHTML() : proposalPaneHTML(draft)}</div>
     ${weekCardHTML()}
     ${templatesHTML()}
-    ${sessionsToday().length ? "" : thenNowCardHTML()}
     ${nudgeHTML()}
   </div>`;
 }
@@ -339,9 +319,18 @@ function weekCardHTML(){
   const a = ascent(), D = ASC_DATA[a.key], nc = a.nextCamp;
   const c0 = nc ? (a.camps[a.passed-1] || [a.start])[0] : 0;
   const pct = a.wait ? Math.min(1, a.series/Math.max(1, a.nextReq)) : nc ? Math.max(0, Math.min(1, (a.alt-c0)/Math.max(1, nc[0]-c0))) : Math.max(0, Math.min(1, a.done));
-  const where = !S.sessions.length ? "Ta première séance te met en route" : a.wait ? `Au sommet ${ascDu(a.key)}` : nc ? `${nc[1]} dans ${ascM(nc[0]-a.alt)}` : `Sommet dans ${ascM(D.top-a.alt)}`;
   const goal = S.goals.daysPerWeek||3, done = sessionsThisWeek(), si = streakInfo(), streak = si.n;
-  const today = todayISO(), monday = weekKey(today), doneDays = new Set(S.sessions.map(s=>s.date));
+  const today = todayISO(), monday = weekKey(today), doneDays = new Set(S.sessions.map(s=>s.date)), doneToday = sessionsToday().length;
+  // la ligne sous le nom : le retour en force (séance qui compte double), sinon ce que la séance du jour peut
+  // faire atteindre, sinon la distance au prochain camp (une seule ligne, plus de « Prochain cap » qui la répète)
+  const promise = !doneToday ? ascTodayPromise(a) : null;
+  const where = a.comeback && !doneToday ? `Retour en force : séance ×${String(ASC_BACK).replace(".", ",")} jusqu'à ${ascM(a.comeback)}`
+    : promise ? (a.wait ? `Dès aujourd'hui : ${ASC_DATA[a.next].n}` : promise.summit ? "Sommet à ta portée aujourd'hui" : `${nc[1]} à ta portée aujourd'hui`)
+    : !S.sessions.length ? "Ta première séance te met en route"
+    : a.wait ? `Au sommet ${ascDu(a.key)}` : nc ? `${nc[1]} dans ${ascM(nc[0]-a.alt)}` : `Sommet dans ${ascM(D.top-a.alt)}`;
+  // la série en jeu : plus de jour de marge pour valider la semaine
+  const left = goal-done, daysLeft = 7-weekdayIdx(today) - (doneToday ? 1 : 0);
+  const risk = streak>=2 && !a.paused && left>0 && left<=daysLeft && daysLeft-left<=1;
   const days = JOURS_COURTS.map((j,i)=>{
     const iso = addDaysISO(monday,i), t = S.templates.find(t=>(t.days||[]).includes(i)), isToday = iso===today;
     // « manquée » seulement si la séance était déjà prévue ce jour-là (pas pour un programme créé après)
@@ -355,19 +344,18 @@ function weekCardHTML(){
     <div class="wk-card">
       <button class="wk-asc" data-a="openAscent" aria-label="Mon ascension : ${esc(D.n)}, ${fmtNum(a.alt)} mètres. ${esc(where)}">
         ${ascStripHTML(a)}
-        <span class="wk-row"><span class="wk-n"><b>${esc(D.n)}</b><small>${esc(where)}</small></span><span class="wk-alt">${fmtNum(a.alt)} m</span><span class="chev">${icon("chev")}</span></span>
+        <span class="wk-row"><span class="wk-n"><b>${esc(D.n)}</b><small${promise || (a.comeback && !doneToday) ? ' class="wk-hot"' : ""}>${esc(where)}</small></span><span class="wk-alt">${fmtNum(a.alt)} m</span><span class="chev">${icon("chev")}</span></span>
         <span class="wk-bar"><i style="width:${(pct*100).toFixed(1)}%"></i></span>
       </button>
       <div class="wk-week">
         <div class="wk-days">${days}</div>
-        <div class="wk-foot"><span class="wk-cnt"><b>${done}</b> sur ${goal} séances</span>${streak>0 ? `<span>${nb(streak, "semaine")} d'affilée${si.recent ? " · joker utilisé" : ""}</span>` : ""}</div>
+        <div class="wk-foot"><span class="wk-cnt"><b>${done}</b> sur ${goal} séances</span>${risk ? `<span class="wk-risk">${ii("flame")}Série de ${streak} sem. en jeu</span>` : streak>0 ? `<span>${nb(streak, "semaine")} d'affilée${si.recent ? " · joker utilisé" : ""}</span>` : ""}</div>
       </div>
     </div>
   </section>`;
 }
 function tplCardHTML(t, i){
   const open = openTpls.has(t.id), region = tplRegion(t), loaded = S.custom.tplId===t.id;
-  const sets = t.exos.reduce((a,e)=>a+e.sets,0);
   const list = open ? tplBodyHTML(t) : "";
   return `<div class="tpl-card2 r-${region} ${open?"open":""} ${loaded?"loaded":""} stagger" data-id="${t.id}" style="--i:${Math.min(i+1,10)}">
     <button class="tc-head" data-a="toggleTpl" data-id="${t.id}" aria-expanded="${open}">
@@ -375,7 +363,6 @@ function tplCardHTML(t, i){
       <span class="tc-main">
         <span class="tc-name">${esc(t.n)}${loaded?' <span class="tc-tag">chargée</span>':""}</span>
         <span class="tc-more"><span>
-          <span class="tc-meta">${t.exos.length} exercice${t.exos.length>1?"s":""} · ${sets} séries · ≈ ${tplMinutes(t)} min</span>
           <span class="tc-days">${(t.days||[]).length ? (t.days||[]).slice().sort().map(d=>`<span>${JOURS_COURTS[d]}</span>`).join("") : `<em>pas de jour fixe</em>`}</span>
         </span></span>
       </span>

@@ -53,7 +53,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const home = await page.evaluate(() => { const g = document.querySelector('.goal-line'); return g ? { t: g.textContent, warn: g.classList.contains('warn') } : null; });
   log('Home alert:', JSON.stringify(home)); if (!home || !home.warn || !/jours sans séance, force estimée −\d+ %/.test(home.t)) fail('alerte sur l\'accueil');
   await shot('01_home_alert');
-  await page.evaluate(() => switchTab('progress')); await wait(700);
+  await page.evaluate(() => { switchTab('progress'); ACT.progressTab({ v: 'force' }); }); await wait(700);   // Progrès › Ta force
   const card = await page.evaluate(() => { const c = document.querySelector('.trend-card');
     return { status: c.querySelector('.tr-status').textContent.trim(), regs: [...c.querySelectorAll('.tr-reg')].map(e => e.textContent.trim() + (e.querySelector('em') ? '!' : '')), lines: [...c.querySelectorAll('.tr-line')].map(e => e.textContent.trim()) }; });
   log('Card:', JSON.stringify(card));

@@ -45,11 +45,11 @@ const OUT = path.join(OUT_ROOT, 'v26'); fs.mkdirSync(OUT, { recursive: true });
   await page.reload(); await page.waitForSelector('#splash', { state: 'detached', timeout: 6000 }); await wait(1500);
   const rec = await page.evaluate(() => ({ n: S.sessions.length, ls: !!localStorage.getItem('forge.v1') }));
   log('Recovered from IndexedDB:', JSON.stringify(rec)); if (rec.n !== st.n || !rec.ls) fail('reprise depuis IndexedDB');
-  // espace affiché dans le Profil
+  // espace affiché dans Profil › Données et sauvegarde
   await page.evaluate(() => switchTab('profil')); await wait(500);
-  const usage = await page.$eval('[data-a="openDataMore"] .s', e => e.textContent).catch(() => null);
+  await page.click('[data-a="openData"]'); await wait(400);
+  const usage = await page.$eval('.sheet [data-a="openStorage"] .s', e => e.textContent).catch(() => null);
   log('Usage row:', usage); if (!usage || !/Ko|Mo/.test(usage)) fail('indicateur d\'espace');
-  await page.click('[data-a="openDataMore"]'); await wait(400);
   await page.click('.sheet [data-a="openStorage"]'); await wait(700); await shot('01_storage');
   const sto = await page.$eval('#stoBody', e => e.textContent.replace(/\s+/g, ' ').slice(0, 200)); log('Storage sheet:', sto);
   if (!/ans d'entraînement/.test(sto)) fail('estimation de durée');
@@ -69,7 +69,7 @@ const OUT = path.join(OUT_ROOT, 'v26'); fs.mkdirSync(OUT, { recursive: true });
   log('Scrub:', a1.t, '→', a2.t, '→', a3.t, '| cursor', a3.cur);
   if (!a1.on || a1.t === a3.t || !a3.cur) fail('parcours de courbe');
   await page.evaluate(() => closeSheet()); await wait(400);
-  await page.evaluate(() => switchTab('history')); await wait(700);
+  await page.evaluate(() => { switchTab('progress'); ACT.progressTab({ v: 'stats' }); }); await wait(700);
   const cb = await page.evaluate(() => { const r = document.querySelector('#histChart .cc-plot').getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; });
   await page.mouse.move(cb.x + 10, cb.y + cb.h - 10); await page.mouse.down();
   await page.mouse.move(cb.x + cb.w * 0.5, cb.y + cb.h - 10); const c1 = await page.$eval('#charttip', e => e.textContent);

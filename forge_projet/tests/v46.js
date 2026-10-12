@@ -69,9 +69,9 @@ const APP = 'file://' + path.resolve(process.argv[2]);
 
   // 5. Progrès : compteur de la progression, carte des muscles en une teinte, stimulus sans losange
   await page.click('.tabbtn[data-id="progress"]'); await wait(200);
-  const tv = await page.evaluate(() => { const e = document.querySelector('.tr-v'); return { count: e.dataset.count, pre: e.dataset.pre }; });
+  const tv = await page.evaluate(() => { const e = document.querySelector('.fs-v'); return { count: e.dataset.count, pre: e.dataset.pre }; });   // « Ta force » du Résumé
   await wait(1200);
-  const tvEnd = await page.evaluate(() => document.querySelector('.tr-v').textContent);
+  const tvEnd = await page.evaluate(() => document.querySelector('.fs-v').textContent);
   await page.evaluate(() => ACT.progressTab({ v: 'muscles' })); await wait(1200);
   const mm = await page.evaluate(() => ({ legend: !!document.querySelector('.mm-legend'), fills: [...new Set([...document.querySelectorAll('.mm-week .mm-z.on')].map(z => getComputedStyle(z).fill))].length, diamond: !!document.querySelector('.wv-track u') }));
   log('Progress:', JSON.stringify(tv), tvEnd, JSON.stringify(mm));

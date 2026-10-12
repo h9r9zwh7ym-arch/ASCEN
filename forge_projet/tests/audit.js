@@ -96,12 +96,16 @@ const W = +(process.env.W || 375), DARK = process.env.DARK === '1', wk = process
   await page.evaluate(() => document.querySelector('#v-progress').scrollTo(0, 99999)); await audit('progress_bottom');
   await page.evaluate(() => ACT.progressTab({ v: 'exos' })); await audit('progress_exos');
   await page.click('[data-a="openExoChart"]'); await wait(900); await audit('exochart'); await close();
-  await page.evaluate(() => ACT.progressTab({ v: 'medals' })); await audit('medals');
-  await page.click('[data-a="allMedals"]'); await wait(900); await audit('all_medals');   // la collection : feuille « Tous les trophées »
+  await page.evaluate(() => ACT.progressTab({ v: 'force' })); await audit('progress_force');
+  await page.evaluate(() => ACT.progressTab({ v: 'stats' })); await audit('progress_stats');
+  await page.evaluate(() => ACT.progressTab({ v: 'overview' })); await wait(300);
+  // Profil › Trophées (refonte 5), puis la collection en feuille enfant
+  await page.click('.tabbtn[data-id="profil"]'); await wait(400);
+  await page.click('#v-profil .pt-card'); await wait(900); await audit('medals');
+  await page.click('.trophies-body [data-a="allMedals"]'); await wait(900); await audit('all_medals');   // la collection : feuille « Tous les trophées »
   await page.click('.medal-card'); await page.waitForSelector('.center-modal, .t3d-full.show', { timeout: 20000 }); await audit('medal_modal'); await close();
   await page.evaluate(() => closeSheet()); await wait(400);
-  await page.click('.tabbtn[data-id="profil"]'); await wait(400);
-  for (const a of ['openSessionPrefs', 'openMotivation', 'openDataMore']) { await page.click(`[data-a="${a}"]`); await wait(700); await audit(a); await page.evaluate(() => closeSheet()); await wait(400); }
+  for (const a of ['openSessionPrefs', 'openMotivation', 'openData']) { await page.click(`[data-a="${a}"]`); await wait(700); await audit(a); await page.evaluate(() => closeSheet()); await wait(400); }
   await page.click('.tabbtn[data-id="profil"]'); await audit('profil');
   await page.evaluate(() => document.querySelector('#v-profil').scrollTo(0, 99999)); await audit('profil_bottom');
   for (const a of ['openEquip', 'openExoPrefs', 'openGoals', 'openExportImport', 'openAppearance', 'openAbout']) { await act(a); await audit(a); await close(); }

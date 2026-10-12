@@ -15,10 +15,7 @@ function sessionIcon(s){
   return `<span class="xico r-${region}">${(first ? exoPicto(first) : pictoSVG("squat"))}</span>`;
 }
 
-// Affichage par paquets : l'historique complet (des centaines de séances après
-// quelques années) prenait plus de 100 ms à dessiner sur téléphone.
-let histLimit = 25;
-let histMetric = "sessions"; // graphique de l'historique : séances, durée, séries ou tonnage
+let histMetric = "sessions"; // graphique de Progrès › Statistiques : séances, durée, séries ou tonnage
 const HIST_METRICS = [["sessions","Séances"],["minutes","Durée"],["sets","Séries"],["volume","Tonnage"]];
 // période du graphique : barres par jour (7 j, 1 mois), par semaine (3 et 6 mois), par mois (1 an) ;
 // « Total » s'adapte à l'ancienneté : semaines jusqu'à 3 mois, mois jusqu'à 3 ans, années au-delà
@@ -77,64 +74,64 @@ function histChartHTML(){
     ${columnChart(out.map(b=>({ label:histLabel(unit,b.k), v:val(b), tip:`${histLabel(unit,b.k,true)} : ${fmt(val(b))}` })), { goal: m==="sessions" && unit==="week" ? S.goals.daysPerWeek : 0, fmt })}
     <div class="hist-avg">${foot}</div>`;
 }
-// écart avec le mois précédent (pas pour le mois en cours, encore incomplet)
-function monthDeltaHTML(key, perMonth, curMonth, firstMonth){
-  if(key===curMonth || key<=firstMonth) return "";
-  const d = parseISO(key+"-01"); d.setMonth(d.getMonth()-1);
-  const pk = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
-  const diff = (perMonth[key]||0)-(perMonth[pk]||0);
-  return ` · <span class="md ${diff>0?"up":diff<0?"down":""}">${diff>0?"+"+diff:diff<0?"−"+Math.abs(diff):"autant"} vs ${MOIS[d.getMonth()]}</span>`;
-}
+// « de mars », « d'avril »
+function deMois(m){ return /^[aeiouéh]/i.test(m) ? "d'"+m : "de "+m; }
+// Historique (refonte 5.0) : un mois à la fois. Le calendrier montre les jours d'entraînement (toucher un
+// jour = sa séance), le Rewind du mois, puis les séances du mois. Avant, toute la liste défilait par paquets
+// de 25 sous un graphique ; le graphique vit maintenant dans Progrès › Statistiques.
+let histMonth = null, histMonthN = -1; // mois affiché (AAAA-MM) ; revient au mois en cours après une nouvelle séance
 function renderHistory(){
-  const all = S.sessions.slice().reverse();
-  const sessions = all.slice(0, histLimit);
-  if(!sessions.length){
+  if(!S.sessions.length){
     return `<div class="navbar"><div class="nb-title">Historique</div></div><div class="content">
       <h1 class="lt">Progrès</h1>${progViewSeg("history")}
       <div class="empty-state"><span class="em">${sfIcon("history","indigo","lg")}</span>Aucune séance enregistrée pour l'instant.<br>Termine ta première séance pour la voir ici.</div>
     </div>`;
   }
-  const months = [];
-  sessions.forEach(s=>{
-    const key = s.date.slice(0,7);
-    let m = months[months.length-1];
-    if(!m || m.key!==key){ m = { key, list:[] }; months.push(m); }
-    m.list.push(s);
-  });
-  // séances par mois sur tout l'historique (pas seulement la partie affichée)
-  const perMonth = {};
-  all.forEach(s=>{ const k = s.date.slice(0,7); perMonth[k] = (perMonth[k]||0)+1; });
-  const curMonth = todayISO().slice(0,7), firstMonth = S.sessions[0].date.slice(0,7);
-  let i = 0;
-  const html = months.map(m=>{
-    const d = parseISO(m.key+"-01");
-    const vol = m.list.reduce((t,s)=>t+sessionVolume(s),0);
-    const rows = m.list.map(s=>{
-      const prs = sessionPRCount(s);
-      return `<button class="row tap stagger" style="--i:${Math.min(i++,12)}" data-a="openSessionDetail" data-id="${s.id}">
-        ${sessionIcon(s)}
-        <div class="grow"><div class="hr-top"><span class="t">${esc(sessionTitle(s))}${prs?` <span class="pr-badge">${ii("bolt")} ${prs}</span>`:""}</span><span class="hr-dur">${s.durationSec?fmtDuration(s.durationSec):""}</span></div>
-        <div class="s">${esc(fmtDate(s.date,"short"))} · ${nb(sessionSetCount(s),"série")}${sessionVolume(s)?" · "+fmtKg(sessionVolume(s)):""}</div>${s.note?`<div class="hn">${esc(s.note)}</div>`:""}</div>
-        <span class="chev">${icon("chev")}</span>
-      </button>`;
-    }).join("");
-    return `<h2 class="sh">${MOIS_LONG[d.getMonth()].replace(/^./,c=>c.toUpperCase())} ${d.getFullYear()}</h2>
-      <div class="sh-sub">${m.list.length} séance${m.list.length>1?"s":""}${vol?" · "+fmtKg(vol):""}${monthDeltaHTML(m.key, perMonth, curMonth, firstMonth)}</div>
-      <div class="group">${rows}</div>`;
-  }).join("");
-  const more = all.length - sessions.length;
+  const cur = todayISO().slice(0,7), first = firstSessionDate().slice(0,7);
+  if(!histMonth || histMonthN!==S.sessions.length || histMonth>cur) histMonth = cur;
+  if(histMonth<first) histMonth = first;
+  histMonthN = S.sessions.length;
   return `<div class="navbar"><div class="nb-title">Historique</div></div><div class="content">
     <h1 class="lt">Progrès</h1>${progViewSeg("history")}
-    <div class="sh-sub">${all.length} séance${all.length>1?"s":""} au total${totalVolumeAllTime()?" · "+fmtKg(totalVolumeAllTime())+" soulevés":""}</div>
-    <div class="chart-card hist-chart stagger" style="--i:0">
-      ${segHTML("histMetric", HIST_METRICS, histMetric, "histMetric")}
-      ${segHTML("histRange", HIST_RANGES, histRange, "histRange").replace('class="seg"','class="seg sm"')}
-      <div id="histChart">${histChartHTML()}</div>
-    </div>
-    <div class="group rc-entry stagger" style="--i:1"><button class="row tap" style="width:100%" data-a="openRecap">${sfIcon("sparkles","orange")}<div class="grow"><div class="t">Rewind</div><div class="s">Revis ton mois ou ton année en animation</div></div><span class="chev">${icon("chev")}</span></button></div>
-    ${html}
-    ${more>0?`<div class="btnrow"><button class="btn tertiary" data-a="histMore">Afficher ${Math.min(more,25)} séance${Math.min(more,25)>1?"s":""} de plus</button></div><div class="hr-note center">${more} au total non affichée${more>1?"s":""}</div>`:""}
+    <div id="histMonth">${histMonthHTML()}</div>
   </div>`;
+}
+function histMonthHTML(){
+  const key = histMonth, cur = todayISO().slice(0,7), first = firstSessionDate().slice(0,7), today = todayISO();
+  const list = S.sessions.filter(s=>s.date.startsWith(key)).reverse(), byDay = {};
+  list.forEach(s=>{ (byDay[s.date] = byDay[s.date] || []).push(s); });
+  const d0 = parseISO(key+"-01"), mName = MOIS_LONG[d0.getMonth()], title = mName.replace(/^./,c=>c.toUpperCase())+" "+d0.getFullYear();
+  const dur = list.reduce((a,s)=>a+(s.durationSec||0),0), adh = key===cur ? monthPlanAdherence() : null; // séances prévues faites ce mois-ci
+  const nDays = new Date(d0.getFullYear(), d0.getMonth()+1, 0).getDate(), lead = (d0.getDay()+6)%7;
+  let cells = "";
+  for(let i=0;i<lead;i++) cells += `<span class="hc-d"></span>`;
+  for(let n=1;n<=nDays;n++){
+    const iso = key+"-"+String(n).padStart(2,"0"), ss = byDay[iso], cls = iso===today ? " today" : iso>today ? " fut" : "";
+    cells += ss ? `<span class="hc-d"><button class="hc-on${cls}" data-a="histDay" data-d="${iso}" aria-label="${esc(fmtDate(iso,"long"))} : ${ss.length>1 ? nb(ss.length,"séance") : esc(sessionTitle(ss[0]))}">${n}</button></span>`
+      : `<span class="hc-d"><span class="hc-n${cls}"${iso===today ? ` aria-label="Aujourd'hui"` : ""}>${n}</span></span>`;
+  }
+  const prev = monthKeyAdd(key, -1), next = monthKeyAdd(key, 1);
+  // le Rewind du mois affiché ; pour le mois en cours, celui du mois écoulé s'il existe
+  const prevN = S.sessions.filter(s=>s.date.startsWith(prev)).length, rk = key===cur && prevN ? prev : list.length ? key : null;
+  const rows = list.map((s,i)=>{
+    const prs = sessionPRCount(s), dd = parseISO(s.date), day = JOURS[dd.getDay()].replace(/^./,c=>c.toUpperCase())+" "+(dd.getDate()===1 ? "1er" : dd.getDate());
+    return `<button class="row tap hs-row stagger" style="--i:${Math.min(i+2,12)}" data-a="openSessionDetail" data-id="${s.id}">
+      ${sessionIcon(s)}
+      <div class="grow"><div class="t">${esc(sessionTitle(s))}</div><div class="s">${day}${prs ? ` · ${nb(prs,"record")}` : ""}</div>${s.note?`<div class="hn">${esc(s.note)}</div>`:""}</div>
+      ${s.durationSec ? `<span class="hs-dur">${fmtDuration(s.durationSec)}</span>` : ""}
+      <span class="chev">${icon("chev")}</span>
+    </button>`;
+  }).join("");
+  return `<section class="hc-card stagger" style="--i:0" aria-label="Calendrier de ${esc(title)}">
+      <div class="hc-head">
+        <button class="hc-nav" data-a="histNav" data-d="-1" aria-label="Mois précédent : ${MOIS_LONG[parseISO(prev+"-01").getMonth()]}" ${key<=first ? "disabled" : ""}>${icon("chevL")}</button>
+        <div class="hc-title"><b>${esc(title)}</b><span>${list.length ? `${nb(list.length,"séance")}${dur ? " · "+fmtDuration(dur) : ""}` : "Aucune séance"}${adh ? ` · ${adh.done} ${adh.planned>1 ? "des" : "de la"} ${adh.planned>1 ? adh.planned+" prévues" : "prévue"}` : ""}</span></div>
+        <button class="hc-nav" data-a="histNav" data-d="1" aria-label="Mois suivant : ${MOIS_LONG[parseISO(next+"-01").getMonth()]}" ${key>=cur ? "disabled" : ""}>${icon("chev")}</button>
+      </div>
+      <div class="hc-grid"><span class="hc-w" aria-hidden="true">L</span><span class="hc-w" aria-hidden="true">M</span><span class="hc-w" aria-hidden="true">M</span><span class="hc-w" aria-hidden="true">J</span><span class="hc-w" aria-hidden="true">V</span><span class="hc-w" aria-hidden="true">S</span><span class="hc-w" aria-hidden="true">D</span>${cells}</div>
+    </section>
+    ${rk ? `<div class="group rc-entry stagger" style="--i:1"><button class="row tap" style="width:100%" data-a="openRecap" data-kind="month" data-key="${rk}">${sfIcon("sparkles","gray")}<div class="grow"><div class="t">Rewind ${deMois(MOIS_LONG[parseISO(rk+"-01").getMonth()])}</div></div><span class="chev">${icon("chev")}</span></button></div>` : ""}
+    ${list.length ? `<h2 class="sh">Séances</h2><div class="group hs-group">${rows}</div>` : `<p class="hr-note center hs-none">Aucune séance en ${mName}.</p>`}`;
 }
 
 // séance enregistrée depuis la dernière visite de l'historique : sa ligne arrive et s'éclaire une
@@ -218,12 +215,19 @@ function sessionDetailHTML(s){
 }
 
 Object.assign(ACT, {
-  // les séances révélées arrivent en cascade, les premières restent en place
-  histMore(){
-    const n0 = qsa("#v-history .row[data-id]").length; histLimit += 25; changed();
-    if(reducedMotion()) return;
-    qsa("#v-history .row[data-id]").slice(n0).forEach((r,i)=>{ if(i>11 || !r.animate) return;
-      try{ r.animate([{ opacity:0, transform:"translateY(10px)" }, { opacity:1, transform:"none" }], { duration:380, delay:i*35, easing:"cubic-bezier(.2,.8,.2,1)", fill:"backwards" }); }catch(e){} });
+  // mois précédent / suivant : seul le mois change, la page ne se reconstruit pas
+  histNav(d){
+    const box = qs("#histMonth"); if(!box) return;
+    const cur = todayISO().slice(0,7), k = monthKeyAdd(histMonth, +d.d);
+    if(k>cur || k<firstSessionDate().slice(0,7)) return;
+    histMonth = k; box.innerHTML = histMonthHTML(); sfx("seg");
+    if(!reducedMotion() && box.animate) try{ box.animate([{ opacity:0, transform:`translateX(${+d.d>0 ? 14 : -14}px)` }, { opacity:1, transform:"none" }], { duration:220, easing:"cubic-bezier(.2,.8,.2,1)" }); }catch(e){}
+  },
+  // un jour du calendrier : sa séance (ou le choix, s'il y en a eu plusieurs)
+  histDay(d){
+    const ss = S.sessions.filter(s=>s.date===d.d); if(!ss.length) return;
+    if(ss.length===1) return ACT.openSessionDetail({ id:ss[0].id });
+    actionSheet({ msg:esc(fmtDate(d.d,"long")), actions:ss.map(s=>({ t:`${sessionTitle(s)}${s.durationSec ? " · "+fmtDuration(s.durationSec) : ""}`, run:()=>ACT.openSessionDetail({ id:s.id }) })) });
   },
   saveNote(d, el){
     const s = S.sessions.find(x=>x.id===d.id); if(!s) return;

@@ -152,14 +152,12 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.evaluate(() => document.querySelector('#v-progress').scrollTo(0, 1200));
   await wait(300);
   await shot('13_progress_charts2');
-  // bulle d'un graphique en colonnes (les graphiques par semaine sont dans l'Historique depuis la 4.0)
-  await page.evaluate(() => switchTab('history')); await wait(700);
+  // bulle d'un graphique en colonnes (Progrès › Statistiques depuis la refonte 5)
+  await page.evaluate(() => ACT.progressTab({ v: 'stats' })); await wait(700);
   const col = await page.$('.cc-col >> nth=-1');
   await col.click(); await wait(200);
   log('Tooltip text:', await page.textContent('#charttip'), 'visible:', await page.$eval('#charttip', e => e.classList.contains('show')));
   await shot('14_tooltip');
-  await page.click('.tabbtn[data-id="progress"]'); await wait(700);
-
   await page.evaluate(() => ACT.progressTab({ v: 'exos' }));
   await wait(800);
   await shot('15_exos');
@@ -169,7 +167,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.click('.sheet-hd [data-a="closesheet"]');
   await wait(350);
 
-  await page.evaluate(() => ACT.progressTab({ v: 'medals' }));
+  await page.evaluate(() => ACT.openTrophies());   // Profil › Trophées depuis la refonte 5
   await wait(1000);
   await shot('17_medals');
   await page.evaluate(() => ACT.allMedals()); await wait(900);   // la collection : feuille « Tous les trophées »
@@ -184,9 +182,9 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.evaluate(() => ACT.progressTab({ v: 'overview' }));
   await wait(1200);
   await shot('19_dark_overview');
-  await page.evaluate(() => ACT.progressTab({ v: 'medals' }));
+  await page.evaluate(() => ACT.openTrophies());
   await wait(1000);
-  await shot('20_dark_medals');
+  await shot('20_dark_medals'); await page.evaluate(() => closeSheet()); await wait(400);
   await page.click('.tabbtn[data-id="today"]');
   await wait(600);
   await shot('21_dark_today');

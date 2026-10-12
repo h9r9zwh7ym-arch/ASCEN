@@ -64,7 +64,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await shot('04_stim_about'); await page.evaluate(() => closeSheet()); await wait(400);
 
   // 4. historique : 7 j / 1 mois / 3 mois / 6 mois / 1 an / Total (par défaut)
-  await page.evaluate(() => switchTab('history')); await wait(600);
+  await page.evaluate(() => { switchTab('progress'); ACT.progressTab({ v: 'stats' }); }); await wait(600);   // Progrès › Statistiques (refonte 5)
   const rg = await page.evaluate(() => ({ labels: [...document.querySelectorAll('[data-seg="histRange"] button')].map(b => b.textContent), on: document.querySelector('[data-seg="histRange"] .on').dataset.v }));
   const bars = {};
   for (const v of ['w', 'm', '3m', '6m', 'y', 'all']) { await page.click(`[data-a="histRange"][data-v="${v}"]`); await wait(350);

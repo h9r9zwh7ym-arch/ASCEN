@@ -29,15 +29,16 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const tab = async v => { await page.evaluate(v => ACT.progressTab({ v }), v); await wait(400);
     return page.evaluate(() => ({ trend: !!document.querySelector('#v-progress .trend-card'), kpi: document.querySelectorAll('#v-progress .kpi').length, heat: !!document.querySelector('#v-progress .heatmap, #v-progress .hm'), habits: !!document.querySelector('#v-progress .group.habits'),
       level: !!document.querySelector('#v-progress .asc-card'), mm: !!document.querySelector('#v-progress .mm-card'), stim: !!document.querySelector('#v-progress .stim-card'), medals: !!document.querySelector('#v-progress .medal-summary'),
-      exos: !!document.querySelector('#v-progress [data-a="openExoChart"]'), titles: [...document.querySelectorAll('#v-progress .sh, #v-progress .cc-t')].map(e => e.textContent.trim()) })); };
+      fs: !!document.querySelector('#v-progress .fs-card'), exos: !!document.querySelector('#v-progress [data-a="openExoChart"]'), titles: [...document.querySelectorAll('#v-progress .sh, #v-progress .cc-t')].map(e => e.textContent.trim()) })); };
   const labels = [...await page.$$eval('[data-seg="pview"] button', b => b.map(x => x.textContent)), ...await page.$$eval('#v-progress .prog-more [data-a="progressTab"]', b => b.map(x => x.dataset.v))];
   const ov = await tab('overview'), mu = await tab('muscles'), ex = await tab('exos'), go = await tab('medals');
   log('Tabs:', labels.join('|'), '| overview', JSON.stringify(ov), '| muscles', JSON.stringify({ mm: mu.mm, stim: mu.stim }), '| goals', JSON.stringify({ level: go.level, medals: go.medals, t: go.titles.slice(0, 4) }));
-  if (labels.join('|') !== 'Résumé|Historique|muscles|exos|medals') fail('Résumé | Historique et trois écrans poussés');
-  if (!ov.trend || ov.kpi !== 4 || !ov.habits || ov.level || ov.mm || ov.titles.some(t => /Séances par semaine|Tonnage par semaine|Mes objectifs|Défis/.test(t))) fail('Résumé recentré');
+  // refonte 5 : le Résumé (Ta force en bref, muscles, records, avant/maintenant) et trois lignes ; Muscles s'ouvre depuis sa carte
+  if (labels.join('|') !== 'Résumé|Historique|exos|stats|medals') fail('Résumé | Historique et trois écrans poussés');
+  if (!ov.fs || ov.trend || ov.kpi || ov.habits || ov.heat || ov.level || ov.mm || ov.titles.some(t => /Séances par semaine|Tonnage par semaine|Mes objectifs|Défis/.test(t))) fail('Résumé recentré');
   if (!mu.mm || !mu.stim || mu.trend) fail('onglet Muscles');
   if (!ex.exos || !ex.titles.includes('Tous mes exercices')) fail('onglet Exercices');
-  if (!go.level || !go.medals || !go.titles.includes('Mes objectifs') || !go.titles.includes('Défis')) fail('onglet Objectifs');
+  if (go.level || go.medals || !go.titles.includes('Mes objectifs') || !go.titles.includes('Défis')) fail('onglet Objectifs (sans ascension ni trophées)');
 
   // 2. progression de force en % (0 au départ) ; stimulus : séries pondérées et zones
   const pc = await page.evaluate(() => ({ zero: pctTxt(100), up: pctTxt(124), down: pctTxt(91), z: [0, 3.5, 4, 9.5, 10, 14].map(stimZone) }));
@@ -50,20 +51,22 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await tab('muscles'); await page.evaluate(() => { const c = document.querySelector('.stim-card'); document.querySelector('#v-progress').scrollTop = c.offsetTop - 70; }); await wait(300); await shot('01_stimulus');
   await tab('overview'); await shot('02_overview');
 
-  // 3. historique : tonnage par semaine (les graphiques ont quitté Progrès)
-  await page.evaluate(() => switchTab('history')); await wait(500);
+  // 3. tonnage par semaine (Progrès › Statistiques depuis la refonte 5)
+  await page.evaluate(() => { switchTab('progress'); ACT.progressTab({ v: 'stats' }); }); await wait(500);
   await page.click('[data-a="histMetric"][data-v="volume"]'); await wait(400);
   const hv = await page.evaluate(() => document.querySelector('.hist-kpi b').textContent);
   log('History tonnage:', hv); if (!/kg|t$/.test(hv)) fail('tonnage dans l\'historique');
 
   // 4. Profil : identité et réglages seulement, la réinitialisation en dernier
   await page.click('.tabbtn[data-id="profil"]'); await wait(500);
+  // (refonte 5 : Trophées puis Réglages ; les données dans une seule feuille, la réinitialisation en dernier)
   const pf = await page.evaluate(() => ({ secs: [...document.querySelectorAll('#v-profil h2.sh')].map(e => e.textContent.trim()), medals: !!document.querySelector('.ph-medals'),
-    lastData: (() => { const g = [...document.querySelectorAll('#v-profil h2.sh')].find(h => /Mes données/.test(h.textContent)).nextElementSibling; const rows = g.querySelectorAll('[data-a]'); return rows[rows.length - 1].dataset.a; })(),
     exRow: (document.querySelector('[data-a="openExoPrefs"] .t') || {}).textContent }));
+  await page.click('#v-profil [data-a="openData"]'); await wait(500);
+  pf.lastData = await page.evaluate(() => { const rows = document.querySelectorAll('#overlay .sheet-body [data-a]'); return rows[rows.length - 1].dataset.a; });
+  await page.evaluate(() => closeSheet()); await wait(400);
   log('Profile:', JSON.stringify(pf));
-  // (loi de Hick : Motivation et les options de données sont regroupées derrière une ligne ; la réinitialisation reste la dernière, dans sa feuille)
-  if (pf.secs.join('|') !== 'Entraînement|Mes données|Apparence et sons' || pf.medals || pf.lastData !== 'openDataMore' || pf.exRow !== 'Mes exercices') fail('Profil réorganisé');
+  if (pf.secs.join('|') !== 'Trophées|Réglages' || pf.medals || pf.lastData !== 'confirmReset' || pf.exRow !== 'Mes exercices') fail('Profil réorganisé');
 
   // 5. favoris : étoile dans la fiche, en tête du choix d'exercices, filtre, menu de séance
   await page.evaluate(() => ACT.showExoInfo({ id: 'pompes_diamant' })); await wait(600);

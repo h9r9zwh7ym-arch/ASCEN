@@ -39,27 +39,27 @@ function recentPRs(n){
 }
 
 function renderProgress(){
-  // quatre onglets, une question chacun : où j'en suis (Résumé), quels muscles je travaille (Muscles),
-  // chaque exercice (Exercices), ce que je vise et ce que j'ai gagné (Objectifs : niveau, objectifs, défis, trophées)
-  // refonte 5.0 : en haut, Résumé | Historique ; Muscles, Exercices et Objectifs s'ouvrent depuis le
-  // Résumé comme des écrans poussés (bouton retour), à la façon des apps Apple
+  // refonte 5.0 : en haut, Résumé | Historique. Le Résumé montre l'essentiel (ta force, tes muscles de la
+  // semaine, tes derniers records, avant/maintenant) ; chaque détail s'ouvre comme un écran poussé
+  // (bouton retour), à la façon des apps Apple : Ta force, Muscles, Exercices, Statistiques, Objectifs et défis
   const sub = PROG_SUB[progressTab];
   if(sub){
-    const pane = progressTab==="exos" ? exosPaneHTML() : progressTab==="medals" ? goalsPaneHTML() : musclesPaneHTML();
+    const pane = { force:forcePaneHTML, exos:exosPaneHTML, stats:statsPaneHTML, medals:goalsPaneHTML }[progressTab] || musclesPaneHTML;
     return `<div class="navbar"><div class="nb-left"><button class="back-link" data-a="progressTab" data-v="overview">${icon("chevL")}Résumé</button></div><div class="nb-title">${sub}</div></div><div class="content">
-      <h1 class="lt">${sub}</h1><div class="seg-pane">${pane}</div></div>`;
+      <h1 class="lt">${sub}</h1><div class="seg-pane">${pane()}</div></div>`;
   }
   return `<div class="navbar"><div class="nb-title">Progrès</div></div><div class="content">
-    <h1 class="lt">Progrès</h1>${progViewSeg("progress")}<div class="seg-pane">${overviewPaneHTML()}${progMoreHTML()}</div></div>`;
+    <h1 class="lt">Progrès</h1>${progViewSeg("progress")}<div class="seg-pane">${overviewPaneHTML()}</div></div>`;
 }
 
 // sous-écrans de Progrès, ouverts depuis le Résumé
-const PROG_SUB = { muscles:"Muscles", exos:"Exercices", medals:"Objectifs" };
+const PROG_SUB = { force:"Ta force", muscles:"Muscles", exos:"Exercices", stats:"Statistiques", medals:"Objectifs et défis" };
 function progViewSeg(cur){ return segHTML("pview", [["progress","Résumé"],["history","Historique"]], cur, "progView"); }
-function progMoreHTML(){
-  if(!S.sessions.length) return "";
-  const items = [["muscles","person","Muscles","Séries de la semaine par muscle"],["exos","dumbbell","Tous les exercices","Courbe, record et projection"],["medals","target","Objectifs et défis","Objectifs, défis et trophées"]];
-  return `<div class="group prog-more">${items.map(([v,g,t,sub])=>`<button class="row tap" style="width:100%" data-a="progressTab" data-v="${v}">${sfIcon(g,"gray")}<div class="grow"><div class="t">${t}</div><div class="s">${sub}</div></div><span class="chev">${icon("chev")}</span></button>`).join("")}</div>`;
+// les liens du bas du Résumé : ce qui n'a pas de carte au-dessus
+function progLinksHTML(){
+  const act = S.targets.filter(t=>!t.doneAt).length + activeChallenges().length;
+  const items = [["exos","dumbbell","Tous les exercices",""],["stats","chart","Statistiques",""],["medals","target","Objectifs et défis", act ? `${act} en cours` : ""]];
+  return `<div class="group prog-more stagger" style="--i:6">${items.map(([v,g,t,val])=>`<button class="row tap" style="width:100%" data-a="progressTab" data-v="${v}">${sfIcon(g,"gray")}<div class="grow"><div class="t">${t}</div></div>${val ? `<span class="val">${val}</span>` : ""}<span class="chev">${icon("chev")}</span></button>`).join("")}</div>`;
 }
 // ---------- projection d'un exercice (réglage Motivation, 4.0) ; l'indice de force est dans strength.js ----------
 function exoMetric(def, ex, kgOnly){
@@ -101,24 +101,74 @@ function exoProjection(){
 
 function overviewPaneHTML(){
   if(!S.sessions.length){
-    return `<div class="empty-state"><span class="em">${sfIcon("chart","orange","lg")}</span>Tes statistiques apparaîtront ici après ta première séance : progression de force, régularité, tonnage, records…</div>`;
+    return `<div class="empty-state"><span class="em">${sfIcon("chart","orange","lg")}</span>Tes statistiques apparaîtront ici après ta première séance : progression de force, muscles travaillés, records…</div>`;
   }
-  const vol = totalVolumeAllTime(), hours = totalDurationSec()/3600;
-  const kpis = `<div class="kpi-grid">
-    <div class="kpi stagger" style="--i:2"><div class="kpi-l">Séances</div><div class="kpi-v" data-count="${S.sessions.length}">${S.sessions.length}</div><div class="kpi-s">${sessionsInMonth()} ce mois-ci</div></div>
-    <div class="kpi stagger" style="--i:3"><div class="kpi-l">Tonnage total</div><div class="kpi-v" ${vol>=10000?`data-count="${round1(vol/1000)}" data-dec="1" data-unit="t"`:`data-count="${Math.round(vol)}" data-unit="kg"`}>${fmtKg(vol)}</div><div class="kpi-s">record : ${fmtKg(bestSessionVolume())} / séance</div></div>
-    <div class="kpi stagger" style="--i:4"><div class="kpi-l">Temps d'entraînement</div><div class="kpi-v" data-count="${round1(hours)}" data-dec="1" data-unit="h">${fmtDec(hours)} h</div><div class="kpi-s">${fmtDuration(Math.round(totalDurationSec()/S.sessions.length))} en moyenne</div></div>
-    <div class="kpi stagger" style="--i:5"><div class="kpi-l">Séries validées</div><div class="kpi-v" data-count="${totalSets()}">${fmtNum(totalSets())}</div><div class="kpi-s">${S.meta.prCount||0} records battus</div></div>
-  </div>`;
-  return `${strengthCardHTML()}${thenNowListHTML()}${kpis}
-    <div class="chart-card stagger" style="--i:6">
-      <div class="cc-h"><div class="cc-t">Régularité</div><div class="cc-s">18 dernières semaines · ${currentStreakWeeks()} sem. d'affilée, record ${maxStreakWeeksEver()}${(()=>{ const a = monthPlanAdherence(); return a ? ` · ce mois : ${a.done} séance${a.done>1?"s":""} sur ${a.planned} prévue${a.planned>1?"s":""}` : ""; })()}</div></div>
-      ${heatmap(18)}
-    </div>
-    ${habitsHTML()}`;
+  return `${forceSumHTML()}${muscleSumHTML()}${recordsSumHTML()}${thenNowListHTML()}${progLinksHTML()}`;
 }
-// tes habitudes (anciennement dans Profil) : ce qui te caractérise, sans répéter les chiffres du haut
-let habitsOpen = false;
+// « Ta force » : le chiffre et sa courbe depuis tes débuts ; le détail (statut, régions, projections) est un toucher plus loin
+function forceSumHTML(){
+  if(S.settings.trend===false) return "";
+  const first = firstSessionDate(), weeks = Math.max(2, Math.min(26, Math.floor(daysBetween(weekKey(first), todayISO())/7)+1));
+  const pts = strengthSeries(weeks);
+  if(pts.length<2) return strengthCardHTML(); // en calibrage : les trois pastilles, sur place
+  const last = pts[pts.length-1], d0 = parseISO(first), y0 = d0.getFullYear()!==parseISO(todayISO()).getFullYear() ? " "+d0.getFullYear() : "";
+  const p = Math.round(last.v-100);
+  return `<button class="fs-card stagger" style="--i:1" data-a="progressTab" data-v="force" aria-label="Ta force : ${pctTxt(last.v)} depuis tes débuts. Voir le détail">
+    <span class="fs-h"><span>Ta force</span><span class="chev">${icon("chev")}</span></span>
+    <span class="fs-v" data-count="${Math.abs(p)}" data-pre="${p>0?"+":p<0?"−":""}" data-unit="%" data-thin="1">${pctTxt(last.v)}</span>
+    <span class="fs-s">depuis tes débuts, en ${MOIS_LONG[d0.getMonth()]}${y0}</span>
+    ${forceSparkSVG(pts.map(x=>x.v))}
+    <span class="fs-ax"><span>${esc(fmtDate(pts[0].wk))}</span><span>Aujourd'hui</span></span>
+  </button>`;
+}
+// courbe pleine largeur, sans axes : la forme suffit (le détail a le vrai graphique)
+function forceSparkSVG(vals){
+  const W = 326, H = 100, top = 10, bot = 96, lo = Math.min(...vals), hi = Math.max(...vals), span = Math.max(1, hi-lo);
+  const xy = vals.map((v,i)=>[4 + i*(W-12)/Math.max(1, vals.length-1), bot - (v-lo)/span*(bot-top)]);
+  const line = xy.map((q,i)=>`${i?"L":"M"}${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(""), e = xy[xy.length-1];
+  return `<svg class="fs-chart" viewBox="0 0 ${W} ${H}" aria-hidden="true">
+    <path class="fs-base" d="M4 ${bot}H${W}"/>
+    <path class="fs-area" d="${line}V${bot}H4Z"/>
+    <path class="fs-line" d="${line}" pathLength="1"/>
+    <circle class="fs-dot" cx="${e[0].toFixed(1)}" cy="${e[1].toFixed(1)}" r="5"/>
+  </svg>`;
+}
+// « Muscles · 7 derniers jours » : les plus travaillés et, s'il y en a un, celui qui traîne ; le détail est l'écran Muscles
+function muscleSumHTML(){
+  const rows = weekVolume(), worked = rows.filter(r=>r.sets>0).sort((a,b)=>b.sets-a.sets);
+  // le muscle en retard qu'on montre : sous le seuil cette semaine mais travaillé ces 4 dernières semaines
+  // (pas un muscle que tu ne travailles jamais : ce serait un reproche à chaque visite)
+  const month = muscleVolume(28), lag = stimLagging().filter(r=>(month.find(m=>m.id===r.id)||{}).sets>0).sort((a,b)=>a.sets-b.sets)[0];
+  const show = worked.filter(r=>r.sets>=STIM.min).slice(0, lag ? 3 : 4);
+  if(lag) show.push(lag);
+  if(show.length<4) worked.forEach(r=>{ if(show.length<4 && !show.includes(r)) show.push(r); });
+  const bars = show.map(r=>`<span class="ms-row${r.sets<STIM.min ? " low" : ""}"><span class="ms-top"><span class="ms-n">${esc(r.n)}</span><span class="ms-v">${fmtDec(r.sets)} série${r.sets>=2?"s":""}</span></span><span class="ms-bar"><i style="width:${Math.min(100, r.sets/STIM.high*100).toFixed(1)}%"></i></span></span>`).join("");
+  const hint = lag ? `${esc(lag.n)} : moins de ${STIM.min} séries cette semaine${appPicksOn() ? ", la prochaine séance proposée en tiendra compte" : ""}. Repère : ${STIM.high} séries par muscle et par semaine.`
+    : worked.length ? `Repère : ${STIM.min} séries par muscle et par semaine pour progresser, ${STIM.high} et plus pour un gain maximal.` : "";
+  return `<section class="ms-sec stagger" style="--i:2"><h2 class="sh">Muscles · 7 derniers jours</h2>
+    <button class="ms-card" data-a="progressTab" data-v="muscles" aria-label="Muscles des 7 derniers jours : voir le détail">${bars || `<span class="ms-empty">Aucune série ces 7 derniers jours.</span>`}</button>
+    ${hint ? `<p class="ms-hint">${hint}</p>` : ""}</section>`;
+}
+// « Derniers records » : les 3 plus récents (la liste complète est dans chaque exercice)
+function recordsSumHTML(){
+  const prs = recentPRs(3); if(!prs.length) return "";
+  return `<h2 class="sh">Derniers records</h2><div class="group rec-group stagger" style="--i:3">${prs.map(p=>`<button class="row tap" style="width:100%" data-a="openExoChart" data-id="${p.def.id}">
+      ${exoIcon(p.def)}
+      <div class="grow"><div class="t">${esc(p.def.n)}</div><div class="s">${esc(setTxt(p.def, p.st))} · ${esc(fmtRelative(p.s.date))}</div></div>
+      <span class="chev">${icon("chev")}</span></button>`).join("")}</div>`;
+}
+// Ta force (écran poussé) : la carte complète, statut, régions, alertes et projections
+function forcePaneHTML(){ return S.sessions.length && S.settings.trend!==false ? strengthCardHTML() : `<div class="empty-state">Active « Progression de force » dans Profil › Motivation pour suivre ta force.</div>`; }
+// Statistiques (écran poussé) : séances, durée, séries et tonnage dans le temps, puis tes habitudes
+function statsPaneHTML(){
+  if(!S.sessions.length) return `<div class="empty-state"><span class="em">${sfIcon("chart","orange","lg")}</span>Tes statistiques apparaîtront ici après ta première séance.</div>`;
+  return `<div class="chart-card hist-chart stagger" style="--i:0">
+      ${segHTML("histMetric", HIST_METRICS, histMetric, "histMetric")}
+      ${segHTML("histRange", HIST_RANGES, histRange, "histRange").replace('class="seg"','class="seg sm"')}
+      <div id="histChart">${histChartHTML()}</div>
+    </div>${habitsHTML()}`;
+}
+// tes habitudes : ce qui te caractérise, en plus des courbes
 function habitsHTML(){
   const fav = favoriteExercise(), wd = favoriteWeekday(), moment = favoriteMoment(), bw = bestWeek();
   const rows = [
@@ -140,8 +190,9 @@ function musclesPaneHTML(){
   if(!S.sessions.length) return `<div class="empty-state"><span class="em">${sfIcon("person","orange","lg")}</span>Après ta première séance, tu verras ici quels muscles tu travailles, et assez ou non.</div>`;
   return weekMuscleMapHTML();
 }
-// Objectifs : niveau, objectifs chiffrés, défis, puis les trophées
-function goalsPaneHTML(){ return `${ascCardHTML()}${targetsHTML()}${challengesHTML()}${medalsPaneHTML()}`; }
+// Objectifs et défis : objectifs chiffrés et défis en cours
+// (l'ascension est sur l'accueil, les trophées dans Profil : pas de doublon ici)
+function goalsPaneHTML(){ return `${targetsHTML()}${challengesHTML()}`; }
 
 function exoSeries(id){
   const def = EXO_MAP[id], loaded = !!kgType(def), pts = [];
@@ -164,12 +215,7 @@ function exoSeries(id){
 function exosPaneHTML(){
   const ids = trainedExoIds();
   if(!ids.length) return `<div class="empty-state"><span class="em">${sfIcon("dumbbell","orange","lg")}</span>Termine des séances pour suivre ta progression exercice par exercice.</div>`;
-  const prs = recentPRs(4);
-  return `${prs.length?`<h2 class="sh">Derniers records</h2><div class="group">${prs.map((p,i)=>`<button class="row tap stagger" style="--i:${i}" data-a="openExoChart" data-id="${p.def.id}">
-      ${sfIcon("bolt","orange")}
-      <div class="grow"><div class="t">${esc(p.def.n)}</div><div class="s">${p.st.reps} ${isTimed(p.def)?"s":"reps"}${loadSuffix(p.def, p.st.weight)} · ${fmtRelative(p.s.date)}</div></div>
-      <span class="chev">${icon("chev")}</span></button>`).join("")}</div>`:""}
-    <h2 class="sh">Tous mes exercices</h2>
+  return `<h2 class="sh">Tous mes exercices</h2>
     <div class="sh-sub">Courbe : 1RM estimé pour les exercices chargés, meilleure série pour le poids du corps.</div>
     <div class="group">${ids.map((id,i)=>{
     const { def, loaded, pts } = exoSeries(id);
@@ -268,10 +314,13 @@ Object.assign(ACT, {
     if(pane && first){ pane.classList.add("pane-in"); setTimeout(()=>pane.classList.remove("pane-in"), 2400); }
     if(pane && pane.animate && !reducedMotion()) try{ pane.animate([{ opacity:0, transform:"translateY(6px)" }, { opacity:1, transform:"none" }], { duration:200, easing:"cubic-bezier(.2,.8,.2,1)" }); }catch(e){}
   },
+  // depuis l'accueil (alerte de force) : l'onglet Progrès, directement sur l'écran voulu
+  progressGo(d){ if(currentTab!=="progress") switchTab("progress"); ACT.progressTab({ v:d.v }); },
   openExoChart(d){ exoChartSheet(d.id); },
   allMedals(){
     openSheet(`<div class="sheet-hd"><span class="t">Tous les trophées</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
-      <div class="sheet-body all-medals">${allMedalsHTML()}</div>`, { tall:true, restore:()=>ACT.allMedals() });
+      <div class="sheet-body all-medals">${allMedalsHTML()}</div>`, { tall:true, child:true, restore:()=>ACT.allMedals() });
+    sheetBackHead(); // ouverte depuis Profil › Trophées : « Retour » y ramène
   },
 });
 // ---------- objectifs personnels chiffrés ----------

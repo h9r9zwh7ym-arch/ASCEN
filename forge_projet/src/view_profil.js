@@ -6,24 +6,35 @@ const LEVEL_HINTS = { debutant:"Moins d'un an de musculation régulière : exerc
 
 function ownedEquipCount(){ return EQUIP_TYPES.filter(e=>!e.always && S.equipment.owned[e.id]).length; }
 
+// carte d'identité : qui tu es et depuis quand (l'ascension est sur l'accueil, les chiffres dans Progrès)
 function profileHeroHTML(){
-  const a = ascent(), D = ASC_DATA[a.key], name = (S.settings.name||"").trim();
-  const since = firstSessionDate();
+  const name = (S.settings.name||"").trim(), since = firstSessionDate(), n = S.sessions.length;
   const initial = name ? esc(name[0].toUpperCase()) : `<svg viewBox="0 0 24 24" class="ph-person">${GLYPHS.person.replace(/#fff/g,"currentColor")}</svg>`;
-  return `<div class="profile-hero stagger" style="--i:0">
-    <button class="ph-avatar" data-a="editName" aria-label="Modifier ton prénom"><span>${initial}</span></button>
-    <div class="ph-main">
-      <button class="ph-name" data-a="editName">${name?esc(name):"Ajoute ton prénom"} ${icon("edit")}</button>
-      <button class="ph-title ph-asc" data-a="openAscent">${a.wait ? `Au sommet ${ascDu(a.key)}` : `${esc(D.n)} · ${fmtNum(a.alt)} m`}${a.summitCount ? ` · ${nb(a.summitCount, "sommet")}` : ""} ${icon("chev")}</button>
-      <div class="xpbar"><span style="width:${Math.round(Math.max(0, Math.min(1, a.done))*100)}%"></span></div>
-      <div class="ph-sub">${since?`Membre actif depuis le ${fmtDate(since)} ${parseISO(since).getFullYear()}`:"Ta première séance t'attend"}</div>
-      <button class="ph-why ${S.settings.why?"":"empty"}" data-a="editWhy">${S.settings.why ? `« ${esc(S.settings.why)} »` : "Ajoute ton pourquoi"} ${icon("edit")}</button>
-    </div>
-  </div>`;
+  const d = since ? parseISO(since) : null, y = d && d.getFullYear()!==parseISO(todayISO()).getFullYear() ? " "+d.getFullYear() : "";
+  return `<button class="profile-hero stagger" style="--i:0" data-a="editName" aria-label="${name ? esc(name)+" : modifier ton prénom" : "Ajoute ton prénom"}">
+    <span class="ph-avatar" aria-hidden="true"><span>${initial}</span></span>
+    <span class="ph-main">
+      <span class="ph-name">${name ? esc(name) : "Ajoute ton prénom"}</span>
+      <span class="ph-sub">${n ? `${nb(n, "séance")} depuis ${MOIS_LONG[d.getMonth()]}${y}` : "Ta première séance t'attend"}</span>
+    </span>
+  </button>`;
+}
+// Trophées : les trois derniers gagnés et le prochain à portée ; la collection s'ouvre au toucher
+function trophiesCardHTML(){
+  const won = MEDALS.filter(m=>medalTier(m)).length, total = MEDALS.length;
+  const recent = Object.keys(S.medals||{}).map(id=>{ const m = MEDAL_MAP[id], st = S.medals[id]; return m && st.t ? { m, t:st.t, d:(st.d||{})[st.t]||"" } : null; })
+    .filter(Boolean).sort((a,b)=>b.d.localeCompare(a.d)).slice(0,3);
+  const next = MEDALS.filter(m=>!m.secret).map(m=>({ m, p:medalProgress(m) })).filter(x=>x.p.next!=null).sort((a,b)=>b.p.pct-a.p.pct).slice(0, 4-recent.length);
+  const thumbs = recent.map(r=>`<span class="pt-th">${medalHTML(r.m, r.t, "sm")}</span>`).join("") + next.map(x=>`<span class="pt-th next">${medalHTML(x.m, x.p.t+1, "sm")}</span>`).join("");
+  return `<h2 class="sh">Trophées</h2>
+    <button class="pt-card stagger" style="--i:1" data-a="openTrophies" aria-label="Trophées : ${won} gagnés sur ${total}. Voir tous les trophées">
+      <span class="pt-thumbs" aria-hidden="true">${thumbs}</span>
+      <span class="pt-foot"><span>${won} gagné${won>1?"s":""} sur ${total}</span><span class="chev">${icon("chev")}</span></span>
+    </button>`;
 }
 // ---------- réglages regroupés (loi de Hick : peu de choix sur l'écran, le détail à un toucher) ----------
 const MOTIV = [["beat","target","orange","Objectif à battre en séance","Ta série de la dernière fois et ce qu'il faut pour la dépasser"],
-  ["nextGoal","flag","red","Prochain cap sur l'accueil","Le but le plus proche : semaine, record, trophée, ascension"],
+  ["nextGoal","flag","red","Prochain cap sur l'accueil","Le but le plus proche : record à battre, trophée, muscle à reprendre"],
   ["trend","trendUp","green","Progression de force","Ta courbe depuis tes débuts, ton statut et les alertes de pause"],
   ["thenNow","chart","blue","Toi, il y a 3 mois","Tes séries d'avant face à celles de maintenant"]];
 function motivSummary(){ const on = MOTIV.filter(([k])=>S.settings[k]!==false).length; return on===MOTIV.length ? "Toutes les aides actives" : on ? `${on} aide${on>1?"s":""} sur ${MOTIV.length} active${on>1?"s":""}` : "Aides désactivées"; }
@@ -56,7 +67,12 @@ function sessionPrefsHTML(){
     </div>`;
 }
 function motivHTML(){
-  return `<p class="sheet-note">Des aides pour garder l'envie. Toutes sont facultatives.</p><div class="group">
+  return `<div class="group"><button class="row tap" style="width:100%" data-a="editWhy" data-from="motiv">
+        ${sfIcon("heart","red")}
+        <div class="grow"><div class="t">Ton pourquoi</div><div class="s wrap">${S.settings.why ? `« ${esc(S.settings.why)} »` : "Ce qui te pousse à t'entraîner : rappelé quand tu reviens après quelques jours"}</div></div>
+        <span class="chev">${icon("chev")}</span>
+      </button></div>
+    <p class="sheet-note" style="margin-top:20px">Des aides pour garder l'envie. Toutes sont facultatives.</p><div class="group">
       ${MOTIV.map(([k,ic,c,t,sub])=>`<div class="row">
         ${sfIcon(ic,c)}
         <div class="grow"><div class="t">${t}</div><div class="s">${sub}</div></div>
@@ -66,6 +82,18 @@ function motivHTML(){
 }
 function dataMoreHTML(){
   return `<div class="group">
+      <button class="row tap" style="width:100%" data-a="backupData">
+        ${sfIcon("download","green")}
+        <div class="grow"><div class="t">Sauvegarder mes données</div><div class="s">${backupStatusText()}</div></div>
+        <span class="chev">${icon("chev")}</span>
+      </button>
+      ${isStandalone() ? "" : `<button class="row tap" style="width:100%" data-a="openInstall">
+        ${sfIcon("phone","blue")}
+        <div class="grow"><div class="t">Installer sur l'écran d'accueil</div><div class="s">Plein écran, hors ligne, données protégées</div></div>
+        <span class="chev">${icon("chev")}</span>
+      </button>`}
+    </div>
+    <div class="group" style="margin-top:14px">
       <button class="row tap" style="width:100%" data-a="restoreData">
         ${sfIcon("restore","teal")}
         <div class="grow"><div class="t">Restaurer une sauvegarde</div><div class="s">Fichier .json créé par ASCEN (ou Forge)</div></div>
@@ -100,82 +128,75 @@ function prefsSheet(title, body, again){
     <div class="sheet-body prefs-body">${body}</div>`, { child:true, restore:again });
   sheetBackHead();
 }
+function themeLabel(){ return S.settings.theme==="auto" ? "Automatique" : S.settings.theme==="dark" ? "Sombre" : "Clair"; }
+// dernière sauvegarde, en court ; en orange quand il est temps d'en refaire une
+function backupShort(){
+  const b = S.meta.lastBackup;
+  if(!b) return S.sessions.length ? { t:"jamais", due:true } : { t:"", due:false };
+  const n = daysBetween(b, todayISO());
+  return { t:n===0 ? "aujourd'hui" : n===1 ? "hier" : `il y a ${n} j`, due:backupDue() };
+}
 function renderProfil(){
+  const eq = ownedEquipCount(), bk = backupShort(), bl = bodyLast();
   return `<div class="navbar"><div class="nb-title">Profil</div></div><div class="content">
     <h1 class="lt">Profil</h1>
     ${profileHeroHTML()}
+    ${trophiesCardHTML()}
 
-    <h2 class="sh">Entraînement</h2>
+    <h2 class="sh">Réglages</h2>
     <div class="group">
-      <button class="row tap" style="width:100%" data-a="openEquip">
-        ${sfIcon("toolbox","orange")}
-        <div class="grow"><div class="t">Matériel</div><div class="s">${ownedEquipCount()} équipement${ownedEquipCount()>1?"s":""} renseigné${ownedEquipCount()>1?"s":""}</div></div>
-        <span class="chev">${icon("chev")}</span>
-      </button>
       <button class="row tap" style="width:100%" data-a="openGoals">
-        ${sfIcon("target","red")}
-        <div class="grow"><div class="t">Objectifs</div><div class="s">${GOAL_LABELS[S.goals.overall]} · ${S.goals.daysPerWeek}×/sem.</div></div>
-        <span class="chev">${icon("chev")}</span>
-      </button>
-      <button class="row tap" style="width:100%" data-a="openBody">
-        ${sfIcon("scale","mint")}
-        <div class="grow"><div class="t">Poids du corps</div><div class="s">${bodyRowText()}</div></div>
-        <span class="chev">${icon("chev")}</span>
-      </button>
-      <button class="row tap" style="width:100%" data-a="openExoPrefs">
-        ${sfIcon("list","blue")}
-        <div class="grow"><div class="t">Mes exercices</div><div class="s">${nb(S.prefs.included.length,"favori")} · ${nb(S.prefs.excluded.length,"exclu")}</div></div>
+        ${sfIcon("target","gray")}
+        <div class="grow"><div class="t">Objectifs</div></div><span class="val">${S.goals.daysPerWeek} par semaine</span>
         <span class="chev">${icon("chev")}</span>
       </button>
       <button class="row tap" style="width:100%" data-a="openSessionPrefs">
-        ${sfIcon("stopwatch","teal")}
-        <div class="grow"><div class="t">Réglages des séances</div><div class="s">${sessionPrefsSummary()}</div></div>
+        ${sfIcon("stopwatch","gray")}
+        <div class="grow"><div class="t">Réglages des séances</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
-      <button class="row tap" style="width:100%" data-a="openMotivation">
-        ${sfIcon("flame","orange")}
-        <div class="grow"><div class="t">Motivation</div><div class="s">${motivSummary()}</div></div>
+      <button class="row tap" style="width:100%" data-a="openEquip">
+        ${sfIcon("toolbox","gray")}
+        <div class="grow"><div class="t">Matériel</div></div><span class="val">${nb(eq, "équipement")}</span>
         <span class="chev">${icon("chev")}</span>
       </button>
-    </div>
-
-    <h2 class="sh">Mes données</h2>
-    <div class="group">
-      <button class="row tap" style="width:100%" data-a="backupData">
-        ${sfIcon("download","green")}
-        <div class="grow"><div class="t">Sauvegarder mes données</div><div class="s">${backupStatusText()}</div></div>
+      <button class="row tap" style="width:100%" data-a="openExoPrefs">
+        ${sfIcon("list","gray")}
+        <div class="grow"><div class="t">Mes exercices</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
-      ${isStandalone() ? "" : `<button class="row tap" style="width:100%" data-a="openInstall">
-        ${sfIcon("phone","blue")}
-        <div class="grow"><div class="t">Installer sur l'écran d'accueil</div><div class="s">Plein écran, hors ligne, données protégées</div></div>
-        <span class="chev">${icon("chev")}</span>
-      </button>`}
-      <button class="row tap" style="width:100%" data-a="openDataMore">
-        ${sfIcon("storage","gray")}
-        <div class="grow"><div class="t">Restaurer, exporter, stockage</div><div class="s">${S.importedProgram.length ? `${nb(S.importedProgram.length, "séance importée")} en attente · ` : ""}${storageRowText()}</div></div>
+      <button class="row tap" style="width:100%" data-a="openBody">
+        ${sfIcon("scale","gray")}
+        <div class="grow"><div class="t">Poids du corps</div></div>${bl ? `<span class="val">${fmtDec(bl.kg)} kg</span>` : ""}
         <span class="chev">${icon("chev")}</span>
       </button>
     </div>
-
-    <h2 class="sh">Apparence et sons</h2>
-    <div class="group">
-      <button class="row tap" style="width:100%" data-a="openAppearance">
-        ${sfIcon("contrast","indigo")}
-        <div class="grow"><div class="t">Apparence</div><div class="s">${S.settings.theme==="auto"?"Automatique":S.settings.theme==="dark"?"Sombre":"Clair"}</div></div>
-        <span class="chev">${icon("chev")}</span>
-      </button>
+    <div class="group" style="margin-top:16px">
       <div class="row">
-        ${sfIcon("speaker","pink")}
-        <div class="grow"><div class="t">Sons</div><div class="s">Séries, records, repos, lancement</div></div>
+        ${sfIcon("speaker","gray")}
+        <div class="grow"><div class="t">Sons</div></div>
         <button class="switch ${S.settings.sound!==false?"on":""}" aria-label="Sons" data-a="toggleSound"></button>
       </div>
       <div class="row sub-setting ${S.settings.sound===false?"off":""}">
         ${sfIcon("tap","gray")}
-        <div class="grow"><div class="t">Clics de l'interface</div><div class="s">Petit « toc » sur les sélections et les +/−</div></div>
+        <div class="grow"><div class="t">Clics de l'interface</div></div>
         <button class="switch ${S.settings.uiSound!==false?"on":""}" aria-label="Clics de l'interface" data-a="toggleUiSound"></button>
       </div>
-
+      <button class="row tap" style="width:100%" data-a="openAppearance">
+        ${sfIcon("contrast","gray")}
+        <div class="grow"><div class="t">Apparence</div></div><span class="val">${themeLabel()}</span>
+        <span class="chev">${icon("chev")}</span>
+      </button>
+      <button class="row tap" style="width:100%" data-a="openMotivation">
+        ${sfIcon("flame","gray")}
+        <div class="grow"><div class="t">Motivation</div></div>
+        <span class="chev">${icon("chev")}</span>
+      </button>
+      <button class="row tap" style="width:100%" data-a="openData">
+        ${sfIcon("storage","gray")}
+        <div class="grow"><div class="t">Données et sauvegarde</div></div>${bk.t ? `<span class="val${bk.due ? " due" : ""}">${bk.t}</span>` : ""}
+        <span class="chev">${icon("chev")}</span>
+      </button>
       <button class="row tap" style="width:100%" data-a="openAbout">
         ${sfIcon("info","gray")}
         <div class="grow"><div class="t">À propos</div></div>
@@ -428,14 +449,23 @@ function openExportImport(){
 }
 
 // ---------- Apparence ----------
+// Apparence (refonte 5.0) : trois vignettes (clair, sombre, automatique) et, à part, la séance en sombre
+function themeThumb(kind){
+  const half = (dark, cls)=>`<span class="tt-half ${cls||""} ${dark ? "tt-dk" : "tt-lt"}"><i class="tt-t"></i><i class="tt-c"><b></b><b></b><em></em></i><i class="tt-c2"></i></span>`;
+  return `<span class="tt-ph ${kind}" aria-hidden="true">${kind==="auto" ? half(false, "l")+half(true, "r") : half(kind==="dark")}</span>`;
+}
 function appearanceBodyHTML(){
-  const opts = [["auto","Auto"],["light","Clair"],["dark","Sombre"]], dark = S.settings.theme==="dark", on = S.settings.liveDark!==false;
-  return `<div class="chips" style="padding-top:4px">${opts.map(([v,l])=>`<button class="chip ${S.settings.theme===v?"on":""}" data-a="setTheme" data-v="${v}">${l}</button>`).join("")}</div>
-    <div class="group" style="margin-top:20px"><div class="row${dark?" off":""}">
-      ${sfIcon("moon","gray")}
-      <div class="grow"><div class="t">Séance en sombre</div><div class="s">${dark ? "L'app est déjà sombre partout" : "Recommandé : moins d'éblouissement pendant l'effort"}</div></div>
+  const th = S.settings.theme||"auto", dark = th==="dark", on = dark || S.settings.liveDark!==false;
+  const opts = [["light","Clair"],["dark","Sombre"],["auto","Automatique"]];
+  return `<h2 class="sh" style="margin-top:6px">Thème de l'app</h2>
+    <div class="group tt-group" role="radiogroup" aria-label="Thème de l'app">${opts.map(([v,l])=>`<button class="tt-opt${th===v?" on":""}" role="radio" aria-checked="${th===v}" data-a="setTheme" data-v="${v}">${themeThumb(v)}<span class="tt-l">${l}</span><span class="tt-r" aria-hidden="true">${icon("check")}</span></button>`).join("")}</div>
+    <p class="hr-note">Automatique suit le réglage de ton iPhone.</p>
+    <h2 class="sh">Pendant la séance</h2>
+    <div class="group"><div class="row${dark?" off":""}">
+      <div class="grow"><div class="t">Séance en sombre</div><div class="s">${dark ? "Toujours en sombre avec le thème Sombre" : on ? "Recommandé" : "La séance suit le thème de l'app"}</div></div>
       <button class="switch ${on?"on":""}" aria-label="Séance en sombre" aria-pressed="${on}" data-a="toggleLiveDark" ${dark?"disabled":""}></button>
-    </div></div>`;
+    </div></div>
+    <p class="hr-note">En noir, les chiffres se lisent mieux de loin et l'écran éblouit moins pendant l'effort. Le reste de l'app garde le thème choisi au-dessus.</p>`;
 }
 function openAppearance(){
   openSheet(`<div class="sheet-hd"><span class="t">Apparence</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body">${appearanceBodyHTML()}</div>`);
@@ -457,6 +487,7 @@ function openAbout(){
     </div>`, { restore:openAbout });
 }
 
+let whyFrom = null; // « Ton pourquoi » ouvert depuis Motivation : on y revient après l'enregistrement
 Object.assign(ACT, {
   editName(){
     openModal(`<div style="font-weight:700;font-size:calc(17rem/17);margin-bottom:12px">Ton prénom</div>
@@ -469,11 +500,17 @@ Object.assign(ACT, {
   },
   openSessionPrefs(){ prefsSheet("Réglages des séances", sessionPrefsHTML(), ()=>ACT.openSessionPrefs()); },
   openMotivation(){ prefsSheet("Motivation", motivHTML(), ()=>ACT.openMotivation()); },
-  openDataMore(){ prefsSheet("Restaurer, exporter, stockage", dataMoreHTML(), ()=>ACT.openDataMore()); },
+  openData(){ prefsSheet("Données et sauvegarde", dataMoreHTML(), ()=>ACT.openData()); },
+  openTrophies(){
+    openSheet(`<div class="sheet-hd"><span class="t">Trophées</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
+      <div class="sheet-body trophies-body">${medalsPaneHTML()}</div>`, { tall:true, restore:()=>ACT.openTrophies() });
+    const b = qs(".trophies-body"); if(b && typeof mountTrophy3D==="function") mountTrophy3D(b);
+  },
   setRest(d){ if(!REST_SCALE[d.v]) return; S.settings.rest = d.v; save(); changed();
     qsa('[data-a="setRest"]').forEach(b=>{ const on = b.dataset.v===d.v; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
     toast(d.v==="normal" ? "Repos conseillés" : d.v==="court" ? "Repos plus courts (≈ −30 %)" : "Repos plus longs (≈ +35 %)", "timer"); },
-  editWhy(){
+  editWhy(d){
+    whyFrom = d && d.from;
     openModal(`<div style="font-weight:700;font-size:calc(17rem/17);margin-bottom:6px">Ton pourquoi</div>
       <div class="hr-note" style="margin-bottom:12px">Ce qui te pousse à t'entraîner. ASCEN te le rappelle quand tu reviens après quelques jours sans séance.</div>
       <div class="num-field"><input id="whyInput" type="text" maxlength="120" placeholder="Ex. être en forme pour la randonnée d'été" value="${esc(S.settings.why||"")}"></div>
@@ -483,7 +520,7 @@ Object.assign(ACT, {
       </div>`);
     setTimeout(()=>{ const i=qs("#whyInput"); if(i) i.focus(); }, 80);
   },
-  saveWhy(){ S.settings.why = ((qs("#whyInput")||{}).value||"").trim().slice(0,120); closeSheet(); save(); changed(); },
+  saveWhy(){ S.settings.why = ((qs("#whyInput")||{}).value||"").trim().slice(0,120); closeSheet(); save(); changed(); if(whyFrom==="motiv") ACT.openMotivation(); whyFrom = null; },
   saveName(){ S.settings.name = ((qs("#nameInput")||{}).value||"").trim(); closeSheet(); save(); changed(); },
   openEquip, openGoals, openExoPrefs, openExportImport, openAppearance, openAbout,
   backupData(){ backupData(); }, exportCSV(){ exportCSV(); }, restoreData(){ restoreData(); }, openInstall(){ openInstall(); },
@@ -565,8 +602,10 @@ Object.assign(ACT, {
   },
   toggleUiSound(d, el){ S.settings.uiSound = S.settings.uiSound===false; save(); el.classList.toggle("on", S.settings.uiSound); if(S.settings.uiSound) setTimeout(()=>sfx("tick"), 80); },
   toggleLiveDark(d, el){
+    if(S.settings.theme==="dark") return;
     S.settings.liveDark = S.settings.liveDark===false; save(); applyTheme();
-    if(el){ el.classList.toggle("on", S.settings.liveDark); el.setAttribute("aria-pressed", S.settings.liveDark); }
+    const b = qs(".sheet-body"); if(b && qs(".tt-group", b)) b.innerHTML = appearanceBodyHTML();
+    else if(el){ el.classList.toggle("on", S.settings.liveDark); el.setAttribute("aria-pressed", S.settings.liveDark); }
   },
   setTheme(d){ S.settings.theme = d.v; save(); applyTheme(); const b=qs(".sheet-body"); if(b) b.innerHTML = appearanceBodyHTML(); changed(); },
 

@@ -438,26 +438,14 @@ function thenVsNow(){
   });
 }
 Object.assign(ACT, { tnOpen(d){ exoChartSheet(d.id); } });
-// accueil : une comparaison par jour (parmi les 5 plus fortes), qui change d'un jour à l'autre
-function thenNowCardHTML(){
-  if(S.settings.thenNow===false) return "";
-  const list = thenVsNow().slice(0, 5); if(!list.length) return "";
-  const c = list[Math.round(Date.parse(todayISO())/864e5) % list.length];
-  return `<button class="tn-card stagger" style="--i:2" data-a="tnOpen" data-id="${c.def.id}" aria-label="${esc(c.def.n)} : ${esc(c.label.toLowerCase())} ${esc(c.then.txt)}, maintenant ${esc(c.now.txt)}">
-    <span class="tn-k">${ii("trendUp")}Toi, ${esc(c.label.toLowerCase())}</span>
-    <span class="tn-ex">${esc(c.def.n)}</span>
-    <span class="tn-row"><span class="tn-then"><small>${esc(c.label)}</small><b>${esc(c.then.txt)}</b></span><span class="tn-arrow">${icon("chev")}</span><span class="tn-now"><small>Maintenant</small><b>${esc(c.now.txt)}</b></span><span class="tn-pct">+${c.pct}&#8239;%</span></span>
-  </button>`;
-}
-// Progrès > Résumé : les 3 plus belles progressions
+// Progrès > Résumé : les 3 plus belles progressions (la seule place où elles apparaissent)
 function thenNowListHTML(){
   if(S.settings.thenNow===false) return "";
   const list = thenVsNow().slice(0, 3); if(!list.length) return "";
-  return `<div class="chart-card tn-list stagger" style="--i:2">
-    <div class="cc-h"><div class="cc-t">Toi, avant et maintenant</div><div class="cc-s">Tes plus belles progressions, en vraies séries</div></div>
-    ${list.map((c,i)=>`<button class="tn-li" style="--k:${i}" data-a="tnOpen" data-id="${c.def.id}">
-      <span class="tn-li-n">${exoIcon(c.def,"xs")}<span>${esc(c.def.n)}</span></span>
-      <span class="tn-li-v"><small>${esc(c.label)}</small> ${esc(c.then.txt)} ${icon("chev")} <b>${esc(c.now.txt)}</b></span>
+  return `<h2 class="sh">Avant et maintenant</h2><div class="group tn-list stagger" style="--i:4">
+    ${list.map((c,i)=>`<button class="row tap tn-li" style="--k:${i}" data-a="tnOpen" data-id="${c.def.id}" aria-label="${esc(c.def.n)} : ${esc(c.label.toLowerCase())} ${esc(c.then.txt)}, maintenant ${esc(c.now.txt)}, plus ${c.pct} %">
+      ${exoIcon(c.def)}
+      <div class="grow"><div class="t">${esc(c.def.n)}</div><div class="s">${esc(c.label)} ${esc(c.then.txt)} → <b>${esc(c.now.txt)}</b></div></div>
       <span class="tn-pct">+${c.pct}&#8239;%</span>
     </button>`).join("")}
   </div>`;

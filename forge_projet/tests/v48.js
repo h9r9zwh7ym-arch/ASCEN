@@ -21,12 +21,12 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.goto(APP); await page.waitForSelector('#splash', { state: 'detached', timeout: 9000 }); await page.waitForTimeout(700);
   const wait = ms => page.waitForTimeout(ms), shot = n => page.screenshot({ path: `${OUT}/${wk ? 'wk_' : ''}${n}.png` });
 
-  // 1. « Toi, il y a 3 mois » : accueil, Progrès, réglage
-  const tn = await page.evaluate(() => { const l = thenVsNow(); return { n: l.length, first: l[0] && { id: l[0].def.id, label: l[0].label, then: l[0].then.txt, now: l[0].now.txt, pct: l[0].pct }, card: !!document.querySelector('#v-today .tn-card') }; });
+  // 1. « Avant et maintenant » : dans Progrès seulement (refonte 5 : plus sur l'accueil), réglage
+  const tn = await page.evaluate(() => { const l = thenVsNow(); return { n: l.length, first: l[0] && { id: l[0].def.id, label: l[0].label, then: l[0].then.txt, now: l[0].now.txt, pct: l[0].pct }, card: !!document.querySelector('#v-today .tn-card, #v-today .tn-list') }; });
   log('Then vs now:', JSON.stringify(tn));
-  if (!tn.first || tn.first.id !== 'dc_haltere' || tn.first.label !== 'Il y a 3 mois' || !/^10 × 1[01] kg$/.test(tn.first.then) || tn.first.now !== '10 × 14 kg' || tn.first.pct < 25 || !tn.card) fail('« Toi, il y a 3 mois »');
-  await page.evaluate(() => { const c = document.querySelector('.tn-card'); document.querySelector('#v-today').scrollTop = c.offsetTop - 120; }); await wait(300); await shot('01_then_now');
+  if (!tn.first || tn.first.id !== 'dc_haltere' || tn.first.label !== 'Il y a 3 mois' || !/^10 × 1[01] kg$/.test(tn.first.then) || tn.first.now !== '10 × 14 kg' || tn.first.pct < 25 || tn.card) fail('« Avant et maintenant »');
   await page.click('.tabbtn[data-id="progress"]'); await wait(700);
+  await page.evaluate(() => { const c = document.querySelector('#v-progress .tn-list'); document.querySelector('#v-progress').scrollTop = c.offsetTop - 160; }); await wait(300); await shot('01_then_now');
   const list = await page.evaluate(() => document.querySelectorAll('#v-progress .tn-list .tn-li').length);
   await page.evaluate(() => { S.settings.thenNow = false; save(); renderView('progress'); renderView('today'); });
   const off = await page.evaluate(() => !!document.querySelector('.tn-card, .tn-list'));
@@ -89,9 +89,9 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     const skipped = await page.evaluate(() => ({ card: !!document.querySelector('.dl-card.miss'), m: missedPlanned() }));
     log('Missed:', JSON.stringify(miss), '| catch-up:', JSON.stringify(caught), '| skip:', JSON.stringify(skipped));
     if (!/Séance manquée : Haut du corps/.test(miss.card || '') || miss.m !== 'tm' || !miss.adh || !(miss.adh.planned >= 1) || miss.adh.done > miss.adh.planned || caught.tpl !== 'tm' || caught.mode !== 'custom' || skipped.card || skipped.m) fail('rattrapage d\'une séance manquée');
-    await page.click('.tabbtn[data-id="progress"]'); await wait(500);
-    const reg = await page.evaluate(() => { ACT.progressTab({ v: 'overview' }); return [...document.querySelectorAll('#v-progress .cc-s')].map(e => e.textContent).find(t => /ce mois/.test(t)) || ''; });
-    log('Regularity:', reg); if (!/ce mois : \d+ séances? sur \d+ prévues?/.test(reg)) fail('régularité du mois');
+    // (refonte 5 : dans l'en-tête du calendrier de l'Historique)
+    const reg = await page.evaluate(() => { switchTab('history'); return document.querySelector('.hc-title span').textContent; });
+    log('Regularity:', reg); if (!/ · \d+ (des \d+ prévues|de la prévue)$/.test(reg)) fail('séances prévues du mois');
   } else log('Monday: missed-session check skipped (nothing earlier this week)');
 
   // 6. la fin de séance affiche ces lignes (vraie séance)

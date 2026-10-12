@@ -19,8 +19,8 @@ const OUT = path.join(OUT_ROOT, 'v24'); fs.mkdirSync(OUT, { recursive: true });
   await page.goto('file://' + path.resolve(process.argv[2]));
   await page.waitForSelector('#splash', { state: 'detached', timeout: 6000 }); await wait(400);
 
-  // ---- 1. modifier une séance
-  await page.evaluate(() => switchTab('history')); await wait(500);
+  // ---- 1. modifier une séance (Historique : on remonte jusqu'en août)
+  await page.evaluate(() => { switchTab('history'); while (histMonth > '2026-08') ACT.histNav({ d: -1 }); }); await wait(500);
   await page.click('[data-a="openSessionDetail"][data-id="s2"]'); await wait(500);
   await page.click('[data-a="histEdit"]'); await wait(500); await shot('01_edit');
   // s2 : 22 kg → 18 kg sur les deux séries, 8 → 11 répétitions sur la première, suppression des pompes, ajout d'une série
@@ -87,8 +87,8 @@ const OUT = path.join(OUT_ROOT, 'v24'); fs.mkdirSync(OUT, { recursive: true });
   await page.click('[data-a="delTarget"]'); await wait(400);
   if ((await page.evaluate(() => S.targets.length)) !== 1) fail('suppression objectif');
 
-  // ---- 3. bilan en image
-  await page.evaluate(() => switchTab('history')); await wait(500);
+  // ---- 3. bilan en image (le Rewind du mois affiché)
+  await page.evaluate(() => { switchTab('history'); while (histMonth > '2026-08') ACT.histNav({ d: -1 }); }); await wait(500);
   await page.click('[data-a="openRecap"]'); await wait(900); await shot('08_recap_month');
   const rc1 = await page.evaluate(() => ({ r: recap, src: (document.querySelector('#rcImg') || {}).src || '' }));
   log('Recap month:', JSON.stringify(rc1.r), rc1.src.length);

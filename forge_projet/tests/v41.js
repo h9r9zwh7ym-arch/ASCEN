@@ -37,10 +37,10 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     const realAsc = window.ascent, realP = window.ascTodayPromise;
     window.ascent = () => Object.assign({}, realAsc(), { series: 0 }); window.ascTodayPromise = () => null;
     const save0 = JSON.stringify(S.sessions), cust0 = JSON.stringify(S.custom); const wkStart = weekKey(todayISO());
-    S.sessions = S.sessions.filter(s => s.date < wkStart); DATA_VER++; out.week3 = nextGoal().t;     // 0/3 : la séance prête porte un record
-    S.custom = { exos: [] }; DATA_VER++; out.weekOnly = nextGoal().t;
+    S.sessions = S.sessions.filter(s => s.date < wkStart); DATA_VER++; out.week3 = (nextGoal() || {}).t || '';     // 0/3 : la séance prête porte un record
+    S.custom = { exos: [] }; DATA_VER++; out.weekOnly = (nextGoal() || {}).t || '';
     // 4.0 (passe qualité) : l'objectif de la semaine n'apparaît qu'à une séance du but (la pastille dit déjà « 0/3 »)
-    const g0 = S.goals.daysPerWeek; S.goals.daysPerWeek = sessionsThisWeek() + 1; DATA_VER++; out.oneLeft = nextGoal().t;
+    const g0 = S.goals.daysPerWeek; S.goals.daysPerWeek = sessionsThisWeek() + 1; DATA_VER++; out.oneLeft = (nextGoal() || {}).t || '';
     out.daysLeft = 7 - weekdayIdx(todayISO()) - (sessionsToday().length ? 1 : 0); S.goals.daysPerWeek = g0;
     window.ascent = realAsc; window.ascTodayPromise = realP;
     S.sessions = JSON.parse(save0); S.custom = JSON.parse(cust0); DATA_VER++; renderView('today');
@@ -48,7 +48,8 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   });
   log('Goal candidates:', JSON.stringify(cands));
   if (!/Record à battre aujourd'hui · Développé couché haltères : \d+ × 1\d kg/.test(cands.week3)) fail('record à battre de la séance prête');
-  if (/semaine/.test(cands.weekOnly) || (cands.daysLeft > 0 && !/Une séance de plus et ta semaine est validée/.test(cands.oneLeft))) fail('objectif de la semaine (seulement à une séance du but)');
+  // refonte 5 : la semaine est dans la carte « Cette semaine », « Prochain cap » ne la répète plus
+  if (/semaine/.test(cands.weekOnly) || /semaine/.test(cands.oneLeft)) fail('« Prochain cap » ne répète pas la semaine');
   await shot('01_home_goal');
 
   // 2. en séance : « à battre » face à la même série la dernière fois, puis retour quand c'est dépassé
@@ -81,8 +82,8 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await shot('04_celebration');
   for (let k = 0; k < 3; k++) { await page.evaluate(() => { if (document.querySelector('#overlay.open')) closeSheet(); }); await wait(450); }
 
-  // 3. Progrès : indice de force, courbe, projection
-  await page.evaluate(() => switchTab('progress')); await wait(800);
+  // 3. Progrès › Ta force : indice de force, courbe, projection (le Résumé n'en montre que le chiffre et la forme)
+  await page.evaluate(() => { switchTab('progress'); ACT.progressTab({ v: 'force' }); }); await wait(800);
   const tr = await page.evaluate(() => { const c = document.querySelector('.trend-card'); const pts = strengthSeries(12);
     return c ? { v: c.querySelector('.tr-v') && c.querySelector('.tr-v').textContent, d: (c.querySelector('.tr-d') || {}).textContent, chart: !!c.querySelector('.linechart svg'), lines: [...c.querySelectorAll('.tr-line')].map(e => e.textContent.trim()), pts: pts.length, first: pts[0] && pts[0].v, last: pts[pts.length - 1].v } : null; });
   log('Trend:', JSON.stringify(tr));
@@ -99,7 +100,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.evaluate(() => switchTab('today')); await wait(500);
   const offHome = await page.evaluate(() => !!document.querySelector('.goal-line'));
   await page.evaluate(() => switchTab('progress')); await wait(500);
-  const offTrend = await page.evaluate(() => !!document.querySelector('.trend-card'));
+  const offTrend = await page.evaluate(() => { ACT.progressTab({ v: 'overview' }); return !!document.querySelector('.trend-card,.fs-card'); });
   const offBeat = await page.evaluate(() => { S.custom = { exos: [{ exoId: 'dc_haltere', sets: 2 }] }; ACT.startCustom(); const l = document.querySelector('#launch'); if (l) l.click(); return 0; });
   await wait(4500); await page.evaluate(() => { const l = document.querySelector('#launch'); if (l) l.click(); }); await wait(500);
   const offLine = await page.evaluate(() => ({ beat: !!document.querySelector('.fc-beat'), last: !!document.querySelector('.fc-last') }));

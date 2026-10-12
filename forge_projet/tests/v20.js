@@ -26,8 +26,8 @@ require('fs').mkdirSync(OUT, { recursive: true });
     save(); persistNow();
   });
   await page.reload(); await page.waitForSelector('#splash', { state: 'detached', timeout: 6000 }); await page.evaluate(() => { if (document.querySelector('.ob-body')) ACT.obSkip(); persistNow(); }).catch(() => {}); await page.waitForTimeout(350);
-  // 1. graphique de l'historique
-  await page.evaluate(() => switchTab('history')); await wait(900);
+  // 1. graphique de l'historique (Progrès › Statistiques depuis la refonte 5)
+  await page.evaluate(() => { switchTab('progress'); ACT.progressTab({ v: 'stats' }); }); await wait(900);
   log('History chart bars:', await page.$$eval('#histChart .cc-bar', e => e.length));
   await shot('01_history');
   await page.click('[data-a="histMetric"][data-v="minutes"]'); await wait(700);
@@ -36,10 +36,10 @@ require('fs').mkdirSync(OUT, { recursive: true });
   // 2 + 7. trophées
   await page.click('.tabbtn[data-id="progress"]'); await wait(500);
   log('Progress tabs:', await page.$$eval('[data-seg="progress"] button', e => e.map(x => x.textContent)));
-  await page.evaluate(() => ACT.progressTab({ v: 'medals' })); await wait(900);
+  await page.evaluate(() => ACT.openTrophies()); await wait(900);
   log('Trophies:', await page.evaluate(() => MEDALS.length), '| sentence gone:', !(await page.evaluate(() => document.body.textContent.includes('paliers platine demandent'))));
   log('New trophy values:', await page.evaluate(() => ['weekend','lunch','comeback','hold','bodyweight','legs','architect'].map(id => id + '=' + Math.round(MEDALS.find(m => m.id === id).val())).join(' ')));
-  await shot('03_trophies');
+  await shot('03_trophies'); await page.evaluate(() => closeSheet()); await wait(400);
   // 11. profil
   await page.click('.tabbtn[data-id="profil"]'); await wait(700);
   log('Profile iOS icons:', await page.$$eval('#v-profil .sfi', e => e.length), '| emoji icons left:', await page.$$eval('#v-profil .ico', e => e.length));

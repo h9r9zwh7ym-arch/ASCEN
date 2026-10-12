@@ -104,8 +104,9 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.click('.tabbtn[data-id="profil"]'); await wait(600);
   const prof = await page.evaluate(() => { const t = document.querySelector('.ph-asc'); return { asc: !!t, txt: t ? t.textContent.trim() : '', badge: !!document.querySelector('.ph-avatar em') }; });
   log('Progress/profil:', JSON.stringify(prog), JSON.stringify(prof));
-  if (!prog.card || !prog.sky || prog.lv) fail('carte Mon ascension dans Progrès');
-  if (!prof.asc || !/m/.test(prof.txt) || prof.badge) fail('profil : ascension au lieu du niveau');
+  // refonte 5 : l'ascension n'est plus que sur l'accueil (carte « Cette semaine ») : ni dans Objectifs, ni dans le Profil
+  if (prog.card || prog.lv) fail('pas de carte Mon ascension dans Progrès');
+  if (prof.asc || prof.badge) fail('profil sans ascension ni niveau');
   // À propos : les sources des montagnes et le lien vers « Comment ça marche » (retour vers À propos)
   await page.evaluate(() => ACT.openAbout()); await wait(500);
   const ab = await page.evaluate(() => ({ src: /OpenStreetMap/.test(document.querySelector('.sheet-body').textContent) && /swisstopo/.test(document.querySelector('.sheet-body').textContent), link: !!document.querySelector('.about-link[data-a="ascHow"]') }));

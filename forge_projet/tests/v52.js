@@ -41,12 +41,14 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     // promesse du jour : un nouveau venu, le premier camp est à portée de la 1re séance
     a = reset([]); R.promise = (ascTodayPromise(a) || {}).t;
     const realWd = window.weekdayIdx;
-    R.newcomer = nextGoal().t;
+    // (refonte 5 : la promesse, la série en jeu et le retour en force sont dans la carte « Cette semaine »)
+    const wkc = () => { renderView('today'); return { where: document.querySelector('.wk-n small').textContent, risk: (document.querySelector('.wk-risk') || {}).textContent || '', goal: (nextGoal() || {}).t || '' }; };
+    R.newcomer = wkc().where;
     // série en jeu : 4 semaines tenues, rien cette semaine, et plus que 3 jours (vendredi)
     const l3 = []; for (let n = 4; n >= 1; n--) for (const d of [0, 2, 4]) l3.push(ses(n, d));
     a = reset(l3); window.weekdayIdx = () => 4; DATA_VER++;
-    const g = nextGoal(); R.risk = { t: g.t, warn: !!g.warn, series: a.series };
-    window.weekdayIdx = () => 0; DATA_VER++; R.monday = nextGoal().t;
+    const g = wkc(); R.risk = { t: g.risk, goal: g.goal, series: a.series };
+    window.weekdayIdx = () => 0; DATA_VER++; R.monday = wkc().risk;
     window.weekdayIdx = realWd; DATA_VER++;
     // frise : pas de délai en mois ou en années, les mètres à gravir
     const a2 = Object.assign({}, ascent(), { key: 'everest', alt: 5200, start: ASC_DATA.everest.start, top: ASC_DATA.everest.top, camps: ascCamps('everest'), passed: 0, campDates: {}, wait: false, done: .01 });
@@ -59,15 +61,15 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   log('Engine:', JSON.stringify(eng));
   if (!(eng.before > 0) || !eng.back.descent || !(eng.back.eBack > 0) || eng.back.after !== null || eng.back.eTo < eng.back.from) fail('retour en force : double jusqu\'à l\'altitude perdue, puis normal');
   if (!eng.noBack) fail('pas de retour en force sans descente');
-  if (!/^Aujourd'hui, Camp 1 est à ta portée/.test(eng.promise || '') || !/^Aujourd'hui, Camp 1 est à ta portée/.test(eng.newcomer)) fail('promesse du jour sur l\'accueil');
-  if (!/^Ta série de 4 semaines est en jeu : 3 séances d'ici dimanche/.test(eng.risk.t) || !eng.risk.warn) fail('série en jeu en premier');
-  if (/série de \d+ semaines est en jeu/.test(eng.monday)) fail('série en jeu : seulement sans marge');
+  if (!/^Aujourd'hui, Camp 1 est à ta portée/.test(eng.promise || '') || eng.newcomer !== "Camp 1 à ta portée aujourd'hui") fail('promesse du jour sur l\'accueil');
+  if (eng.risk.t.trim() !== 'Série de 4 sem. en jeu' || /en jeu/.test(eng.risk.goal)) fail('série en jeu dans la carte de la semaine');
+  if (eng.monday) fail('série en jeu : seulement sans marge');
   if (!eng.far.gravir || eng.far.months) fail('frise : pas de délai lointain');
 
   // 2. après la descente : accueil, séance en cours (×2), fin de séance (part du retour en force), Vitesse
   await page.evaluate(() => renderView('today')); await wait(500);
-  const home = await page.evaluate(() => (document.querySelector('.goal-line') || {}).textContent || '');
-  log('Home:', home.replace(/\s+/g, ' ').trim()); if (!/Retour en force : ta prochaine séance compte double/.test(home)) fail('accueil : retour en force annoncé');
+  const home = await page.evaluate(() => (document.querySelector('.wk-n small') || {}).textContent || '');
+  log('Home:', home.replace(/\s+/g, ' ').trim()); if (!/^Retour en force : séance ×2 jusqu'à/.test(home)) fail('accueil : retour en force annoncé (carte de la semaine)');
   await shot('01_home');
   await page.evaluate(() => ACT.openAscent()); await page.waitForSelector('#ascScene .asc-svg', { timeout: 8000 }); await wait(900);
   await page.evaluate(() => document.querySelector('.asc-row[data-k="speed"]').scrollIntoView({ block: 'center' })); await page.click('.asc-row[data-k="speed"]'); await wait(600);

@@ -31,10 +31,10 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.goto(APP); await page.waitForSelector('#splash', { state: 'detached', timeout: 9000 }); await page.waitForTimeout(700);
   const wait = ms => page.waitForTimeout(ms), shot = n => page.screenshot({ path: `${OUT}/${wk ? 'wk_' : ''}${n}.png` });
 
-  // 1. accueil recentré : la séance avant « Toi, il y a 3 mois », pas de « Prochain cap » qui répète
-  //    la pastille de la semaine, « Pourquoi ? » de la semaine allégée dans le coin de la carte
+  // 1. accueil recentré : plus de « Toi, il y a 3 mois » (dans Progrès seulement depuis la refonte 5), pas de
+  //    « Prochain cap » qui répète la semaine, « Pourquoi ? » de la semaine allégée dans le coin de la carte
   const home = await page.evaluate(() => { const v = document.querySelector('#v-today'), pane = v.querySelector('.seg-pane'), tn = v.querySelector('.tn-card'), goal = v.querySelector('.goal-line'), dl = v.querySelector('.dl-card');
-    return { tnAfter: !!(tn && pane && (pane.compareDocumentPosition(tn) & Node.DOCUMENT_POSITION_FOLLOWING)), goal: goal ? goal.textContent.trim() : '', left: (S.goals.daysPerWeek || 3) - sessionsThisWeek(),
+    return { tnAfter: !tn && !!pane, goal: goal ? goal.textContent.trim() : '', left: (S.goals.daysPerWeek || 3) - sessionsThisWeek(),
       dl: !!dl, info: !!(dl && dl.querySelector(':scope > .info-btn[data-a="deloadHow"]')), rows: dl ? dl.querySelectorAll('.dl-act button').length : 0 }; });
   log('Home:', JSON.stringify(home));
   if (!home.tnAfter || (home.left > 1 && /pour valider ta semaine/.test(home.goal)) || (home.dl && (!home.info || home.rows !== 2))) fail('accueil recentré sur la séance');
@@ -45,8 +45,8 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const stuck = await page.evaluate(() => [...document.querySelectorAll('.view.enter')].map(v => v.id));
   log('Views left in enter:', JSON.stringify(stuck)); if (stuck.length) fail('écran coincé en entrée');
 
-  // 3. historique : changer de période transforme le graphique (pas de repousse depuis zéro), le total défile
-  await page.evaluate(() => switchTab('history')); await wait(700);
+  // 3. Statistiques : changer de période transforme le graphique (pas de repousse depuis zéro), le total défile
+  await page.evaluate(() => { switchTab('progress'); ACT.progressTab({ v: 'stats' }); }); await wait(700);
   const k0 = await page.evaluate(() => document.querySelector('.hist-kpi b').textContent);
   await page.click('[data-a="histRange"][data-v="3m"]'); await wait(90);
   const mid = await page.evaluate(() => { const box = document.querySelector('#histChart'), bars = [...box.querySelectorAll('.cc-bar')];
@@ -106,13 +106,11 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.evaluate(() => switchTab('history')); await wait(100);
   const fresh3 = await page.evaluate(() => !!document.querySelector('#v-history .row.fresh'));
   log('Fresh after delete:', fresh3); if (fresh3) fail('pas d\'éclairage après suppression');
-  // « Afficher plus » : les séances révélées arrivent en cascade, les premières ne bougent pas
-  const more = await page.evaluate(() => { const n0 = document.querySelectorAll('#v-history .row[data-id]').length, first = document.querySelector('#v-history .row[data-id]').dataset.id;
-    document.querySelector('[data-a="histMore"]').click();
-    const rows = [...document.querySelectorAll('#v-history .row[data-id]')], anim = r => r.getAnimations().length;
-    return { n0, n1: rows.length, oldMoved: rows.slice(0, n0).filter(anim).length, newIn: rows.slice(n0).filter(anim).length, same: rows[0].dataset.id === first }; });
-  log('Show more:', JSON.stringify(more)); if (!(more.n1 > more.n0) || more.oldMoved || !more.newIn || !more.same) fail('« Afficher plus » en cascade');
-  await wait(600);
+  // mois précédent : seul le mois change (la page ne se reconstruit pas), en glissant
+  const nav = await page.evaluate(() => { const v = document.querySelector('#v-history'), c0 = v.querySelector('.content'); ACT.histNav({ d: -1 });
+    const box = document.querySelector('#histMonth'); return { same: v.querySelector('.content') === c0, anim: box.getAnimations().length, rows: box.querySelectorAll('.hs-row').length }; });
+  log('Month nav:', JSON.stringify(nav)); if (!nav.same || !nav.anim || !nav.rows) fail('mois précédent sans reconstruire la page');
+  await page.evaluate(() => ACT.histNav({ d: 1 })); await wait(600);
 
   // 7. Rewind : des touchers rapides ne superposent jamais deux diapos
   const rwq = await page.evaluate(async () => { openRewind('month', todayISO().slice(0, 7)); const sl = ms => new Promise(r => setTimeout(r, ms)); const counts = [];
@@ -137,7 +135,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
       const has = { fav: typeof SFX.fav === 'function', toggle: typeof SFX.toggle === 'function' };
       // le « toc » des sélecteurs (il ne se jouait jamais : l'action marquait le segment avant l'écouteur)
       const heard = []; const sf = window.sfx; window.sfx = (n, a) => { heard.push(n); return sf(n, a); };
-      switchTab('history'); await new Promise(r => setTimeout(r, 300));
+      switchTab('progress'); ACT.progressTab({ v: 'stats' }); await new Promise(r => setTimeout(r, 300));
       document.querySelector('[data-a="histRange"]:not(.on)').click(); await new Promise(r => setTimeout(r, 100));
       document.querySelector('[data-a="histMetric"]:not(.on)').click(); window.sfx = sf;
       return { state, wet, bus, pads, duck: +duck.toFixed(2), has, seg: heard.filter(n => n === 'seg').length };
@@ -149,9 +147,9 @@ const APP = 'file://' + path.resolve(process.argv[2]);
 
   // 9. sombre : le curseur des sélecteurs est plus clair que son rail
   await page.evaluate(() => { S.settings.theme = 'dark'; save(); applyTheme(); }); await wait(300);
-  const seg = await page.evaluate(() => { const ind = document.querySelector('#v-history [data-seg="histRange"] .seg-ind'); const bg = getComputedStyle(ind).backgroundColor; return bg; });
+  const seg = await page.evaluate(() => { switchTab('progress'); ACT.progressTab({ v: 'stats' }); const ind = document.querySelector('#v-progress [data-seg="histRange"] .seg-ind'); const bg = getComputedStyle(ind).backgroundColor; return bg; });
   log('Dark seg thumb:', seg); if (seg !== 'rgb(99, 99, 102)') fail('curseur des sélecteurs en sombre');
-  await shot('04_dark_history');
+  await shot('04_dark_stats');
 
   await browser.close();
   errors.forEach(e => log(e)); log(errors.length ? 'ERRORS: ' + errors.length : '=== NO ERRORS ===');

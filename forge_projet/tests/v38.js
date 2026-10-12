@@ -60,10 +60,13 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.evaluate(() => closeSheet()); await wait(400);
 
   // 3. « ton pourquoi » : Profil → enregistré ; rappel après 4 jours sans séance ; lancement
+  // (refonte 5 : dans Profil › Motivation, qui revient après l'enregistrement)
   await page.evaluate(() => { switchTab('profil'); }); await wait(500);
-  await page.click('[data-a="editWhy"]'); await wait(300);
-  await page.fill('#whyInput', 'Être en forme pour la rando <b>d\'été</b>'); await page.click('[data-a="saveWhy"]'); await wait(400);
-  const prof = await page.evaluate(() => ({ why: S.settings.why, shown: document.querySelector('.ph-why').textContent.trim(), html: document.querySelector('.ph-why').innerHTML.includes('<b>') }));
+  await page.click('[data-a="openMotivation"]'); await wait(500);
+  await page.click('.sheet [data-a="editWhy"]'); await wait(300);
+  await page.fill('#whyInput', 'Être en forme pour la rando <b>d\'été</b>'); await page.click('[data-a="saveWhy"]'); await wait(600);
+  const prof = await page.evaluate(() => { const r = document.querySelector('.sheet [data-a="editWhy"] .s'); return { why: S.settings.why, shown: r.textContent.trim(), html: r.innerHTML.includes('<b>') }; });
+  await page.evaluate(() => closeSheet()); await wait(300);
   log('Why in profile:', JSON.stringify(prof)); if (!/Être en forme/.test(prof.why) || !/« Être en forme/.test(prof.shown) || prof.html) fail('pourquoi enregistré et échappé');
   const card = await page.evaluate(() => { S.sessions.forEach((s, i) => { s.date = addDaysISO(todayISO(), -5 - i); }); S.sessions.sort((a, b) => a.date < b.date ? -1 : 1); save(); switchTab('today'); renderView('today');
     return { card: !!document.querySelector('.why-card'), text: (document.querySelector('.why-card .why-t') || {}).textContent, tag: splashTagline() }; });

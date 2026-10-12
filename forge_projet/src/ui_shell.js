@@ -205,13 +205,13 @@ function switchTabNow(id){
 }
 // Onglets déjà visités dont les données ont changé : reconstruits pendant les temps morts (un à la
 // fois), pour que le prochain changement d'onglet soit instantané au lieu de reconstruire au toucher.
-// Rien pendant une séance en cours (barre d'onglets masquée, batterie) ni pour les trophées 3D.
+// Rien pendant une séance en cours (barre d'onglets masquée, batterie).
 let prerenderQueued = false;
 function prerenderStaleViews(){
   if(prerenderQueued) return;
   const idle = window.requestIdleCallback || (f=>setTimeout(()=>f({ timeRemaining:()=>12, didTimeout:false }), 400));
   const stale = ()=>(S.draft && S.draft.startedAt) ? [] : TAB_ORDER.filter(id=>id!==currentTab).map(id=>qs("#v-"+id))
-    .filter(v=>v && v._seen && !(v._ver===DATA_VER && v._day===todayISO()) && !(v.id==="v-progress" && typeof progressTab!=="undefined" && progressTab==="medals"));
+    .filter(v=>v && v._seen && !(v._ver===DATA_VER && v._day===todayISO()));
   prerenderQueued = true;
   idle(function step(dl){
     const list = stale();
