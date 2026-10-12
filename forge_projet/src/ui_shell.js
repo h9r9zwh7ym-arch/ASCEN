@@ -1,7 +1,7 @@
 // ================= INTERFACE : coquille =================
 const TABS = [
   { id:"today",    n:"Aujourd'hui", icon:"home" },
-  { id:"history",  n:"Historique",  icon:"clock" },
+  { id:"history",  n:"Historique",  icon:"clock", bar:false }, // pas de bouton : on y va depuis Progrès (Résumé | Historique)
   { id:"progress", n:"Progrès",     icon:"chart" },
   { id:"profil",   n:"Profil",      icon:"user" },
 ];
@@ -22,6 +22,7 @@ const ICONS = {
   user:'<circle cx="12" cy="8" r="3.6" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M4.5 20c1.4-4 4-6 7.5-6s6.1 2 7.5 6" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/>',
   check:'<path d="M5 13l4.5 4.5L19 8" stroke="currentColor" stroke-width="2.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
   chev:'<path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+  chevL:'<path d="M15 4.5 7.5 12l7.5 7.5" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
   close:'<path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   plus:'<path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   trophy:'<path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" stroke="currentColor" stroke-width="1.7" fill="none"/><path d="M7 6H4a3 3 0 0 0 3 5M17 6h3a3 3 0 0 1-3 5" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round"/><path d="M12 14v3M9 20h6M9.5 17h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
@@ -134,7 +135,7 @@ function qsa(sel,root){ return Array.from((root||document).querySelectorAll(sel)
 function buildShell(){
   qs("#app").innerHTML = TABS.map(t=>`<div class="view" id="v-${t.id}"></div>`).join("");
   if(!qs("#charttip")){ const t = document.createElement("div"); t.id = "charttip"; t.setAttribute("role","tooltip"); document.body.appendChild(t); }
-  qs(".tabbar").innerHTML = TABS.map(t=>`<button class="tabbtn" data-a="tab" data-id="${t.id}">${icon(t.icon)}<span class="tl">${t.n}</span></button>`).join("");
+  qs(".tabbar").innerHTML = TABS.filter(t=>t.bar!==false).map(t=>`<button class="tabbtn" data-a="tab" data-id="${t.id}">${icon(t.icon)}<span class="tl">${t.n}</span></button>`).join("");
   // défilement : barre de navigation translucide et grand titre qui se replie façon iOS
   // (une seule écriture par image, uniquement des propriétés composées par le GPU)
   qsa(".view").forEach(v=>{
@@ -153,7 +154,9 @@ function buildShell(){
 }
 
 let currentTab = "today";
-const TAB_ORDER = ["today","history","progress","profil"];
+const TAB_ORDER = ["today","progress","history","profil"];
+// l'Historique vit sous l'onglet Progrès (refonte 5.0 : trois onglets)
+const tabOf = id=>id==="history" ? "progress" : id;
 // transitions entre écrans : View Transitions (Safari 18+, Chrome) quand disponible,
 // sinon l'animation d'entrée CSS habituelle
 const canVT = ()=>!!document.startViewTransition && !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -180,7 +183,7 @@ function switchTabNow(id){
   const changed = currentTab!==id;
   v.dataset.dir = !changed || from<0 ? "" : to>from ? "r" : "l";
   currentTab = id;
-  qsa(".tabbtn").forEach(b=>{ const on = b.dataset.id===id; b.classList.toggle("on", on); if(on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
+  qsa(".tabbtn").forEach(b=>{ const on = b.dataset.id===tabOf(id); b.classList.toggle("on", on); if(on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
   qsa(".view").forEach(x=>x.classList.toggle("active", x===v));
   const upToDate = v._ver===DATA_VER && v._day===todayISO() && v.firstChild;
   if(!upToDate){
@@ -565,7 +568,11 @@ function toast(msg, ic, undo){
 const ACT = {
   toastUndo(){ const f = toastUndoFn; toastUndoFn = null; clearTimeout(toastTimer); qs("#toast").classList.remove("show","has-act"); if(f){ f(); sfx("seg"); } },
   retryView(d){ renderViewAnimated(d.v||currentTab); },
-  tab(d){ if(d.id===currentTab) reselectTab(); else switchTab(d.id); },
+  // re-toucher l'onglet de l'écran affiché (Historique compris, sous Progrès) remonte en haut
+  // Historique est un segment de Progrès : l'onglet ramène toujours au Résumé
+  tab(d){ if(currentTab===d.id) reselectTab(); else switchTab(d.id); },
+  // Progrès : Résumé | Historique (même onglet, deux écrans)
+  progView(d){ if(d.v!==currentTab) switchTab(d.v); },
   closesheet(){ if(!sheetBack()) closeSheet(); },
   sheetBack(){ if(!sheetBack()) closeSheet(); },
   dismisssheet(){ if(Date.now()>suppressSheetClick) dismissSheet(); },

@@ -70,7 +70,7 @@ const OUT = path.join(OUT_ROOT, 'v32'); fs.mkdirSync(OUT, { recursive: true });
   await shot('01_view_error');
   await page.evaluate(() => { VIEWS.history = window.__h; }); await page.click('#v-history [data-a="retryView"]'); await wait(500);
   const back = await page.$eval('#v-history .lt', e => e.textContent).catch(() => null);
-  log('Failing view:', JSON.stringify(err), '| after retry:', back); if (!err.box || !err.logged || back !== 'Historique') fail('écran en échec rattrapé');
+  log('Failing view:', JSON.stringify(err), '| after retry:', back); if (!err.box || !err.logged || back !== 'Progrès') fail('écran en échec rattrapé');
   // 7. bornes de saisie : une faute de frappe ne gonfle pas les statistiques
   await page.evaluate(() => { switchTab('today'); S.custom = { exos: [{ exoId: 'dc_haltere', sets: 2 }, { exoId: 'pompes', sets: 2 }] }; ACT.startCustom(); }); await wait(4600);
   await page.evaluate(() => { const l = document.querySelector('#launch'); if (l) l.click(); }); await wait(600);

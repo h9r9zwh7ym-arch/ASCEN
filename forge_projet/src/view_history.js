@@ -90,7 +90,7 @@ function renderHistory(){
   const sessions = all.slice(0, histLimit);
   if(!sessions.length){
     return `<div class="navbar"><div class="nb-title">Historique</div></div><div class="content">
-      <h1 class="lt">Historique</h1>
+      <h1 class="lt">Progrès</h1>${progViewSeg("history")}
       <div class="empty-state"><span class="em">${sfIcon("history","indigo","lg")}</span>Aucune séance enregistrée pour l'instant.<br>Termine ta première séance pour la voir ici.</div>
     </div>`;
   }
@@ -124,8 +124,8 @@ function renderHistory(){
   }).join("");
   const more = all.length - sessions.length;
   return `<div class="navbar"><div class="nb-title">Historique</div></div><div class="content">
-    <h1 class="lt">Historique</h1>
-    <div class="sh-sub" style="margin-top:-4px">${all.length} séance${all.length>1?"s":""} au total${totalVolumeAllTime()?" · "+fmtKg(totalVolumeAllTime())+" soulevés":""}</div>
+    <h1 class="lt">Progrès</h1>${progViewSeg("history")}
+    <div class="sh-sub">${all.length} séance${all.length>1?"s":""} au total${totalVolumeAllTime()?" · "+fmtKg(totalVolumeAllTime())+" soulevés":""}</div>
     <div class="chart-card hist-chart stagger" style="--i:0">
       ${segHTML("histMetric", HIST_METRICS, histMetric, "histMetric")}
       ${segHTML("histRange", HIST_RANGES, histRange, "histRange").replace('class="seg"','class="seg sm"')}

@@ -104,7 +104,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.evaluate(() => { S.custom = { exos: [] }; openTpls = new Set([S.templates[0].id]); save(); renderViewAnimated('today'); });
   await wait(500);
   await shot('10_dark_today');
-  await tap('.tabbtn[data-id="history"]'); await wait(400);
+  await page.evaluate(() => switchTab('history')); await wait(400);
   await shot('11_dark_history');
   await browser.close();
   if (errors.length) { console.log('=== ERRORS ==='); errors.forEach(e => console.log(e)); process.exit(1); }

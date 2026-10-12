@@ -80,8 +80,8 @@ function iconTile(ctx, name, x, y, size, color){
   ctx.fillStyle = color; rrect(ctx, x, y, size, size, size*0.26); ctx.fill();
   drawGlyph(ctx, name, x+size*0.17, y+size*0.17, size*0.66, "#fff");
 }
-// titres en Geist (police de la marque, embarquée), chiffres en Barlow Semi Condensed ; repli système
-function recapFont(w, px, display){ return `${w} ${px}px ${display ? '"Geist ASCEN",' : '"ASCEN Num",'}-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif`; }
+// titres en SF Pro (police du système), chiffres en SF Pro Rounded ; repli système
+function recapFont(w, px, display){ return `${w} ${px}px ${display ? '' : 'ui-rounded,"SF Pro Rounded",'}-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif`; }
 function recapFit(ctx, txt, max){
   if(ctx.measureText(txt).width<=max) return txt;
   while(txt.length>1 && ctx.measureText(txt+"…").width>max) txt = txt.slice(0,-1);

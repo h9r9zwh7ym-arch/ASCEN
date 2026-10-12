@@ -32,7 +32,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const s1 = await sb();
   await page.evaluate(() => { document.querySelector('#v-today').scrollTop = 0; }); await wait(300);
   log('Status strip:', JSON.stringify(s0), '→ scrolled', s1.bg);
-  if (s0.bg !== 'rgb(244, 243, 241)' || s0.top !== 0 || s0.w !== 390 || s0.pos !== 'fixed' || s0.body !== 'rgb(244, 243, 241)' || s0.meta !== '#f4f3f1' || s1.bg !== 'rgb(247, 246, 244)' || s0.tipTop !== '-400px') fail('barre d\'état à la couleur de l\'app (bandeau fixe, fond en style direct)');
+  if (s0.bg !== 'rgb(242, 242, 247)' || s0.top !== 0 || s0.w !== 390 || s0.pos !== 'fixed' || s0.body !== 'rgb(242, 242, 247)' || s0.meta !== '#f2f2f7' || s1.bg !== 'rgb(248, 248, 249)' || s0.tipTop !== '-400px') fail('barre d\'état à la couleur de l\'app (bandeau fixe, fond en style direct)');
 
   // 2. Ma séance ↔ séance de l'app (liens de la carte principale) : seul le bloc de la séance change, sans cascade de tout l'écran
   const before = await page.evaluate(() => { window.__head = document.querySelector('#v-today .home-head'); window.__seg = null; return document.querySelector('#v-today .seg-pane').className; });

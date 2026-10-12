@@ -107,7 +107,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   log('Feeling sheet gone:', !(await page.$('[data-a="setFeelingAndFinish"]')));
 
   // --- historique ---
-  await page.click('.tabbtn[data-id="history"]');
+  await page.evaluate(() => switchTab('history'));
   await wait(400);
   await page.click('#v-history [data-a="openSessionDetail"]');
   await wait(400);
@@ -153,14 +153,14 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await wait(300);
   await shot('13_progress_charts2');
   // bulle d'un graphique en colonnes (les graphiques par semaine sont dans l'Historique depuis la 4.0)
-  await page.click('.tabbtn[data-id="history"]'); await wait(700);
+  await page.evaluate(() => switchTab('history')); await wait(700);
   const col = await page.$('.cc-col >> nth=-1');
   await col.click(); await wait(200);
   log('Tooltip text:', await page.textContent('#charttip'), 'visible:', await page.$eval('#charttip', e => e.classList.contains('show')));
   await shot('14_tooltip');
   await page.click('.tabbtn[data-id="progress"]'); await wait(700);
 
-  await page.click('[data-a="progressTab"][data-v="exos"]');
+  await page.evaluate(() => ACT.progressTab({ v: 'exos' }));
   await wait(800);
   await shot('15_exos');
   await page.click('[data-a="openExoChart"][data-id="dc_haltere"]');
@@ -169,7 +169,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.click('.sheet-hd [data-a="closesheet"]');
   await wait(350);
 
-  await page.click('[data-a="progressTab"][data-v="medals"]');
+  await page.evaluate(() => ACT.progressTab({ v: 'medals' }));
   await wait(1000);
   await shot('17_medals');
   await page.evaluate(() => ACT.allMedals()); await wait(900);   // la collection : feuille « Tous les trophées »
@@ -181,10 +181,10 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await wait(350);
 
   await page.emulateMedia({ colorScheme: 'dark' });
-  await page.click('[data-a="progressTab"][data-v="overview"]');
+  await page.evaluate(() => ACT.progressTab({ v: 'overview' }));
   await wait(1200);
   await shot('19_dark_overview');
-  await page.click('[data-a="progressTab"][data-v="medals"]');
+  await page.evaluate(() => ACT.progressTab({ v: 'medals' }));
   await wait(1000);
   await shot('20_dark_medals');
   await page.click('.tabbtn[data-id="today"]');

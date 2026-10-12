@@ -20,12 +20,12 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const wait = ms => page.waitForTimeout(ms), shot = n => page.screenshot({ path: `${OUT}/${wk ? 'wk_' : ''}${n}.png` });
 
   // 1. onglet re-touché : remonte en haut, sans reconstruire la page ; autre onglet : rendu réutilisé
-  await page.click('.tabbtn[data-id="history"]'); await wait(500);
+  await page.evaluate(() => switchTab('history')); await wait(500);
   const h1 = await page.evaluate(() => { const v = document.querySelector('#v-history'); v.scrollTop = 600; v._mark = 1; v.firstElementChild.dataset.keep = '1'; return v.scrollTop; });
-  await page.click('.tabbtn[data-id="history"]'); await wait(900);
+  await page.click('.tabbtn[data-id="progress"]'); await wait(900);
   const h2 = await page.evaluate(() => { const v = document.querySelector('#v-history'); return { top: v.scrollTop, same: v.firstElementChild.dataset.keep === '1', enter: v.classList.contains('enter') }; });
   log('Re-tap:', h1, '→', JSON.stringify(h2)); if (!(h1 > 0) || h2.top > 4 || !h2.same || h2.enter) fail('onglet re-touché : remonte sans reconstruire');
-  await page.click('.tabbtn[data-id="progress"]'); await wait(500); await page.click('.tabbtn[data-id="history"]'); await wait(400);
+  await page.evaluate(() => switchTab('progress')); await wait(500); await page.evaluate(() => switchTab('history')); await wait(400);
   const h3 = await page.evaluate(() => ({ same: document.querySelector('#v-history').firstElementChild.dataset.keep === '1', active: currentTab, aria: document.querySelector('.tabbtn.on').getAttribute('aria-current') }));
   log('Tab back:', JSON.stringify(h3)); if (!h3.same || h3.active !== 'history' || h3.aria !== 'page') fail('retour sur un onglet sans reconstruction');
   // Progrès : sous-onglets, re-toucher Progrès en haut ramène au résumé

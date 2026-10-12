@@ -85,18 +85,18 @@ const W = +(process.env.W || 375), DARK = process.env.DARK === '1', wk = process
   await audit('live_complete');
   await page.click('.complete-card [data-a="finishSession"]'); await wait(1200); await audit('celebration'); await close();
   await audit('today_done');
-  await page.click('.tabbtn[data-id="history"]'); await audit('history');
+  await page.evaluate(() => switchTab('history')); await audit('history');
   await page.click('#v-history [data-a="openSessionDetail"]'); await audit('history_detail'); await close();
   await page.click('#v-history [data-a="openSessionDetail"]'); await page.waitForTimeout(400); await page.click('[data-a="histEdit"]'); await audit('history_edit'); await close();
   await page.click('[data-a="openRecap"]'); await audit('recap'); await close();
   await page.click('.tabbtn[data-id="progress"]'); await wait(900); await audit('progress');
-  await page.click('[data-a="progressTab"][data-v="muscles"]'); await audit('progress_muscles');
-  await page.click('[data-a="progressTab"][data-v="medals"]'); await wait(500);
+  await page.evaluate(() => ACT.progressTab({ v: 'muscles' })); await audit('progress_muscles');
+  await page.evaluate(() => ACT.progressTab({ v: 'medals' })); await wait(500);
   await page.click('[data-a="newTarget"]'); await wait(500); await page.click('.pick-row [data-a="pickerTap"]'); await audit('target_new'); await close();
   await page.evaluate(() => document.querySelector('#v-progress').scrollTo(0, 99999)); await audit('progress_bottom');
-  await page.click('[data-a="progressTab"][data-v="exos"]'); await audit('progress_exos');
+  await page.evaluate(() => ACT.progressTab({ v: 'exos' })); await audit('progress_exos');
   await page.click('[data-a="openExoChart"]'); await wait(900); await audit('exochart'); await close();
-  await page.click('[data-a="progressTab"][data-v="medals"]'); await audit('medals');
+  await page.evaluate(() => ACT.progressTab({ v: 'medals' })); await audit('medals');
   await page.click('[data-a="allMedals"]'); await wait(900); await audit('all_medals');   // la collection : feuille « Tous les trophées »
   await page.click('.medal-card'); await page.waitForSelector('.center-modal, .t3d-full.show', { timeout: 20000 }); await audit('medal_modal'); await close();
   await page.evaluate(() => closeSheet()); await wait(400);

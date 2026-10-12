@@ -41,12 +41,26 @@ function recentPRs(n){
 function renderProgress(){
   // quatre onglets, une question chacun : où j'en suis (Résumé), quels muscles je travaille (Muscles),
   // chaque exercice (Exercices), ce que je vise et ce que j'ai gagné (Objectifs : niveau, objectifs, défis, trophées)
-  const seg = segHTML("progress", [["overview","Résumé"],["muscles","Muscles"],["exos","Exercices"],["medals","Objectifs"]], progressTab, "progressTab");
-  const pane = progressTab==="exos" ? exosPaneHTML() : progressTab==="medals" ? goalsPaneHTML() : progressTab==="muscles" ? musclesPaneHTML() : overviewPaneHTML();
+  // refonte 5.0 : en haut, Résumé | Historique ; Muscles, Exercices et Objectifs s'ouvrent depuis le
+  // Résumé comme des écrans poussés (bouton retour), à la façon des apps Apple
+  const sub = PROG_SUB[progressTab];
+  if(sub){
+    const pane = progressTab==="exos" ? exosPaneHTML() : progressTab==="medals" ? goalsPaneHTML() : musclesPaneHTML();
+    return `<div class="navbar"><div class="nb-left"><button class="back-link" data-a="progressTab" data-v="overview">${icon("chevL")}Résumé</button></div><div class="nb-title">${sub}</div></div><div class="content">
+      <h1 class="lt">${sub}</h1><div class="seg-pane">${pane}</div></div>`;
+  }
   return `<div class="navbar"><div class="nb-title">Progrès</div></div><div class="content">
-    <h1 class="lt">Progrès</h1>${seg}<div class="seg-pane">${pane}</div></div>`;
+    <h1 class="lt">Progrès</h1>${progViewSeg("progress")}<div class="seg-pane">${overviewPaneHTML()}${progMoreHTML()}</div></div>`;
 }
 
+// sous-écrans de Progrès, ouverts depuis le Résumé
+const PROG_SUB = { muscles:"Muscles", exos:"Exercices", medals:"Objectifs" };
+function progViewSeg(cur){ return segHTML("pview", [["progress","Résumé"],["history","Historique"]], cur, "progView"); }
+function progMoreHTML(){
+  if(!S.sessions.length) return "";
+  const items = [["muscles","person","Muscles","Séries de la semaine par muscle"],["exos","dumbbell","Tous les exercices","Courbe, record et projection"],["medals","target","Objectifs et défis","Objectifs, défis et trophées"]];
+  return `<div class="group prog-more">${items.map(([v,g,t,sub])=>`<button class="row tap" style="width:100%" data-a="progressTab" data-v="${v}">${sfIcon(g,"gray")}<div class="grow"><div class="t">${t}</div><div class="s">${sub}</div></div><span class="chev">${icon("chev")}</span></button>`).join("")}</div>`;
+}
 // ---------- projection d'un exercice (réglage Motivation, 4.0) ; l'indice de force est dans strength.js ----------
 function exoMetric(def, ex, kgOnly){
   let m = 0;

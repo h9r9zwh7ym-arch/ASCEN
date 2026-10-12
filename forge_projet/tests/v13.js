@@ -138,7 +138,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   // médailles
   await page.click('.tabbtn[data-id="progress"]');
   await wait(400);
-  await page.click('[data-a="progressTab"][data-v="medals"]');
+  await page.evaluate(() => ACT.progressTab({ v: 'medals' }));
   await wait(900);
   await page.evaluate(() => ACT.allMedals()); await wait(900);   // la collection : feuille « Tous les trophées »
   log('Medal families:', await page.$$eval('.medal-card', e => e.length));

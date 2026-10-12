@@ -24,16 +24,16 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.goto(APP); await page.waitForSelector('#splash', { state: 'detached', timeout: 9000 }); await page.waitForTimeout(600);
   const wait = ms => page.waitForTimeout(ms), shot = n => page.screenshot({ path: `${OUT}/${wk ? 'wk_' : ''}${n}.png` });
 
-  // 1. Progrès : quatre onglets, une question chacun
+  // 1. Progrès : Résumé | Historique en haut, Muscles, Exercices et Objectifs en écrans poussés depuis le Résumé
   await page.click('.tabbtn[data-id="progress"]'); await wait(700);
   const tab = async v => { await page.evaluate(v => ACT.progressTab({ v }), v); await wait(400);
     return page.evaluate(() => ({ trend: !!document.querySelector('#v-progress .trend-card'), kpi: document.querySelectorAll('#v-progress .kpi').length, heat: !!document.querySelector('#v-progress .heatmap, #v-progress .hm'), habits: !!document.querySelector('#v-progress .group.habits'),
       level: !!document.querySelector('#v-progress .asc-card'), mm: !!document.querySelector('#v-progress .mm-card'), stim: !!document.querySelector('#v-progress .stim-card'), medals: !!document.querySelector('#v-progress .medal-summary'),
       exos: !!document.querySelector('#v-progress [data-a="openExoChart"]'), titles: [...document.querySelectorAll('#v-progress .sh, #v-progress .cc-t')].map(e => e.textContent.trim()) })); };
-  const labels = await page.$$eval('[data-seg="progress"] button', b => b.map(x => x.textContent));
+  const labels = [...await page.$$eval('[data-seg="pview"] button', b => b.map(x => x.textContent)), ...await page.$$eval('#v-progress .prog-more [data-a="progressTab"]', b => b.map(x => x.dataset.v))];
   const ov = await tab('overview'), mu = await tab('muscles'), ex = await tab('exos'), go = await tab('medals');
   log('Tabs:', labels.join('|'), '| overview', JSON.stringify(ov), '| muscles', JSON.stringify({ mm: mu.mm, stim: mu.stim }), '| goals', JSON.stringify({ level: go.level, medals: go.medals, t: go.titles.slice(0, 4) }));
-  if (labels.join('|') !== 'Résumé|Muscles|Exercices|Objectifs') fail('quatre onglets');
+  if (labels.join('|') !== 'Résumé|Historique|muscles|exos|medals') fail('Résumé | Historique et trois écrans poussés');
   if (!ov.trend || ov.kpi !== 4 || !ov.habits || ov.level || ov.mm || ov.titles.some(t => /Séances par semaine|Tonnage par semaine|Mes objectifs|Défis/.test(t))) fail('Résumé recentré');
   if (!mu.mm || !mu.stim || mu.trend) fail('onglet Muscles');
   if (!ex.exos || !ex.titles.includes('Tous mes exercices')) fail('onglet Exercices');
@@ -51,7 +51,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await tab('overview'); await shot('02_overview');
 
   // 3. historique : tonnage par semaine (les graphiques ont quitté Progrès)
-  await page.click('.tabbtn[data-id="history"]'); await wait(500);
+  await page.evaluate(() => switchTab('history')); await wait(500);
   await page.click('[data-a="histMetric"][data-v="volume"]'); await wait(400);
   const hv = await page.evaluate(() => document.querySelector('.hist-kpi b').textContent);
   log('History tonnage:', hv); if (!/kg|t$/.test(hv)) fail('tonnage dans l\'historique');

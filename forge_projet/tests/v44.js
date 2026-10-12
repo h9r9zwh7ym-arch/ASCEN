@@ -64,7 +64,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await shot('04_stim_about'); await page.evaluate(() => closeSheet()); await wait(400);
 
   // 4. historique : 7 j / 1 mois / 3 mois / 6 mois / 1 an / Total (par défaut)
-  await page.click('.tabbtn[data-id="history"]'); await wait(600);
+  await page.evaluate(() => switchTab('history')); await wait(600);
   const rg = await page.evaluate(() => ({ labels: [...document.querySelectorAll('[data-seg="histRange"] button')].map(b => b.textContent), on: document.querySelector('[data-seg="histRange"] .on').dataset.v }));
   const bars = {};
   for (const v of ['w', 'm', '3m', '6m', 'y', 'all']) { await page.click(`[data-a="histRange"][data-v="${v}"]`); await wait(350);
@@ -81,7 +81,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.click('[data-a="toggleSection"][data-k="tplOpen"]'); await wait(700);
   await page.click('[data-a="toggleSection"][data-k="planOpen"]'); await wait(700);
   const mini = await page.evaluate(() => ({ same: [...document.querySelectorAll('.tpl-card2')].every((c, i) => c === window.__cards[i]), cards: document.querySelectorAll('.tpl-card2').length,
-    rows: [...document.querySelectorAll('.tpl-card2')].map(c => c.querySelector('.tc-name').textContent + ':' + c.querySelector('.tc-dmini').textContent), more: Math.max(...[...document.querySelectorAll('.tc-more')].map(e => e.offsetHeight)),
+    rows: [...document.querySelectorAll('.tpl-card2')].map(c => c.querySelector('.tc-name').firstChild.textContent.trim() + ':' + c.querySelector('.tc-dmini').textContent), more: Math.max(...[...document.querySelectorAll('.tc-more')].map(e => e.offsetHeight)),
     days: document.querySelectorAll('.week-plan.mini .wp-day').length, names: Math.max(...[...document.querySelectorAll('.week-plan .wp-t')].map(e => e.offsetHeight)), extra: document.querySelector('.wp-extra').offsetHeight, colored: document.querySelectorAll('.week-plan .wp-day.has').length, showMore: !!document.querySelector('[data-a="tplShowAll"]') }));
   log('Collapsed:', nodes, JSON.stringify(mini));
   if (!mini.same || mini.cards !== 5 || mini.rows[0] !== 'Haut du corps:Lun' || mini.rows[4] !== 'Bras:—' || mini.more > 1 || mini.days !== 7 || mini.names > 1 || mini.extra > 1 || mini.colored !== 4 || mini.showMore) fail('sections repliées en résumé, sans re-rendu');

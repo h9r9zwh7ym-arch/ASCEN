@@ -22,7 +22,7 @@ const OUT = path.join(process.env.OUT_DIR || path.join(__dirname, 'out'), 'tour'
   await ev(() => { const b = document.querySelector('[data-a="todayMode"][data-v="proposal"]'); b && b.click(); }); await scroll(560); await shot('today_proposal'); await scroll(0);
   await ev(() => ACT.showExoInfo({ id: 'dc_haltere' })); await shot('exo_sheet'); await ev(() => { const s = document.querySelector('.sheet-body'); s.scrollTop = 600; }); await shot('exo_sheet_2'); await ev(() => closeSheet());
   await ev(() => openPicker({ title: 'Choisir des exercices', multi: true, onDone: () => {} })); await shot('picker'); await ev(() => closeSheet());
-  await page.click('.tabbtn[data-id="history"]'); await shot('history'); await scroll(700); await shot('history_2'); await scroll(0);
+  await page.evaluate(() => switchTab('history')); await shot('history'); await scroll(700); await shot('history_2'); await scroll(0);
   await ev(() => ACT.openSessionDetail({ id: S.sessions[S.sessions.length - 1].id })); await shot('session_detail'); await ev(() => closeSheet());
   await page.click('.tabbtn[data-id="progress"]'); await shot('progress'); await scroll(750); await shot('progress_2'); await scroll(1500); await shot('progress_3'); await scroll(2300); await shot('progress_4'); await scroll(0);
   await ev(() => ACT.progressTab({ v: 'exos' })); await shot('progress_exos');

@@ -53,7 +53,7 @@ const path = require('path');
     console.log('No start button found!');
   }
 
-  await page.click('.tabbtn[data-id="history"]');
+  await page.evaluate(() => switchTab('history'));
   await page.waitForTimeout(150);
   await page.click('.tabbtn[data-id="progress"]');
   await page.waitForTimeout(150);

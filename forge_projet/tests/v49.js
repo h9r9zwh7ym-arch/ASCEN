@@ -41,12 +41,12 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await shot('01_home');
 
   // 2. onglets coup sur coup : aucun écran ne reste en « entrée » (sa cascade se rejouerait à chaque rendu)
-  await page.click('.tabbtn[data-id="history"]'); await wait(120); await page.click('.tabbtn[data-id="progress"]'); await wait(120); await page.click('.tabbtn[data-id="profil"]'); await wait(1500);
+  await page.evaluate(() => switchTab('history')); await wait(120); await page.click('.tabbtn[data-id="progress"]'); await wait(120); await page.click('.tabbtn[data-id="profil"]'); await wait(1500);
   const stuck = await page.evaluate(() => [...document.querySelectorAll('.view.enter')].map(v => v.id));
   log('Views left in enter:', JSON.stringify(stuck)); if (stuck.length) fail('écran coincé en entrée');
 
   // 3. historique : changer de période transforme le graphique (pas de repousse depuis zéro), le total défile
-  await page.click('.tabbtn[data-id="history"]'); await wait(700);
+  await page.evaluate(() => switchTab('history')); await wait(700);
   const k0 = await page.evaluate(() => document.querySelector('.hist-kpi b').textContent);
   await page.click('[data-a="histRange"][data-v="3m"]'); await wait(90);
   const mid = await page.evaluate(() => { const box = document.querySelector('#histChart'), bars = [...box.querySelectorAll('.cc-bar')];
@@ -93,17 +93,17 @@ const APP = 'file://' + path.resolve(process.argv[2]);
 
   // 6. séance terminée : sa ligne s'éclaire à l'arrivée dans l'historique
   await page.evaluate(() => { S.sessions.push({ id: 'fresh1', date: todayISO(), durationSec: 1500, exos: [{ exoId: 'pompes', sets: [{ reps: 12, done: true }] }] }); save(); renderView('today'); });
-  await page.click('.tabbtn[data-id="history"]'); await wait(100);
+  await page.evaluate(() => switchTab('history')); await wait(100);
   const fresh = await page.evaluate(() => { const r = document.querySelector('#v-history .row[data-id="fresh1"]'); return r && r.classList.contains('fresh'); });
   log('Fresh row:', fresh); if (!fresh) fail('séance terminée qui s\'éclaire dans l\'historique');
   await wait(1900); await page.click('.tabbtn[data-id="today"]'); await wait(300);
   // une fois l'onglet vu, plus d'éclairage
-  await page.click('.tabbtn[data-id="history"]'); await wait(100);
+  await page.evaluate(() => switchTab('history')); await wait(100);
   const fresh2 = await page.evaluate(() => !!document.querySelector('#v-history .row.fresh'));
   if (fresh2) fail('éclairage une seule fois');
   // supprimer la dernière séance n'éclaire pas la précédente
   await page.evaluate(() => { S.sessions = S.sessions.filter(s => s.id !== 'fresh1'); save(); switchTab('today'); }); await wait(300);
-  await page.click('.tabbtn[data-id="history"]'); await wait(100);
+  await page.evaluate(() => switchTab('history')); await wait(100);
   const fresh3 = await page.evaluate(() => !!document.querySelector('#v-history .row.fresh'));
   log('Fresh after delete:', fresh3); if (fresh3) fail('pas d\'éclairage après suppression');
   // « Afficher plus » : les séances révélées arrivent en cascade, les premières ne bougent pas

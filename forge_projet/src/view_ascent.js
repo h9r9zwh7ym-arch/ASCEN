@@ -87,7 +87,7 @@ function ascMedalSVG(k, size, engrave, cols){
     <circle cx="50" cy="50" r="46" fill="url(#${id}a)"/><circle cx="50" cy="50" r="37" fill="url(#${id}b)"/>
     <circle cx="50" cy="50" r="37" fill="none" stroke="${dk}" stroke-opacity=".35" stroke-width="1.2"/>
     ${sh.length ? `<g clip-path="url(#${id}c)"><path d="${lp(sh)}L76 64L24 64Z" fill="${dk}" fill-opacity=".42"/><path d="${lp(sh)}" fill="none" stroke="${lt}" stroke-width="1.4" stroke-linejoin="round" stroke-opacity=".95"/></g>` : ""}
-    ${engrave && k ? `<text x="50" y="76" text-anchor="middle" font-family="ASCEN Num,-apple-system,sans-serif" font-weight="700" font-size="10" fill="${dk}" fill-opacity=".8">${fmtNum(ASC_DATA[k].top)} m</text>` : ""}
+    ${engrave && k ? `<text x="50" y="76" text-anchor="middle" font-family="ui-rounded,-apple-system,sans-serif" font-weight="700" font-size="10" fill="${dk}" fill-opacity=".8">${fmtNum(ASC_DATA[k].top)} m</text>` : ""}
     <path d="M18 34A36 36 0 0 1 60 14" stroke="#fff" stroke-opacity=".55" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`;
 }
 

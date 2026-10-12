@@ -1059,6 +1059,33 @@ accueil 25 → 22 (et un seul chemin pour démarrer au lieu de cinq), séance de
 **Tests** : `tests/v54.js` (budgets de choix, chemins de l'accueil, Ajuster, Tous les trophées, feuilles du Profil et
 « Retour », habituels du sélecteur, trois temps forts) ; tests plus anciens adaptés (le chemin change, pas ce qu'ils vérifient).
 
+## 9 quatertricies. Refonte du design (toujours 4.0, en cours)
+
+YaYa trouvait l'interface encore peu claire. Une maquette complète (10 écrans, Artifact « ASCEN — nouveau design »)
+a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est appliquée par étapes ; ce qui est fait :
+
+- **Étape 1, fondations** (`:root` de `style.css`, seul endroit à modifier) :
+  - fonds iOS : clair `#F2F2F7` / cartes `#FFFFFF`, sombre `#000000` / `#1C1C1E` ; textes `#1C1C1E`, `#6C6C70`, `#8E8E93` ;
+  - **un seul accent** : aplat `--tint` `#BC5736` (texte blanc dessus, `--on-tint`), texte orange `--tint-ink` `#B4532F`
+    (sombre `#E07A55`), fond doux `--tint-bg` ; interrupteurs en vert système (`--switch`) ;
+  - **police système** partout (SF Pro), chiffres en SF Pro Rounded (`--num: ui-rounded, …`) : Geist et Barlow sont
+    retirés (`src/fonts` supprimé, `build.sh` n'embarque plus rien) ;
+  - plus de capitales ni d'approche élargie (titres de groupe, étiquettes) ;
+  - rayons : contrôles 12, cartes 20, cartes héros 22, boutons 16 ; boutons de 56 px, lignes de liste de 52 px min. ;
+  - pictos d'exercice d'une seule couleur (orange) sur pastille ronde teintée (`.xico`) ; icônes des lignes de
+    réglage en gris sans tuile colorée (`.sfi`), ronde et teintée en grand (`.sfi.lg`).
+- **Étape 2, trois onglets** : Aujourd'hui / Progrès / Profil. Historique n'est plus dans la barre (`bar:false` dans
+  `TABS`) mais reste une vue : en haut de Progrès, un sélecteur **Résumé | Historique** (`progViewSeg`, action
+  `progView`) passe d'une vue à l'autre ; l'onglet Progrès reste allumé sur les deux (`tabOf`) et ramène toujours au
+  Résumé. Muscles, Exercices et Objectifs ne sont plus des segments : ce sont des écrans poussés depuis trois lignes en
+  bas du Résumé (`progMoreHTML`), avec un bouton « ‹ Résumé » (`.back-link`) en haut à gauche.
+- Barre d'état : mêmes règles qu'avant (bandeau `#sbar`), nouvelles couleurs `#F2F2F7` / `#000000`.
+
+À venir : séance en cours et repos en sombre, accueil, fin de séance (tonnage, record seulement s'il y en a un,
+ascension), Progrès, Historique, Profil › Apparence (thème Clair / Sombre / Automatique et « Séance en sombre »),
+animations signatures. Les sections plus haut qui parlent de Geist, Barlow, `#F4F3F1` ou `#FF6B3D` décrivent l'état
+d'avant cette refonte.
+
 ## 10. Cahier des charges d'origine (résumé)
 
 Voir le fichier `4a3df5ee-cahier-des-charges-forge.md` fourni au lancement du projet pour le texte complet. Points clés déjà couverts en v1.0 : matériel personnalisable et extensible, bibliothèque d'exercices filtrée, inclusion/exclusion d'exercices, objectifs personnalisés, suivi détaillé de séance (éditable, timer de repos, coche rapide), moteur de suggestion 100% local avec export/import IA, graphiques de progression, PR, streaks/régularité, trophées, écran d'accueil = séance du jour, thème clair/sombre automatique, page À propos avec copyright.
@@ -1074,7 +1101,7 @@ Voir le fichier `4a3df5ee-cahier-des-charges-forge.md` fourni au lancement du pr
 
 ## 12. Aperçu en artifact Claude
 
-En plus du dépôt Git (source de vérité), l'app peut être publiée comme Artifact claude.ai pour un aperçu rapide sans avoir à cloner/ouvrir le fichier : extraire le `<title>`, le `<style>` et le contenu de `<body>` de `dist/forge.html` (sans les balises `<!doctype>`/`<html>`/`<head>`/`<body>`, qu'un Artifact fournit lui-même), puis publier ce fragment avec l'outil Artifact. L'app n'utilise aucune ressource externe (polices de la marque embarquées, pas de script CDN), donc elle passe telle quelle la politique de sécurité des Artifacts. Ce n'est qu'un aperçu de confort : le livrable réel reste le fichier unique du dépôt.
+En plus du dépôt Git (source de vérité), l'app peut être publiée comme Artifact claude.ai pour un aperçu rapide sans avoir à cloner/ouvrir le fichier : extraire le `<title>`, le `<style>` et le contenu de `<body>` de `dist/forge.html` (sans les balises `<!doctype>`/`<html>`/`<head>`/`<body>`, qu'un Artifact fournit lui-même), puis publier ce fragment avec l'outil Artifact. L'app n'utilise aucune ressource externe (police du système, pas de script CDN), donc elle passe telle quelle la politique de sécurité des Artifacts. Ce n'est qu'un aperçu de confort : le livrable réel reste le fichier unique du dépôt.
 
 ## 13. Méthode de travail attendue
 

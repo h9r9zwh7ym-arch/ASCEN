@@ -38,7 +38,7 @@ const OUT = path.join(OUT_ROOT, 'v29'); fs.mkdirSync(OUT, { recursive: true });
   const toastTxt = await page.$eval('#toast', e => e.textContent); const logged = await page.evaluate(() => ERR_LOG.length);
   log('After failing action:', JSON.stringify(toastTxt), 'logged:', logged); if (!/rien n'est perdu/.test(toastTxt) || logged < 1) fail('erreur d\'action contenue');
   await page.evaluate(() => { document.getElementById('boom').remove(); switchTab('history'); }); await wait(400);
-  const ok = await page.$eval('#v-history .lt', e => e.textContent).catch(() => null); if (ok !== 'Historique') fail('app utilisable après une erreur');
+  const ok = await page.$eval('#v-history .lt', e => e.textContent).catch(() => null); if (ok !== 'Progrès') fail('app utilisable après une erreur');
   // 3. double appui sur « Valider la série » : une seule série validée
   await page.evaluate(() => { switchTab('today'); S.custom.exos = [{ exoId: 'pompes', sets: 3 }]; save(); ACT.startCustom(); }); await wait(4600);
   await page.evaluate(() => { const l = document.querySelector('#launch'); if (l) l.click(); }); await wait(700);

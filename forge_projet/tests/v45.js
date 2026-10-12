@@ -36,7 +36,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const scrolled = await page.evaluate(() => document.querySelector('meta[name="theme-color"]:not([media])').content);
   await page.evaluate(() => { document.querySelector('#v-today').scrollTop = 0; }); await wait(300);
   const back = await page.evaluate(() => document.querySelector('meta[name="theme-color"]:not([media])').content);
-  log('Status bar:', top, '→', scrolled, '→', back); if (top !== '#0b0b0a' || scrolled !== '#11100f' || back !== top) fail('barre d\'état assortie à la barre de navigation');
+  log('Status bar:', top, '→', scrolled, '→', back); if (top !== '#000000' || scrolled !== '#121213' || back !== top) fail('barre d\'état assortie à la barre de navigation');
 
   // 3. justesse : 1RM relatif au poids du corps, muscle secondaire, séries faciles
   const calc = await page.evaluate(() => {
@@ -56,7 +56,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   if (calc.pushIdx !== 125 || calc.triDays !== 3 || calc.triF !== 1 || calc.pect !== 1.5) fail('1RM relatif, muscle secondaire, séries faciles');
 
   // 4. historique : en changeant de mesure, les barres glissent (mêmes colonnes, animation en cours)
-  await page.click('.tabbtn[data-id="history"]'); await wait(600);
+  await page.evaluate(() => switchTab('history')); await wait(600);
   await page.click('[data-a="histRange"][data-v="3m"]'); await wait(700);
   await page.click('[data-a="histMetric"][data-v="minutes"]'); await wait(60);
   const morph = await page.evaluate(() => ({ cls: document.querySelector('#histChart').className, anims: document.getAnimations().filter(a => a.effect && a.effect.target && a.effect.target.classList && a.effect.target.classList.contains('cc-bar')).length }));
