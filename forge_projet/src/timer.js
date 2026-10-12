@@ -34,12 +34,20 @@ function tickRest(){
   if(remain<=0){
     // fini pendant que l'app était en arrière-plan : pas de sonnerie ni de vibration en retard
     const late = document.hidden || Date.now()-restState.endAt > 3000;
-    if(!late){ if(navigator.vibrate) try{ navigator.vibrate([120,60,120]); }catch(e){} sfx("restEnd"); }
-    toast(late ? "Repos terminé : série suivante" : "C'est reparti : série suivante", "bolt");
+    // à zéro, l'anneau passe à l'orange (« C'est reparti ») un court instant, puis la série suivante s'affiche
+    if(!late && !restState.over){
+      restState.over = Date.now();
+      if(navigator.vibrate) try{ navigator.vibrate([120,60,120]); }catch(e){}
+      sfx("restEnd"); renderRestBar(0);
+      if(typeof ringOver==="function" && ringOver(true)) return;
+    }
+    if(!late && restState.over && Date.now()-restState.over < 1100) return;
+    if(late || !qs(".sx-ring")) toast(late ? "Repos terminé : série suivante" : "C'est reparti : série suivante", "bolt");
     if(typeof restReady!=="undefined") restReady = true;
     endRest();
     return;
   }
+  if(restState.over){ restState.over = 0; if(typeof ringOver==="function") ringOver(false); }
   // 3 dernières secondes : l'anneau bat et le téléphone vibre à chaque seconde
   const wrap = document.querySelector(".ring-wrap");
   if(wrap) wrap.classList.toggle("ending", remain<=3);

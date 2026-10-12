@@ -81,7 +81,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   // démarrer directement une séance enregistrée
   if (!(await page.$('.tpl-card2.open'))) { await tap('.tpl-card2 >> nth=0 >> .tc-head'); await wait(300); }
   await tap('.tpl-card2.open [data-a="startTemplate"] >> nth=0'); await wait(700); await page.waitForSelector('#launch', { state: 'detached', timeout: 6000 });
-  log('Live started:', await page.evaluate(() => !!(S.draft && S.draft.startedAt)), 'name:', await page.textContent('.lh-clock small'));
+  log('Live started:', await page.evaluate(() => !!(S.draft && S.draft.startedAt)), 'name:', await page.textContent('.sx-clock small'));
   await shot('07_live');
   await tap('.fc-info'); await wait(450);
   const hasSwap = await page.$('[data-a="swapFromInfo"]');

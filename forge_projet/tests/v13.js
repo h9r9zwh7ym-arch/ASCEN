@@ -98,12 +98,12 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await wait(500);
   const n1 = await page.$eval('.fc-name', e => e.textContent);
   log('Swipe changed exercise:', n0, '->', n1, n0 !== n1);
-  await page.click('.ls-chip >> nth=3');
+  await page.click('[data-a="openOverview"]'); await wait(400); await page.click('[data-a="jumpFromOverview"][data-idx="3"]');
   await wait(400);
-  log('Chip jump current:', await page.$eval('.ls-chip.current .ls-name', e => e.textContent), '/ card:', await page.$eval('.fc-name', e => e.textContent));
+  log('Jump from list, card:', await page.$eval('.fc-name', e => e.textContent));
   for (let i = 0; i < 3; i++) { await page.click('[data-a="validateSet"]'); await wait(150); const sk = await page.$('.focus-card [data-a="restSkip"]'); if (sk) { await sk.click(); await wait(120); } }
   await wait(300);
-  log('Strip summary:', await page.$eval('.lh-row', e => e.textContent.replace(/\s+/g, ' ').trim()));
+  log('Progress bar:', await page.$eval('.lp-bar', e => e.getAttribute('aria-label')));
   await page.evaluate(() => document.querySelector('#v-today').scrollTo(0, 300));
   await wait(200);
   await shot('13_strip_sticky');

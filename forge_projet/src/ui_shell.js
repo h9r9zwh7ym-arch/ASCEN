@@ -230,7 +230,10 @@ function reselectTab(){
 }
 // séance en cours à l'écran : la barre d'onglets s'efface (toute la hauteur pour l'effort, rien
 // ne passe dessous) ; « Terminer » et la croix restent en haut pour sortir
-function syncLiveChrome(){ document.body.classList.toggle("live-focus", currentTab==="today" && !!(S.draft && S.draft.startedAt)); }
+function syncLiveChrome(){
+  document.body.classList.toggle("live-focus", currentTab==="today" && !!(S.draft && S.draft.startedAt));
+  if(typeof applyTheme==="function") applyTheme(true);
+}
 
 const VIEWS = {};
 function renderView(id){
@@ -433,10 +436,18 @@ function openSheet(html, opts){
   sheetOnBack = opts.onBack || null;
   showOverlay(`<div class="sheet ${opts.tall?"tall":""}" role="dialog">${opts.noGrab?"":'<div class="sheet-grab"></div>'}${html}${opts.footer?`<div class="sheet-ft">${opts.footer}</div>`:""}</div>`, "sheet");
 }
-function openModal(html){
+function openModal(html, cls){
   // une confirmation remplace la feuille : « Annuler » ferme tout, comme avant
   sheetStack = []; sheetRestore = null; sheetOnBack = null;
-  showOverlay(`<div class="center-modal" role="dialog">${html}</div>`, "modal");
+  showOverlay(`<div class="center-modal${cls ? " "+cls : ""}" role="dialog">${html}</div>`, "modal");
+}
+// feuille d'actions iOS (en bas de l'écran) : un message, des actions, et « Continuer » à part
+function actionSheet({ msg, label, actions, cancel, onYes }){
+  openModal(`<div class="as-group">${msg ? `<div class="as-msg">${msg}</div>` : ""}${actions.map(a=>`<button class="as-btn${a.danger?" danger":""}" data-a="${a.a}">${esc(a.t)}</button>`).join("")}</div>
+    <button class="as-btn as-cancel" data-a="closesheet">${esc(cancel||"Annuler")}</button>`, "action-sheet");
+  const ov = qs("#overlay"), m = qs(".center-modal", ov);
+  if(m && label) m.setAttribute("aria-label", label);
+  ov._onYes = onYes || null;
 }
 // La page elle-même ne doit jamais défiler (#app est fixé, chaque onglet défile seul). Sur iPhone, un geste
 // qui s'échappe d'une feuille qui se ferme pouvait pourtant la décaler : barre d'onglets remontée, haut de

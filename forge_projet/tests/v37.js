@@ -26,18 +26,18 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   let p = await open(base, true); await startLive(p);
   const live = await p.evaluate(() => {
     const lum = c => { const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }); return .2126 * r + .7152 * g + .0722 * b; };
-    const chip = document.querySelector('.ls-chip.current'), sets = chip.querySelector('.ls-sets');
+    const chip = document.querySelector('.sx-set.cur'), sets = chip.querySelector('small');
     const a = lum(getComputedStyle(sets).color), b = lum(getComputedStyle(chip).backgroundColor), cr = (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
     const hit = sel => [...document.querySelectorAll(sel)].map(e => { const r = e.getBoundingClientRect(), pb = getComputedStyle(e, '::before');
       const w = Math.max(r.width, pb.content !== 'none' ? parseFloat(pb.width) || 0 : 0), h = Math.max(r.height, pb.content !== 'none' ? parseFloat(pb.height) || 0 : 0); return Math.min(w, h); });
-    const small = ['.big-stepper button', '.fc-menu', '.fc-info', '.nb-done', '.live-nav .icon-btn', '.focus-nav .center-link'].flatMap(s => hit(s).filter(v => v < 44).map(v => s + ' ' + v));
+    const small = ['.big-stepper button', '.fc-menu', '.fc-info', '.nb-done', '.lp-bar', '.sx-set.done', '.sx-next'].flatMap(s => hit(s).filter(v => v < 44).map(v => s + ' ' + v));
     const tb = document.querySelector('.tabbar'), tr = tb.getBoundingClientRect();
     return { cr: +cr.toFixed(2), small, focus: document.body.classList.contains('live-focus'), tabHidden: tr.top >= innerHeight - 2 || getComputedStyle(tb).pointerEvents === 'none',
       w: Object.fromEntries(S.draft.exos.map(e => [e.exoId, e.sets[0].weight])) };
   });
   await p.screenshot({ path: `${OUT}/${wk ? 'wk_' : ''}01_live_dark.png` });
   log('Live:', JSON.stringify(live));
-  if (live.cr < 3) fail('compteur de la puce en cours lisible en sombre (' + live.cr + ')');
+  if (live.cr < 3) fail('série en cours lisible en sombre (' + live.cr + ')');
   if (live.small.length) fail('zones de toucher < 44 : ' + live.small.join(', '));
   if (!live.focus || !live.tabHidden) fail('barre d\'onglets effacée pendant la séance');
   if (live.w.dc_haltere !== 10 || live.w.curl_biceps !== 4 || live.w.squat_gobelet !== 12) fail('première charge réaliste (10 / 4 / 12 kg)');

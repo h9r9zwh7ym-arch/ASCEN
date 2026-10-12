@@ -30,10 +30,10 @@ const path = require('path');
   await page.waitForTimeout(300);
 
   // step reps/weight
-  const repsBefore = await page.$eval('.big-stepper .bs-val', el => el.textContent);
+  const repsBefore = await page.$eval('.big-stepper [data-f="reps"]', el => el.textContent);
   await page.click('[data-a="stepReps"][data-d="1"]');
   await page.waitForTimeout(100);
-  const repsAfter = await page.$$eval('.big-stepper .bs-val', els => els[0].textContent);
+  const repsAfter = await page.$eval('.big-stepper [data-f="reps"]', el => el.textContent);
   console.log('Reps before/after +1:', repsBefore, repsAfter);
 
   // validate set -> should show rest ring
@@ -62,7 +62,7 @@ const path = require('path');
   console.log('Exercise name after auto-advance (should differ from first):', nameAfterAdvance);
 
   // navigation
-  await page.click('[data-a="focusPrev"]');
+  await page.evaluate(() => ACT.focusPrev());
   await page.waitForTimeout(250);
   await page.screenshot({ path: `${shotDir}/focus4_prev.png` });
 
@@ -82,7 +82,7 @@ const path = require('path');
 
   // reduced motion
   await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'light' });
-  await page.click('[data-a="focusNext"]');
+  await page.evaluate(() => ACT.focusNext());
   await page.waitForTimeout(200);
 
   await browser.close();

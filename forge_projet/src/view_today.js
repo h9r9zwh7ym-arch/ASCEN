@@ -580,16 +580,18 @@ function refreshPickerFooter(){
 }
 
 // ---------- séance en cours ----------
+// Refonte (séance) : un écran sombre, une chose à la fois. En haut le nom et le chrono, « Terminer » ;
+// la barre (un segment par exercice) ouvre la liste de la séance ; l'altitude en dessous. Changer
+// d'exercice : glisser la carte, toucher « À suivre » ou un exercice de la liste.
 function renderTodayLive(draft){
-  const nav = `<div class="navbar live-nav"><div class="nb-left"><button class="icon-btn" aria-label="Abandonner la séance" data-a="abandonSession">${icon("close")}</button></div><div class="nb-title">${esc(liveName(draft))}</div><div class="nb-right"><button class="nb-done" data-a="finishSession">Terminer</button></div></div>`;
+  const top = `<div class="sx-top"><div class="sx-clock"><small>${esc(liveName(draft))}</small><span id="liveClock">${fmtClock(elapsedSec(draft))}</span></div>
+    <button class="sx-end nb-done" data-a="finishSession">Terminer</button></div>`;
   if(!draft.exos.length){
-    return `${nav}<div class="content"><div class="empty-state"><span class="em">${sfIcon("toolbox","gray","lg")}</span>Tous les exercices ont été retirés.<br>Ajoute-en un pour continuer.</div>
+    return `<div class="content live sx">${top}<div class="empty-state"><span class="em">${sfIcon("toolbox","gray","lg")}</span>Tous les exercices ont été retirés.<br>Ajoute-en un pour continuer.</div>
     <div class="btnrow"><button class="btn" data-a="addExoOpen">${icon("plus")} Ajouter un exercice</button></div></div>`;
   }
-  return `${nav}
-  <div class="content live">
+  return `<div class="content live sx">${top}
     <div class="live-head" id="liveHead">${liveHeadHTML(draft)}</div>
-    <div class="live-strip" id="liveStrip">${liveStripHTML(draft)}</div>
     <div id="focusRegion">${renderFocusRegionInner(draft)}</div>
   </div>`;
 }
@@ -605,31 +607,13 @@ function fmtClock(sec){
 }
 function elapsedSec(draft){ return Math.max(0, Math.round((Date.now()-Date.parse(draft.startedAt))/1000)); }
 function liveHeadHTML(draft){
-  const c = liveCounts(draft), pct = c.total ? c.done/c.total : 0;
+  const c = liveCounts(draft), n = draft.exos.length, cur = Math.min(liveFocusIdx, n-1);
   const segs = draft.exos.map((e,i)=>{
-    const d = e.sets.filter(s=>s.done).length, n = e.sets.length;
-    return `<span class="lp-seg ${i===liveFocusIdx?"current":""} ${d===n?"full":""}" style="flex:${n}"><i style="width:${Math.round(d/n*100)}%"></i></span>`;
+    const d = e.sets.filter(s=>s.done).length, k = e.sets.length;
+    return `<span class="lp-seg ${i===cur?"current":""} ${d===k?"full":""}"><i style="width:${Math.round(d/k*100)}%"></i></span>`;
   }).join("");
-  return `<div class="lh-row">
-      <div class="lh-clock"><span id="liveClock">${fmtClock(elapsedSec(draft))}</span><small>${esc(liveName(draft))}</small></div>
-      <div class="lh-pct"><b>${Math.round(pct*100)}<span>%</span></b><small>${c.left ? `${c.left} série${c.left>1?"s":""} à faire` : "tout est fait"}</small></div>
-    </div>
-    <div class="lp-bar" aria-label="${c.done} séries sur ${c.total}">${segs}</div>
+  return `<button class="lp-bar" style="--n:${n}" data-a="openOverview" aria-label="Exercice ${cur+1} sur ${n}, ${c.done} séries sur ${c.total} faites. Voir les exercices de la séance">${segs}</button>
     ${typeof liveAscHTML==="function" ? liveAscHTML(draft) : ""}`;
-}
-function liveStripHTML(draft){
-  const idx = Math.min(liveFocusIdx, draft.exos.length-1);
-  const chips = draft.exos.map((e,i)=>{
-    const def = EXO_MAP[e.exoId], n = e.sets.length, d = e.sets.filter(s=>s.done).length;
-    const allDone = !draft.exos.some(x=>x.sets.some(s=>!s.done));
-    const cls = (i===idx && !allDone ? "current" : "") + (d===n ? " done" : d ? " started" : " todo") + (i===stripBump ? " bump" : "");
-    return `<button class="ls-chip ${cls}" data-a="focusJump" data-idx="${i}" aria-label="${esc(def.n)} : ${d===n?"terminé":`${d} sur ${n} séries`}">
-      <span class="ls-ring r-${regionOf(def)}" style="--p:${Math.round(d/n*100)}"><span>${d===n?icon("check"):exoPicto(def)}</span></span>
-      <span class="ls-name">${esc(def.n)}</span>
-      <span class="ls-sets">${d}/${n}</span>
-    </button>`;
-  }).join("");
-  return `<div class="ls-chips" id="lsChips">${chips}</div>`;
 }
 // prochain exercice qui reste à faire après « from » (en bouclant), ou -1
 function exoFinished0(ex){ return ex.sets.every(s=>s.done); }
@@ -655,59 +639,54 @@ function nextUndone(from){
   for(let k=1;k<=n;k++){ const i = (from+k)%n; if(ex[i].sets.some(s=>!s.done)) return i; }
   return -1;
 }
-function centerStripChip(smooth){
-  const strip = qs("#lsChips"), c = strip && qs(".ls-chip.current", strip);
-  if(!c) return;
-  strip.scrollTo({ left: c.offsetLeft - strip.clientWidth/2 + c.offsetWidth/2, behavior: smooth?"smooth":"auto" });
-}
 // chronomètre de séance : une seule mise à jour du texte par seconde
 setInterval(()=>{
   const c = document.getElementById("liveClock");
   if(c && S.draft && S.draft.startedAt) c.textContent = fmtClock(elapsedSec(S.draft));
 }, 1000);
 
+// anneau du repos : grand, le temps au centre ; à zéro il passe à l'orange (« C'est reparti ») un court instant
+const RING_R = 112, RING_C = 2*Math.PI*RING_R;
 function ringSVG(remain, total){
-  const r=76, c=2*Math.PI*r;
   const frac = total>0 ? Math.max(0,remain)/total : 0;
-  return `<div class="ring-wrap"><svg viewBox="0 0 172 172">
-    <circle class="ring-bg" cx="86" cy="86" r="${r}"/>
-    <circle class="ring-fg" id="ringFg" cx="86" cy="86" r="${r}" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${(c*(1-frac)).toFixed(1)}"/>
-  </svg><div class="ring-label"><div class="ring-time" id="ringTime">${fmtMMSS(Math.max(0,remain))}</div><div class="ring-sub">restant</div></div></div>`;
+  return `<div class="ring-wrap sx-ring"><svg viewBox="0 0 248 248" aria-hidden="true">
+    <circle class="ring-bg" cx="124" cy="124" r="${RING_R}"/>
+    <circle class="ring-fg" id="ringFg" cx="124" cy="124" r="${RING_R}" stroke-dasharray="${RING_C.toFixed(1)}" stroke-dashoffset="${(RING_C*(1-frac)).toFixed(1)}"/>
+  </svg><div class="ring-label"><div class="ring-sub" id="ringSub">Repos</div><div class="ring-time" id="ringTime" role="timer">${fmtMMSS(Math.max(0,remain))}</div></div></div>`;
 }
 function updateFocusRing(remain, total){
   const t = qs("#ringTime"), fg = qs("#ringFg");
   if(!t || !fg) return;
   t.textContent = fmtMMSS(Math.max(0,remain));
-  const c = 2*Math.PI*76, frac = total>0 ? Math.max(0,remain)/total : 0;
-  fg.setAttribute("stroke-dashoffset", (c*(1-frac)).toFixed(1));
+  const frac = total>0 ? Math.max(0,remain)/total : 0;
+  fg.setAttribute("stroke-dashoffset", (RING_C*(1-frac)).toFixed(1));
+}
+function ringOver(on){
+  const w = qs(".sx-ring"); if(!w) return false;
+  w.classList.toggle("over", on!==false); w.classList.remove("ending");
+  const s = qs("#ringSub"), t = qs("#ringTime"), fg = qs("#ringFg");
+  if(s) s.textContent = on===false ? "Repos" : "C'est reparti";
+  // l'anneau se remplit d'un coup, en orange : c'est le signal
+  if(on!==false){ if(t) t.textContent = "0:00"; if(fg) fg.setAttribute("stroke-dashoffset", "0"); }
+  return true;
 }
 
 function renderFocusRegionInner(draft){
   const idx = Math.min(liveFocusIdx, draft.exos.length-1);
   liveFocusIdx = idx;
   const ex = draft.exos[idx], def = EXO_MAP[ex.exoId];
-  const c = liveCounts(draft);
-  if(!c.left) return sessionCompleteHTML(draft);
-  const nav = `<div class="focus-nav">
-    <button class="navbtn" aria-label="Exercice précédent" data-a="focusPrev" ${draft.exos.length<2?"disabled":""} style="transform:scaleX(-1)">${icon("chev")}</button>
-    <button class="center-link" data-a="openOverview"><span><b>${idx+1}</b> sur ${draft.exos.length}</span><small>Tout voir</small></button>
-    <button class="navbtn" aria-label="Exercice suivant" data-a="focusNext" ${draft.exos.length<2?"disabled":""}>${icon("chev")}</button>
-  </div>`;
-  const firstTime = idx===0 && c.done===0;
-  return `${renderFocusCard(idx, ex, def)}${upNextHTML(idx)}${nav}${firstTime?`<div class="swipe-hint">Glisse la carte ou touche le bandeau pour changer d'exercice</div>`:""}`;
+  if(!liveCounts(draft).left) return sessionCompleteHTML(draft);
+  return renderFocusCard(idx, ex, def);
 }
+// « À suivre » : une ligne qui mène à l'exercice suivant (ou qui dit que c'est le dernier)
 function upNextHTML(idx){
   const ex = S.draft.exos[idx];
   const curDone = ex.sets.every(s=>s.done);
   const ni = nextUndone(idx);
-  if(ni<0 || (ni===idx)) return curDone || ni<0 ? "" : `<div class="up-next last"><span class="un-flag">${sfIcon("flag","green")}</span><div class="grow"><div class="un-k">Dernier exercice</div><div class="un-t">Plus que celui-ci, tu y es presque !</div></div></div>`;
+  if(ni<0 || (ni===idx)) return curDone || ni<0 ? "" : `<div class="sx-next last">Dernier exercice : tu y es presque</div>`;
   if(curDone) return ""; // le bouton « Exercice suivant » de la carte fait déjà le travail
-  const e = S.draft.exos[ni], def = EXO_MAP[e.exoId], left = e.sets.filter(s=>!s.done).length;
-  return `<button class="up-next r-${regionOf(def)}" data-a="focusJump" data-idx="${ni}">
-    ${exoIcon(def,"sm")}
-    <div class="grow"><div class="un-k">À suivre</div><div class="un-t">${esc(def.n)}</div></div>
-    <span class="un-s">${left} série${left>1?"s":""}</span>${icon("chev")}
-  </button>`;
+  const def = EXO_MAP[S.draft.exos[ni].exoId];
+  return `<button class="sx-next up-next" data-a="focusJump" data-idx="${ni}"><span>À suivre :</span> <b class="un-t">${esc(def.n)}</b></button>`;
 }
 let completeShown = false; // la fête « séance complète » ne se joue qu'une fois
 function sessionCompleteHTML(draft){
@@ -739,13 +718,14 @@ const HOLD_R = 76, HOLD_C = 2*Math.PI*HOLD_R;
 function holdCardHTML(idx, ex, def, si, header, animClass, setDots){
   const prep = hold.phase==="prep";
   const left = prep ? 3 : Math.max(0, Math.ceil(hold.target - (Date.now()-hold.t0)/1000));
-  return `<div class="focus-card holding r-${regionOf(def)} ${animClass}">${header}
+  return `<div class="focus-card holding sx-card sx-hold r-${regionOf(def)} ${animClass}">${header}
     <div class="fc-phase">${prep?"Mets-toi en position":"Tiens bon !"} · série ${si+1} / ${ex.sets.length}</div>
-    ${setDots(si)}
     <div class="ring-wrap hold-wrap ${prep?"prep":""}"><svg viewBox="0 0 172 172">
       <circle class="ring-bg" cx="86" cy="86" r="${HOLD_R}"/>
       <circle class="ring-fg" id="holdFg" cx="86" cy="86" r="${HOLD_R}" stroke-dasharray="${HOLD_C.toFixed(1)}" stroke-dashoffset="${prep?HOLD_C.toFixed(1):"0"}"/>
     </svg><div class="ring-label"><div class="ring-time" id="holdTime">${prep?left:fmtMMSS(left)}</div><div class="ring-sub" id="holdSub">${prep?"prêt…":`sur ${hold.target} s`}</div></div></div>
+    <div class="sx-grow"></div>
+    ${setDots(si)}
     <div class="hold-actions">
       <button class="btn big validate hold-stop" data-a="holdStop">${icon("check")} ${prep?"Annuler":"Arrêter et valider"}</button>
     </div>
@@ -783,7 +763,7 @@ function effortHTML(){
   const timed = isTimed(EXO_MAP[S.draft.exos[src.exi].exoId]);
   const opts = timed ? [[3,"À fond"],[2,"Encore un peu"],[1,"Large marge"]] : [[3,"0"],[2,"1–2"],[1,"3 ou +"]];
   return `<div class="effort" role="group" aria-label="Ressenti de la série">
-    <div class="ef-q">${timed?"Comment c'était ?":"Répétitions que tu aurais pu faire en plus ?"} <span>facultatif</span></div>
+    <div class="ef-q">${timed?"Comment c'était ?":"Combien de reps en réserve ?"} <span>Facultatif</span></div>
     <div class="ef-opts">${opts.map(([v,l])=>`<button class="${st.effort===v?"on":""}" data-a="setEffort" data-v="${v}" aria-pressed="${st.effort===v}">${l}</button>`).join("")}</div>
   </div>`;
 }
@@ -820,6 +800,32 @@ function beatLineHTML(ex, def, si, st){
   const lt = loadableTypeOf(def), at = lt && st.weight ? (lt==="bands" ? ` · ${fmtLoad(def, st.weight)}` : ` à ${fmtDec(st.weight)} kg`) : "";
   return `<div class="fc-beat">${ii("target")}<span>À battre : <b>${tgt}${isTimed(def) ? " s" : " reps"}</b>${at} <small>(la dernière fois : ${refTxt})</small></span></div>`;
 }
+const SX_PM = d=>`<svg viewBox="0 0 18 18" aria-hidden="true"><path d="${d>0?"M9 3v12M3 9h12":"M3 9h12"}" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>`;
+const SX_CHECK = `<svg class="sx-ck" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.3l2.3 2.3 4.7-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const SX_DOTS = `<svg viewBox="0 0 20 4" aria-hidden="true"><circle cx="2" cy="2" r="2" fill="currentColor"/><circle cx="10" cy="2" r="2" fill="currentColor"/><circle cx="18" cy="2" r="2" fill="currentColor"/></svg>`;
+// le mouvement, joué deux fois à l'arrivée sur l'exercice puis au repos (rien ne tourne en boucle pendant une heure)
+function sxAnim(def){ return def._sxa || (def._sxa = exoAnimSVG(def).replace(/repeatCount="indefinite"/g, 'repeatCount="2"')); }
+// valeur courte d'une série : « 10 × 14 », « 12 », « 30 s »
+function sxSetVal(def, s){
+  if(isTimed(def)) return `${s.reps??"–"} s`;
+  const lt = loadableTypeOf(def);
+  return lt && lt!=="bands" && s.weight ? `${s.reps??"–"} × ${fmtDec(s.weight)}` : `${s.reps??"–"}`;
+}
+function sxSetSpeech(def, s){
+  if(isTimed(def)) return `${s.reps||0} secondes`;
+  const lt = loadableTypeOf(def);
+  return `${s.reps||0} répétitions${lt && lt!=="bands" && s.weight ? ` à ${fmtDec(s.weight)} kilos` : lt==="bands" && s.weight ? `, ${bandLabel(s.weight)}` : ""}`;
+}
+// les séries de l'exercice : faites (✓, touchées = corriger), en cours (cadre orange), à venir
+function sxSetsHTML(idx, ex, def, si, jd){
+  const n = ex.sets.length, cols = n<=5 ? n : Math.ceil(n/2);
+  return `<div class="sx-sets${cols>=5?" many":""}" style="--n:${cols}">${ex.sets.map((s,i)=>{
+    const lbl = `Série ${i+1}`;
+    if(s.done) return `<button class="sx-set done${s.pr?" pr":""}${i===jd?" just":""}" data-a="editDoneSets" data-exi="${idx}" aria-label="${lbl} faite : ${sxSetSpeech(def, s)}${s.pr?", record":""}. Corriger"><small>${s.pr?ii("bolt"):SX_CHECK}${lbl}</small><b>${sxSetVal(def, s)}</b></button>`;
+    if(i===si) return `<div class="sx-set cur" aria-current="step"><small>${lbl}</small><b>${sxSetVal(def, s)}</b></div>`;
+    return `<div class="sx-set"><small>${lbl}</small><b class="dim">—</b></div>`;
+  }).join("")}</div>`;
+}
 function renderFocusCard(idx, ex, def){
   const animClass = focusAnimDir==="r" ? "anim-r" : focusAnimDir==="l" ? "anim-l" : "";
   focusAnimDir = null;
@@ -827,90 +833,107 @@ function renderFocusCard(idx, ex, def){
   justDone = null;
   const resting = restState && restState.exoIdx===idx;
   const allDone = ex.sets.every(s=>s.done);
-  const header = `<button class="fc-menu" aria-label="Options de l'exercice" data-a="focusMenu" data-idx="${idx}">•••</button>
-    <button class="fc-info" aria-label="Fiche de l'exercice" data-a="showExoInfo" data-id="${def.id}">i</button>
-    <div class="fc-icon">${exoIcon(def,"lg")}</div>
-    <div class="fc-name">${esc(def.n)}</div>
-    <div class="fc-sub">${musclesLabel(def)}</div>`;
-  const anyDone = ex.sets.some(s=>s.done);
-  const dots = si => ex.sets.map((s,i)=>`<span class="sd ${s.done?"done":i===si?"current":""} ${i===jd?"just":""} ${s.pr?"pr":""}"></span>`).join("");
-  // une série validée par erreur se corrige en touchant les points (ou via •••)
-  const setDots = si => anyDone ? `<button class="set-dots tap" data-a="editDoneSets" data-exi="${idx}" aria-label="Corriger les séries faites">${dots(si)}</button>` : `<div class="set-dots">${dots(si)}</div>`;
+  // l'exercice : le mouvement (toucher = fiche et technique), son nom, ••• pour les options
+  const header = `<div class="sx-ex">
+      <button class="sx-pic fc-info" data-a="showExoInfo" data-id="${def.id}" aria-label="${esc(def.n)} : fiche et technique">${sxAnim(def)}</button>
+      <h2 class="sx-name fc-name">${esc(def.n)}</h2>
+      <button class="sx-menu fc-menu" aria-label="Options de l'exercice : technique, remplacer, ajouter une série" data-a="focusMenu" data-idx="${idx}">${SX_DOTS}</button>
+    </div>`;
+  const sets = si => sxSetsHTML(idx, ex, def, si, jd);
 
   if(resting){
     const remain = Math.max(0, Math.round((restState.endAt-Date.now())/1000));
     const tIdx = restTarget(restState.exoIdx, restState.arrived), tEx = tIdx>=0 ? S.draft.exos[tIdx] : null;
     const next = tEx && tEx.sets.find(s=>!s.done), nDef = tEx && EXO_MAP[tEx.exoId];
-    const nextTxt = !next ? "" : tIdx===idx ? `Ensuite : ${next.reps} ${isTimed(def)?"s":"reps"}${loadSuffix(def, next.weight)}`
-      : `Ensuite : <b>${esc(nDef.n)}</b> · ${next.reps} ${isTimed(nDef)?"s":"reps"}${loadSuffix(nDef, next.weight)}`;
-    return `<div class="focus-card resting r-${regionOf(def)} ${animClass}">${header}
-      ${setDots(-1)}
-      <div class="fc-phase">Repos · respire</div>
+    const src = restState.src, srcEx = src && S.draft.exos[src.exi];
+    const saved = srcEx && srcEx.sets[src.si] ? `<button class="sx-saved" data-a="editDoneSets" data-exi="${src.exi}" aria-label="Série ${src.si+1} enregistrée. Corriger ou annuler"><span class="sx-okdot">${SX_CHECK}</span><span>Série ${src.si+1} enregistrée</span></button>` : "";
+    const upcoming = next ? `<div class="sx-upcard fc-next"><span class="sx-uptile">${exoPicto(nDef)}</span><div class="grow"><b>${esc(nDef.n)}</b>
+        <small>À suivre · série ${tEx.sets.indexOf(next)+1} · ${sxSetVal(nDef, next)}${loadableTypeOf(nDef) && loadableTypeOf(nDef)!=="bands" && next.weight ? " kg" : isTimed(nDef) ? "" : " reps"}</small></div></div>` : "";
+    return `<div class="focus-card resting sx-card sx-rest r-${regionOf(def)} ${animClass}">
+      ${saved}
       ${ringSVG(remain, restState.totalSec)}
-      ${nextTxt?`<div class="fc-next">${nextTxt}</div>`:""}
-      <div class="ring-adjust"><button data-a="restAdjust" data-d="-15">−15 s</button><button data-a="restAdjust" data-d="15">+15 s</button><button class="skip" data-a="restSkip">Passer</button></div>
+      <div class="ring-adjust sx-adj"><button data-a="restAdjust" data-d="-15" aria-label="Retirer 15 secondes">−15 s</button><button data-a="restAdjust" data-d="15" aria-label="Ajouter 15 secondes">+15 s</button></div>
       ${effortHTML()}
+      <div class="sx-grow"></div>
+      ${upcoming}
+      <button class="btn big sx-skip skip" data-a="restSkip">Passer le repos</button>
     </div>`;
   }
 
   if(allDone){
-    const recap = ex.sets.map(s=>`<span class="chip ${s.pr?"pr":""}">${s.pr?ii("bolt"):""}${s.reps||"?"}${loadSuffix(def, s.weight)}</span>`).join("");
-    return `<div class="focus-card r-${regionOf(def)} ${animClass}">${header}
-      <div class="fc-done-badge">${icon("check")}</div>
-      <div class="fc-done-t">Exercice terminé</div>
-      <button class="fc-recap tap" data-a="editDoneSets" data-exi="${idx}" aria-label="Corriger les séries faites">${recap}</button>
-      ${(()=>{ const ni = nextUndone(idx); if(ni<0) return ""; const nd = EXO_MAP[S.draft.exos[ni].exoId];
-        return `<button class="btn big next-exo" data-a="focusJump" data-idx="${ni}"><span class="ne-k">Exercice suivant</span><span class="ne-n">${esc(nd.n)}</span>${icon("chev")}</button>`; })()}
-      <div class="fc-quiet"><button data-a="addSetFocus" data-exi="${idx}">+ Ajouter une série</button></div>
+    const ni = nextUndone(idx), nd = ni>=0 ? EXO_MAP[S.draft.exos[ni].exoId] : null;
+    return `<div class="focus-card sx-card r-${regionOf(def)} ${animClass}">${header}
+      <div class="sx-grow"></div>
+      <div class="sx-done fc-done-t"><span class="sx-okdot">${SX_CHECK}</span>Exercice terminé</div>
+      ${sets(-1)}
+      <div class="fc-quiet"><button data-a="addSetFocus" data-exi="${idx}">Ajouter une série</button></div>
+      ${nd ? `<button class="btn big next-exo" data-a="focusJump" data-idx="${ni}"><span class="ne-k">Exercice suivant</span><span class="ne-n">${esc(nd.n)}</span></button>` : ""}
     </div>`;
   }
 
   const si = ex.sets.findIndex(s=>!s.done);
   const st = ex.sets[si];
-  const hasWeight = !!loadableTypeOf(def);
-  const unit = isTimed(def) ? "Secondes" : "Répétitions";
-  if(hold && hold.exi===idx) return holdCardHTML(idx, ex, def, si, header, animClass, setDots);
+  if(hold && hold.exi===idx) return holdCardHTML(idx, ex, def, si, header, animClass, sets);
   const rr = restReady; restReady = false; // animation « c'est reparti » après le repos
   setTimeout(()=>{ valRoll = {}; }, 0);
-  return `<div class="focus-card r-${regionOf(def)} ${animClass}">${header}
-    <div class="fc-phase">Série ${si+1} / ${ex.sets.length} · objectif ${repsLabel(ex.targetReps)}</div>
-    ${setDots(si)}
-    <div class="big-steppers">
-      <div class="big-stepper"><div class="bs-label">${unit}</div><div class="bs-row">
-        <button aria-label="Moins" data-a="stepReps" data-exi="${idx}" data-si="${si}" data-d="-1">−</button>
-        <button class="bs-val ${valRoll.f==="reps"?"roll-"+valRoll.d:""}" aria-label="Saisir la valeur" data-a="editVal" data-f="reps" data-exi="${idx}" data-si="${si}">${st.reps??"–"}</button>
-        <button aria-label="Plus" data-a="stepReps" data-exi="${idx}" data-si="${si}" data-d="1">+</button>
-      </div></div>
-      ${hasWeight?`<div class="big-stepper ${loadableTypeOf(def)==="bands"?"band":""}"><div class="bs-label">${loadableTypeOf(def)==="bands"?"Élastique":"Charge (kg)"}</div><div class="bs-row">
-        <button aria-label="Moins" data-a="stepWeight" data-exi="${idx}" data-si="${si}" data-d="-1">−</button>
-        ${loadableTypeOf(def)==="bands"
-          ? `<span class="bs-val band-val ${valRoll.f==="weight"?"roll-"+valRoll.d:""}">${st.weight?bandLabel(st.weight):"–"}</span>`
-          : `<button class="bs-val ${valRoll.f==="weight"?"roll-"+valRoll.d:""}" aria-label="Saisir la charge" data-a="editVal" data-f="weight" data-exi="${idx}" data-si="${si}">${st.weight??"–"}</button>`}
-        <button aria-label="Plus" data-a="stepWeight" data-exi="${idx}" data-si="${si}" data-d="1">+</button>
-      </div></div>`:""}
-    </div>
-    ${S.settings.beat===false ? lastTimeHTML(ex.exoId, !!ex.note) : beatLineHTML(ex, def, si, st)}
-    ${kgType(def) && (st.weight||0)>=8 && !S.draft.exos.some(e=>e.sets.some(x=>x.done)) ? `<div class="warmup">${ii("flame")} Échauffement : 1 série légère (≈ ${fmtDec(Math.max(1, Math.round((st.weight||0)*0.5)))} kg) de 8 à 10 répétitions avant de commencer.</div>` : ""}
-    ${ex.note && !noteIsBeat(ex) ?`<div class="exo-note" style="margin:0 0 14px">${esc(ex.note)}${ex.harder&&EXO_MAP[ex.harder]&&!ex.sets.some(s=>s.done)?`<button class="note-act" data-a="swapHarder" data-idx="${idx}">Essayer maintenant ${icon("chev")}</button>`:""}</div>`:""}
+  const warm = kgType(def) && (st.weight||0)>=8 && !S.draft.exos.some(e=>e.sets.some(x=>x.done))
+    ? `<div class="sx-note warmup">Échauffement : 1 série légère (≈ ${fmtDec(Math.max(1, Math.round((st.weight||0)*0.5)))} kg) de 8 à 10 répétitions avant de commencer.</div>` : "";
+  const note = ex.note && !noteIsBeat(ex) ? `<div class="sx-note exo-note">${esc(ex.note)}${ex.harder&&EXO_MAP[ex.harder]&&!ex.sets.some(s=>s.done)?` <button class="note-act" data-a="swapHarder" data-idx="${idx}">Essayer maintenant</button>`:""}</div>` : "";
+  return `<div class="focus-card sx-card r-${regionOf(def)} ${animClass}" data-exi="${idx}">${header}${warm}${note}
+    <div class="sx-grow"></div>
+    ${sets(si)}
+    ${sxStepsHTML(idx, ex, def, si, st)}
+    ${upNextHTML(idx)}
     ${isTimed(def)
       ? `<button class="btn big validate hold-go ${rr?"ready":""}" data-a="holdStart" data-exi="${idx}" data-si="${si}">${icon("timer")} Lancer le chrono · ${st.reps||30} s</button>
          <button class="btn ghost sm hold-skip" data-a="validateSet" data-exi="${idx}">Valider sans chrono</button>`
-      : `<button class="btn big validate ${rr?"ready":""}" data-a="validateSet" data-exi="${idx}">${icon("check")} Valider la série ${si+1}</button>`}
+      : `<button class="btn big validate ${rr?"ready":""}" data-a="validateSet" data-exi="${idx}">Valider la série</button>`}
   </div>`;
+}
+// la charge puis les répétitions : gros chiffres, gros boutons ; en bas, la série à battre
+function sxStepsHTML(idx, ex, def, si, st){
+  const lt = loadableTypeOf(def), bands = lt==="bands", timed = isTimed(def);
+  const roll = f => valRoll.f===f ? "roll-"+valRoll.d : "";
+  const at = `data-exi="${idx}" data-si="${si}"`;
+  const wRow = !lt ? "" : `<div class="big-stepper sx-row">
+      <button class="sx-pm" aria-label="${bands?"Élastique plus léger":"Charge plus légère"}" data-a="stepWeight" ${at} data-d="-1">${SX_PM(-1)}</button>
+      <div class="sx-val"><small>${bands?"Élastique":"Charge"}</small>${bands
+        ? `<span class="bs-val band-val ${roll("weight")}" aria-live="polite">${st.weight?bandLabel(st.weight):"–"}</span>`
+        : `<button class="bs-val ${roll("weight")}" aria-label="Charge : ${st.weight?fmtDec(st.weight):0} kilos. Saisir une valeur" data-a="editVal" data-f="weight" ${at}><b>${st.weight!=null?fmtDec(st.weight):"–"}</b><span>kg</span></button>`}</div>
+      <button class="sx-pm" aria-label="${bands?"Élastique plus fort":"Charge plus lourde"}" data-a="stepWeight" ${at} data-d="1">${SX_PM(1)}</button>
+    </div>`;
+  const rRow = `<div class="big-stepper sx-row">
+      <button class="sx-pm" aria-label="${timed?"Une seconde de moins":"Une répétition de moins"}" data-a="stepReps" ${at} data-d="-1">${SX_PM(-1)}</button>
+      <div class="sx-val"><small>${timed?"Secondes":"Répétitions"}</small><button class="bs-val ${roll("reps")}" aria-label="${timed?"Durée":"Répétitions"} : ${st.reps??0}. Saisir une valeur" data-a="editVal" data-f="reps" ${at}><b>${st.reps??"–"}</b></button></div>
+      <button class="sx-pm" aria-label="${timed?"Une seconde de plus":"Une répétition de plus"}" data-a="stepReps" ${at} data-d="1">${SX_PM(1)}</button>
+    </div>`;
+  const hint = S.settings.beat===false ? lastTimeHTML(ex.exoId, !!ex.note) : beatLineHTML(ex, def, si, st);
+  return `<div class="sx-steps">${wRow}${rRow}${hint ? `<div class="sx-hint" aria-live="polite">${hint}</div>` : ""}</div>`;
+}
+// +/− sans tout redessiner : seules les séries et les compteurs changent (le mouvement continue)
+function patchFocusSteps(idx){
+  const card = qs("#focusRegion .sx-card[data-exi]");
+  if(!card || card.dataset.exi!==String(idx) || hold || (restState && restState.exoIdx===idx) || !S.draft || !S.draft.exos[idx]) return false;
+  const ex = S.draft.exos[idx], si = ex.sets.findIndex(s=>!s.done); if(si<0) return false;
+  const def = EXO_MAP[ex.exoId], a = qs(".sx-sets", card), b = qs(".sx-steps", card);
+  if(!a || !b) return false;
+  a.outerHTML = sxSetsHTML(idx, ex, def, si, -1);
+  b.outerHTML = sxStepsHTML(idx, ex, def, si, ex.sets[si]);
+  setTimeout(()=>{ valRoll = {}; }, 0);
+  return true;
 }
 
 function refreshFocusRegion(){
   const el = qs("#focusRegion");
   if(!el || !S.draft || !S.draft.startedAt) return;
   el.innerHTML = renderFocusRegionInner(S.draft);
-  const strip = qs("#liveStrip");
-  // centrage du bandeau à l'image suivante : lire sa géométrie ici forcerait une mise en page de plus
-  if(strip){ const sl = (qs("#lsChips")||{}).scrollLeft||0; strip.innerHTML = liveStripHTML(S.draft); requestAnimationFrame(()=>{ const c = qs("#lsChips"); if(c){ c.scrollLeft = sl; centerStripChip(true); } }); }
+  // chaque état (série, repos, exercice terminé) est un écran : il commence en haut
+  const v = qs("#v-today"); if(v && v.scrollTop && currentTab==="today") v.scrollTop = 0;
   stripBump = -1;
   const head = qs("#liveHead");
   if(head){
-    // la barre et le pourcentage partent de l'ancienne valeur pour que le progrès se voie
-    const oldW = qsa(".lp-seg i", head).map(i=>i.style.width), oldPct = parseInt((qs(".lh-pct b", head)||{}).textContent)||0;
+    // la barre part de l'ancienne valeur pour que le progrès se voie
+    const oldW = qsa(".lp-seg i", head).map(i=>i.style.width);
     head.innerHTML = liveHeadHTML(S.draft);
     const segs = qsa(".lp-seg i", head);
     if(oldW.length===segs.length && !reducedMotion()){
@@ -919,14 +942,6 @@ function refreshFocusRegion(){
         // échelle horizontale plutôt que largeur : animée par le compositeur, sans mise en page à chaque image
         const r0 = parseFloat(oldW[k])||0, r1 = parseFloat(to)||0;
         if(i.animate && r1>0) try{ i.style.transition = "none"; i.style.transformOrigin = "left center"; i.animate([{ transform:`scaleX(${r0/r1})` }, { transform:"scaleX(1)" }], { duration:600, easing:"cubic-bezier(.32,.72,0,1)" }); }catch(e){} });
-      const b = qs(".lh-pct b", head), newPct = parseInt(b.textContent)||0;
-      if(newPct!==oldPct){
-        b.classList.add("bump");
-        const t0 = performance.now();
-        (function step(t){ const p = Math.min(1,(t-t0)/600), e = 1-Math.pow(1-p,3);
-          b.firstChild.textContent = Math.round(oldPct+(newPct-oldPct)*e);
-          if(p<1) requestAnimationFrame(step); })(t0);
-      }
     }
   }
   // l'altitude de la séance : +X m, compteur, camp atteint en pleine séance (view_ascent.js)
@@ -1478,7 +1493,7 @@ Object.assign(ACT, {
     ex.sets.forEach((s,i)=>{ if(i>=+d.si && !s.done && s.reps===old) s.reps = v; });
     st.reps = v;
     valRoll = { f:"reps", d: parseInt(d.d,10)>0 ? "up" : "down" }; sfx("step", parseInt(d.d,10)>0);
-    save(); refreshFocusRegion();
+    save(); if(!patchFocusSteps(+d.exi)) refreshFocusRegion();
   },
   stepWeight(d){
     const ex = S.draft.exos[+d.exi], def = EXO_MAP[ex.exoId], st = ex.sets[+d.si], old = st.weight;
@@ -1486,7 +1501,7 @@ Object.assign(ACT, {
     ex.sets.forEach((s,i)=>{ if(i>=+d.si && !s.done && s.weight===old) s.weight = v; });
     st.weight = v;
     valRoll = { f:"weight", d: parseInt(d.d,10)>0 ? "up" : "down" }; sfx("step", parseInt(d.d,10)>0);
-    save(); refreshFocusRegion();
+    save(); if(!patchFocusSteps(+d.exi)) refreshFocusRegion();
   },
   editVal(d){
     const ex = S.draft.exos[+d.exi], st = ex.sets[+d.si], isW = d.f==="weight";
@@ -1498,7 +1513,7 @@ Object.assign(ACT, {
         v = isW ? Math.min(bands ? 5 : 500, v) : Math.min(9999, v);
         // la nouvelle valeur s'applique aussi aux séries suivantes non validées
         ex.sets.forEach((s,i)=>{ if(i>=+d.si && !s.done){ if(isW) s.weight = round1(v); else s.reps = Math.round(v); } });
-        save(); refreshFocusRegion();
+        save(); if(!patchFocusSteps(+d.exi)) refreshFocusRegion();
       }});
   },
   validateSet(d){
@@ -1509,9 +1524,9 @@ Object.assign(ACT, {
     const st = ex.sets[si];
     haptic(12);
     let [bx,by] = centerOf(".validate");
-    if(bx==null){ [bx,by] = centerOf(".focus-card .set-dots"); if(bx==null){ bx = innerWidth/2; by = innerHeight/2; } }
-    // les textes flottants partent des points de série (même place avant et après le repos)
-    const dotsR = (qs(".focus-card .set-dots")||{getBoundingClientRect:()=>null}).getBoundingClientRect();
+    if(bx==null){ [bx,by] = centerOf(".focus-card .sx-sets"); if(bx==null){ bx = innerWidth/2; by = innerHeight/2; } }
+    // les textes flottants partent de la série validée (sa case), sinon de la rangée des séries
+    const dotsR = (qs(".focus-card .sx-set.cur")||qs(".focus-card .sx-sets")||{getBoundingClientRect:()=>null}).getBoundingClientRect();
     const fx0 = dotsR ? dotsR.left+dotsR.width/2 : bx, fy0 = dotsR ? dotsR.top-8 : by-30;
     // record : meilleur que l'historique ET que les séries déjà validées aujourd'hui
     const prevToday = ex.sets.filter(s=>s.done);
@@ -1632,21 +1647,26 @@ Object.assign(ACT, {
     save(); closeSheet(); changed(); toast("Ajouté à Ma séance");
   },
 
+  // « Terminer » : enregistrer, abandonner ou continuer, dans une seule feuille d'actions (tout fait : on enregistre)
   finishSession(){
-    const all = S.draft.exos.reduce((t,e)=>t+e.sets.length,0);
-    const done = S.draft.exos.reduce((t,e)=>t+e.sets.filter(s=>s.done).length,0);
-    if(!done){
-      confirmSheet({ title:"Aucune série validée", html:"Il n'y a rien à enregistrer. Abandonner la séance ?", ok:"Abandonner", danger:true,
-        onOk:()=>{ S.draft=null; liveFocusIdx=0; stopRestTimer(); save(); renderViewAnimated("today"); } });
-    } else if(done<all){
-      confirmSheet({ title:"Terminer la séance ?", html:`${all-done} série${all-done>1?"s":""} non validée${all-done>1?"s":""} ne ser${all-done>1?"ont":"a"} pas enregistrée${all-done>1?"s":""}.`, ok:"Terminer", onOk:finalizeSession });
-    } else finalizeSession();
+    const c = liveCounts(S.draft);
+    if(c.done && !c.left) return finalizeSession();
+    finishSheet();
   },
-  abandonSession(){
-    confirmSheet({ title:"Abandonner la séance ?", html:"La progression de cette séance sera perdue.", ok:"Abandonner", danger:true,
-      onOk:()=>{ S.draft=null; liveFocusIdx=0; stopRestTimer(); save(); renderViewAnimated("today"); } });
+  abandonSession(){ finishSheet(); },
+  // abandon immédiat, mais rattrapable 5 s (« Annuler » dans le message)
+  abandonNow(){
+    const draft = S.draft, idx = liveFocusIdx; if(!draft) return;
+    closeSheet(); S.draft = null; liveFocusIdx = 0; stopRestTimer(); save(); renderViewAnimated("today");
+    toast("Séance abandonnée", "trash", ()=>{ if(S.draft && S.draft.startedAt) return; S.draft = draft; liveFocusIdx = idx; save(); renderViewAnimated("today"); });
   },
 });
+function finishSheet(){
+  const c = liveCounts(S.draft);
+  actionSheet({ label:"Terminer la séance", cancel:"Continuer", onYes:finalizeSession,
+    msg: c.done ? `${nb(c.done, "série")} sur ${c.total} faite${c.done>1?"s":""}. Les séries non validées ne seront pas enregistrées.` : "Aucune série validée : il n'y a rien à enregistrer.",
+    actions: [...(c.done ? [{ a:"confirmYes", t:"Enregistrer et terminer" }] : []), { a:"abandonNow", t:"Abandonner la séance", danger:true }] });
+}
 VIEWS.today = renderToday;
 
 // ---------- corriger une série déjà validée (v4.0) ----------

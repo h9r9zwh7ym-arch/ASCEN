@@ -52,9 +52,9 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await wait(300);
   await page.click('.hero-go'); await page.waitForSelector('#launch', { state: 'detached', timeout: 6000 });
   // 3. navigation en boucle
-  await page.click('[data-a="focusPrev"]'); await wait(300);
+  await page.evaluate(() => ACT.focusPrev()); await wait(300);
   log('Prev from first -> last:', await page.textContent('.fc-name'));
-  await page.click('[data-a="focusNext"]'); await wait(300);
+  await page.evaluate(() => ACT.focusNext()); await wait(300);
   log('Next from last -> first:', await page.textContent('.fc-name'));
   // 9. mode circuit : repos puis exercice suivant
   log('Flow default:', await page.evaluate(() => circuitMode() ? 'circuit' : 'classic'));
@@ -72,11 +72,11 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await wait(3200);
   await shot('08_hold');
   log('Hold phase:', await page.evaluate(() => hold && hold.phase), '| time:', await page.textContent('#holdTime'));
-  await wait(3500);
+  await wait(4500); // 3 s de mise en place + 5 s tenues depuis le toucher : marge pour les moteurs lents
   log('Auto-validated plank:', await page.evaluate(() => S.draft.exos[1].sets[0].done + ' reps=' + S.draft.exos[1].sets[0].reps));
   // fin du repos auto -> exercice suivant
   await page.evaluate(() => { if (restState) restState.endAt = Date.now() + 300; });
-  await wait(1200);
+  await wait(1800); // + 1,1 s d'anneau orange avant la série suivante
   log('After rest end ->', await page.textContent('.fc-name').catch(() => 'complete'));
   // terminer tout
   for (let i = 0; i < 10; i++) { const v = await page.$('[data-a="validateSet"]'); if (!v) break; await v.click(); await wait(150); const sk = await page.$('.focus-card [data-a="restSkip"]'); if (sk) { await sk.click(); await wait(150); } }

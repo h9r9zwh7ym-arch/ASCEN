@@ -150,7 +150,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   // 9. sombre : le curseur des sélecteurs est plus clair que son rail
   await page.evaluate(() => { S.settings.theme = 'dark'; save(); applyTheme(); }); await wait(300);
   const seg = await page.evaluate(() => { const ind = document.querySelector('#v-history [data-seg="histRange"] .seg-ind'); const bg = getComputedStyle(ind).backgroundColor; return bg; });
-  log('Dark seg thumb:', seg); if (seg !== 'rgb(74, 71, 68)') fail('curseur des sélecteurs en sombre');
+  log('Dark seg thumb:', seg); if (seg !== 'rgb(99, 99, 102)') fail('curseur des sélecteurs en sombre');
   await shot('04_dark_history');
 
   await browser.close();

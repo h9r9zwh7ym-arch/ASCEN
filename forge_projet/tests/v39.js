@@ -20,11 +20,15 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const wait = ms => page.waitForTimeout(ms), shot = n => page.screenshot({ path: `${OUT}/${wk ? 'wk_' : ''}${n}.png` });
 
   // 1. onglet re-touché : remonte en haut, sans reconstruire la page ; autre onglet : rendu réutilisé
+  // (Historique est un segment de Progrès : l'onglet Progrès touché depuis l'Historique ramène au Résumé)
   await page.evaluate(() => switchTab('history')); await wait(500);
-  const h1 = await page.evaluate(() => { const v = document.querySelector('#v-history'); v.scrollTop = 600; v._mark = 1; v.firstElementChild.dataset.keep = '1'; return v.scrollTop; });
+  await page.evaluate(() => { document.querySelector('#v-history').firstElementChild.dataset.keep = '1'; });
+  await page.click('.tabbtn[data-id="progress"]'); await wait(700);
+  const toRes = await page.evaluate(() => currentTab);
+  const h1 = await page.evaluate(() => { const v = document.querySelector('#v-progress'); v.scrollTop = 600; v.firstElementChild.dataset.keep = '1'; return v.scrollTop; });
   await page.click('.tabbtn[data-id="progress"]'); await wait(900);
-  const h2 = await page.evaluate(() => { const v = document.querySelector('#v-history'); return { top: v.scrollTop, same: v.firstElementChild.dataset.keep === '1', enter: v.classList.contains('enter') }; });
-  log('Re-tap:', h1, '→', JSON.stringify(h2)); if (!(h1 > 0) || h2.top > 4 || !h2.same || h2.enter) fail('onglet re-touché : remonte sans reconstruire');
+  const h2 = await page.evaluate(() => { const v = document.querySelector('#v-progress'); return { top: v.scrollTop, same: v.firstElementChild.dataset.keep === '1', enter: v.classList.contains('enter') }; });
+  log('Historique → Progrès:', toRes, '| re-tap:', h1, '→', JSON.stringify(h2)); if (toRes !== 'progress' || !(h1 > 0) || h2.top > 4 || !h2.same || h2.enter) fail('onglet re-touché : remonte sans reconstruire');
   await page.evaluate(() => switchTab('progress')); await wait(500); await page.evaluate(() => switchTab('history')); await wait(400);
   const h3 = await page.evaluate(() => ({ same: document.querySelector('#v-history').firstElementChild.dataset.keep === '1', active: currentTab, aria: document.querySelector('.tabbtn.on').getAttribute('aria-current') }));
   log('Tab back:', JSON.stringify(h3)); if (!h3.same || h3.active !== 'history' || h3.aria !== 'page') fail('retour sur un onglet sans reconstruction');
@@ -49,16 +53,16 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.evaluate(() => { const st = S.draft.exos[0].sets[0]; st.reps = 10; st.weight = 12; ACT.validateSet({ exi: '0' }); }); await wait(500);
   const restSec = await page.evaluate(() => restState && restState.totalSec);
   await page.evaluate(() => { ACT.restSkip(); liveFocusIdx = 0; refreshFocusRegion(); }); await wait(300);
-  await page.click('.focus-card button.set-dots'); await wait(500);
+  await page.click('.focus-card .sx-set.done'); await wait(500);
   await shot('01_done_sets');
   await page.click('#dsBody [data-f="reps"][data-d="1"]'); await page.click('#dsBody [data-f="weight"][data-d="1"]'); await wait(200);
   const ed = await page.evaluate(() => { const s = S.draft.exos[0].sets[0]; return { reps: s.reps, w: s.weight, done: s.done }; });
   await page.click('#dsBody [data-a="dsUndo"]'); await wait(400);
-  const un = await page.evaluate(() => ({ done: S.draft.exos[0].sets[0].done, sheet: document.querySelector('#overlay').classList.contains('open'), phase: document.querySelector('.fc-phase').textContent, toast: document.getElementById('toast').textContent }));
+  const un = await page.evaluate(() => ({ done: S.draft.exos[0].sets[0].done, sheet: document.querySelector('#overlay').classList.contains('open'), phase: document.querySelector('.sx-set.cur small').textContent + ' / ' + document.querySelectorAll('.sx-set').length + (document.querySelector('.sx-set.done') ? ' done' : ''), toast: document.getElementById('toast').textContent }));
   log('Rest used:', restSec, '| edit:', JSON.stringify(ed), '| undo:', JSON.stringify(un));
   if (restSec !== rest.v) fail('durée de repos appliquée en séance');
   if (ed.reps !== 11 || ed.w !== 14 || !ed.done) fail('correction reps / charge d\'une série faite');
-  if (un.done || un.sheet || !/Série 1 \/ 3/.test(un.phase) || !/à refaire/.test(un.toast)) fail('annuler la validation d\'une série');
+  if (un.done || un.sheet || un.phase !== 'Série 1 / 3' || !/à refaire/.test(un.toast)) fail('annuler la validation d\'une série');
   await page.evaluate(() => { S.draft = null; save(); renderView('today'); }); await wait(300);
 
   // 4. séance express

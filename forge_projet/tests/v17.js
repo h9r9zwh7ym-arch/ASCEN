@@ -56,7 +56,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.click('[data-a="validateSet"]'); await wait(120);
   log('Seg grew:', await page.$$eval('.lp-seg.grew', e => e.length));
   await wait(600);
-  log('Pct:', await page.textContent('.lh-pct b'));
+  log('Bar:', await page.$eval('.lp-bar', e => e.getAttribute('aria-label')));
   await shot('05_live');
   await browser.close();
   if (errors.length) { console.log('=== ERRORS ==='); errors.forEach(e => console.log(e)); process.exit(1); }

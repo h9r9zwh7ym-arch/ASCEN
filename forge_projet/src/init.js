@@ -2,11 +2,14 @@
 const APP_VERSION = "4.0";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
-function applyTheme(){
-  const t = S.settings.theme;
-  if(t==="light") document.documentElement.setAttribute("data-theme","light");
-  else if(t==="dark") document.documentElement.setAttribute("data-theme","dark");
-  else document.documentElement.removeAttribute("data-theme");
+// séance en sombre (réglage, actif par défaut) : pendant la séance, l'écran passe en sombre quel que
+// soit le thème, moins éblouissant pendant l'effort ; il revient au thème choisi en sortant
+function liveDarkOn(){ return S.settings.liveDark!==false && document.body.classList.contains("live-focus"); }
+function applyTheme(soft){
+  const t = liveDarkOn() ? "dark" : S.settings.theme, want = t==="light" || t==="dark" ? t : null;
+  const de = document.documentElement;
+  if(de.getAttribute("data-theme")===want){ if(soft) return; }
+  else if(want) de.setAttribute("data-theme", want); else de.removeAttribute("data-theme");
   syncStatusBar();
 }
 // Barre d'état (heure, batterie). Depuis iOS 26, Safari ignore theme-color : il colore la barre

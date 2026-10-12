@@ -27,7 +27,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.waitForSelector('#launch', { state: 'detached', timeout: 6000 });
   await wait(300);
   await shot('01_live');
-  log('Clock:', await page.textContent('#liveClock'), '| pct:', await page.textContent('.lh-pct b'), '| up next:', await page.textContent('.up-next .un-t').catch(()=>null));
+  log('Clock:', await page.textContent('#liveClock'), '| bar:', await page.$eval('.lp-bar', e => e.getAttribute('aria-label')), '| up next:', await page.textContent('.up-next .un-t').catch(()=>null));
   await page.click('[data-a="stepReps"][data-d="1"]'); await wait(80);
   log('Roll class:', await page.$eval('.bs-val', e => e.className));
   await page.click('[data-a="validateSet"]'); await wait(300);
@@ -36,14 +36,14 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.evaluate(() => { restState.endAt = Date.now()+2500; });
   await wait(900);
   log('Ring ending class:', await page.$eval('.ring-wrap', e => e.classList.contains('ending')));
-  await wait(2200);
+  await wait(3000); // + 1,1 s d'anneau orange « C'est reparti » avant la série suivante
   log('Ready pulse:', await page.$eval('.validate', e => e.classList.contains('ready')));
   await page.click('[data-a="validateSet"]'); await wait(400);
-  log('After exo 1 done, current:', await page.textContent('.fc-name'), '| float:', await page.$$eval('.float-txt', e=>e.map(x=>x.textContent)));
+  log('After exo 1 done, current:', await page.evaluate(() => (document.querySelector('.fc-name') || document.querySelector('.sx-upcard b') || {}).textContent), '| float:', await page.$$eval('.float-txt', e=>e.map(x=>x.textContent)));
   await shot('03_after_exo');
   // sauter au 3e, le terminer, le 2e reste à faire
   await page.click('[data-a="restSkip"]').catch(()=>{}); await wait(200);
-  await page.click('.ls-chip >> nth=2'); await wait(300);
+  await page.evaluate(() => ACT.focusJump({ idx: '2' })); await wait(300);
   for (let i=0;i<2;i++){ await page.click('[data-a="validateSet"]'); await wait(200); const sk = await page.$('.focus-card [data-a="restSkip"]'); if (sk){ await sk.click(); await wait(150);} }
   log('After exo 3 -> goes to undone exo 2:', await page.textContent('.fc-name'));
   await page.click('[data-a="openOverview"]'); await wait(400);

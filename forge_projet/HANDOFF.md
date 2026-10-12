@@ -1080,10 +1080,30 @@ a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est
   Résumé. Muscles, Exercices et Objectifs ne sont plus des segments : ce sont des écrans poussés depuis trois lignes en
   bas du Résumé (`progMoreHTML`), avec un bouton « ‹ Résumé » (`.back-link`) en haut à gauche.
 - Barre d'état : mêmes règles qu'avant (bandeau `#sbar`), nouvelles couleurs `#F2F2F7` / `#000000`.
+- **Étape 3, séance en cours et repos** (`view_today.js`, bloc « Refonte : séance » de `style.css`, préfixe `sx-`) :
+  - **sombre pendant la séance** : `applyTheme()` (init.js) force `data-theme="dark"` tant que `body.live-focus`
+    est posé (onglet Aujourd'hui + séance démarrée), sauf si le réglage `S.settings.liveDark === false`
+    (Profil › Apparence › « Séance en sombre », grisé quand le thème est déjà Sombre). `syncLiveChrome()` l'appelle ;
+  - un écran par état, en colonne pleine hauteur, sans défilement de 375 × 667 à 430 × 932 (tailles en `vh`
+    via `--pic`, `--row`, `--val`, `--ring`, et deux paliers `max-height` 760 / 600 px) ;
+  - en haut : nom + chrono, « Terminer » ; la barre (un segment par exercice, `lp-bar`) ouvre la liste de la
+    séance ; l'altitude (`liveAscHTML`) en une ligne. Plus de bandeau de pastilles ni de flèches : on change
+    d'exercice en glissant la carte, par « À suivre » ou depuis la liste (les actions `focusPrev/Next` restent) ;
+  - série : le mouvement animé dans un rond (toucher = fiche ; joué deux fois, `sxAnim`, sans zone de muscle),
+    le nom, « ••• » ; une case par série (`sxSetsHTML` : faite ✓ = corriger, en cours cadre orange, à venir —) ;
+    charge puis répétitions en gros (`sxStepsHTML`) avec la série à battre en pied de carte ; « À suivre » ;
+    « Valider la série ». Les +/− et la saisie ne redessinent que les cases et les compteurs (`patchFocusSteps`) ;
+  - repos : « ✓ Série N enregistrée » (toucher = corriger), grand anneau (`ringSVG`, r = 112), −15 s / +15 s,
+    reps en réserve (facultatif), carte « À suivre », « Passer le repos ». À zéro, l'anneau se remplit en orange
+    avec « C'est reparti » 1,1 s (`ringOver`, `restState.over` dans timer.js), puis la série suivante s'affiche
+    toute seule (pas de toucher de plus) ;
+  - « Terminer » ouvre une feuille d'actions iOS (`actionSheet()` dans ui_shell.js) : Enregistrer et terminer /
+    Abandonner la séance / Continuer. L'abandon est immédiat mais rattrapable 5 s (« Annuler » dans le message).
+    Tout est fait : « Terminer » enregistre directement.
+- Le mouvement animé (`exoAnimSVG`) est d'une seule couleur partout (`--tint-ink`), sans la zone de muscle foncée.
 
-À venir : séance en cours et repos en sombre, accueil, fin de séance (tonnage, record seulement s'il y en a un,
-ascension), Progrès, Historique, Profil › Apparence (thème Clair / Sombre / Automatique et « Séance en sombre »),
-animations signatures. Les sections plus haut qui parlent de Geist, Barlow, `#F4F3F1` ou `#FF6B3D` décrivent l'état
+À venir : accueil, fin de séance (tonnage, record seulement s'il y en a un, ascension), Progrès, Historique,
+Profil › Apparence (vignettes de thème), animations signatures. Les sections plus haut qui parlent de Geist, Barlow, `#F4F3F1` ou `#FF6B3D` décrivent l'état
 d'avant cette refonte.
 
 ## 10. Cahier des charges d'origine (résumé)

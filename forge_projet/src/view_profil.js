@@ -429,8 +429,13 @@ function openExportImport(){
 
 // ---------- Apparence ----------
 function appearanceBodyHTML(){
-  const opts = [["auto","Auto"],["light","Clair"],["dark","Sombre"]];
-  return `<div class="chips" style="padding-top:4px">${opts.map(([v,l])=>`<button class="chip ${S.settings.theme===v?"on":""}" data-a="setTheme" data-v="${v}">${l}</button>`).join("")}</div>`;
+  const opts = [["auto","Auto"],["light","Clair"],["dark","Sombre"]], dark = S.settings.theme==="dark", on = S.settings.liveDark!==false;
+  return `<div class="chips" style="padding-top:4px">${opts.map(([v,l])=>`<button class="chip ${S.settings.theme===v?"on":""}" data-a="setTheme" data-v="${v}">${l}</button>`).join("")}</div>
+    <div class="group" style="margin-top:20px"><div class="row${dark?" off":""}">
+      ${sfIcon("moon","gray")}
+      <div class="grow"><div class="t">Séance en sombre</div><div class="s">${dark ? "L'app est déjà sombre partout" : "Recommandé : moins d'éblouissement pendant l'effort"}</div></div>
+      <button class="switch ${on?"on":""}" aria-label="Séance en sombre" aria-pressed="${on}" data-a="toggleLiveDark" ${dark?"disabled":""}></button>
+    </div></div>`;
 }
 function openAppearance(){
   openSheet(`<div class="sheet-hd"><span class="t">Apparence</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body">${appearanceBodyHTML()}</div>`);
@@ -559,6 +564,10 @@ Object.assign(ACT, {
     toast(S.settings.stretching ? "Étirements ajoutés en fin de séance proposée" : "Plus d'étirements dans les séances proposées", "check");
   },
   toggleUiSound(d, el){ S.settings.uiSound = S.settings.uiSound===false; save(); el.classList.toggle("on", S.settings.uiSound); if(S.settings.uiSound) setTimeout(()=>sfx("tick"), 80); },
+  toggleLiveDark(d, el){
+    S.settings.liveDark = S.settings.liveDark===false; save(); applyTheme();
+    if(el){ el.classList.toggle("on", S.settings.liveDark); el.setAttribute("aria-pressed", S.settings.liveDark); }
+  },
   setTheme(d){ S.settings.theme = d.v; save(); applyTheme(); const b=qs(".sheet-body"); if(b) b.innerHTML = appearanceBodyHTML(); changed(); },
 
   confirmReset(){
