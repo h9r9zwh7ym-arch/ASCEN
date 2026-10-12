@@ -38,7 +38,7 @@ function tplEdBodyHTML(){
   e.exos.forEach(x=>delete x.fresh);
   return `
     <div class="te-sec">Nom</div>
-    <div class="num-field txt te-name"><input id="tplEdName" type="text" maxlength="40" placeholder="Ex. Haut du corps A" value="${esc(e.n)}" autocomplete="off"></div>
+    <div class="num-field txt te-name"><input id="tplEdName" type="text" maxlength="40" placeholder="Ex. Haut du corps A" value="${esc(e.n)}" autocomplete="off" enterkeyhint="done"></div>
     <div class="te-sec">Jours dans la semaine</div>
     <div class="tpl-daypick te-days">${JOURS_COURTS.map((j,i)=>{
       const on = e.days.includes(i);

@@ -279,7 +279,8 @@ function restoreData(){
   inp.addEventListener("change", async ()=>{
     const f = inp.files && inp.files[0]; inp.remove(); if(!f) return;
     let data;
-    try{ const o = JSON.parse(await f.text()); data = o && o.data ? o.data : o; }catch(e){ data = null; }
+    // une sauvegarde de plusieurs années pèse moins de 2 Mo : au-delà de 50 Mo, ce n'en est pas une
+    try{ if(f.size>5e7) throw 0; const o = JSON.parse(await f.text()); data = o && o.data ? o.data : o; }catch(e){ data = null; }
     if(!data || typeof data!=="object" || !(Array.isArray(data.sessions) || Array.isArray(data.zs))){ openModal(`<div style="font-weight:700;color:var(--red)">Fichier non reconnu</div><div class="hr-note" style="margin-top:8px">Choisis un fichier de sauvegarde créé par ASCEN (ascen-sauvegarde-….json) ou par Forge.</div><button class="btn secondary" style="margin-top:14px" data-a="closesheet">OK</button>`); return; }
     const n = (Array.isArray(data.sessions) && data.sessions.length ? data.sessions : data.zs || []).length, t = Array.isArray(data.templates) ? data.templates.length : 0;
     confirmSheet({ title:"Restaurer cette sauvegarde ?", html:`${n} séance${n>1?"s":""} et ${t} séance${t>1?"s":""} enregistrée${t>1?"s":""}. Les données actuelles de cet appareil seront remplacées (une copie de secours est gardée).`, ok:"Restaurer", danger:true, onOk:()=>{
@@ -334,7 +335,7 @@ function equipBodyHTML(){
       <div class="hr-note" style="margin:0 0 10px">${esc(e.hint||"")}</div>
       <div class="chips" style="padding:0 0 10px">${chips||'<span class="hr-note" style="margin:0">Aucun poids renseigné</span>'}</div>
       <div style="display:flex;gap:8px">
-        <input type="text" inputmode="decimal" placeholder="${e.unit}" id="wadd-${e.id}" style="flex:1;min-width:0;background:var(--fill2);border:0;border-radius:10px;padding:0 12px;height:38px">
+        <input type="text" inputmode="decimal" enterkeyhint="done" maxlength="6" placeholder="${e.unit}" id="wadd-${e.id}" style="flex:1;min-width:0;background:var(--fill2);border:0;border-radius:10px;padding:0 12px;height:38px">
         <button class="btn sm" style="flex:none;width:auto" data-a="addWeight" data-id="${e.id}">Ajouter</button>
       </div>
     </div>`;
@@ -344,7 +345,7 @@ function equipBodyHTML(){
     <h2 class="sh">Autre équipement</h2>
     <div class="hr-note" style="margin-top:-6px">Pour mémoire : ces équipements n'influencent pas les séances proposées. Le matériel ci-dessus, lui, est pris en compte.</div>
     <div class="group" style="margin-top:10px">${customs}
-      <div class="row"><input placeholder="Nom de l'équipement" id="customEquipName" style="flex:1;border:0;background:transparent;height:100%;font-size:calc(17rem/17)"><button class="btn sm" data-a="addCustomEquip">Ajouter</button></div>
+      <div class="row"><input placeholder="Nom de l'équipement" id="customEquipName" maxlength="40" autocomplete="off" enterkeyhint="done" style="flex:1;border:0;background:transparent;height:100%;font-size:calc(17rem/17)"><button class="btn sm" data-a="addCustomEquip">Ajouter</button></div>
     </div>`;
 }
 function openEquip(){
@@ -435,7 +436,7 @@ function refreshExoPrefs(){
 
 // ---------- Export / import IA ----------
 function exportImportBodyHTML(){
-  const importedRows = S.importedProgram.map((s,i)=>`<div class="row"><div class="grow t">${esc(s.nom||s.name||("Séance "+(i+1)))}</div>${i===0?'<span class="chip on">Prochaine</span>':""}</div>`).join("");
+  const importedRows = S.importedProgram.map((s,i)=>`<div class="row"><div class="grow t">${esc(s.nom||("Séance "+(i+1)))}</div>${i===0?'<span class="chip on">Prochaine</span>':""}</div>`).join("");
   return `<p class="body">Génère un prompt résumant ton profil (matériel, objectifs, historique) à coller dans l'IA de ton choix. Elle te répondra avec un programme au format JSON que tu peux ensuite importer ici.</p>
     <div class="btnrow" style="margin-top:16px"><button class="btn" data-a="copyPrompt">Copier le prompt</button></div>
     <div class="field" style="margin-top:12px"><textarea readonly rows="6" style="width:100%;border:0;background:transparent;font-size:calc(13rem/17);padding:10px 0;resize:vertical">${esc(buildExportPrompt())}</textarea></div>
@@ -490,7 +491,7 @@ let whyFrom = null; // « Ton pourquoi » ouvert depuis Motivation : on y revien
 Object.assign(ACT, {
   editName(){
     openModal(`<div style="font-weight:700;font-size:calc(17rem/17);margin-bottom:12px">Ton prénom</div>
-      <div class="num-field txt"><input id="nameInput" type="text" maxlength="30" placeholder="Prénom" value="${esc(S.settings.name||"")}"></div>
+      <div class="num-field txt"><input id="nameInput" type="text" maxlength="30" placeholder="Prénom" autocomplete="given-name" autocapitalize="words" autocorrect="off" spellcheck="false" enterkeyhint="done" value="${esc(S.settings.name||"")}"></div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
         <button class="btn" data-a="saveName">Enregistrer</button>
         <button class="btn ghost" data-a="closesheet" style="height:40px">Annuler</button>
@@ -512,7 +513,7 @@ Object.assign(ACT, {
     whyFrom = d && d.from;
     openModal(`<div style="font-weight:700;font-size:calc(17rem/17);margin-bottom:6px">Ton pourquoi</div>
       <div class="hr-note" style="margin-bottom:12px">Ce qui te pousse à t'entraîner. ASCEN te le rappelle quand tu reviens après quelques jours sans séance.</div>
-      <div class="num-field txt"><input id="whyInput" type="text" maxlength="120" placeholder="Ex. être en forme pour la randonnée d'été" value="${esc(S.settings.why||"")}"></div>
+      <div class="num-field txt"><input id="whyInput" type="text" maxlength="120" enterkeyhint="done" placeholder="Ex. être en forme pour la randonnée d'été" value="${esc(S.settings.why||"")}"></div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
         <button class="btn" data-a="saveWhy">Enregistrer</button>
         <button class="btn ghost" data-a="closesheet" style="height:40px">Annuler</button>
@@ -540,8 +541,9 @@ Object.assign(ACT, {
     save(); refreshEquip();
   },
   addCustomEquip(){
-    const input = qs("#customEquipName"); const v = (input.value||"").trim();
-    if(v){ S.equipment.custom.push({id:uid(),n:v}); save(); }
+    const input = qs("#customEquipName"); const v = (input.value||"").replace(/\s+/g," ").trim().slice(0,40);
+    // un nom déjà présent (casse ignorée) n'est pas ajouté une seconde fois
+    if(v && !S.equipment.custom.some(c=>c.n.toLowerCase()===v.toLowerCase())){ S.equipment.custom.push({id:uid(),n:v}); save(); }
     refreshEquip();
   },
   removeCustom(d){
@@ -639,7 +641,7 @@ function bodyBodyHTML(){
   const tr = bodyTrend();
   const recent = S.body.slice(-6).reverse();
   return `<p class="body" style="margin-bottom:14px">Facultatif. Une pesée par semaine, le matin à jeun, suffit : le poids varie naturellement d'un à deux kilos d'un jour à l'autre, seule la tendance compte.</p>
-    <div class="body-add"><div class="num-field"><input id="bodyIn" type="text" inputmode="decimal" maxlength="6" placeholder="${l?fmtDec(l.kg):"Ex. 72,5"}" aria-label="Poids en kg"><span>kg</span></div>
+    <div class="body-add"><div class="num-field"><input id="bodyIn" type="text" inputmode="decimal" maxlength="6" enterkeyhint="done" placeholder="${l?fmtDec(l.kg):"Ex. 72,5"}" aria-label="Poids en kg"><span>kg</span></div>
     <button class="btn" data-a="bodyAdd">Ajouter</button></div>
     ${pts.length ? `<div class="chart-card" style="margin-top:14px">
       <div class="cc-h"><div class="cc-t">12 derniers mois</div>${tr!=null?`<div class="cc-s">${tr>0?"+":tr<0?"−":"±"}${fmtDec(Math.abs(tr))} kg en 1 mois</div>`:""}</div>

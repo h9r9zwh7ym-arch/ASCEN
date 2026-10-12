@@ -19,7 +19,16 @@ const T3D_METALS = {        // couleur sRGB, rugosité de la couronne
   4: { c:"#F6FBFF", r:.02, diamond:true },   // cristal taillé sur fond platine (voir t3dMats)
   s: { c:"#EDE6FF", r:.14, iris:true },   // secrets découverts
 };
-const T3D = { loading:null, ctx:null, snap:null, failed:false, cache:new Map(), queue:[], busy:false, geo:new Map(), mats:new Map(), syms:new Map() };
+const T3D = { loading:null, ctx:null, snap:null, failed:false, cache:new Map(), queue:[], busy:false, geo:new Map(), mats:new Map(), syms:new Map(), holdUntil:0 };
+// Le travail lourd des vignettes (charger Three.js, compiler les shaders, encoder l'image) se fait au calme :
+// jamais pendant la fin de séance qui s'anime (compteurs, montée du grimpeur : T3D.holdUntil, .ca-trk.go).
+// Safari n'a pas requestIdleCallback : son repli attend un peu au lieu de partir 16 ms après.
+function t3dQuiet(fn){
+  const busy = ()=>performance.now()<T3D.holdUntil || !!qs(".ca-trk.go");
+  const go = ()=>{ if(busy()) return setTimeout(go, 400);
+    if(window.requestIdleCallback) requestIdleCallback(fn, { timeout:2500 }); else setTimeout(fn, 250); };
+  go();
+}
 // Géométries, matériaux et symboles partagés entre toutes les médailles (vignettes et rendu vivant) :
 // construits une fois par session et jamais libérés. Avant, chaque vignette reconstruisait tout
 // puis le détruisait (programmes de rendu recompilés, mémoire qui fait le yo-yo) : c'était le
@@ -336,8 +345,7 @@ function t3dPump(){
   if(T3D.busy || !T3D.queue.length) return;
   T3D.busy = true;
   const job = T3D.queue.shift();
-  const idle = window.requestIdleCallback || (f=>setTimeout(f, 16));
-  idle(async ()=>{
+  t3dQuiet(async ()=>{
     try{
       const s = await t3dSnapCtx(), m = MEDAL_MAP[job.id];
       const medal = t3dBuildMedal(s.T, m, job.tier);
@@ -346,7 +354,7 @@ function t3dPump(){
       t3dDispose(medal);
       s.canvas.toBlob(b=>{ b ? job.ok(URL.createObjectURL(b)) : job.ko(new Error("blob")); T3D.busy = false; t3dPump(); }, "image/webp", .92);
     }catch(e){ T3D.failed = true; job.ko(e); T3D.busy = false; T3D.queue.splice(0).forEach(j=>j.ko(e)); }
-  }, { timeout:400 });
+  });
 }
 // remplace le dessin SVG par la vignette 3D quand l'élément devient visible
 let t3dSnapIO = null;
@@ -368,11 +376,10 @@ function t3dFill(el){
 }
 // toute médaille ajoutée au document (onglets, célébration, fiches) est améliorée
 // (au calme : la vignette 3D remplace le dessin après coup, jamais pendant un rendu ou le démarrage)
-const t3dIdle = window.requestIdleCallback || (f=>setTimeout(f, 60));
 new MutationObserver(ms=>{
   const roots = new Set();
   for(const m of ms) for(const n of m.addedNodes){ if(n.nodeType===1 && (n.matches && n.matches(".medal[data-mid]") || n.querySelector && n.querySelector(".medal[data-mid]"))) roots.add(n.parentNode||n); }
-  if(roots.size) t3dIdle(()=>{ if(t3dUsable()) roots.forEach(r=>{ if(r.isConnected) upgradeMedals(r); }); }, { timeout:600 });
+  if(roots.size) t3dQuiet(()=>{ if(t3dUsable()) roots.forEach(r=>{ if(r.isConnected) upgradeMedals(r); }); });
 }).observe(document.documentElement, { childList:true, subtree:true });
 
 // ---------- rendu vivant (carte mise en avant + fiche détaillée) ----------

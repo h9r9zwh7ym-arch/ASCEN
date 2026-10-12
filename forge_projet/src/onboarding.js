@@ -17,12 +17,12 @@ function obBody(){
       <div class="row">${sfIcon("person","gray")}<div class="grow"><div class="t">100 % sur ton téléphone</div><div class="s">Aucun compte, aucune donnée envoyée</div></div></div>
     </div>
     <div class="te-sec">Ton prénom <span class="ob-opt">facultatif</span></div>
-    <div class="num-field txt"><input id="obName" type="text" maxlength="30" placeholder="Prénom" autocomplete="given-name" value="${esc(S.settings.name||"")}"></div>`;
+    <div class="num-field txt"><input id="obName" type="text" maxlength="30" placeholder="Prénom" autocomplete="given-name" autocapitalize="words" autocorrect="off" spellcheck="false" enterkeyhint="done" value="${esc(S.settings.name||"")}"></div>`;
   if(obStep===1) return `<div class="ob-t2">Ton matériel</div><div class="ob-s2">Coche ce que tu as à la maison. Le poids du corps est toujours inclus.</div>
     <div class="ob-equip">${OB_EQUIP.map(id=>{ const e = EQUIP_MAP[id]; const on = S.equipment.owned[id];
       return `<button class="ob-eq ${on?"on":""}" data-a="obEquip" data-id="${id}" aria-pressed="${on}">${sfIcon(EQUIP_GLYPH[id]||"wrench", "gray")}<span>${esc(e.n)}</span><em>${icon("check")}</em></button>`; }).join("")}</div>
     ${S.equipment.owned.dumbbells ? `<div class="te-sec">Tes haltères <span class="ob-opt">kg, séparés par des virgules</span></div>
-      <div class="num-field txt"><input id="obDb" type="text" inputmode="decimal" placeholder="Ex. 4, 6, 8, 10" value="${(S.equipment.weights.dumbbells||[]).join(", ")}"></div>` : ""}`;
+      <div class="num-field txt"><input id="obDb" type="text" inputmode="decimal" enterkeyhint="done" placeholder="Ex. 4, 6, 8, 10" value="${(S.equipment.weights.dumbbells||[]).join(", ")}"></div>` : ""}`;
   if(obStep===2) return `<div class="ob-t2">Ton objectif</div><div class="ob-s2">Il règle les fourchettes de répétitions et le volume proposé.</div>
     <div class="ob-goals">${[["hypertrophie","Prendre du muscle","8 à 12 répétitions, ~10 séries par muscle et par semaine"],["force","Devenir plus fort·e","Moins de répétitions, charges plus lourdes"],["endurance","Endurance et tonus","Plus de répétitions, repos courts"]].map(([k,t,d])=>`<button class="ob-goal ${S.goals.overall===k?"on":""}" data-a="obGoal" data-v="${k}"><b>${t}</b><small>${d}</small></button>`).join("")}</div>
     <div class="te-sec">Ton niveau</div>
@@ -34,7 +34,7 @@ function obBody(){
     <div class="te-sec">Durée d'une séance</div>
     <div class="cal-alarm">${[["court","≈ 20 min"],["moyen","≈ 35 min"],["long","≈ 50 min"]].map(([k,l])=>`<button class="chip ${S.goals.sessionLength===k?"on":""}" data-a="obLen" data-v="${k}">${l}</button>`).join("")}</div>
     <div class="te-sec">Pourquoi tu t'entraînes ? <span class="ob-opt">facultatif</span></div>
-    <div class="num-field txt"><input id="obWhy" type="text" maxlength="120" placeholder="Ex. être en forme pour la randonnée d'été" value="${esc(S.settings.why||"")}"></div>
+    <div class="num-field txt"><input id="obWhy" type="text" maxlength="120" enterkeyhint="done" placeholder="Ex. être en forme pour la randonnée d'été" value="${esc(S.settings.why||"")}"></div>
     <div class="ob-note">ASCEN te le rappellera les jours où la motivation manque.</div>`;
   const split = WEEK_SPLITS[Math.min(6, Math.max(2, S.goals.daysPerWeek))];
   return `<div class="ob-t2">Ta semaine</div><div class="ob-s2">ASCEN peut créer tes ${split.length} séances et les placer dans la semaine. Chaque jour prévu, ta séance s'affichera directement.</div>

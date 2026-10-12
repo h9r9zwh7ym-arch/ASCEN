@@ -29,13 +29,18 @@ function muscleVolume(days){
 }
 function weekVolume(){ return muscleVolume(7); }
 function stimZone(v){ return v>=STIM.high ? "high" : v>=STIM.min ? "ok" : v>0 ? "low" : "none"; }
+// derniers records : un seul par exercice (le plus récent, sa dernière série record), sans les exercices supprimés
 function recentPRs(n){
-  const out = [];
+  const out = [], seen = new Set();
   for(let i=S.sessions.length-1;i>=0 && out.length<n;i--){
     const s = S.sessions[i];
-    s.exos.forEach(ex=>ex.sets.forEach(st=>{ if(st.done && st.pr && out.length<n) out.push({ s, def:EXO_MAP[ex.exoId], st }); }));
+    s.exos.forEach(ex=>{
+      const def = EXO_MAP[ex.exoId]; if(!def || seen.has(ex.exoId) || out.length>=n) return;
+      const prs = ex.sets.filter(st=>st.done && st.pr); if(!prs.length) return;
+      seen.add(ex.exoId); out.push({ s, def, st:prs[prs.length-1] });
+    });
   }
-  return out.filter(x=>x.def);
+  return out;
 }
 
 function renderProgress(){

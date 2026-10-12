@@ -505,6 +505,7 @@ function celRecordHTML(session){
 }
 function showCelebration(session, ups, hits, won){
   const sets = sessionSetCount(session);
+  if(typeof T3D!=="undefined") T3D.holdUntil = performance.now()+3500;   // vignettes 3D après les animations
   // l'ascension remplace l'XP : altitude gagnée, camps franchis, sommet
   const asc = typeof ascent==="function" ? ascent().log[session.id] : null, summit = asc && asc.summit, moved = !!(asc && (asc.camps.length || asc.summit || asc.started));
   const name = (S.settings.name||"").trim().split(" ")[0];

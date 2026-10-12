@@ -460,26 +460,42 @@ function resolveExoRef(ref){
   return found||null;
 }
 
+// programme importé (fichier d'une IA, sauvegarde, ancienne version) : forme et tailles bornées. Un
+// fichier mal formé ne doit ni planter l'app, ni la geler (« series » : 1 000 000 000), ni grossir le stockage.
+function cleanImportedProgram(list){
+  if(!Array.isArray(list)) return [];
+  const txt = (v, n)=>typeof v==="string" || typeof v==="number" ? String(v).slice(0, n) : "";
+  return list.filter(s=>s && typeof s==="object").slice(0, 20).map(s=>{
+    const ex = Array.isArray(s.exercices) ? s.exercices : Array.isArray(s.exercises) ? s.exercises : [];
+    return { nom:txt(s.nom!=null ? s.nom : s.name, 60), exercices:ex.filter(r=>r && typeof r==="object").slice(0, 20).map(r=>{
+      const o = { nom:txt(r.nom!=null ? r.nom : r.name, 80) };
+      if(r.id!=null) o.id = txt(r.id, 64);
+      const n = parseInt(r.series!=null ? r.series : r.sets, 10); if(n>0) o.series = Math.min(10, n);
+      if(typeof r.reps==="string") o.reps = r.reps.slice(0, 12); else if(isFinite(r.reps) && r.reps>0) o.reps = Math.min(100, Math.round(r.reps));
+      const w = parseFloat(String(r.poids!=null ? r.poids : r.weight!=null ? r.weight : "").replace(",", ".")); if(isFinite(w) && w>0 && w<=500) o.poids = w;
+      return o; }) };
+  });
+}
 function buildSessionFromImported(prog){
   const warnings = [];
   const exos = [];
-  (prog.exercices||prog.exercises||[]).forEach(ref=>{
+  (prog && Array.isArray(prog.exercices) ? prog.exercices : []).forEach(ref=>{
     const exo = resolveExoRef(ref);
-    if(!exo){ warnings.push(`Exercice non reconnu : "${ref.nom||ref.name||ref.id||"?"}" (ignoré).`); return; }
-    const setsN = ref.series||ref.sets||exo.sets;
+    if(!exo){ warnings.push(`Exercice non reconnu : "${ref.nom||ref.id||"?"}" (ignoré).`); return; }
+    const setsN = Math.min(10, Math.max(1, parseInt(ref.series, 10) || exo.sets || 3));
     let reps = [exo.repsMin, exo.repsMax];
     if(typeof ref.reps==="string" && ref.reps.includes("-")){
       const [a,b] = ref.reps.split("-").map(x=>parseInt(x,10));
-      if(!isNaN(a)&&!isNaN(b)) reps=[a,b];
+      if(a>0 && b>=a && b<=100) reps=[a,b];
     } else if(typeof ref.reps==="number"){ reps=[ref.reps,ref.reps]; }
-    const weight = (ref.poids!=null?ref.poids:ref.weight!=null?ref.weight:null);
+    const weight = ref.poids!=null ? ref.poids : null;
     const mid = Math.round((reps[0]+reps[1])/2);
     const sets = [];
     for(let i=0;i<setsN;i++) sets.push({reps:mid,weight,done:false,rpe:null});
     exos.push({ exoId:exo.id, targetSets:setsN, targetReps:reps, note:null, sets });
   });
   return { id:uid(), date:todayISO(), source:"imported", startedAt:null, completedAt:null,
-    name: prog.nom||prog.name||null, exos, warnings };
+    name: (prog && prog.nom)||null, exos, warnings };
 }
 
 function getOrCreateDraft(){
@@ -554,8 +570,8 @@ Le champ "poids" est facultatif (ASCEN peut le calculer automatiquement). Propos
 function importProgramJSON(text){
   let data;
   try{ data = JSON.parse(text); }catch(e){ return { ok:false, error:"Le fichier n'est pas un JSON valide." }; }
-  const sessions = data.sessions || (Array.isArray(data)?data:null);
-  if(!sessions || !Array.isArray(sessions) || !sessions.length){
+  const sessions = cleanImportedProgram(data && typeof data==="object" ? (Array.isArray(data) ? data : data.sessions) : null);
+  if(!sessions.length){
     return { ok:false, error:"Format inattendu : aucune clé \"sessions\" trouvée." };
   }
   const warnings = [];

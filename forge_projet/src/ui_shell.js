@@ -288,7 +288,7 @@ function segHTML(key, options, cur, action){
   const idx = Math.max(0, options.findIndex(o=>o[0]===cur));
   return `<div class="seg" data-seg="${key}" data-cur="${idx}" style="--n:${options.length}" role="tablist">
     <span class="seg-ind"></span>
-    ${options.map(([id,label])=>`<button role="tab" aria-selected="${id===cur}" class="${id===cur?"on":""}" data-a="${action}" data-v="${id}">${label}</button>`).join("")}
+    ${options.map(([id,label])=>`<button role="tab" aria-selected="${id===cur}" class="${id===cur?"on":""}" data-a="${action}" data-v="${id}"><span>${label}</span></button>`).join("")}
   </div>`;
 }
 // L'indicateur glisse de l'ancienne à la nouvelle position. Web Animations plutôt qu'une
@@ -643,7 +643,9 @@ document.addEventListener("click", e=>{
 });
 document.addEventListener("keydown", e=>{
   if(e.key==="Enter" && e.target && e.target.id==="numInput"){ e.preventDefault(); ACT.numOk(); }
-  if(e.key==="Enter" && e.target && e.target.id==="tplEdName"){ e.preventDefault(); e.target.blur(); }
+  // champs sans bouton propre : Entrée ferme le clavier ; recherche : idem (la liste est déjà filtrée)
+  if(e.key==="Enter" && e.target && /^(tplEdName|obName|obDb|obWhy|pickerSearch)$/.test(e.target.id||"")){ e.preventDefault(); e.target.blur(); }
+  if(e.key==="Enter" && e.target && e.target.id==="customEquipName"){ e.preventDefault(); ACT.addCustomEquip(); }
   if(e.key==="Enter" && e.target && e.target.id==="bodyIn"){ e.preventDefault(); ACT.bodyAdd(); }
   if(e.key==="Enter" && e.target && /^wadd-/.test(e.target.id||"")){ e.preventDefault(); ACT.addWeight({ id:e.target.id.slice(5) }); }
   if(e.key==="Enter" && e.target && (e.target.id==="nameInput" || e.target.id==="whyInput" || e.target.id==="tplName")){

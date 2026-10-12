@@ -276,7 +276,7 @@ function normalizeState(parsed){
     merged.medals = parsed.medals && typeof parsed.medals==="object" && !Array.isArray(parsed.medals) ? parsed.medals : {};
     merged.prefs.excluded = Array.isArray(merged.prefs.excluded) ? merged.prefs.excluded.filter(id=>EXO_MAP[id]) : [];
     merged.prefs.included = Array.isArray(merged.prefs.included) ? merged.prefs.included.filter(id=>EXO_MAP[id]) : [];
-    merged.importedProgram = parsed.importedProgram||[];
+    merged.importedProgram = cleanImportedProgram(parsed.importedProgram);
     merged.challenges = (Array.isArray(parsed.challenges)?parsed.challenges:[]).filter(c=>c && typeof c.id==="string" && /^\d{4}-\d{2}-\d{2}$/.test(c.start));
     merged.targets = (Array.isArray(parsed.targets)?parsed.targets:[]).filter(t=>t && t.id && EXO_MAP[t.exoId] && ["reps","kg","sec"].includes(t.kind) && t.value>0);
     const isoOK = x=>typeof x==="string" && /^\d{4}-\d{2}-\d{2}$/.test(x);

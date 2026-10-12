@@ -514,7 +514,7 @@ function renderPickerSheet(){
   const chips = [["","Tous les muscles"]].concat(MUSCLES.map(m=>[m.id,m.n])).map(([id,n])=>`<button class="chip ${(picker.muscle||"")===id?"on":""}" data-a="pickerMuscle" data-v="${id}">${esc(n)}</button>`).join("");
   openSheet(`<div class="sheet-hd${picker.onCancel?" te-hd":""}">${picker.onCancel?`<button class="te-cancel" data-a="pickerCancel">${icon("chev")}<span>Retour</span></button>`:""}<span class="t">${esc(picker.title)}</span>${picker.onCancel?`<span class="te-spacer"></span>`:`<button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button>`}</div>
     <div class="picker-top">
-      <label class="search">${icon("search")}<input id="pickerSearch" type="search" placeholder="Rechercher un exercice" autocomplete="off"></label>
+      <label class="search">${icon("search")}<input id="pickerSearch" type="search" placeholder="Rechercher un exercice" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search"></label>
       <div class="chip-scroll" id="pickerCats">${cats}</div>
       <div class="chip-scroll" id="pickerChips" style="margin-top:8px">${chips}</div>
     </div>
@@ -1005,9 +1005,14 @@ function draftBeats(draft){
     return t + ex.sets.filter((st,si)=>{ if(!st.done || st.pr) return false; const ref = beatRef(ex.exoId, si); return !!ref && daysBetween(ref.date, todayISO())<21 && beatCmp(def, st, ref)>0; }).length; }, 0);
 }
 function finalizeSession(){
-  const draft = S.draft;
-  draft.completedAt = new Date().toISOString();
-  draft.durationSec = Math.round((Date.parse(draft.completedAt)-Date.parse(draft.startedAt))/1000);
+  const draft = S.draft; if(!draft) return;   // double appui sur « Terminer » : une seule fin de séance
+  // séance restée ouverte (oubliée, plus de 30 min sans série validée) : elle s'arrête à la dernière série,
+  // sinon la durée (et les statistiques) compterait toute la nuit
+  const end = Date.now(), start = Date.parse(draft.startedAt), last = +draft.lastSetAt || 0;
+  const stop = last && last>start && end-last>30*60e3 ? last+60e3 : end;
+  draft.completedAt = new Date(stop).toISOString();
+  draft.durationSec = isFinite(start) ? Math.max(0, Math.round((stop-start)/1000)) : 0;
+  delete draft.lastSetAt;
   draft.exos = draft.exos.filter(ex=>ex.sets.some(s=>s.done));
   // séries meilleures que la même série la dernière fois (comptées avant d'ajouter la séance)
   if(S.settings.beat!==false) draft.beats = draftBeats(draft);
@@ -1574,9 +1579,11 @@ Object.assign(ACT, {
   },
   validateSet(d){
     const exi = +d.exi;
-    const ex = S.draft.exos[exi], def = EXO_MAP[ex.exoId];
+    const ex = S.draft && S.draft.exos[exi], def = ex && EXO_MAP[ex.exoId];
+    if(!def) return;   // séance déjà terminée (double appui) ou exercice disparu
     const si = ex.sets.findIndex(s=>!s.done);
     if(si<0) return;
+    S.draft.lastSetAt = Date.now();
     const st = ex.sets[si];
     let [bx,by] = centerOf(".validate");
     if(bx==null){ [bx,by] = centerOf(".focus-card .sx-sets"); if(bx==null){ bx = innerWidth/2; by = innerHeight/2; } }
@@ -1704,6 +1711,7 @@ Object.assign(ACT, {
 
   // « Terminer » : enregistrer, abandonner ou continuer, dans une seule feuille d'actions (tout fait : on enregistre)
   finishSession(){
+    if(!S.draft) return;
     const c = liveCounts(S.draft);
     if(c.done && !c.left) return finalizeSession();
     finishSheet();

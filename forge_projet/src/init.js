@@ -121,8 +121,8 @@ function init(){
     fi.addEventListener("change", async (e)=>{
       const file = e.target.files[0];
       if(!file) return;
-      const text = await file.text();
-      const res = importProgramJSON(text);
+      // un programme tient en quelques Ko : au-delà de 2 Mo, ce n'est pas le bon fichier
+      const res = file.size>2e6 ? { ok:false, error:"Fichier trop volumineux pour un programme." } : importProgramJSON(await file.text());
       fi.value = "";
       if(res.ok){
         toast(`Programme importé : ${res.count} séance(s)`);
