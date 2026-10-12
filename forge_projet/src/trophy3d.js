@@ -434,13 +434,15 @@ function t3dFrame(now){
   if(!ctx.canvas.isConnected || !ctx.visible || document.hidden || !ctx.medal || ctx.canvas._lost){ ctx.running = false; return; }
   const lively = ctx.dragging || ctx.unlock || ctx.flip || ctx.burst || Math.abs(ctx.vel)>.02;
   if(!lively && ctx.last && now-ctx.last < 30){ requestAnimationFrame(t3dFrame); return; }
-  const dt = Math.min(.05, ctx.last ? (now-ctx.last)/1000 : 0); ctx.last = now;
+  const raw = ctx.last ? (now-ctx.last)/1000 : 0, dt = Math.min(.05, raw); ctx.last = now;
   const t = (now-ctx.t0)/1000, reduce = t3dReduced(), M = ctx.medal;
   if(!ctx.dragging){ ctx.drag += ctx.vel*dt; ctx.vel *= Math.pow(.04, dt); ctx.drag *= Math.pow(.35, dt); }
   let ry = reduce ? .28 : Math.sin(t*.55)*.38, rx = reduce ? -.06 : Math.sin(t*.42)*.07 - .04, s = 1, lift = reduce ? 0 : Math.sin(t*1.1)*.03;
   if(ctx.flip){ const u = Math.min(1, (now-ctx.flip)/700); ry += (1-easeOutCubic(u))*Math.PI*2; if(u>=1) ctx.flip = 0; }
   if(ctx.unlock){
-    const u = (now-ctx.unlock)/1000;
+    // temps réel, mais au plus 0,25 s par image : une première image lente (compilation des
+    // shaders) ne fait pas sauter l'animation d'un coup
+    const u = ctx.unlockT += Math.min(.25, raw);
     if(reduce){ s = Math.min(1, u/.4); }
     else {
       s = u<.9 ? Math.max(.001, easeOutBack(Math.min(1, u/.9))) : 1;
@@ -467,7 +469,7 @@ function t3dFrame(now){
 function t3dStart(){ const c = T3D.ctx; if(c && !c.running){ c.running = true; c.last = 0; requestAnimationFrame(t3dFrame); } }
 function t3dPlayUnlock(){
   const c = T3D.ctx; if(!c) return;
-  c.unlock = performance.now(); c.burstDone = false; c.vel = 0; c.drag = 0;
+  c.unlock = true; c.unlockT = 0; c.burstDone = false; c.vel = 0; c.drag = 0;
   if(!t3dReduced()){ haptic([20,40,30]); setTimeout(()=>sfx("medal"), 250); }
   t3dStart();
 }

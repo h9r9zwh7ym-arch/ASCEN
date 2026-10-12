@@ -1218,6 +1218,9 @@ a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est
     `.tpl-card2.loaded/.open`) ; « Copie de secours » affichait « NaN Mo » (la copie compressée est un
     `ArrayBuffer` : `byteLength`) ; les étapes d'« Installer ASCEN » étaient coupées (« fais d'abord une
     sauvegarde » invisible) et le texte d'intro collé au bord.
+    Trophée 3D : l'animation de déblocage comptait le temps depuis son lancement ; une première image lente
+    (compilation des shaders) dépassait ses 2,4 s et elle était sautée. Elle avance maintenant en temps réel
+    mais d'au plus 0,25 s par image (`ctx.unlockT`, trophy3d.js), donc se joue toujours en entier.
   - Semaine allégée : icône et barre dans l'orange de la marque (plus de vert).
   - **Rewind** : palette de la marque (braise, encre, rouille, pierre, nuit ; l'or reste pour la diapo des
     trophées), au lieu du bleu, violet, vert et turquoise.
