@@ -216,14 +216,21 @@ function normalizeState(parsed){
     const d = defaultState();
     // fusion superficielle pour tolérer l'ajout de nouveaux champs entre versions
     const merged = Object.assign({}, d, parsed);
-    merged.equipment = Object.assign({}, d.equipment, parsed.equipment||{});
-    merged.equipment.owned = Object.assign({}, d.equipment.owned, (parsed.equipment||{}).owned||{});
-    merged.equipment.weights = Object.assign({}, d.equipment.weights, (parsed.equipment||{}).weights||{});
-    merged.prefs = Object.assign({}, d.prefs, parsed.prefs||{});
-    merged.goals = Object.assign({}, d.goals, parsed.goals||{});
-    merged.settings = Object.assign({}, d.settings, parsed.settings||{});
-    merged.meta = Object.assign({}, d.meta, parsed.meta||{});
-    merged.custom = Object.assign({}, d.custom, parsed.custom||{});
+    const obj = x=>x && typeof x==="object" && !Array.isArray(x) ? x : {};
+    const pe = obj(parsed.equipment);
+    merged.equipment = Object.assign({}, d.equipment, pe);
+    merged.equipment.owned = Object.assign({}, d.equipment.owned, obj(pe.owned));
+    Object.keys(merged.equipment.owned).forEach(k=>{ merged.equipment.owned[k] = merged.equipment.owned[k]===true; });
+    // charges : des listes de nombres ; une valeur abîmée reprend la valeur par défaut au lieu de faire
+    // échouer tout le chargement (l'app repartait alors sur un historique vide)
+    merged.equipment.weights = Object.assign({}, d.equipment.weights, obj(pe.weights));
+    Object.keys(merged.equipment.weights).forEach(k=>{ const v = merged.equipment.weights[k];
+      merged.equipment.weights[k] = Array.isArray(v) ? v.map(Number).filter(x=>isFinite(x) && x>0 && x<1000) : (d.equipment.weights[k]||[]).slice(); });
+    merged.prefs = Object.assign({}, d.prefs, obj(parsed.prefs));
+    merged.goals = Object.assign({}, d.goals, obj(parsed.goals));
+    merged.settings = Object.assign({}, d.settings, obj(parsed.settings));
+    merged.meta = Object.assign({}, d.meta, obj(parsed.meta));
+    merged.custom = Object.assign({}, d.custom, obj(parsed.custom));
     // format compact (v2.5) ; une liste « sessions » non vide (import externe) reste prioritaire
     // format compact : chaque séance est décodée à part ; une entrée abîmée est écartée (et comptée)
     // au lieu de faire échouer tout le chargement, ce qui démarrait l'app sur un historique vide
@@ -273,7 +280,9 @@ function normalizeState(parsed){
       merged.draft = dr && typeof dr==="object" && Array.isArray(dr.exos) ? Object.assign({}, dr, { exos:dr.exos.filter(ex=>okExo(ex) && known(ex)).map(ex=>Object.assign({}, ex, { sets:ex.sets.filter(okSet) })) }) : null;
       if(merged.draft && !merged.draft.exos.length) merged.draft = null;
     }
-    merged.medals = parsed.medals && typeof parsed.medals==="object" && !Array.isArray(parsed.medals) ? parsed.medals : {};
+    // trophées : { palier 0-4, dates des paliers } ; une entrée abîmée est écartée
+    merged.medals = {};
+    Object.entries(obj(parsed.medals)).forEach(([k, m])=>{ if(m && typeof m==="object" && Number.isInteger(m.t) && m.t>=0 && m.t<=4) merged.medals[k] = Object.assign({}, m, { d:obj(m.d) }); });
     merged.prefs.excluded = Array.isArray(merged.prefs.excluded) ? merged.prefs.excluded.filter(id=>EXO_MAP[id]) : [];
     merged.prefs.included = Array.isArray(merged.prefs.included) ? merged.prefs.included.filter(id=>EXO_MAP[id]) : [];
     merged.importedProgram = cleanImportedProgram(parsed.importedProgram);
