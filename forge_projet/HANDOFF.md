@@ -1315,6 +1315,27 @@ a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est
   - Test : `tests/v61.js` (et v12, v13, v22, v25, v31, v36, v37, v38, v41, v44, v47, v52, v54, v55, v57,
     v59, v60 adaptés).
 
+- **Retours sur iPhone (5 points)** :
+  - **Mes séances** : plus de chevron de section (il ne réduisait rien : la liste restait aussi haute).
+    En-tête simple, cartes toujours détaillées ; chaque séance garde sa flèche pour voir ses exercices.
+  - **Modifier la séance du jour** : en édition, la carte n'affiche plus « Commencer » ni « Choisir une autre
+    séance » ; on modifie, « OK », puis « Commencer ». À « OK », si la séance vient de Mes séances et a changé,
+    feuille d'actions comme pour un événement récurrent du Calendrier : « Pour aujourd'hui seulement » (carte
+    « Modifiée pour aujourd'hui », la question ne revient pas sans nouveau changement : `S.custom.oneOff`) ou
+    « Aussi pour les prochaines fois » (met à jour la séance enregistrée). « Modifier » sur « Prévu aujourd'hui »
+    édite aussi sur place (`heroEditPlanned`).
+  - **Mon ascension** : bouton ⓘ en simple cercle (comme les autres boutons info ; `.tr-how` partout) ; titres
+    « Étapes » et « Cette semaine » au-dessus de leur carte, comme sur l'accueil ; séparateurs rétablis entre
+    les rangées du détail (les blocs dépliables intercalés les cassaient).
+  - **Régularité** : vitesse actuelle en évidence (×0,5 « Vitesse de départ »), escalier des paliers (hauteur =
+    vitesse) avec « ×1 = vitesse normale », prochain palier chiffré (« chaque séance te ferait monter d'environ
+    N m au lieu de M m »), élan de départ expliqué ; dernières semaines datées, chacune avec une icône parlante
+    (coche, flocon = gelée, pause, tiret = sans séance, « 0/3 » pour la semaine en cours) et une légende limitée
+    aux états présents.
+  - **Fiche exercice** : réflexion faite (Apple Forme, App Store, Strong, Hevy), une seule carte à filets
+    remplace les six cartes : conseil (séries × répétitions, repos, « 2 côtés en même temps » / « 1 côté à la
+    fois ») puis ton historique, ou une ligne « Première fois » à la place de la carte rose.
+
 Les sections plus haut qui parlent de Geist, Barlow, `#F4F3F1` ou `#FF6B3D` décrivent l'état d'avant cette refonte.
 
 ## 10. Cahier des charges d'origine (résumé)

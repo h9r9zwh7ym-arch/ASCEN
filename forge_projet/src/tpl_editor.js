@@ -182,7 +182,7 @@ Object.assign(ACT, {
     if(t){ if(days.join()!==(t.days||[]).join()) t.since = todayISO(); t.n = name; t.days = days; t.exos = exos; }
     else { t = { id:uid(), n:name, days, exos, since:todayISO() }; S.templates.push(t); }
     if(e.fromCustom || S.custom.tplId===t.id){ S.custom.name = name; S.custom.tplId = t.id; if(e.fromCustom) S.custom.exos = clone(exos); delete S.custom.pendingDays; }
-    openTpls.add(t.id); uiState().tplOpen = true;
+    openTpls.add(t.id);
     tplEdit = null;
     if(t.days.includes(weekdayIdx(todayISO())) && !(S.draft && S.draft.startedAt)) applyPlannedSession(true);
     closeSheet(); save(); changed(); sfx("set");
@@ -205,7 +205,7 @@ Object.assign(ACT, {
     });
     if(!made.length){ toast("Pas assez d'exercices avec ton matériel"); return; }
     S.goals.daysPerWeek = wizardN;
-    uiState().tplOpen = true; uiState().planOpen = true;
+    uiState().planOpen = true;
     if(!(S.draft && S.draft.startedAt)) applyPlannedSession(true);
     closeSheet(); save(); renderTodaySoft(); sfx("exo");
     // les nouvelles séances apparaissent l'une après l'autre (le reste de l'accueil ne bouge pas)

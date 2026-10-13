@@ -34,6 +34,8 @@ const ASC_IC = {
   card:'<rect x="4" y="3" width="16" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="m7 16 3.5-5 2.5 3 1.5-2 2.5 4Z" fill="currentColor"/>',
   peak:'<path d="m2.5 19 7-11.5 3.5 5.5 2.5-3.5 6 9.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
   pause:'<path d="M9 6v12M15 6v12" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>',
+  snow:'<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9M9.5 4.5 12 7l2.5-2.5M9.5 19.5 12 17l2.5 2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  dash:'<path d="M7 12h10" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>',
 };
 function ascIc(n, cls){ return `<svg viewBox="0 0 24 24" class="asc-ic ${cls||""}" aria-hidden="true">${ASC_IC[n]}</svg>`; }
 const ascM = n=>fmtNum(n)+" m";
@@ -507,11 +509,13 @@ const ascPos = (k, v)=>{ const D = ASC_DATA[k]; return Math.max(0, Math.min(100,
 function ascStepsHTML(a){
   const D = ASC_DATA[a.key], camps = ascCamps(a.key), N = camps.length, alt = a.wait ? D.top : a.alt, P = v=>v.toFixed(1);
   const ni = a.wait ? -1 : camps.findIndex(c=>c[0]>alt+.5);
-  return `<section class="card asc-steps" id="ascSteps" aria-label="Étapes de l'expédition">
+  return `<section class="asc-steps" id="ascSteps" aria-label="Étapes de l'expédition">
     <div class="st-hd"><h2>Étapes</h2><span class="st-n">${a.wait ? "Sommet atteint" : `<b class="num">${a.passed}</b> sur ${N}`}</span></div>
+    <div class="card asc-card">
     <div class="exp-track" aria-hidden="true"><div class="exp-push" style="width:${ASC_PUSH*100}%"></div><div class="exp-fill" style="width:${P(ascPos(a.key, alt))}%"></div>${camps.map((c, i)=>`<i class="exp-tick${c[0]<=alt+.5 ? " past" : ""}${i===ni ? " next" : ""}" style="left:${P(ascPos(a.key, c[0]))}%"></i>`).join("")}<i class="exp-me" style="left:${P(ascPos(a.key, alt))}%"></i></div>
     <div class="st-list">${ascStepsListHTML(a)}</div>
     <button class="st-more" data-a="ascAllSteps" aria-expanded="${ascStepsAll}"><span>${ascStepsAll ? "Réduire" : "Toutes les étapes"}</span>${icon("chev")}</button>
+    </div>
   </section>`;
 }
 function ascHudHTML(a){
@@ -539,12 +543,14 @@ function ascWeekHTML(a){
   else if(n===0 && !a.wait) msg = `${nb(left, "séance")} d'ici dimanche pour tenir ton objectif. Sans séance, tu redescendrais au camp précédent.`;
   else msg = `Encore ${nb(left, "séance")} d'ici dimanche : ta série passera à <b>${nb(a.series+1, "semaine")}</b>.`;
   const lbl = pzThis ? "Cette semaine est en pause" : pzNext ? "La semaine prochaine est en pause" : "Vacances ou malade ? Mettre en pause";
-  return `<section class="card asc-week" id="ascWeek">
+  return `<section class="asc-week" id="ascWeek">
     <div class="aw-hd"><h2>Cette semaine</h2><span class="aw-n"><b class="num">${n}</b>/${g} séance${g>1 ? "s" : ""}</span></div>
+    <div class="card asc-card">
     <div class="aw-dots" aria-hidden="true">${Array.from({ length:g }, (_,i)=>`<i class="${i<n ? "on" : ""}"></i>`).join("")}</div>
     <p class="aw-msg">${msg}</p>
     <button class="aw-pause${pzThis || pzNext ? " on" : ""}${ascPauseOpen ? " open" : ""}" data-a="ascPauseMenu" aria-expanded="${ascPauseOpen}" aria-controls="ascPauseBox">${ascIc("pause")}<span>${lbl}</span>${icon("chev")}</button>
     <div class="clp" id="ascPauseBox">${ascPauseOpen ? ascPauseBoxHTML(a) : ""}</div>
+    </div>
   </section>`;
 }
 // ---------- le détail, replié : une ligne par sujet ----------
@@ -582,16 +588,24 @@ function ascSecBody(k, a){
       ${near ? `<div class="wx ${a.pushOK ? "" : "warn"}">${ascIc("pulse", a.pushOK ? "" : "warn")}<span><b>Dernière ligne droite : ${a.pushOK ? "pleine vitesse" : "mi-vitesse"}</b><span>Ta force est à ${Math.round(a.form*100)} % de ton meilleur niveau récent${a.pushOK ? "." : ` (il faut ${Math.round(ASC_FORM_OK*100)} %).`}</span></span></div>` : ""}`;
   }
   if(k==="reg"){
+    // Ce que vaut la régularité, en clair : un multiplicateur de la montée (×1 = vitesse normale), l'escalier des
+    // paliers (hauteur = vitesse), ce que rapporte le prochain, et les dernières semaines, chacune nommée et datée
     const p = a.tier, nextP = p<ASC_TH.length-1 ? p+1 : null, opens = nextP==null ? [] : ASC_ORDER.filter(x=>ASC_REQ[x]===ASC_TH[nextP]).map(ascLe);
-    const weeks = a.weeks.slice(-13);
-    return `<p class="sub">Les semaines d'affilée où tu fais tes ${nb(a.goal, "séance")}. Plus la série est longue, plus tu montes vite.</p>
-      <div class="pal">${ASC_TH.map((t,i)=>`<div class="${i<=p ? "on" : ""} ${i===p ? "cur" : ""}"><b class="num">${ascX(ASC_MUL[i])}</b><i></i><small>${t ? t+" sem." : "départ"}</small></div>`).join("")}</div>
-      <p class="note">${nextP==null ? `Palier maximal : tu montes <b>3 fois</b> plus vite qu'au départ.`
-        : `Prochain palier dans <b class="num">${nb(ASC_TH[nextP]-a.series, "semaine")}</b> : <b>${ascX(ASC_MUL[nextP])}</b>${opens.length ? `. Il ouvre ${esc(ascList(opens))}.` : "."}`}</p>
+    const g = nb(a.goal, "séance"), elan = a.elan>a.reg+.005, now = ascSpeedNow(a);
+    const proj = nextP==null ? 0 : now/a.mul*Math.max(a.elan, ASC_MUL[nextP]);
+    const weeks = a.weeks.slice(-6), seen = new Set(weeks.map(w=>w.state==="deload" ? "pause" : w.state));
+    const next = nextP==null ? `Palier maximal : chaque séance te fait monter <b>3 fois</b> plus vite que la vitesse normale.`
+      : `Encore <b class="num">${nb(ASC_TH[nextP]-a.series, "semaine")}</b> à ${g} pour passer à <b>${ascX(ASC_MUL[nextP])}</b>${proj>now+.5 ? ` : chaque séance te ferait monter d'environ <b class="num">${ascM(proj)}</b> au lieu de ${ascM(now)}` : ""}.${opens.length ? ` Ce palier ouvre ${esc(ascList(opens))}.` : ""}`;
+    return `<div class="rg-now"><b class="num">${ascX(a.reg)}</b><span><b>${p ? "Ta vitesse de régularité" : "Vitesse de départ"}</b><small>${a.series ? `${nb(a.series, "semaine")} d'affilée à ${g}` : `pas encore de semaine complète à ${g}`}</small></span></div>
+      <p class="sub">Chaque semaine où tu fais tes ${g} allonge ta série. Plus elle est longue, plus chaque séance te fait monter.</p>
+      <div class="rg-stairs" role="img" aria-label="Paliers de régularité : ${ASC_TH.map((t,i)=>`${ascX(ASC_MUL[i])} ${t ? `après ${t} semaines` : "au départ"}`).join(", ")}">${ASC_TH.map((t,i)=>`<div class="rg-step${i<p ? " done" : ""}${i===p ? " cur" : ""}" style="--h:${ASC_MUL[i]/3}"><b class="num">${ascX(ASC_MUL[i])}</b><i></i><small>${t ? t+" sem." : "départ"}</small></div>`).join("")}</div>
+      <p class="rg-cap">semaines d'affilée · ×1 = vitesse normale</p>
+      <p class="note">${next}</p>
+      ${elan ? `<p class="sub">En ce moment, ton élan de départ te fait monter à <b>${ascX(Math.round(a.elan*10)/10)}</b> : il compte à la place de la régularité jusqu'à ta ${ASC_ELAN[1]}ᵉ séance.</p>` : ""}
       ${ascGoalHint(a)}
       ${weeks.length ? `<div class="asc-wk-h">Tes dernières semaines</div>
-      <div class="weeks" aria-label="Dernières semaines">${weeks.map(w=>`<i class="wk ${w.state}" title="${ASC_WK_LABEL[w.state]}"></i>`).join("")}</div>
-      <div class="legend"><span><i class="wk ok"></i>tenue</span><span><i class="wk frozen"></i>gelée</span><span><i class="wk deload"></i>pause</span><span><i class="wk empty"></i>sans séance</span></div>` : ""}`;
+      <div class="rg-weeks">${weeks.map(w=>`<div class="rg-w ${w.state}" title="${ASC_WK_LABEL[w.state]}"><i>${w.state==="cur" ? `<span class="num">${w.n}/${a.goal}</span>` : ascIc(ASC_WK_IC[w.state])}</i><small>${w.state==="cur" ? "en cours" : fmtDate(w.w)}</small></div>`).join("")}</div>
+      <div class="rg-legend">${[["ok", "check", "Objectif tenu : la série avance"], ["frozen", "snow", "Objectif manqué : la série est gelée"], ["pause", "pause", "Pause ou semaine allégée : rien ne se perd"], ["empty", "dash", "Sans séance : un palier de moins"]].filter(([st])=>seen.has(st)).map(([st, ic, t])=>`<span class="rg-w ${st}"><i>${ascIc(ic)}</i>${t}</span>`).join("")}</div>` : ""}`;
   }
   if(k==="itin"){
     const done = new Set(a.summits.filter(s=>s.lap===a.lap).map(s=>s.key)), any = new Set(a.summits.map(s=>s.key));
@@ -606,7 +620,8 @@ function ascSecBody(k, a){
   return `${mine.length ? `<div class="asc-trophies">${mine.map((s,i)=>`<button class="asc-tr" data-a="ascReplay" data-i="${a.summits.length-1-i}" aria-label="${esc(ASC_DATA[s.key].n)}, atteint le ${fmtDate(s.date)}">${ascMedalSVG(s.key, 56, true)}<b>${esc(ASC_DATA[s.key].n)}</b><small>${fmtDate(s.date)} ${s.date.slice(0,4)}</small></button>`).join("")}</div>` : ""}
     <div class="rw-row"><span class="rw-ic">${ascMedalSVG(x, 44, true)}</span><span><span class="t">À gagner : trophée ${ascDu(x)}</span><span class="s">${t[3]}, gravé de sa vraie silhouette, avec sa carte de sommet</span></span></div>`;
 }
-const ASC_WK_LABEL = { ok:"objectif tenu", frozen:"objectif raté : série gelée", deload:"semaine allégée", pause:"pause déclarée", empty:"sans séance", cur:"semaine en cours" };
+const ASC_WK_LABEL = { ok:"objectif tenu", frozen:"objectif manqué : série gelée", deload:"semaine allégée", pause:"pause déclarée", empty:"sans séance", cur:"semaine en cours" };
+const ASC_WK_IC = { ok:"check", frozen:"snow", deload:"pause", pause:"pause", empty:"dash" };
 // objectif souvent manqué d'une seule séance : il vaut mieux un objectif tenable qu'une série qui ne démarre jamais
 function ascGoalHint(a){
   const g = a.goal, done = a.weeks.filter(w=>w.state!=="cur").slice(-8);
@@ -651,7 +666,7 @@ function ascBodyHTML(a){
       <div class="asc-toast" role="status" aria-live="polite"></div>
     </section>
     ${ascStepsHTML(a)}
-    ${S.sessions.length ? ascWeekHTML(a) : `<section class="card asc-week"><p class="aw-msg">Chaque séance te fait monter. Ta régularité et ta force décident de la vitesse : commence par ta première séance.</p></section>`}
+    ${S.sessions.length ? ascWeekHTML(a) : `<section class="asc-week"><div class="card asc-card"><p class="aw-msg">Chaque séance te fait monter. Ta régularité et ta force décident de la vitesse : commence par ta première séance.</p></div></section>`}
     ${ascRowsHTML(a)}`;
 }
 function ascSceneToast(icn, html, ms){

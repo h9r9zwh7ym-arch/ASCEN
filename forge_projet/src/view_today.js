@@ -145,9 +145,9 @@ function heroHTML(mode, draft){
     entries = planned.exos.map(e=>({ id:e.exoId, dose:tplDose(e.exoId, e.sets) }));
     meta = [nb(planned.exos.length, "exercice"), nb(planned.exos.reduce((a,e)=>a+e.sets,0), "série"), `≈ ${tplMinutes(planned)} min`];
     act = `data-a="startTemplate" data-id="${planned.id}"`;
-    mod = `<button class="hero-mod" data-a="tplOpenEditor" data-id="${planned.id}">Modifier</button>`;
+    mod = `<button class="hero-mod" data-a="heroEditPlanned" data-id="${planned.id}">Modifier</button>`;
   } else if(kind==="custom"){
-    eyebrow = planned && S.custom.tplId===planned.id ? "Prévu aujourd'hui" : "Prête à démarrer";
+    eyebrow = !customEdit && customDiffers(customTpl()) ? "Modifiée pour aujourd'hui" : planned && S.custom.tplId===planned.id ? "Prévu aujourd'hui" : "Prête à démarrer";
     title = esc(S.custom.name||"Ma séance");
     entries = S.custom.exos.map(e=>({ id:e.exoId, dose:tplDose(e.exoId, e.sets) }));
     meta = [nb(entries.length, "exercice"), nb(S.custom.exos.reduce((a,e)=>a+e.sets,0), "série"), `≈ ${estimateMinutes({ exos:S.custom.exos.map(e=>({ exoId:e.exoId, sets:new Array(e.sets).fill(0) })) })} min`];
@@ -163,15 +163,16 @@ function heroHTML(mode, draft){
     act = `data-a="startSession"`;
     mod = `<button class="hero-mod${propAdjust ? " on" : ""}" data-a="propAdjust" aria-expanded="${propAdjust}">${propAdjust ? "OK" : "Ajuster"}</button>`;
   }
-  // en édition (Modifier, Ajuster), la liste éditable suit la carte : la carte ne la répète pas
+  // en édition (Modifier, Ajuster), la liste éditable suit la carte : la carte ne la répète pas, et on ne
+  // lance rien d'ici. On modifie, « OK », puis « Commencer » (comme l'édition d'une liste sur iOS)
   const editing = (kind==="custom" && customEdit) || (kind==="proposal" && (propAdjust || !draft.exos.length));
-  return `<div class="hero ${kind} stagger" style="--i:2">
+  return `<div class="hero ${kind}${editing ? " editing" : ""} stagger" style="--i:2">
     <div class="hero-hd"><span class="hero-eyebrow">${eyebrow}</span>${mod}</div>
     <span class="hero-title">${title}</span>
     <span class="hero-meta">${meta.map(m=>`<span>${m}</span>`).join("")}</span>
-    ${editing ? "" : heroListHTML(entries)}
+    ${editing ? "" : `${heroListHTML(entries)}
     <button class="hero-go" ${act}>Commencer</button>
-    <button class="hero-alt" data-a="chooseSession">Choisir une autre séance</button>
+    <button class="hero-alt" data-a="chooseSession">Choisir une autre séance</button>`}
   </div>`;
 }
 // Un seul rappel à la fois, en bas de l'accueil : la sauvegarde d'abord, sinon le Rewind du mois écoulé
@@ -274,7 +275,7 @@ function proposalPaneHTML(draft){
 }
 
 // ---------- séances enregistrées & planning ----------
-function uiState(){ return S.settings.ui || (S.settings.ui = { planOpen:true, tplOpen:true }); }
+function uiState(){ return S.settings.ui || (S.settings.ui = { planOpen:true }); }
 let openTpls = new Set();   // séances enregistrées dépliées
 let reorderMode = false;
 
@@ -294,22 +295,6 @@ function nextPlanned(){
   return null;
 }
 
-// replier / déplier Mes séances ou Ma semaine : les mêmes éléments se resserrent en CSS (classe
-// « mini »), sans reconstruire la liste ; les cartes ouvertes se referment d'abord
-function setSectionOpen(sec, head, open){
-  sfx(open ? "open" : "close");
-  if(head){ head.setAttribute("aria-expanded", open); const ch = head.querySelector(".sec-chev"); if(ch) ch.classList.toggle("open", open); }
-  if(!open && sec.classList.contains("tpl-section")){
-    qsa(".tpl-card2.open", sec).forEach(c=>{ openTpls.delete(c.dataset.id); c.classList.remove("open"); const h = qs(".tc-head", c); h.setAttribute("aria-expanded", false); qs(".sec-chev", h).classList.remove("open"); animateCollapse(qs(".clp", c), false, null, true); });
-  }
-  sec.classList.toggle("mini", !open);
-}
-function sectionHead(title, key, extra){
-  const open = uiState()[key];
-  return `<button class="sec-h" data-a="toggleSection" data-k="${key}" aria-expanded="${open}">
-    <span>${title}</span>${extra||""}<span class="sec-chev ${open?"open":""}">${icon("chev")}</span>
-  </button>`;
-}
 
 // ---------- « Cette semaine » : la montagne et la semaine dans une seule carte ----------
 // En haut, la vraie scène de la montagne (view_ascent.js : chargée après l'affichage, puis gardée en image),
@@ -401,7 +386,6 @@ function tplCardHTML(t, i){
           <span class="tc-days">${(t.days||[]).length ? (t.days||[]).slice().sort().map(d=>`<span>${JOURS_COURTS[d]}</span>`).join("") : `<em>pas de jour fixe</em>`}</span>
         </span></span>
       </span>
-      <span class="tc-dmini">${(t.days||[]).length ? (t.days||[]).slice().sort().map(d=>JOURS_COURTS[d]).join(" · ") : "—"}</span>
       <span class="tc-picts">${t.exos.slice(0,3).map(e=>EXO_MAP[e.exoId]?exoIcon(EXO_MAP[e.exoId],"xs"):"").join("")}</span>
       <span class="sec-chev ${open?"open":""}">${icon("chev")}</span>
     </button>
@@ -417,8 +401,7 @@ function tplBodyHTML(t){
     </div>`;
 }
 
-// toutes les séances, toujours : repliée (classe « mini »), la section les réduit à leur couleur,
-// leur nom et leurs jours ; dépliée, chaque carte montre son détail
+// toutes les séances, toujours ; chaque carte se déplie sur ses exercices
 function tplListHTML(){ return `<div class="tpl-list">${S.templates.map(tplCardHTML).join("")}</div>`; }
 function templatesHTML(){
   if(!S.templates.length){
@@ -431,25 +414,22 @@ function templatesHTML(){
       </div>
     </div>`;
   }
-  const open = uiState().tplOpen;
-  return `<div class="tpl-section ${open?"":"mini"} stagger" style="--i:5">
-    <div class="sec-row">
-      ${sectionHead(`${icon("bookmark")}<span>Mes séances</span><span class="sec-count">${S.templates.length}</span>`, "tplOpen")}
-    </div>
-    <div class="clp">${tplListHTML()}</div>
+  return `<div class="tpl-section stagger" style="--i:5">
+    <div class="sec-row"><h2 class="sec-h"><span>Mes séances</span><span class="sec-count">${S.templates.length}</span></h2></div>
+    ${tplListHTML()}
     ${appPicksOn() ? `<button class="tpl-add wp-wizard" data-a="weekWizard"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg><span>Programme de la semaine</span></button>` : ""}
   </div>`;
 }
 
 // Enregistrer ou non la séance composée : enregistrée, elle rejoint « Mes séances » et, avec des jours, le planning
 function pendingDaysLabel(){ return (S.custom.pendingDays||[]).slice().sort().map(d=>JOURS[(d+1)%7]).join(", "); }
+// la séance du jour vient-elle de Mes séances, et en diffère-t-elle ?
+function customTpl(){ return S.custom.tplId && S.templates.find(x=>x.id===S.custom.tplId) || null; }
+const exoSig = list=>JSON.stringify(list.map(e=>[e.exoId, e.sets]));
+function customDiffers(t){ return !!t && exoSig(t.exos)!==exoSig(S.custom.exos); }
 function saveRowHTML(){
-  const t = S.custom.tplId && S.templates.find(x=>x.id===S.custom.tplId);
-  if(t){
-    const same = JSON.stringify(t.exos.map(e=>[e.exoId,e.sets]))===JSON.stringify(S.custom.exos.map(e=>[e.exoId,e.sets]));
-    return `<button class="save-row saved" data-a="saveTemplateOpen">${sfIcon("bookmarkG","indigo")}<span class="grow"><span class="t">Enregistrée dans Mes séances</span>
-      <span class="s">${same ? ((t.days||[]).length ? "Planifiée : "+daysLabel(t.days) : "Aucun jour planifié") : "Modifiée : touche pour mettre à jour"}</span></span><span class="chev">${icon("chev")}</span></button>`;
-  }
+  // déjà dans Mes séances : le choix (aujourd'hui seulement ou aussi les prochaines fois) se fait à « OK »
+  if(customTpl()) return "";
   const pend = S.custom.pendingDays && S.custom.pendingDays.length;
   return `<button class="save-row" data-a="saveTemplateOpen">${sfIcon("bookmarkG","indigo")}<span class="grow"><span class="t">${pend?`Prévoir pour le ${pendingDaysLabel()}`:"Ajouter à Mes séances"}</span>
     <span class="s">Facultatif : pour la retrouver et la placer dans ton planning</span></span><span class="chev">${icon("chev")}</span></button>`;
@@ -1179,6 +1159,26 @@ Object.assign(ACT, {
   },
   // « Modifier » : la liste devient éditable (séries, retrait, ajout, enregistrement) ; « OK » la referme
   heroEdit(){
+    const t = customTpl();
+    if(customEdit && customDiffers(t) && S.custom.oneOff!==exoSig(S.custom.exos)){
+      return actionSheet({ label:"Garder les modifications", msg:`Tu as modifié « ${esc(t.n)} ». Ces changements valent :`,
+        actions:[{ t:"Pour aujourd'hui seulement", run:()=>{ S.custom.oneOff = exoSig(S.custom.exos); save(); ACT.heroEditDone(); } },
+          { t:"Aussi pour les prochaines fois", run:()=>{
+            t.exos = S.custom.exos.map(e=>({ exoId:e.exoId, sets:e.sets })); delete S.custom.oneOff; save();
+            ACT.heroEditDone();
+            const l = qs("#v-today .tpl-list"); if(l) l.outerHTML = tplListHTML();
+            toast(`« ${t.n} » mise à jour dans Mes séances`, "check"); } }],
+        cancel:"Continuer à modifier" });
+    }
+    ACT.heroEditDone();
+  },
+  // la séance prévue se modifie sur place, comme celle du jour (sa copie du jour devient éditable)
+  heroEditPlanned(d){
+    const t = S.templates.find(x=>x.id===d.id); if(!t) return;
+    S.custom = { exos: clone(t.exos), name: t.n, tplId: t.id }; S.settings.todayTab = "custom"; customEdit = false; save();
+    ACT.heroEditDone();
+  },
+  heroEditDone(){
     customEdit = !customEdit; reorderMode = false; sfx(customEdit ? "open" : "close");
     const v = qs("#v-today"), pane = v && qs(".seg-pane", v), draft = getOrCreateDraft();
     if(!pane || draft.startedAt){ renderView("today"); return; }
@@ -1247,20 +1247,7 @@ Object.assign(ACT, {
       </div>
       <button class="btn ghost" style="height:40px;margin-top:6px" data-a="closesheet">Fermer</button>`);
   },
-  toggleSection(d, el){
-    const u = uiState(); u[d.k] = !u[d.k]; save();
-    const sec = el && el.closest(".tpl-section");
-    if(!sec) return changed();
-    setSectionOpen(sec, el, u[d.k]);
-  },
   toggleTpl(d, el){
-    // section repliée : toucher une séance rouvre la section et déplie cette séance
-    const sec = el && el.closest(".tpl-section");
-    if(sec && sec.classList.contains("mini")){
-      uiState().tplOpen = true; save();
-      setSectionOpen(sec, sec.querySelector('[data-a="toggleSection"]'), true);
-      if(openTpls.has(d.id)) return;
-    }
     const open = !openTpls.has(d.id);
     if(open) openTpls.add(d.id); else openTpls.delete(d.id);
     const card = el && el.closest(".tpl-card2"), t = S.templates.find(x=>x.id===d.id);
@@ -1658,11 +1645,16 @@ Object.assign(ACT, {
     const pr = exoPRs(e.id), last = lastPerformance(e.id);
     const live = S.draft && S.draft.startedAt;
     const cat = EXO_CATS.find(c=>c.id===exoCategory(e));
-    const stats = pr.count ? `<div class="stat-strip" style="margin-top:14px">
-        <div class="stat-box"><div class="num">${pr.count}</div><div class="lbl">séance${pr.count>1?"s":""}</div></div>
-        <div class="stat-box"><div class="num">${pr.maxWeight?fmtLoad(e, pr.maxWeight):"–"}</div><div class="lbl">record charge</div></div>
-        <div class="stat-box"><div class="num">${last?fmtRelative(last.session.date):"–"}</div><div class="lbl">dernière fois</div></div>
-      </div>` : `<div class="first-time">Tu n'as encore jamais fait cet exercice : commence léger pour prendre tes repères.</div>`;
+    // une seule carte, deux lignes à filets (comme le récapitulatif d'Apple Forme) : le conseil, puis ton historique
+    const facts = `<div class="exo-facts">
+        <div class="ef-row"><div><b>${e.sets} × ${e.repsMin}–${e.repsMax}</b><span>${isTimed(e)?"secondes":"répétitions"} conseillées</span></div>
+          <div><b>${restFor(e)} s</b><span>de repos</span></div>
+          <div><b>${e.uni?"1 côté":"2 côtés"}</b><span>${e.uni?"à la fois":"en même temps"}</span></div></div>
+        ${pr.count ? `<div class="ef-row"><div><b>${pr.count}</b><span>séance${pr.count>1?"s":""}</span></div>
+          <div><b>${pr.maxWeight?fmtLoad(e, pr.maxWeight):"–"}</b><span>record charge</span></div>
+          <div><b>${last?fmtRelative(last.session.date):"–"}</b><span>dernière fois</span></div></div>`
+        : `<div class="ef-note">${ii("sparkle")}<span>Première fois : commence léger pour prendre tes repères.</span></div>`}
+      </div>`;
     const similar = availableExos().filter(x=>x.id!==e.id && x.muscles[0]===e.muscles[0]).slice(0,4);
     const liveIdx = live ? S.draft.exos.findIndex(x=>x.exoId===e.id) : -1;
     const simHTML = similar.length ? `<h2 class="sh">Même muscle principal</h2><div class="group">${similar.map(x=>`<div class="row">
@@ -1679,12 +1671,7 @@ Object.assign(ACT, {
       </div>
       <div class="exo-muscle-chips">${e.muscles.map((m,i)=>`<span class="chip mchip ${i===0?"main":""}">${MUSCLE_MAP[m].n}${i===0?" <small>principal</small>":""}</span>`).join("")}</div>
       ${e.muscles.some(m=>m!=="cardio") ? `<div class="exo-mm">${exoMuscleMap(e)}</div>` : ""}
-      ${stats}
-      <div class="exo-facts">
-        <div><b>${e.sets} × ${e.repsMin}–${e.repsMax}</b><span>${isTimed(e)?"secondes":"répétitions"} conseillées</span></div>
-        <div><b>${restFor(e)} s</b><span>de repos</span></div>
-        <div><b>${e.uni?"Unilatéral":"Bilatéral"}</b><span>${e.uni?"un côté à la fois":"les deux côtés"}</span></div>
-      </div>
+      ${facts}
       <h2 class="sh">Exécution</h2>
       <div class="cue-list">${e.cues.map((c,i)=>`<div class="cue-item" style="animation-delay:${i*0.07}s"><div class="cue-num">${i+1}</div><div class="cue-txt">${esc(c)}</div></div>`).join("")}</div>
       <div class="safety-box"><div class="lbl">Sécurité</div><div class="txt">${esc(e.safety)}</div></div>
