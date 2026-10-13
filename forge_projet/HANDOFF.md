@@ -1307,7 +1307,13 @@ a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est
   - **Pas fait** (à garder pour plus tard) : espaces insécables automatiques avant « : ; ! ? » (une passe
     sur tout le texte rendu changerait aussi les textes que vérifient les tests) ; trophées 2D et 3D tout à
     fait homogènes ; redessin de la carte des muscles.
-  - Test : `tests/v61.js` (et v22, v31, v36, v37, v38, v44, v47, v52, v54, v55, v57, v59, v60 adaptés).
+  - **Robustesse trouvée par la suite complète** : retirer une ligne (séance, « Ma séance », éditeur) ignore
+    un second toucher pendant sa sortie (sinon deux exercices partaient) ; l'éditeur supprimé pendant cette
+    sortie n'est plus touché (`tplEdit` nul) ; la barre « Cette semaine » est posée tout de suite quand les
+    animations sont réduites ; la copie figée d'un écran qui s'en va perd `pane-in` (pas d'animations
+    recréées). `tests/monkey.js` affiche la pile et la dernière action en cas d'erreur.
+  - Test : `tests/v61.js` (et v12, v13, v22, v25, v31, v36, v37, v38, v41, v44, v47, v52, v54, v55, v57,
+    v59, v60 adaptés).
 
 Les sections plus haut qui parlent de Geist, Barlow, `#F4F3F1` ou `#FF6B3D` décrivent l'état d'avant cette refonte.
 
