@@ -52,7 +52,8 @@ const OUT = path.join(OUT_ROOT, 'v26'); fs.mkdirSync(OUT, { recursive: true });
   log('Usage row:', usage); if (!usage || !/Ko|Mo/.test(usage)) fail('indicateur d\'espace');
   await page.click('.sheet [data-a="openStorage"]'); await wait(700); await shot('01_storage');
   const sto = await page.$eval('#stoBody', e => e.textContent.replace(/\s+/g, ' ').slice(0, 200)); log('Storage sheet:', sto);
-  if (!/ans d'entraînement/.test(sto)) fail('estimation de durée');
+  // 2.1.2 : plus de phrase « place pour N ans d'entraînement » ; l'espace utilisé et les lignes en valeurs suffisent
+  if (!/sur ~5 Mo/.test(sto) || /ans d'entraînement/.test(sto)) fail('espace de stockage en valeurs');
   const idbSize = await page.evaluate(async () => { const r = await idbGet(); return { compressed: typeof r.data !== 'string', bytes: typeof r.data === 'string' ? r.data.length * 2 : (r.data.byteLength ?? r.data.size), ls: (localStorage.getItem('forge.v1') || '').length * 2 }; });
   log('Backup copy:', JSON.stringify(idbSize)); if (typeof CompressionStream !== 'undefined' && false) {}
   if (idbSize.bytes > idbSize.ls * 0.5) fail('copie de secours non compressée');
