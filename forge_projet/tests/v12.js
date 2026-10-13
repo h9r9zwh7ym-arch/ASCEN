@@ -97,7 +97,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
     const sk = await page.$('.focus-card [data-a="restSkip"]');
     if (sk) { await sk.click(); await wait(120); }
   }
-  await page.click('[data-a="finishSession"]');
+  await page.click('[data-a="finishSession"]:visible'); // séance complète : le bouton de la carte (le « Terminer » du haut est masqué)
   await wait(900);
   await shot('08_celebration');
   log('Celebration medals:', await page.$$eval('.cel-medal .cm-t', e => e.map(x => x.textContent)));

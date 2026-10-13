@@ -107,7 +107,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.evaluate(() => document.querySelector('#v-today').scrollTo(0, 300));
   await wait(200);
   await shot('13_strip_sticky');
-  await page.click('[data-a="finishSession"]');
+  await page.click('[data-a="finishSession"]:visible');
   await wait(300);
   const cy = await page.$('.center-modal [data-a="confirmYes"]'); if (cy) { await cy.click(); await wait(900); }
   log('Medals:', await page.$$eval('.cel-medal .cm-t', e => e.map(x => x.textContent)));
