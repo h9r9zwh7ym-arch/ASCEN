@@ -10,7 +10,8 @@ const SKIP = /^(confirmReset|restoreData|triggerImport|backupData|exportCSV|copy
   const b = await (wk ? __pw.webkit.launch() : __pw.chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined }));
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: wk, isMobile: wk, acceptDownloads: true });
   const page = await ctx.newPage(); const errs = [];
-  page.on('pageerror', e => errs.push('PAGEERROR: ' + e.message)); page.on('dialog', d => d.dismiss());
+  let lastA = '';
+  page.on('pageerror', e => errs.push('PAGEERROR: ' + e.message + ' (après ' + lastA + ')\n' + String(e.stack || '').split('\n').slice(1, 5).join('\n'))); page.on('dialog', d => d.dismiss());
   await page.addInitScript(() => { if (sessionStorage.getItem('s')) return; sessionStorage.setItem('s', 1);
     const ids = ['dc_haltere', 'rowing_uni_haltere', 'squat_gobelet', 'curl_biceps', 'planche', 'pompes']; const ss = [];
     for (let k = 90; k >= 2; k -= 3) { const d = new Date(); d.setDate(d.getDate() - k); ss.push({ id: 's' + k, date: d.toISOString().slice(0, 10), durationSec: 2400,
@@ -32,7 +33,7 @@ const SKIP = /^(confirmReset|restoreData|triggerImport|backupData|exportCSV|copy
     const w = cands.map(a => SKIP.test(a) ? 0 : 1 / Math.pow(1 + (counts[a] || 0), 2)); const tot = w.reduce((x, y) => x + y, 0);
     if (!tot) { await page.evaluate(() => { try { closeSheet(); } catch (e) {} }); continue; }
     let r = rnd() * tot, k = 0; while (r > w[k]) { r -= w[k]; k++; } if (k >= cands.length) k = cands.length - 1;
-    counts[cands[k]] = (counts[cands[k]] || 0) + 1;
+    counts[cands[k]] = (counts[cands[k]] || 0) + 1; lastA = cands[k] + ' #' + i;
     await page.evaluate(k => { const e = document.querySelector(`[data-mk="${k}"]`); if (e) e.click(); }, k).catch(e => errs.push('click: ' + e.message));
     await page.waitForTimeout(40 + Math.floor(rnd() * 160));
     if (rnd() < 0.03) await page.evaluate(() => { try { closeSheet(); } catch (e) {} });

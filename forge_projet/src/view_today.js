@@ -387,7 +387,7 @@ function wkClimb(el){
     const io = new IntersectionObserver(es=>{ if(es.some(x=>x.isIntersecting)){ io.disconnect(); setTimeout(go, 350); } }, { threshold:.6 });
     io.observe(bar.parentElement);
   };
-  wait();
+  if(reducedMotion()) go(); else wait();   // rien ne bouge : inutile d'attendre que la carte soit vue
 }
 function tplCardHTML(t, i){
   const open = openTpls.has(t.id), region = tplRegion(t), loaded = S.custom.tplId===t.id;
@@ -1334,9 +1334,11 @@ Object.assign(ACT, {
     confirmSheet({ title:"Revenir à la suggestion automatique ?", html:"Le programme importé restera disponible pour une prochaine séance.", ok:"Revenir à l'auto", onOk:()=>{ S.draft = generateEngineSession(); liveFocusIdx=0; save(); renderTodaySoft(); } });
   },
   removeExo(d, el){
+    if(!S.draft) return;
+    const row = el && !S.draft.startedAt && el.closest(".row");
+    if(row && row.classList.contains("leaving")) return;   // double toucher : une seule ligne retirée
     sfx("remove");
     if(S.draft.startedAt) closeSheet();
-    const row = el && !S.draft.startedAt && el.closest(".row");
     const draft = S.draft, i = +d.idx;
     const go = ()=>{
       const [ex] = draft.exos.splice(i,1); if(!ex) return;
@@ -1408,8 +1410,9 @@ Object.assign(ACT, {
     changed();
   },
   customRemove(d, el){
+    const row = el && el.closest(".row");
+    if(row && row.classList.contains("leaving")) return;   // double toucher : une seule ligne retirée
     sfx("remove");
-    const row = el.closest(".row");
     const i = +d.idx;
     const go = ()=>{
       const [ex] = S.custom.exos.splice(i,1); if(!ex) return; changed();

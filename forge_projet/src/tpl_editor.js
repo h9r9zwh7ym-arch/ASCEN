@@ -130,9 +130,11 @@ Object.assign(ACT, {
     tplEdit.dirty = true; sfx("step", parseInt(d.d,10)>0); refreshTplEditor();
   },
   tplEdRemove(d, el){
+    const row = el && el.closest(".row"), ed = tplEdit;
+    if(!ed || (row && row.classList.contains("leaving"))) return;   // double toucher : une seule ligne retirée
     sfx("remove");
-    const row = el && el.closest(".row");
-    const go = ()=>{ tplEdit.exos.splice(+d.i,1); tplEdit.dirty = true; refreshTplEditor(); };
+    // l'éditeur a pu être fermé ou supprimé pendant la sortie de la ligne
+    const go = ()=>{ if(tplEdit!==ed) return; ed.exos.splice(+d.i,1); ed.dirty = true; refreshTplEditor(); };
     if(row){ row.classList.add("leaving"); setTimeout(go, 200); } else go();
   },
   tplEdMove(d){
@@ -168,7 +170,7 @@ Object.assign(ACT, {
   },
   tplEdDiscard(){ tplEdit = null; closeSheet(); },
   tplEdResume(){ renderTplEditor(); },
-  tplEdDelete(){ const id = tplEdit.id; tplEdit = null; ACT.deleteTemplate({ id }); },
+  tplEdDelete(){ if(!tplEdit) return; const id = tplEdit.id; tplEdit = null; ACT.deleteTemplate({ id }); },
   tplEdSave(){
     const e = tplEdit; if(!e || !e.exos.length) return;
     const name = (e.n||"").trim() || `Séance ${S.templates.length+(e.id?0:1)}`;

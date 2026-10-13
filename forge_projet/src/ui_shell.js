@@ -610,6 +610,7 @@ let navRun = null, navQuiet = false, navSheetDir = null;
 function navSnap(el){
   const g = el.cloneNode(true), body = el.querySelector(".sheet-body"), st = el.scrollTop, bst = body ? body.scrollTop : 0;
   g.removeAttribute("id"); g.classList.remove("enter", "sh-in");
+  g.querySelectorAll(".pane-in").forEach(x=>x.classList.remove("pane-in"));   // état final sans recréer d'animations
   if(el.id) g.classList.add("vg-"+el.id.replace(/^v-/, ""));
   g.classList.add("nav-ghost"); g.setAttribute("aria-hidden", "true"); g.inert = true;
   // toujours APRÈS le vrai écran dans le document : qs(".sheet"), qs("#id")… trouvent le vrai d'abord ;
