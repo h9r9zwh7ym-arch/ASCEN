@@ -312,23 +312,33 @@ function allMedalsHTML(){
 }
 
 const paneSeen = {}; // sous-onglet de Progrès → version des données déjà affichée
+let progScroll = 0;    // position du Résumé, retrouvée au retour d'un sous-écran (comme iOS)
+// change d'écran sans animation ; rend vrai à la première visite pour ces données (les graphiques se
+// dessinent alors, pas à chaque aller-retour Résumé ↔ Muscles)
+function progSet(v){
+  const el = qs("#v-progress");
+  paneSeen[progressTab] = DATA_VER;
+  if(!PROG_SUB[progressTab]) progScroll = el.scrollTop;
+  const first = paneSeen[v]!==DATA_VER;
+  progressTab = v;
+  el.scrollTop = 0;   // avant le rendu : pas de seconde mise en page forcée
+  renderView("progress");
+  if(!PROG_SUB[v] && progScroll) el.scrollTop = progScroll;
+  return first;
+}
 Object.assign(ACT, {
+  // Résumé → sous-écran : il entre par la droite ; retour : il repart à droite (navGo, ui_shell.js)
   progressTab(d){
     if(progressTab===d.v) return;
-    // v4.0 : plus de capture de toute la page (View Transitions) ni de cascade rejouée : le
-    // sélecteur glisse (settleSegs), le contenu est reconstruit et apparaît en fondu court
-    // les graphiques (courbe, carte des muscles, barres) ne se redessinent qu'à la première visite
-    // de chaque sous-onglet pour ces données : aller-retour Résumé ↔ Muscles sans tout rejouer
-    paneSeen[progressTab] = DATA_VER;
-    progressTab = d.v; const v = qs("#v-progress"), first = paneSeen[d.v]!==DATA_VER;
-    if(v.scrollTop) v.scrollTop = 0; // avant le rendu : pas de seconde mise en page forcée
-    renderView("progress");
-    const pane = v.querySelector(".seg-pane");
+    const el = qs("#v-progress"), from = progressTab;
+    const dir = d.instant || currentTab!=="progress" ? null : PROG_SUB[d.v] ? "push" : PROG_SUB[from] ? "pop" : null;
+    let first = false;
+    navGo(el, ()=>{ first = progSet(d.v); }, dir);
+    const pane = el.querySelector(".seg-pane");
     if(pane && first){ pane.classList.add("pane-in"); setTimeout(()=>pane.classList.remove("pane-in"), 2400); }
-    if(pane && pane.animate && !reducedMotion()) try{ pane.animate([{ opacity:0, transform:"translateY(6px)" }, { opacity:1, transform:"none" }], { duration:200, easing:"cubic-bezier(.2,.8,.2,1)" }); }catch(e){}
   },
   // depuis l'accueil (alerte de force) : l'onglet Progrès, directement sur l'écran voulu
-  progressGo(d){ if(currentTab!=="progress") switchTab("progress"); ACT.progressTab({ v:d.v }); },
+  progressGo(d){ if(currentTab!=="progress") switchTab("progress"); ACT.progressTab({ v:d.v, instant:true }); },
   openExoChart(d){ exoChartSheet(d.id); },
   allMedals(){
     openSheet(`<div class="sheet-hd"><span class="t">Tous les trophées</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
@@ -441,3 +451,10 @@ function jokerTip(){
   if(si.recent) return `Joker utilisé (semaine du ${fmtDate(si.recent)}) : la série continue. Prochain joker dans ${si.nextJokerIn} semaine${si.nextJokerIn>1?"s":""}.`;
   return "Joker disponible : une semaine sans séance par mois ne casse pas la série.";
 }
+
+// glisser depuis le bord gauche sur un sous-écran : retour au Résumé (ui_shell.js, NAV_BACKS)
+NAV_BACKS.push({
+  host(){ return currentTab==="progress" && PROG_SUB[progressTab] && !qs("#overlay").classList.contains("open") ? qs("#v-progress") : null; },
+  go(){ this.from = progressTab; progSet("overview"); return qs("#v-progress"); },
+  back(){ progSet(this.from); return qs("#v-progress"); },
+});

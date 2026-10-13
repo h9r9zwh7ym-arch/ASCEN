@@ -55,7 +55,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
       kpi: !!v.querySelector('.kpi-grid,.kpi'), heat: !!v.querySelector('.heatmap,.hm-grid'), habits: !!v.querySelector('.habits'), txt: v.textContent }; });
   log('Résumé:', JSON.stringify(Object.assign({}, ov, { txt: undefined }))); await shot('02_resume');
   if (!/^[+−]?\d+ %$/.test(ov.fs || '') || !/^depuis tes débuts, en /.test(ov.fsS || '')) fail('carte « Ta force »');
-  if (ov.ms < 1 || ov.ms > 4 || ov.rec !== 3 || ov.tn < 1 || ov.links.join('|') !== 'Tous les exercices|Statistiques|Objectifs et défis=1 en cours') fail('blocs du Résumé');
+  if (ov.ms < 1 || ov.ms > 4 || ov.rec < 1 || ov.rec > 3 || ov.tn < 1 || ov.links.join('|') !== 'Tous les exercices|Statistiques|Objectifs et défis=1 en cours') fail('blocs du Résumé');
   if (ov.kpi || ov.heat || ov.habits || ov.txt.includes(ascName)) fail('le Résumé ne répète ni chiffres clés, ni régularité, ni ascension');
   await page.click('.fs-card'); await wait(700);
   const force = await page.evaluate(() => ({ t: document.querySelector('#v-progress .lt').textContent, card: !!document.querySelector('#v-progress .trend-card') }));

@@ -154,7 +154,6 @@ p.body{margin:0 20px;color:var(--label2);font-size:var(--fs-sub)}
 
 /* celebration */
 @keyframes pop{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.08);opacity:1}100%{transform:scale(1)}}
-@media (prefers-reduced-motion:reduce){.celebrate-ring{animation:none}}
 
 /* empty state */
 .empty-state{padding:50px 30px;text-align:center;color:var(--label2)}
@@ -992,7 +991,7 @@ h2.sh .more.strong{font-weight:700}
 .pick-h .sfi{vertical-align:-5px;margin-right:4px}
 
 /* ---- performances : les onglets masqués gardent leur mise en page en cache (content-visibility),les blocs hors écran ne sont ni mis en page ni peints tant qu'on n'y fait pas défiler ---- */
-#v-history .group,#v-progress .chart-card,#v-progress .medal-grid,#v-profil .group{content-visibility:auto;contain-intrinsic-size:auto 280px}
+#v-history .group,:is(#v-progress,.vg-progress) .chart-card,:is(#v-progress,.vg-progress) .medal-grid,#v-profil .group{content-visibility:auto;contain-intrinsic-size:auto 280px}
 .group,.chart-card,.tpl-card2,.medal-card,.focus-card,.hero{contain:layout style}
 
 /* ---- animations v2.0 : ressorts et retours tactiles,uniquement transform/opacity ---- */
@@ -1626,9 +1625,9 @@ h2.sh .more{font-family:var(--sans);font-size:var(--fs-sub);font-weight:500;lett
 .chip.on{background:var(--label);color:var(--bg2)}
 .fc-phase{color:var(--label2);font-size:var(--fs-cap);font-weight:600;letter-spacing:.05em}
 /* icônes de contenu hors Profil : monochromes teintées (les réglages du Profil gardent le code couleur iOS) */
-#v-today .sfi,#v-history .sfi,#v-progress .sfi{background:var(--tint-bg)!important;box-shadow:none}
-#v-today .sfi [fill="#fff"],#v-history .sfi [fill="#fff"],#v-progress .sfi [fill="#fff"]{fill:var(--tint-ink)}
-#v-today .sfi [stroke="#fff"],#v-history .sfi [stroke="#fff"],#v-progress .sfi [stroke="#fff"]{stroke:var(--tint-ink)}
+#v-today .sfi,#v-history .sfi,:is(#v-progress,.vg-progress) .sfi{background:var(--tint-bg)!important;box-shadow:none}
+#v-today .sfi [fill="#fff"],#v-history .sfi [fill="#fff"],:is(#v-progress,.vg-progress) .sfi [fill="#fff"]{fill:var(--tint-ink)}
+#v-today .sfi [stroke="#fff"],#v-history .sfi [stroke="#fff"],:is(#v-progress,.vg-progress) .sfi [stroke="#fff"]{stroke:var(--tint-ink)}
 /* sélecteur d'exercices */
 .chip{font-weight:500}
 .chip.on{font-weight:600}
@@ -1717,8 +1716,8 @@ h2.sh .more{font-family:var(--sans);font-size:var(--fs-sub);font-weight:500;lett
 /* graphiques : 11 px minimum */
 .cc-gl span,.cc-goal span,.cc-x span,.hm-months,.hm-days,.hm-legend{font-size:11px}
 .lc-tick{font-size:11px}
-:where(.hero-picts .hp,.later,.bn-act button,.ph-name,.fc-menu,.fc-info,.ring-adjust button,.focus-nav .center-link){position:relative}
-.hero-picts .hp::before,.later::before,.bn-act button::before,.ph-name::before,.fc-menu::before,.fc-info::before,.ring-adjust button::before,.focus-nav .center-link::before{
+:where(.later,.bn-act button,.ph-name,.fc-menu,.fc-info,.ring-adjust button){position:relative}
+.later::before,.bn-act button::before,.ph-name::before,.fc-menu::before,.fc-info::before,.ring-adjust button::before{
   content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%);border-radius:inherit}
 .pick-row{min-height:44px}
 .pick-row .row-main{min-height:44px}
@@ -2455,7 +2454,7 @@ button.pc-gh.on .chev{transform:rotate(90deg)}
 
 /* ================= Refonte 5.0 : composants communs ================= */
 /* icônes de réglages et de listes : un seul gris, sans pastille de couleur (le dessin suffit) */
-.sfi,.sfi.sm,.sfi.xs,#v-today .sfi,#v-history .sfi,#v-progress .sfi,.pick-h .sfi,.backup-nudge .sfi,.be-ico .sfi,.te-ico .sfi,.rc-entry .sfi{background:transparent!important;box-shadow:none!important;color:var(--label2)}
+.sfi,.sfi.sm,.sfi.xs,#v-today .sfi,#v-history .sfi,:is(#v-progress,.vg-progress) .sfi,.pick-h .sfi,.backup-nudge .sfi,.be-ico .sfi,.te-ico .sfi,.rc-entry .sfi{background:transparent!important;box-shadow:none!important;color:var(--label2)}
 .sfi svg [fill="#fff"]{fill:currentColor}
 .sfi svg [stroke="#fff"]{stroke:currentColor}
 .sfi.lg{background:var(--tint-bg)!important;color:var(--tint-ink);border-radius:50%;box-shadow:none!important}
@@ -2803,7 +2802,7 @@ body.live-focus #v-today{padding-bottom:0}
 .home .tpl-empty{border-radius:var(--r-hero)}
 
 /* ===== Refonte : Progrès › Résumé ===== */
-#v-progress h2.sh{font-size:var(--fs-t2);line-height:1.25;margin:28px 20px 8px}
+:is(#v-progress,.vg-progress) h2.sh{font-size:var(--fs-t2);line-height:1.25;margin:28px 20px 8px}
 .fs-card{display:flex;flex-direction:column;align-items:stretch;width:calc(100% - 2 * var(--gutter));margin:0 var(--gutter);padding:16px;border-radius:var(--r-hero);background:var(--bg2);color:var(--label);text-align:left}
 .fs-card:active{opacity:.8}
 .fs-h{display:flex;align-items:center;justify-content:space-between;font-size:var(--fs-body);font-weight:600}
@@ -2842,8 +2841,8 @@ body.live-focus #v-today{padding-bottom:0}
 .tn-list .tn-pct{padding:0;background:none;color:var(--tint-ink);font-size:var(--fs-body)}
 .ms-card{font-weight:400}
 /* listes de Progrès et de l'Historique : icônes grises (maquette), sauf le Rewind */
-#v-progress .group .sfi [stroke="#fff"],#v-history .hs-group .sfi [stroke="#fff"]{stroke:currentColor}
-#v-progress .group .sfi [fill="#fff"],#v-history .hs-group .sfi [fill="#fff"]{fill:currentColor}
+:is(#v-progress,.vg-progress) .group .sfi [stroke="#fff"],#v-history .hs-group .sfi [stroke="#fff"]{stroke:currentColor}
+:is(#v-progress,.vg-progress) .group .sfi [fill="#fff"],#v-history .hs-group .sfi [fill="#fff"]{fill:currentColor}
 .prog-more .row .val{font-variant-numeric:tabular-nums}
 @media (prefers-reduced-motion:reduce){.ms-bar i{animation:none}}
 
@@ -3008,3 +3007,17 @@ body.live-focus #v-today{padding-bottom:0}
 .type-scroll,.chip-scroll{padding-top:6px;padding-bottom:8px;margin-top:-6px;margin-bottom:-6px}
 .stim-sum .sz-ok{color:var(--label)}
 .st-gap{color:var(--label2)}
+
+/* ===== Navigation poussée, façon iOS (navGo / navSlide, ui_shell.js) =====
+   L'écran poussé entre par la droite avec une ombre sur son bord gauche ; celui de dessous recule d'un
+   tiers sous un voile. Les copies figées ont leurs animations arrêtées à l'état final. */
+.nav-ghost{pointer-events:none}
+.nav-ghost,.nav-ghost *{animation-delay:-60s!important;transition:none!important}
+.nav-top,.nav-under{transition:none!important;will-change:transform}
+.nav-under{z-index:0}.nav-dim{z-index:1}.nav-top{z-index:2}
+.view.nav-top,.view.nav-under{background:var(--bg)}
+.nav-top{box-shadow:-10px 0 28px rgba(0,0,0,.12)}
+.nav-dim{position:absolute;inset:0;background:rgba(0,0,0,.1);pointer-events:none}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nav-dim{background:rgba(0,0,0,.4)} :root:not([data-theme="light"]) .nav-top{box-shadow:-10px 0 28px rgba(0,0,0,.5)}}
+:root[data-theme="dark"] .nav-dim{background:rgba(0,0,0,.4)}
+:root[data-theme="dark"] .nav-top{box-shadow:-10px 0 28px rgba(0,0,0,.5)}

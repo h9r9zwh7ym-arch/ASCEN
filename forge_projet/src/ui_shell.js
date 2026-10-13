@@ -398,12 +398,23 @@ function showOverlay(inner, kind){
   const ov = qs("#overlay");
   const gen = ++overlayGen;
   hideTip();
+  // feuille ouverte depuis une autre (ou retour) : la nouvelle glisse par-dessus l'ancienne, comme une page
+  const dir = navSheetDir; navSheetDir = null;
+  const prev = dir && !navQuiet && kind==="sheet" && ov.dataset.kind==="sheet" && ov.classList.contains("show") ? ov.querySelector(".sheet") : null;
+  const snap = prev && !reducedMotion() ? navSnap(prev) : null;
+  if(snap && navRun) navRun();
   ov.innerHTML = `<div class="scrim" data-a="dismisssheet"></div>${inner}`;
+  if(snap){
+    const cur = ov.querySelector(".sheet");
+    ov.classList.add("open"); ov.dataset.kind = kind;
+    navSlide(snap, cur, dir, true);
+    return;
+  }
   ov.classList.add("open");
   if(typeof syncStatusBar==="function") syncStatusBar(true);
   ov.dataset.kind = kind;
   // contenu en courte cascade à l'ouverture (pas quand la feuille se redessine ensuite)
-  const sh = ov.querySelector(".sheet"); if(sh && !reducedMotion()){ sh.classList.add("sh-in"); setTimeout(()=>sh.classList.remove("sh-in"), 800); }
+  const sh = ov.querySelector(".sheet"); if(sh && !reducedMotion() && !navQuiet){ sh.classList.add("sh-in"); setTimeout(()=>sh.classList.remove("sh-in"), 800); }
   requestAnimationFrame(()=>requestAnimationFrame(()=>{ if(gen===overlayGen) ov.classList.add("show"); }));
 }
 // ---------- pile de feuilles ----------
@@ -439,6 +450,7 @@ function openSheet(html, opts){
     if(!sheetShown()) sheetStack = [];
     else if(opts.child && sheetRestore) sheetStack.push(sheetRestore);
   }
+  navSheetDir = sheetRestoring ? "pop" : opts.child && sheetStack.length ? "push" : null;
   sheetRestore = opts.restore || null;
   sheetOnBack = opts.onBack || null;
   showOverlay(`<div class="sheet ${opts.tall?"tall":""}" role="dialog">${opts.noGrab?"":'<div class="sheet-grab"></div>'}${html}${opts.footer?`<div class="sheet-ft">${opts.footer}</div>`:""}</div>`, "sheet");
@@ -537,7 +549,7 @@ function dismissSheet(){ if(sheetBack()) return; if(!sheetDismissGuard()) closeS
       g.sheet.style.transform = "translateY(100%)";
       if(sc) sc.style.opacity = "";
       suppressSheetClick = Date.now()+350;
-      setTimeout(()=>{ if(g.sheet.isConnected) sheetBack(); }, 200);
+      setTimeout(()=>{ if(g.sheet.isConnected){ navQuiet = true; try{ sheetBack(); } finally{ navQuiet = false; } } }, 200);
     } else if(far && !sheetDismissGuard()){
       g.sheet.style.transform = "translateY(100%)";
       if(sc) sc.style.opacity = "";
@@ -559,6 +571,132 @@ function dismissSheet(){ if(sheetBack()) return; if(!sheetDismissGuard()) closeS
   document.addEventListener("mouseup", ()=>end());
 })();
 let suppressSheetClick = 0;
+
+// ---------- navigation poussée, façon iOS ----------
+// Un écran poussé entre par la droite par-dessus le précédent, qui recule d'un tiers sous un voile ; le
+// retour fait l'inverse, au bouton ou en glissant depuis le bord gauche (le doigt mène l'écran, on relâche
+// passé un tiers ou d'un geste vif ; sinon tout revient en place). L'écran qui s'en va est figé dans un
+// calque (copie, animations arrêtées à leur état final) et le vrai conteneur reçoit le nouvel écran :
+// rien n'est calculé deux fois. Pour les sous-écrans de Progrès et les feuilles ouvertes depuis une autre.
+const NAV_MS = 440, NAV_EASE = "cubic-bezier(.32,.72,0,1)", NAV_UNDER = .3, NAV_EDGE = 24;
+let navRun = null, navQuiet = false, navSheetDir = null;
+// copie figée d'un écran, avec ses positions de défilement (posée plus tard, l'original peut disparaître)
+function navSnap(el){
+  const g = el.cloneNode(true), body = el.querySelector(".sheet-body"), st = el.scrollTop, bst = body ? body.scrollTop : 0;
+  g.removeAttribute("id"); g.classList.remove("enter", "sh-in");
+  if(el.id) g.classList.add("vg-"+el.id.replace(/^v-/, ""));
+  g.classList.add("nav-ghost"); g.setAttribute("aria-hidden", "true"); g.inert = true;
+  // toujours APRÈS le vrai écran dans le document : qs(".sheet"), qs("#id")… trouvent le vrai d'abord ;
+  // l'empilement visuel passe par les classes nav-top / nav-under (z-index)
+  return { g, st, bst, place(ref){
+    ref.parentNode.insertBefore(g, ref.nextSibling);
+    g.scrollTop = st; const b = g.querySelector(".sheet-body"); if(b) b.scrollTop = bst;
+  } };
+}
+// calques : top (glisse à droite de p × largeur), under (recule d'un tiers), voile entre les deux
+function navLayers(top, under, dim){
+  top.classList.add("nav-top"); under.classList.add("nav-under");
+  return { top, under, dim, w:under.getBoundingClientRect().width || innerWidth };
+}
+function navDim(ref, sheet){
+  if(sheet) return null;   // dans une feuille, le fond est déjà voilé
+  const d = document.createElement("div"); d.className = "nav-dim"; ref.parentNode.insertBefore(d, ref.nextSibling); return d;
+}
+function navPose(L, p){
+  L.top.style.transform = `translate3d(${p*L.w}px,0,0)`;
+  L.under.style.transform = `translate3d(${-(1-p)*NAV_UNDER*L.w}px,0,0)`;
+  if(L.dim) L.dim.style.opacity = String(1-p);
+}
+function navTween(L, p0, p1, ms, done){
+  const T = p=>`translate3d(${p*L.w}px,0,0)`, U = p=>`translate3d(${-(1-p)*NAV_UNDER*L.w}px,0,0)`, o = { duration:ms, easing:NAV_EASE, fill:"forwards" };
+  const anims = [L.top.animate([{ transform:T(p0) }, { transform:T(p1) }], o), L.under.animate([{ transform:U(p0) }, { transform:U(p1) }], o)];
+  if(L.dim) anims.push(L.dim.animate([{ opacity:1-p0 }, { opacity:1-p1 }], o));
+  let over = false;
+  const end = ()=>{ if(over) return; over = true; if(navRun===end) navRun = null; done(); anims.forEach(a=>{ try{ a.cancel(); }catch(e){} }); };
+  navRun = end; anims[0].finished.then(end, end);
+}
+function navClean(L, ghost){
+  [L.top, L.under].forEach(x=>{ x.classList.remove("nav-top", "nav-under"); x.style.transform = ""; });
+  if(ghost) ghost.remove(); if(L.dim) L.dim.remove();
+}
+// aller (push : cur entre par la droite) ou retour (pop : la copie de l'ancien repart à droite)
+function navSlide(snap, cur, dir, sheet){
+  snap.place(cur);
+  const dim = navDim(cur, sheet);
+  const L = dir==="push" ? navLayers(cur, snap.g, dim) : navLayers(snap.g, cur, dim);
+  navTween(L, dir==="push" ? 1 : 0, dir==="push" ? 0 : 1, NAV_MS, ()=>navClean(L, snap.g));
+}
+// un conteneur (onglet) qui change d'écran : render() y dessine le nouvel écran
+function navGo(el, render, dir){
+  if(navRun) navRun();
+  if(!dir || reducedMotion() || !el.animate || !el.classList.contains("active")){ render(); return; }
+  const snap = navSnap(el);
+  render();
+  navSlide(snap, el, dir, false);
+}
+// retour en glissant depuis le bord gauche. Chaque fournisseur : host() → élément qui glisse (ou null),
+// go() → affiche l'écran précédent sans animation et rend l'élément qui le porte, back() → annule
+const NAV_BACKS = [];
+let navDrag = null;
+// Le geste remplace l'écran sous le doigt : les événements tactiles suivants visent alors un élément
+// retiré du document et ne remontent plus jusqu'à lui (iOS comme les autres). On les écoute donc sur
+// l'élément touché lui-même, le temps du geste.
+document.addEventListener("touchstart", e=>{
+  if(navDrag || e.touches.length!==1) return;
+  const t = e.touches[0]; if(t.clientX>NAV_EDGE) return;
+  for(const b of NAV_BACKS){ const h = b.host(); if(!h) continue;
+    const tg = e.target;
+    navDrag = { b, h, tg, x0:t.clientX, y0:t.clientY, on:false, pts:[], p:0 };
+    tg.addEventListener("touchmove", navMove, { passive:false });
+    tg.addEventListener("touchend", navEndEv); tg.addEventListener("touchcancel", navCancelEv);
+    return;
+  }
+}, { passive:true, capture:true });
+function navUnlisten(d){ d.tg.removeEventListener("touchmove", navMove, { passive:false }); d.tg.removeEventListener("touchend", navEndEv); d.tg.removeEventListener("touchcancel", navCancelEv); }
+function navMove(e){
+  const d = navDrag; if(!d) return;
+  const t = e.touches[0], dx = t.clientX-d.x0, dy = t.clientY-d.y0;
+  if(!d.on){
+    if(Math.abs(dy)>8 && Math.abs(dy)>Math.abs(dx)){ navDrag = null; navUnlisten(d); return; }   // défilement vertical
+    if(dx<6) return;
+    if(navRun) navRun();
+    const snap = navSnap(d.h), under = d.b.go();
+    if(!under){ navDrag = null; navUnlisten(d); return; }
+    snap.place(under);
+    d.snap = snap; d.L = navLayers(snap.g, under, navDim(under, d.b.sheet)); d.on = true; hideTip();
+  }
+  if(e.cancelable) e.preventDefault();
+  e.stopPropagation();
+  d.p = Math.max(0, Math.min(1, dx/d.L.w)); navPose(d.L, d.p);
+  d.pts.push([dx, e.timeStamp]); if(d.pts.length>5) d.pts.shift();
+}
+function navEndEv(e){ navDragEnd(e); }
+function navCancelEv(e){ navDragEnd(e, true); }
+function navDragEnd(e, cancel){
+  const d = navDrag; navDrag = null; if(!d) return;
+  navUnlisten(d);
+  if(!d.on) return;
+  if(e) e.stopPropagation();
+  const a = d.pts[0], b = d.pts[d.pts.length-1], v = a && b && b[1]>a[1] ? (b[0]-a[0])/(b[1]-a[1]) : 0;   // px/ms
+  const done = cancel!==true && (v>.35 || (d.p>.35 && v>-.2));
+  const ms = Math.max(180, Math.round(NAV_MS*(done ? 1-d.p : d.p)));
+  if(done) haptic(8);
+  navTween(d.L, d.p, done ? 1 : 0, ms, ()=>{
+    navClean(d.L, null);
+    if(!done){
+      const el = d.b.back();   // l'écran poussé revient, à la même position de défilement
+      if(el){ el.scrollTop = d.snap.st; const bd = el.querySelector(".sheet-body"); if(bd) bd.scrollTop = d.snap.bst; }
+    }
+    d.snap.g.remove();
+  });
+}
+document.addEventListener("ascen:suspend", ()=>navDragEnd(null, true));
+// feuilles ouvertes depuis une autre : même geste pour revenir à la précédente
+NAV_BACKS.push({ sheet:true,
+  host(){ return sheetShown() && sheetStack.length && sheetRestore && !qs(".t3d-full") ? qs("#overlay .sheet") : null; },
+  go(){ this.again = sheetRestore; navQuiet = true; try{ sheetBack(); } finally{ navQuiet = false; } return qs("#overlay .sheet"); },
+  back(){ if(!this.again) return null; navQuiet = true; try{ this.again(); } finally{ navQuiet = false; } return qs("#overlay .sheet"); },
+});
 function confirmSheet({title,html,ok,onOk,danger}){
   openModal(`<div style="font-weight:700;font-size:calc(17rem/17);margin-bottom:6px">${esc(title)}</div>
     <div style="color:var(--label2);font-size:var(--fs-sub);line-height:1.4;margin-bottom:18px">${html||""}</div>

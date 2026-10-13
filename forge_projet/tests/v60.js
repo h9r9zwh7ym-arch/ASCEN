@@ -59,11 +59,12 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   log('Name field:', JSON.stringify(nm)); if (nm.cap !== 'words' || nm.key !== 'done' || nm.corr !== 'off' || nm.align !== 'left') fail('champ du prénom');
   await page.evaluate(() => closeSheet()); await wait(400);
   await page.evaluate(() => openEquip()); await wait(600);
-  await page.fill('#customEquipName', '  Gilet   lesté  ' + 'x'.repeat(60)); await page.press('#customEquipName', 'Enter'); await wait(300);
-  await page.fill('#customEquipName', 'GILET LESTÉ ' + 'X'.repeat(60)); await page.evaluate(() => ACT.addCustomEquip()); await wait(300);
-  const eq = await page.evaluate(() => ({ n: S.equipment.custom.length, name: (S.equipment.custom[0] || {}).n || '', max: document.querySelector('#customEquipName').maxLength }));
-  log('Custom equipment:', JSON.stringify({ n: eq.n, len: eq.name.length, start: eq.name.slice(0, 12), max: eq.max }));
-  if (eq.n !== 1 || eq.name.length > 40 || !eq.name.startsWith('Gilet lesté') || eq.max !== 40) fail('équipement perso : Entrée, longueur, doublon');
+  await page.fill('#customEquipName', '  Gilet   lesté  '); await page.press('#customEquipName', 'Enter'); await wait(300);   // Entrée ajoute, espaces nettoyés
+  await page.fill('#customEquipName', 'GILET LESTÉ'); await page.evaluate(() => ACT.addCustomEquip()); await wait(300);        // doublon (casse ignorée)
+  await page.evaluate(() => { document.querySelector('#customEquipName').value = 'Planche '.repeat(10); ACT.addCustomEquip(); }); await wait(300);  // 80 caractères (collés)
+  const eq = await page.evaluate(() => ({ names: S.equipment.custom.map(c => c.n), max: document.querySelector('#customEquipName').maxLength }));
+  log('Custom equipment:', JSON.stringify(eq));
+  if (eq.names.length !== 2 || eq.names[0] !== 'Gilet lesté' || eq.names[1].length > 40 || eq.max !== 40) fail('équipement perso : Entrée, longueur, doublon');
   await page.evaluate(() => closeSheet()); await wait(400);
 
   // 5. import de programme : fichiers abîmés refusés sans erreur, tailles bornées, nettoyé au chargement
@@ -90,6 +91,33 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   if (fin.n !== 1 || !(fin.dur >= 3600 && fin.dur <= 3700) || !fin.hold) fail('fin de séance : double appui, séance oubliée, vignettes 3D après les animations');
   await wait(2500); await shot('01_finish');
   await page.evaluate(() => closeSheet()); await wait(500);
+
+  // 8. navigation iOS : le sous-écran entre par la droite et repart à droite ; retour en glissant depuis le
+  // bord gauche (geste suivi, annulé s'il est court et lent), même geste dans une feuille ouverte depuis une autre
+  await page.evaluate(() => { switchTab('progress'); ACT.progressTab({ v: 'overview' }); }); await wait(500);
+  await page.evaluate(() => { document.querySelector('#v-progress').scrollTop = 250; }); await wait(150);
+  await page.click('[data-a="progressTab"][data-v="stats"]'); await wait(150);
+  const push = await page.evaluate(() => ({ g: document.querySelectorAll('.nav-ghost').length, x: new DOMMatrix(getComputedStyle(document.querySelector('#v-progress')).transform).m41 }));
+  await wait(600);
+  const pushed = await page.evaluate(() => ({ tab: progressTab, g: document.querySelectorAll('.nav-ghost, .nav-dim').length, tf: document.querySelector('#v-progress').style.transform, keep: progScroll }));   // keep : position du Résumé au toucher (le clic y fait défiler)
+  log('Push:', JSON.stringify(push), JSON.stringify(pushed));
+  if (!(push.g === 1 && push.x > 5) || pushed.tab !== 'stats' || pushed.g || pushed.tf) fail('sous-écran poussé par la droite');
+  if (!wk) {
+    const cdp = await ctx.newCDPSession(page);
+    const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+    const swipe = async (x1, steps, ms) => { await touch('touchStart', 6, 420); for (let i = 1; i <= steps; i++) { await touch('touchMove', 6 + (x1 - 6) * i / steps, 420); await wait(ms); } await touch('touchEnd'); await wait(700); };
+    await swipe(60, 8, 35); const short = await page.evaluate(() => ({ tab: progressTab, g: document.querySelectorAll('.nav-ghost, .nav-dim').length }));
+    await swipe(300, 8, 20); const full = await page.evaluate(() => ({ tab: progressTab, g: document.querySelectorAll('.nav-ghost, .nav-dim').length, top: document.querySelector('#v-progress').scrollTop }));
+    log('Edge swipe: short', JSON.stringify(short), '| full', JSON.stringify(full));
+    if (short.tab !== 'stats' || short.g || full.tab !== 'overview' || full.g || !(pushed.keep > 0) || Math.abs(full.top - pushed.keep) > 1) fail('retour en glissant depuis le bord gauche');
+    await page.evaluate(() => { switchTab('today'); openPicker({ title: 'x', multi: true, onDone: () => {} }); }); await wait(700);
+    await page.evaluate(() => document.querySelector('.pick-row .info-btn').click()); await wait(700);
+    const fiche = await page.evaluate(() => ({ t: document.querySelector('#overlay .sheet-hd .t').textContent, body: document.querySelectorAll('#overlay .sheet .cue, #overlay .sheet .exo-stage').length }));
+    await swipe(300, 8, 20); const back = await page.evaluate(() => ({ picker: !!document.querySelector('#pickerSearch'), sheets: document.querySelectorAll('#overlay .sheet').length }));
+    log('Sheet: fiche', JSON.stringify(fiche), '→ back', JSON.stringify(back));
+    if (fiche.t !== 'Fiche exercice' || !fiche.body || !back.picker || back.sheets !== 1) fail('feuille : fiche poussée et retour au geste');
+    await page.evaluate(() => closeSheet()); await wait(400);
+  }
 
   // 7. CSS mort retiré (anciennes barres de séance, planning de semaine, pastilles d'accueil)
   const css = await page.evaluate(() => [...document.styleSheets].map(s => { try { return [...s.cssRules].map(r => r.cssText).join('\n'); } catch (e) { return ''; } }).join('\n'));
