@@ -131,10 +131,10 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const ap = await page.evaluate(() => ({ opts: [...document.querySelectorAll('.tt-opt')].map(b => b.querySelector('.tt-l').textContent + ':' + b.getAttribute('aria-checked')), sw: !document.querySelector('[data-a="toggleLiveDark"]').disabled }));
   await shot('07_appearance');
   await page.click('.tt-opt[data-v="dark"]'); await wait(500);
-  const apd = await page.evaluate(() => ({ dark: document.querySelector('.tt-opt[data-v="dark"]').getAttribute('aria-checked'), sw: document.querySelector('[data-a="toggleLiveDark"]').disabled, s: document.querySelector('.tt-group ~ .group .s').textContent, attr: document.documentElement.dataset.theme }));
+  const apd = await page.evaluate(() => ({ dark: document.querySelector('.tt-opt[data-v="dark"]').getAttribute('aria-checked'), sw: document.querySelector('[data-a="toggleLiveDark"]').disabled, s: (document.querySelector('.tt-group ~ .group .s') || {}).textContent || '', attr: document.documentElement.dataset.theme }));
   await page.click('.tt-opt[data-v="auto"]'); await wait(400);
   log('Appearance:', JSON.stringify(ap), JSON.stringify(apd));
-  if (ap.opts.join('|') !== 'Clair:false|Sombre:false|Automatique:true' || !ap.sw || apd.dark !== 'true' || !apd.sw || apd.s !== 'Toujours en sombre avec le thème Sombre' || apd.attr !== 'dark') fail('Apparence');
+  if (ap.opts.join('|') !== 'Clair:false|Sombre:false|Automatique:true' || !ap.sw || apd.dark !== 'true' || !apd.sw || apd.s /* 2.1.2 : l'interrupteur grisé suffit, sans sous-titre */ || apd.attr !== 'dark') fail('Apparence');
   await page.evaluate(() => closeSheet()); await wait(400);
 
   await browser.close();
