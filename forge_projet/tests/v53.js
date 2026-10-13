@@ -56,21 +56,25 @@ const APP = 'file://' + path.resolve(process.argv[2]);
 
   // 3. l'écran : la ligne « Carnet de route », les cartes, la prochaine à découvrir, une carte en grand
   await page.evaluate(() => ACT.openAscent()); await page.waitForSelector('#ascScene .asc-svg', { timeout: 8000 }); await wait(3200);
-  const steps = await page.evaluate(() => [...document.querySelectorAll('#ascSteps .st-i:not(.top) .st-t small')].map(x => x.textContent));
-  await page.evaluate(() => document.querySelector('.asc-row[data-k="carnet"]').scrollIntoView({ block: 'center' })); await page.click('.asc-row[data-k="carnet"]'); await wait(700);
-  const car = await page.evaluate(() => ({ val: document.querySelector('.asc-row[data-k="carnet"] .val').textContent, n: document.querySelectorAll('#ascSec-carnet button.pc').length, lock: document.querySelectorAll('#ascSec-carnet .pc.locked').length,
-    cards: ascCards(ascent()).length, gh: (document.querySelector('#ascSec-carnet .pc-gh') || {}).textContent, q: !!document.querySelector('#ascSec-carnet .pc-q'), pm: !!document.querySelector('#ascSec-carnet .pc-pm') }));
+  await page.evaluate(() => document.querySelector('.asc-row[data-k="steps"]').click()); await wait(900);
+  const steps = await page.evaluate(() => [...document.querySelectorAll('#ascSub .st-i:not(.top) .st-t small')].map(x => x.textContent));
+  await page.click('.sheet-hd [data-a="sheetBack"]'); await wait(1200);
+  const carnetVal = await page.evaluate(() => document.querySelector('.asc-row[data-k="carnet"] .val').textContent);
+  await page.evaluate(() => document.querySelector('.asc-row[data-k="carnet"]').scrollIntoView({ block: 'center' })); await page.click('.asc-row[data-k="carnet"]'); await wait(900);
+  const car = await page.evaluate(val => ({ val, n: document.querySelectorAll('#ascSub button.pc').length, lock: document.querySelectorAll('#ascSub .pc.locked').length,
+    cards: ascCards(ascent()).length, gh: (document.querySelector('#ascSub .pc-gh') || {}).textContent, q: !!document.querySelector('#ascSub .pc-q'), pm: !!document.querySelector('#ascSub .pc-pm') }), carnetVal);
   log('Steps:', JSON.stringify(steps), 'Carnet:', JSON.stringify(car));
   if (!steps.length || !steps.every(t => / · \d/.test(t))) fail('étapes : le terrain sous chaque camp');
   if (car.val !== `${car.cards} cartes` || car.n !== car.cards || car.lock !== 1 || !/Moléson/.test(car.gh) || !car.q || !car.pm) fail('carnet : les cartes gagnées et la prochaine à découvrir');
-  await page.evaluate(() => document.querySelector('#ascSec-carnet .pc-row').scrollIntoView({ block: 'center' })); await wait(300); await shot('01_carnet');
-  await page.click('#ascSec-carnet button.pc'); await wait(700);
+  await page.evaluate(() => document.querySelector('#ascSub .pc-row').scrollIntoView({ block: 'center' })); await wait(300); await shot('01_carnet');
+  await page.click('#ascSub button.pc'); await wait(700);
   const big = await page.evaluate(() => ({ t: (document.querySelector('.sheet-hd .t') || {}).textContent, big: !!document.querySelector('.pc-view .pc.big'), back: !!document.querySelector('.sheet-hd [data-a="sheetBack"]') }));
   await shot('02_card');
   await page.click('.sheet-hd [data-a="sheetBack"]'); await wait(900);
-  const back = await page.evaluate(() => !!document.querySelector('#ascScene') && document.querySelector('.asc-row[data-k="carnet"]').getAttribute('aria-expanded'));
+  const back = await page.evaluate(() => !!document.querySelector('#ascSub .pc-row'));
   log('Big card:', JSON.stringify(big), back);
-  if (big.t !== 'Carte postale' || !big.big || !big.back || back !== 'true') fail('carte en grand, puis retour');
+  if (big.t !== 'Carte postale' || !big.big || !big.back || !back) fail('carte en grand, puis retour au carnet');
+  await page.click('.sheet-hd [data-a="sheetBack"]'); await wait(1400);
   // la bulle d'un camp atteint : le terrain et la ligne du carnet
   await page.evaluate(() => document.querySelector('.asc-body').scrollTop = 0); await wait(300);
   await page.evaluate(() => ACT.ascCamp({ i: '0' })); await wait(700);

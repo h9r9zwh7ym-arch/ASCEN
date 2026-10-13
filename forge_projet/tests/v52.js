@@ -73,7 +73,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await shot('01_home');
   await page.evaluate(() => ACT.openAscent()); await page.waitForSelector('#ascScene .asc-svg', { timeout: 8000 }); await wait(900);
   await page.evaluate(() => document.querySelector('.asc-row[data-k="speed"]').scrollIntoView({ block: 'center' })); await page.click('.asc-row[data-k="speed"]'); await wait(600);
-  const sp = await page.evaluate(() => [...document.querySelectorAll('#ascSec-speed .fx-r')].map(r => r.textContent.replace(/\s+/g, ' ').trim()));
+  const sp = await page.evaluate(() => [...document.querySelectorAll('#ascSub .fx-r')].map(r => r.textContent.replace(/\s+/g, ' ').trim()));
   log('Speed rows:', JSON.stringify(sp)); if (!sp.some(t => /^Retour en force.*×2/.test(t))) fail('Vitesse : retour en force ×2');
   await page.evaluate(() => closeSheet()); await wait(400);
   await page.evaluate(() => { S.custom = { exos: [{ exoId: 'dc_haltere', sets: 4 }] }; ACT.startCustom(); }); await wait(2500);

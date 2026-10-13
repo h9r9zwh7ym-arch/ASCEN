@@ -1336,6 +1336,26 @@ a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est
     remplace les six cartes : conseil (séries × répétitions, repos, « 2 côtés en même temps » / « 1 côté à la
     fois ») puis ton historique, ou une ligne « Première fois » à la place de la carte rose.
 
+- **Retours sur iPhone (2)** :
+  - **Carte du jour** : plus d'étiquette « Prête à démarrer » ni « Prévu aujourd'hui » ; le titre et « Modifier »
+    partagent la première ligne ; une étiquette seulement quand elle apprend quelque chose (« Modifiée pour
+    aujourd'hui », « Proposée par l'app », « Programme importé »), en tête de la ligne de détails. En édition,
+    barre « Annuler / OK » : Annuler revient à l'instantané pris en entrant en édition (`heroSnap`), avec
+    « Ignorer les modifications ? » s'il y a des changements. Date et titre de l'accueil sur la ligne des titres
+    de section (20 px) ; « Voir les N exercices » sur celle des noms.
+  - **Choisir une séance** : feuille groupée en trois familles (Mes séances avec jours, exercices et durée ;
+    Proposée par l'app ; Sur le moment : express, composer) au lieu d'une feuille d'actions uniforme.
+  - **Changer l'ordre** : maintenir une ligne (≈ ¼ s) la soulève, elle suit le doigt, les autres s'écartent,
+    la liste défile près des bords (`[data-sort]`, `SORTS` dans ui_shell.js). Remplace « Ordre » (éditeur) et
+    « Réordonner » (liste du jour). Le geste est expliqué sous la liste jusqu'au premier déplacement
+    (`S.meta.sortHint`). Éditeur : plus de note de planning ni de répartition par région ; l'avertissement
+    « remplacera « X » » reste.
+  - **Mon ascension, épurée** : la scène, une carte « prochain objectif » (nom, distance, délai, barre), « Cette
+    semaine » (compte et une phrase), puis une liste : Vitesse, Étapes, Itinéraire, Carnet de route, Trophées,
+    Pause. Chaque ligne pousse son écran (glissement iOS, retour par le bord) au lieu de déplier un accordéon.
+    Vitesse : un chiffre (« +N m par séance »), les facteurs actifs, puis la régularité (escalier, prochain
+    palier, semaines datées). Pause : deux interrupteurs et un pied de liste.
+
 Les sections plus haut qui parlent de Geist, Barlow, `#F4F3F1` ou `#FF6B3D` décrivent l'état d'avant cette refonte.
 
 ## 10. Cahier des charges d'origine (résumé)

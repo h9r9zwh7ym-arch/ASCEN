@@ -58,11 +58,9 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.evaluate(() => { if (!customEdit) ACT.heroEdit(); }); await wait(500); // la liste éditable est derrière « Modifier »
   log('Builder rows:', await page.$$eval('.group.builder .row', e => e.length), 'region legend:', await page.$$eval('.region-legend span', e => e.map(x => x.textContent).join(', ')));
   const first = await page.$eval('.group.builder .row .t', e => e.textContent);
-  await tap('[data-a="toggleReorder"]'); await wait(300);
-  await tap('.group.builder [data-a="customMove"][data-d="1"] >> nth=0'); await wait(300);
+  await page.evaluate(() => ACT.customMove({ idx: 0, d: 1 })); await wait(300);   // l'ordre se change en glissant (v62) ; ici, l'action directe
   log('Reorder moved first down:', first, '->', await page.$eval('.group.builder .row:nth-child(2) .t', e => e.textContent));
   await shot('04_reorder');
-  await tap('[data-a="toggleReorder"]'); await wait(300);
   await tap('.group.builder .row-main >> nth=0'); await wait(500);
   log('Info sheet title:', await page.$eval('.exo-hero .nm', e => e.textContent), 'similar:', await page.$$eval('.sheet-body .group .row', e => e.length));
   await shot('05_info');

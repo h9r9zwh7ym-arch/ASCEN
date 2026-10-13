@@ -470,8 +470,7 @@ function ascStripHydrate(){
 // ---------- l'écran « Mon ascension » ----------
 let ascG = null;
 // ---------- les étapes : barre de l'expédition, prochain camp mis en avant, quelques suivants, le sommet ----------
-let ascStepsAll = false;
-function ascStepsListHTML(a){
+function ascStepsListHTML(a, all){
   const k = a.key, D = ASC_DATA[k], camps = ascCamps(k), N = camps.length, alt = a.wait ? D.top : a.alt;
   const f = camps.findIndex(c=>c[0]>alt+.5), nI = a.wait || f<0 ? N : f;
   const item = i=>{
@@ -485,11 +484,11 @@ function ascStepsListHTML(a){
       else if(/\b(mois|ans)\b/.test(e.time)) r = `<span class="st-r"><b class="num">${ascM(m)}</b><small>à gravir</small></span>`;
       else r = `<span class="st-r"><b>${esc(e.txt)}</b>${e.time ? `<small>${esc(e.time)}</small>` : ""}</span>`;
       if(top) node = ascIc("flag"); }
-    return `<button class="st-i${past ? " past" : ""}${nx ? " next" : ""}${top ? " top" : ""}" data-a="ascCamp" data-i="${i}">
-      <span class="st-node">${node}</span><span class="st-t">${top ? "Sommet" : esc(c[1])}<small>${top ? "" : esc(ascStory(k)[i].t)+" · "}<span class="num">${fmtNum(c[2])} m</span></small></span>${r}</button>`;
+    return `<div class="st-i${past ? " past" : ""}${nx ? " next" : ""}${top ? " top" : ""}">
+      <span class="st-node">${node}</span><span class="st-t">${top ? "Sommet" : esc(c[1])}<small>${top ? "" : esc(ascStory(k)[i].t)+" · "}<span class="num">${fmtNum(c[2])} m</span></small></span>${r}</div>`;
   };
   let idx;
-  if(ascStepsAll) idx = Array.from({ length:N+1 }, (_, i)=>i);
+  if(all) idx = Array.from({ length:N+1 }, (_, i)=>i);
   else if(a.wait) idx = [N-2, N-1, N].filter(i=>i>=0);
   else idx = [nI-1, nI, nI+1].filter(i=>i>=0 && i<N).concat([N]);
   idx = [...new Set(idx)];
@@ -506,16 +505,23 @@ function ascStepsListHTML(a){
   return html;
 }
 const ascPos = (k, v)=>{ const D = ASC_DATA[k]; return Math.max(0, Math.min(100, (v-D.start)/(D.top-D.start)*100)); };
-function ascStepsHTML(a){
-  const D = ASC_DATA[a.key], camps = ascCamps(a.key), N = camps.length, alt = a.wait ? D.top : a.alt, P = v=>v.toFixed(1);
+// ---------- le prochain objectif : un nom, une distance, un délai, la barre de l'expédition ----------
+function ascNextHTML(a){
+  const D = ASC_DATA[a.key], camps = ascCamps(a.key), alt = a.wait ? D.top : a.alt, P = v=>v.toFixed(1);
   const ni = a.wait ? -1 : camps.findIndex(c=>c[0]>alt+.5);
-  return `<section class="asc-steps" id="ascSteps" aria-label="Étapes de l'expédition">
-    <div class="st-hd"><h2>Étapes</h2><span class="st-n">${a.wait ? "Sommet atteint" : `<b class="num">${a.passed}</b> sur ${N}`}</span></div>
-    <div class="card asc-card">
+  let t, sub, r, rs = "";
+  if(a.wait){
+    const X = ASC_DATA[a.next], ok = a.series>=a.nextReq;
+    t = `Prochaine expédition : ${X.n}`; sub = ok ? "Elle commence à ta prochaine séance" : `Il faut ${a.nextReq} semaines d'affilée (tu en as ${a.series})`;
+    r = fmtNum(X.top)+" m"; rs = esc(X.region);
+  } else {
+    const c = ni>=0 ? camps[ni] : [D.top, "Sommet", D.top], m = c[0]-alt, e = ascEta(m, a);
+    t = ni>=0 ? `${c[1]} · ${ascStory(a.key)[ni].t}` : "Sommet";
+    sub = e.time ? `${e.txt} · ${e.time}` : e.txt; r = ascM(m); rs = "à gravir";
+  }
+  return `<section class="card asc-card asc-steps asc-next" id="ascSteps" aria-label="Prochaine étape">
+    <div class="an-row"><span class="an-t">${esc(t)}<small>${esc(sub)}</small></span><span class="an-r"><b class="num">${r}</b><small>${rs}</small></span></div>
     <div class="exp-track" aria-hidden="true"><div class="exp-push" style="width:${ASC_PUSH*100}%"></div><div class="exp-fill" style="width:${P(ascPos(a.key, alt))}%"></div>${camps.map((c, i)=>`<i class="exp-tick${c[0]<=alt+.5 ? " past" : ""}${i===ni ? " next" : ""}" style="left:${P(ascPos(a.key, c[0]))}%"></i>`).join("")}<i class="exp-me" style="left:${P(ascPos(a.key, alt))}%"></i></div>
-    <div class="st-list">${ascStepsListHTML(a)}</div>
-    <button class="st-more" data-a="ascAllSteps" aria-expanded="${ascStepsAll}"><span>${ascStepsAll ? "Réduire" : "Toutes les étapes"}</span>${icon("chev")}</button>
-    </div>
   </section>`;
 }
 function ascHudHTML(a){
@@ -525,47 +531,50 @@ function ascHudHTML(a){
 }
 // vitesse d'une séance type maintenant (séries des 6 dernières séances en moyenne, palier et force actuels)
 function ascSpeedNow(a){ return (a.effAvg || ascEffort(15))*a.mul*a.force/(1 + .25*a.lap); }
-// ---------- « Cette semaine » : la seule chose à faire ; la pause, repliée derrière un lien ----------
-let ascPauseOpen = false;
+// ---------- « Cette semaine » : le compte et une phrase ----------
 function ascPauseBoxHTML(a){
+  // deux interrupteurs, comme dans les réglages iOS ; l'explication en pied de liste
   const thisW = weekKey(todayISO()), pz = ascPauses();
-  const btn = (w, lbl)=>{ const on = pz.includes(w); return `<button class="btn ${on ? "secondary on" : "tertiary"} sm" data-a="ascPause" data-w="${w}" aria-pressed="${on}" ${!on && !a.pausesLeft ? "disabled" : ""}>${on ? icon("check")+" " : ""}${lbl}</button>`; };
-  return `<div class="asc-pause"><p>La semaine ne compte pas : ta série et ton altitude restent où elles sont. ${a.pausesLeft ? `Encore ${nb(a.pausesLeft, "pause")} ce trimestre.` : "Plus de pause disponible ce trimestre."}</p>
-    <div class="ap-b">${btn(thisW, "Cette semaine")}${btn(addDaysISO(thisW, 7), "La suivante")}</div></div>`;
+  const row = (w, lbl)=>{ const on = pz.includes(w), off = !on && !a.pausesLeft;
+    return `<div class="row"><div class="grow"><div class="t">${lbl}</div></div><button class="switch ${on ? "on" : ""}" role="switch" aria-checked="${on}" aria-label="Pause ${lbl.toLowerCase()}" data-a="ascPause" data-w="${w}" ${off ? "disabled" : ""}></button></div>`; };
+  return `<div class="group asc-pause">${row(thisW, "Cette semaine")}${row(addDaysISO(thisW, 7), "La semaine prochaine")}</div>
+    <p class="sort-hint">Vacances, maladie : la semaine ne compte pas, ta série et ton altitude restent où elles sont. ${a.pausesLeft ? `Encore ${nb(a.pausesLeft, "pause")} ce trimestre.` : "Plus de pause disponible ce trimestre."}</p>`;
 }
 function ascWeekHTML(a){
   const thisW = weekKey(todayISO()), W = a.weeks[a.weeks.length-1], n = W && W.w===thisW ? W.n : 0, g = a.goal, left = Math.max(0, g-n);
-  const daysLeft = 7 - weekdayIdx(todayISO()), held = left===0, pz = ascPauses(), pzThis = pz.includes(thisW), pzNext = pz.includes(addDaysISO(thisW, 7));
+  const daysLeft = 7 - weekdayIdx(todayISO()), held = left===0, pzThis = ascPauses().includes(thisW);
   let msg;
-  if(pzThis && !held) msg = "Semaine en pause : elle ne compte pas, rien ne se perd.";
+  if(pzThis && !held) msg = "Semaine en pause : rien ne se perd.";
   else if(held) msg = `Objectif tenu : ta série passe à <b>${nb(a.series, "semaine")}</b>.`;
-  else if(left>daysLeft) msg = n ? "Plus assez de jours pour tenir l'objectif : chaque séance fait quand même monter, et la série reste gelée." : `Fais au moins une séance d'ici dimanche : sans séance, tu redescendrais au camp précédent.`;
-  else if(n===0 && !a.wait) msg = `${nb(left, "séance")} d'ici dimanche pour tenir ton objectif. Sans séance, tu redescendrais au camp précédent.`;
-  else msg = `Encore ${nb(left, "séance")} d'ici dimanche : ta série passera à <b>${nb(a.series+1, "semaine")}</b>.`;
-  const lbl = pzThis ? "Cette semaine est en pause" : pzNext ? "La semaine prochaine est en pause" : "Vacances ou malade ? Mettre en pause";
+  else if(left>daysLeft) msg = n ? "Objectif hors de portée cette semaine : chaque séance fait quand même monter." : "Fais au moins une séance d'ici dimanche pour ne pas redescendre.";
+  else if(n===0 && !a.wait) msg = `Encore ${nb(left, "séance")} d'ici dimanche. Sans aucune, tu redescends d'un camp.`;
+  else msg = `Encore ${nb(left, "séance")} d'ici dimanche pour allonger ta série.`;
   return `<section class="asc-week" id="ascWeek">
-    <div class="aw-hd"><h2>Cette semaine</h2><span class="aw-n"><b class="num">${n}</b>/${g} séance${g>1 ? "s" : ""}</span></div>
+    <div class="aw-hd"><h2>Cette semaine</h2><span class="aw-n"><b class="num">${n}</b>/${g}</span></div>
     <div class="card asc-card">
     <div class="aw-dots" aria-hidden="true">${Array.from({ length:g }, (_,i)=>`<i class="${i<n ? "on" : ""}"></i>`).join("")}</div>
     <p class="aw-msg">${msg}</p>
-    <button class="aw-pause${pzThis || pzNext ? " on" : ""}${ascPauseOpen ? " open" : ""}" data-a="ascPauseMenu" aria-expanded="${ascPauseOpen}" aria-controls="ascPauseBox">${ascIc("pause")}<span>${lbl}</span>${icon("chev")}</button>
-    <div class="clp" id="ascPauseBox">${ascPauseOpen ? ascPauseBoxHTML(a) : ""}</div>
     </div>
   </section>`;
 }
-// ---------- le détail, replié : une ligne par sujet ----------
+// ---------- le détail : une liste ; chaque ligne ouvre son écran (comme les réglages iOS) ----------
 const ASC_SECS = [
-  ["speed", "gauge", "orange", "Vitesse", a=>`+${ascM(ascSpeedNow(a))} / séance`],
-  ["reg", "calendar", "green", "Régularité", a=>`${a.series} sem. · ${ascX(a.reg)}`],
-  ["itin", "compass", "teal", "Itinéraire", a=>`${new Set(a.summits.filter(s=>s.lap===a.lap).map(s=>s.key)).size} sur 13`],
-  ["carnet", "postcard", "indigo", "Carnet de route", a=>{ const n = ascCards(a).length; return n ? nb(n, "carte") : ""; }],
-  ["rw", "trophy", "yellow", "Trophées", a=>a.summits.length ? String(a.summits.length) : ""],
+  ["speed", "gauge", "orange", "Vitesse", a=>`+${ascM(ascSpeedNow(a))} / séance`, "Vitesse de montée"],
+  ["steps", "flag", "red", "Étapes", a=>a.wait ? "sommet atteint" : `${a.passed} sur ${ascCamps(a.key).length}`, "Étapes"],
+  ["itin", "compass", "teal", "Itinéraire", a=>`${new Set(a.summits.filter(s=>s.lap===a.lap).map(s=>s.key)).size} sur 13`, "Itinéraire"],
+  ["carnet", "postcard", "indigo", "Carnet de route", a=>{ const n = ascCards(a).length; return n ? nb(n, "carte") : ""; }, "Carnet de route"],
+  ["rw", "trophy", "yellow", "Trophées", a=>a.summits.length ? String(a.summits.length) : "", "Trophées"],
+  ["pause", "hourglass", "green", "Pause", a=>{ const w = weekKey(todayISO()), pz = ascPauses(); return pz.includes(w) ? "cette semaine" : pz.includes(addDaysISO(w, 7)) ? "semaine prochaine" : "vacances, maladie"; }, "Pause"],
 ];
-let ascOpen = new Set();
 function ascRowsHTML(a){
-  return `<div class="group asc-rows">${ASC_SECS.map(([k, g, c, t, v])=>{ const on = ascOpen.has(k);
-    return `<button class="row tap asc-row ${on ? "on" : ""}" data-a="ascSec" data-k="${k}" aria-expanded="${on}">${sfIcon(g, c)}<div class="grow"><div class="t">${t}</div></div><span class="val">${v(a)}</span><span class="chev">${icon("chev")}</span></button>
-      <div class="clp asc-clp" id="ascSec-${k}">${on ? `<div class="asc-sec">${ascSecBody(k, a)}</div>` : ""}</div>`; }).join("")}</div>`;
+  return `<div class="group asc-rows">${ASC_SECS.map(([k, g, c, t, v])=>`<button class="row tap asc-row" data-a="ascSub" data-k="${k}">${sfIcon(g, c)}<div class="grow"><div class="t">${t}</div></div><span class="val">${v(a)}</span><span class="chev">${icon("chev")}</span></button>`).join("")}</div>`;
+}
+// sous-écran poussé depuis Mon ascension (retour en glissant ou par « Retour »)
+function ascOpenSub(k){
+  const sec = ASC_SECS.find(x=>x[0]===k); if(!sec) return;
+  openSheet(`<div class="sheet-hd"><span class="t">${sec[5]}</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
+    <div class="sheet-body asc-body asc-sub"><div class="asc-sec" id="ascSub" data-k="${k}">${ascSecBody(k, ascent())}</div></div>`, { tall:true, child:true, restore:()=>ascOpenSub(k) });
+  sheetBackHead();
 }
 const ascList = x=>x.length>2 ? x.slice(0,-1).join(", ")+" et "+x.slice(-1) : x.join(" et ");
 function ascSecBody(k, a){
@@ -574,39 +583,28 @@ function ascSecBody(k, a){
     const hard = S.sessions.length ? a.hardAvg : 15, eff = ascEffort(hard), lapF = 1/(1+.25*a.lap), pct = a.index==null ? null : Math.round(a.index-100);
     const row = (t, sub, v, cls)=>`<div class="fx-r${cls ? " "+cls : ""}"><span>${t}${sub ? `<small>${sub}</small>` : ""}</span><b class="num">${v}</b></div>`;
     const near = !a.wait && a.index!=null && a.done>.7, L = a.last, elan = a.elan>a.reg+.005;
-    return `<div class="fx">
+    const tot = ascSpeedNow(a)*(a.comeback ? ASC_BACK : 1);
+    return `<div class="sp-hero"><b class="num">+${ascM(tot)}</b><span>par séance, en ce moment</span></div>
+      <div class="card asc-card fx">
         ${row("Effort", `${fmtDec(Math.round(hard*2)/2)} séries difficiles${S.sessions.length>1 ? " en moyenne" : ""}`, ascM(eff))}
         ${a.bonusAvg>.05 ? row("Records et progrès", `+${fmtDec(Math.round(a.bonusAvg*2)/2)} série${a.bonusAvg>=2 ? "s" : ""} en moyenne`, "+"+ascM(ascEffort(a.bonusAvg))) : ""}
-        ${elan ? row("Élan de départ", `s'estompe d'ici ta ${ASC_ELAN[1]}ᵉ séance`, ascX(Math.round(a.elan*10)/10)) : ""}
-        ${row("Régularité", (a.series ? `série de ${nb(a.series, "semaine")}` : "pas encore de série")+(elan ? " · l'élan compte à sa place" : ""), ascX(a.reg), elan ? "off" : "")}
+        ${elan ? row("Élan de départ", `jusqu'à ta ${ASC_ELAN[1]}ᵉ séance`, ascX(Math.round(a.elan*10)/10)) : ""}
+        ${row("Régularité", elan ? "l'élan compte à sa place" : a.series ? nb(a.series, "semaine")+" d'affilée" : "pas encore de série", ascX(a.reg), elan ? "off" : "")}
         ${row("Force", pct==null ? "pas encore mesurée" : `${pct>=0 ? "+" : "−"}${Math.abs(pct)} % depuis tes débuts`, ascX(Math.round(a.force*100)/100))}
         ${lapF<.999 ? row(`${a.lap+1}ᵉ tour`, "plus exigeant", ascX(Math.round(lapF*100)/100)) : ""}
-        ${a.comeback ? row("Retour en force", `jusqu'à ${ascM(a.comeback)}, l'altitude perdue`, ascX(ASC_BACK)) : ""}
-        ${row("Par séance", "", "+"+ascM(ascSpeedNow(a)*(a.comeback ? ASC_BACK : 1)), "tot")}
+        ${a.comeback ? row("Retour en force", `jusqu'à ${ascM(a.comeback)}`, ascX(ASC_BACK)) : ""}
       </div>
-      <p class="note">${L && L.waiting ? "Ta dernière séance n'a pas fait monter : l'expédition suivante attend ta série. " : ""}Un record compte pour 3 séries de plus, une série mieux que la dernière fois pour 1 de plus.</p>
-      ${near ? `<div class="wx ${a.pushOK ? "" : "warn"}">${ascIc("pulse", a.pushOK ? "" : "warn")}<span><b>Dernière ligne droite : ${a.pushOK ? "pleine vitesse" : "mi-vitesse"}</b><span>Ta force est à ${Math.round(a.form*100)} % de ton meilleur niveau récent${a.pushOK ? "." : ` (il faut ${Math.round(ASC_FORM_OK*100)} %).`}</span></span></div>` : ""}`;
+      ${L && L.waiting ? `<p class="note">Ta dernière séance n'a pas fait monter : l'expédition suivante attend ta série.</p>` : ""}
+      ${near ? `<div class="wx ${a.pushOK ? "" : "warn"}">${ascIc("pulse", a.pushOK ? "" : "warn")}<span><b>Dernière ligne droite : ${a.pushOK ? "pleine vitesse" : "mi-vitesse"}</b><span>Ta force est à ${Math.round(a.form*100)} % de ton meilleur niveau récent${a.pushOK ? "." : ` (il faut ${Math.round(ASC_FORM_OK*100)} %).`}</span></span></div>` : ""}
+      <h2 class="sh">Régularité</h2>
+      ${ascRegHTML(a)}`;
   }
-  if(k==="reg"){
-    // Ce que vaut la régularité, en clair : un multiplicateur de la montée (×1 = vitesse normale), l'escalier des
-    // paliers (hauteur = vitesse), ce que rapporte le prochain, et les dernières semaines, chacune nommée et datée
-    const p = a.tier, nextP = p<ASC_TH.length-1 ? p+1 : null, opens = nextP==null ? [] : ASC_ORDER.filter(x=>ASC_REQ[x]===ASC_TH[nextP]).map(ascLe);
-    const g = nb(a.goal, "séance"), elan = a.elan>a.reg+.005, now = ascSpeedNow(a);
-    const proj = nextP==null ? 0 : now/a.mul*Math.max(a.elan, ASC_MUL[nextP]);
-    const weeks = a.weeks.slice(-6), seen = new Set(weeks.map(w=>w.state==="deload" ? "pause" : w.state));
-    const next = nextP==null ? `Palier maximal : chaque séance te fait monter <b>3 fois</b> plus vite que la vitesse normale.`
-      : `Encore <b class="num">${nb(ASC_TH[nextP]-a.series, "semaine")}</b> à ${g} pour passer à <b>${ascX(ASC_MUL[nextP])}</b>${proj>now+.5 ? ` : chaque séance te ferait monter d'environ <b class="num">${ascM(proj)}</b> au lieu de ${ascM(now)}` : ""}.${opens.length ? ` Ce palier ouvre ${esc(ascList(opens))}.` : ""}`;
-    return `<div class="rg-now"><b class="num">${ascX(a.reg)}</b><span><b>${p ? "Ta vitesse de régularité" : "Vitesse de départ"}</b><small>${a.series ? `${nb(a.series, "semaine")} d'affilée à ${g}` : `pas encore de semaine complète à ${g}`}</small></span></div>
-      <p class="sub">Chaque semaine où tu fais tes ${g} allonge ta série. Plus elle est longue, plus chaque séance te fait monter.</p>
-      <div class="rg-stairs" role="img" aria-label="Paliers de régularité : ${ASC_TH.map((t,i)=>`${ascX(ASC_MUL[i])} ${t ? `après ${t} semaines` : "au départ"}`).join(", ")}">${ASC_TH.map((t,i)=>`<div class="rg-step${i<p ? " done" : ""}${i===p ? " cur" : ""}" style="--h:${ASC_MUL[i]/3}"><b class="num">${ascX(ASC_MUL[i])}</b><i></i><small>${t ? t+" sem." : "départ"}</small></div>`).join("")}</div>
-      <p class="rg-cap">semaines d'affilée · ×1 = vitesse normale</p>
-      <p class="note">${next}</p>
-      ${elan ? `<p class="sub">En ce moment, ton élan de départ te fait monter à <b>${ascX(Math.round(a.elan*10)/10)}</b> : il compte à la place de la régularité jusqu'à ta ${ASC_ELAN[1]}ᵉ séance.</p>` : ""}
-      ${ascGoalHint(a)}
-      ${weeks.length ? `<div class="asc-wk-h">Tes dernières semaines</div>
-      <div class="rg-weeks">${weeks.map(w=>`<div class="rg-w ${w.state}" title="${ASC_WK_LABEL[w.state]}"><i>${w.state==="cur" ? `<span class="num">${w.n}/${a.goal}</span>` : ascIc(ASC_WK_IC[w.state])}</i><small>${w.state==="cur" ? "en cours" : fmtDate(w.w)}</small></div>`).join("")}</div>
-      <div class="rg-legend">${[["ok", "check", "Objectif tenu : la série avance"], ["frozen", "snow", "Objectif manqué : la série est gelée"], ["pause", "pause", "Pause ou semaine allégée : rien ne se perd"], ["empty", "dash", "Sans séance : un palier de moins"]].filter(([st])=>seen.has(st)).map(([st, ic, t])=>`<span class="rg-w ${st}"><i>${ascIc(ic)}</i>${t}</span>`).join("")}</div>` : ""}`;
+  if(k==="steps"){
+    const N = ascCamps(a.key).length;
+    return `<div class="asc-steps"><div class="st-hd"><span class="st-n">${a.wait ? "Sommet atteint" : `<b class="num">${a.passed}</b> sur ${N} étapes franchies`}</span></div><div class="card asc-card"><div class="st-list">${ascStepsListHTML(a, true)}</div></div></div>`;
   }
+  if(k==="pause") return ascPauseBoxHTML(a);
+  if(k==="reg") return ascRegHTML(a);
   if(k==="itin"){
     const done = new Set(a.summits.filter(s=>s.lap===a.lap).map(s=>s.key)), any = new Set(a.summits.map(s=>s.key));
     return `${a.lap ? `<p class="sub">${a.lap+1}ᵉ tour de l'itinéraire.</p>` : ""}${ASC_GROUPS.map(([stage, keys])=>`<div class="stage">${stage}</div><ol class="stops">${keys.map(x=>{
@@ -619,6 +617,23 @@ function ascSecBody(k, a){
   const x = a.wait ? a.next : a.key, t = ASC_TIERS[ASC_TIER_OF(x)], mine = a.summits.slice().reverse();
   return `${mine.length ? `<div class="asc-trophies">${mine.map((s,i)=>`<button class="asc-tr" data-a="ascReplay" data-i="${a.summits.length-1-i}" aria-label="${esc(ASC_DATA[s.key].n)}, atteint le ${fmtDate(s.date)}">${ascMedalSVG(s.key, 56, true)}<b>${esc(ASC_DATA[s.key].n)}</b><small>${fmtDate(s.date)} ${s.date.slice(0,4)}</small></button>`).join("")}</div>` : ""}
     <div class="rw-row"><span class="rw-ic">${ascMedalSVG(x, 44, true)}</span><span><span class="t">À gagner : trophée ${ascDu(x)}</span><span class="s">${t[3]}, gravé de sa vraie silhouette, avec sa carte de sommet</span></span></div>`;
+}
+// la régularité en clair : l'escalier des paliers (hauteur = vitesse), ce que rapporte le prochain, les dernières
+// semaines, chacune nommée et datée
+function ascRegHTML(a){
+  const p = a.tier, nextP = p<ASC_TH.length-1 ? p+1 : null, opens = nextP==null ? [] : ASC_ORDER.filter(x=>ASC_REQ[x]===ASC_TH[nextP]).map(ascLe);
+  const g = nb(a.goal, "séance"), now = ascSpeedNow(a);
+  const proj = nextP==null ? 0 : now/a.mul*Math.max(a.elan, ASC_MUL[nextP]);
+  const weeks = a.weeks.slice(-6), seen = new Set(weeks.map(w=>w.state==="deload" ? "pause" : w.state));
+  const next = nextP==null ? `Palier maximal : chaque séance te fait monter <b>3 fois</b> plus vite que la vitesse normale.`
+    : `Encore <b class="num">${nb(ASC_TH[nextP]-a.series, "semaine")}</b> à ${g} pour passer à <b>${ascX(ASC_MUL[nextP])}</b>${proj>now+.5 ? ` : environ <b class="num">${ascM(proj)}</b> par séance au lieu de ${ascM(now)}` : ""}.${opens.length ? ` Ce palier ouvre ${esc(ascList(opens))}.` : ""}`;
+  return `<div class="rg-stairs" role="img" aria-label="Paliers de régularité : ${ASC_TH.map((t,i)=>`${ascX(ASC_MUL[i])} ${t ? `après ${t} semaines` : "au départ"}`).join(", ")}">${ASC_TH.map((t,i)=>`<div class="rg-step${i<p ? " done" : ""}${i===p ? " cur" : ""}" style="--h:${ASC_MUL[i]/3}"><b class="num">${ascX(ASC_MUL[i])}</b><i></i><small>${t ? t+" sem." : "départ"}</small></div>`).join("")}</div>
+    <p class="rg-cap">semaines d'affilée à ${g} · ×1 = vitesse normale</p>
+    <p class="note">${next}</p>
+    ${ascGoalHint(a)}
+    ${weeks.length ? `<div class="asc-wk-h">Tes dernières semaines</div>
+    <div class="rg-weeks">${weeks.map(w=>`<div class="rg-w ${w.state}" title="${ASC_WK_LABEL[w.state]}"><i>${w.state==="cur" ? `<span class="num">${w.n}/${a.goal}</span>` : ascIc(ASC_WK_IC[w.state])}</i><small>${w.state==="cur" ? "en cours" : fmtDate(w.w)}</small></div>`).join("")}</div>
+    <div class="rg-legend">${[["ok", "check", "Objectif tenu : la série avance"], ["frozen", "snow", "Objectif manqué : la série est gelée"], ["pause", "pause", "Pause ou semaine allégée : rien ne se perd"], ["empty", "dash", "Sans séance : un palier de moins"]].filter(([st])=>seen.has(st)).map(([st, ic, t])=>`<span class="rg-w ${st}"><i>${ascIc(ic)}</i>${t}</span>`).join("")}</div>` : ""}`;
 }
 const ASC_WK_LABEL = { ok:"objectif tenu", frozen:"objectif manqué : série gelée", deload:"semaine allégée", pause:"pause déclarée", empty:"sans séance", cur:"semaine en cours" };
 const ASC_WK_IC = { ok:"check", frozen:"snow", deload:"pause", pause:"pause", empty:"dash" };
@@ -665,8 +680,8 @@ function ascBodyHTML(a){
       ${ascHudHTML(a)}
       <div class="asc-toast" role="status" aria-live="polite"></div>
     </section>
-    ${ascStepsHTML(a)}
-    ${S.sessions.length ? ascWeekHTML(a) : `<section class="asc-week"><div class="card asc-card"><p class="aw-msg">Chaque séance te fait monter. Ta régularité et ta force décident de la vitesse : commence par ta première séance.</p></div></section>`}
+    ${ascNextHTML(a)}
+    ${S.sessions.length ? ascWeekHTML(a) : `<section class="asc-week"><div class="card asc-card"><p class="aw-msg">Chaque séance te fait monter. Commence par ta première.</p></div></section>`}
     ${ascRowsHTML(a)}`;
 }
 function ascSceneToast(icn, html, ms){
@@ -716,12 +731,12 @@ function ascMountScene(a, intro){
     }, reducedMotion() ? 0 : 450);
   }).catch(()=>{ const host = qs("#ascScene"); if(host){ host.classList.add("offline"); introToast(); } });
 }
-// après une pause : la carte de la semaine, les étapes, les valeurs des lignes et le détail ouvert se mettent à jour sur place
+// après une pause : le sous-écran ouvert se met à jour sur place (l'écran principal se redessine au retour)
 function ascRefreshSheet(){
-  const a = ascent(), wk = qs("#ascWeek"), sl = qs("#ascSteps .st-list"); if(wk) wk.outerHTML = ascWeekHTML(a);
-  if(sl) sl.innerHTML = ascStepsListHTML(a);
-  ASC_SECS.forEach(([k, , , , v])=>{ const r = qs(`.asc-row[data-k="${k}"] .val`); if(r) r.textContent = v(a);
-    const b = qs(`#ascSec-${k} .asc-sec`); if(b) b.innerHTML = ascSecBody(k, a); });
+  const a = ascent(), sub = qs("#ascSub"), wk = qs("#ascWeek");
+  if(sub) sub.innerHTML = ascSecBody(sub.dataset.k, a);
+  if(wk) wk.outerHTML = ascWeekHTML(a);
+  ASC_SECS.forEach(([k, , , , v])=>{ const r = qs(`.asc-row[data-k="${k}"] .val`); if(r) r.textContent = v(a); });
 }
 
 // ---------- sommet atteint : plein écran ----------
@@ -976,7 +991,8 @@ function ascDescentNotice(){
 }
 
 Object.assign(ACT, {
-  openAscent(){ ascOpen = new Set(); ascStepsAll = false; ascPauseOpen = false; ascBubOn = null; ascCarnetOpen = new Set(); openAscent(); },
+  openAscent(){ ascBubOn = null; ascCarnetOpen = new Set(); openAscent(); },
+  ascSub(d){ ascOpenSub(d.k); },
   ascCarnetGrp(d, el){
     const k = d.k, on = !ascCarnetOpen.has(k), box = qs("#ascCg-"+k); if(!box || !ASC_DATA[k]) return;
     on ? ascCarnetOpen.add(k) : ascCarnetOpen.delete(k);
@@ -998,11 +1014,6 @@ Object.assign(ACT, {
       <div class="sheet-body pc-view">${ascPostcardHTML(k, i, { date:c.date, big:true })}</div>`, { child:true, restore:()=>ACT.ascCard(d) });
     if(!sheetCanGoBack()){ const hd = qs(".sheet .sheet-hd"); if(hd){ hd.classList.remove("te-hd"); hd.innerHTML = `<span class="t">Carte postale</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button>`; } }
   },
-  ascPauseMenu(d, el){
-    const box = qs("#ascPauseBox"); if(!box) return;
-    ascPauseOpen = !ascPauseOpen; el.classList.toggle("open", ascPauseOpen); el.setAttribute("aria-expanded", ascPauseOpen);
-    animateCollapse(box, ascPauseOpen, ascPauseOpen ? ascPauseBoxHTML(ascent()) : "");
-  },
   // une étape de la liste : on remonte à la montagne et sa bulle s'ouvre
   ascCamp(d){
     const i = +d.i, a = ascent(), N = ascCamps(a.key).length, body = qs(".asc-body"), host = qs("#ascScene"); if(!host) return;
@@ -1011,18 +1022,6 @@ Object.assign(ACT, {
     const far = body && body.scrollTop>4;   // la scène entière en vue : la bulle peut s'ouvrir n'importe où
     if(far) body.scrollTo({ top:0, behavior:reducedMotion() ? "auto" : "smooth" });
     setTimeout(()=>ascBubble(o), far && !reducedMotion() ? 420 : 0);
-  },
-  ascAllSteps(d, el){
-    const box = qs("#ascSteps .st-list"); if(!box) return;
-    ascStepsAll = !ascStepsAll; sfx(ascStepsAll ? "open" : "close");
-    el.setAttribute("aria-expanded", ascStepsAll); el.firstChild.textContent = ascStepsAll ? "Réduire" : "Toutes les étapes";
-    morphHeight(box, ()=>{ box.innerHTML = ascStepsListHTML(ascent()); });
-  },
-  ascSec(d, el){
-    const k = d.k, on = !ascOpen.has(k), box = qs("#ascSec-"+k); if(!box) return;
-    on ? ascOpen.add(k) : ascOpen.delete(k);
-    el.classList.toggle("on", on); el.setAttribute("aria-expanded", on);
-    animateCollapse(box, on, on ? `<div class="asc-sec">${ascSecBody(k, ascent())}</div>` : "");
   },
   ascFromCel(){ closeSheet(); setTimeout(openAscent, 320); },
   ascPause(d){

@@ -126,19 +126,19 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const sheet = await page.evaluate(() => { const a = ascent(), h = document.querySelector('#ascScene'), svg = h.querySelector('.asc-svg');
     return { ready: h.classList.contains('ready'), paths: svg.querySelectorAll('path[class^="ak"]').length, camps: svg.querySelectorAll('.asc-camp').length, exp: ascCamps(a.key).length,
       hud: h.querySelector('.hud-n').textContent, name: ASC_DATA[a.key].n, cards: [...document.querySelectorAll('.asc-body .asc-row .t')].map(x => x.textContent).join('|'),
-      week: !!document.querySelector('#ascWeek .aw-msg'), next: (document.querySelector('#ascSteps .st-i.next, #ascSteps .exp-next-i') || {}).textContent || '', steps: document.querySelectorAll('#ascSteps .st-list .st-i').length, rowsH: Math.round(document.querySelector('.asc-rows').getBoundingClientRect().height),
+      week: !!document.querySelector('#ascWeek .aw-msg'), next: (document.querySelector('#ascSteps .an-row') || {}).textContent || '', steps: document.querySelectorAll('#ascSteps .exp-track').length, rowsH: Math.round(document.querySelector('.asc-rows').getBoundingClientRect().height),
       folded: document.querySelectorAll('.asc-body .stops li').length, me: !!svg.querySelector('.asc-me[transform]'), seen: S.ascent.seen && S.ascent.seen.key === a.key,
       aspect: Math.round(780 / (h.getBoundingClientRect().width / h.getBoundingClientRect().height)), vh: ASC_DATA[a.key].vh,
       day: svg.innerHTML.includes('#78A8D6') || svg.innerHTML.includes('#6EA2D2') || svg.innerHTML.includes('#5A8CCD') || svg.innerHTML.includes('#2F62B4') }; });
   log('Sheet:', JSON.stringify(sheet));
   if (!sheet.ready || sheet.paths < 20 || sheet.camps !== sheet.exp || sheet.hud !== sheet.name || !sheet.me || !sheet.seen || !sheet.day) fail('écran Mon ascension : scène, camps, HUD');
-  // lisibilité : où j'en suis (une phrase), cette semaine, puis le détail replié en lignes (visibles : la colonne ne les écrase pas)
-  if (sheet.cards !== 'Vitesse|Régularité|Itinéraire|Carnet de route|Trophées' || !sheet.week || !/dans \d|Prochaine expédition/.test(sheet.next) || sheet.steps < 3 || sheet.steps > 5 || sheet.rowsH < 180 || sheet.folded || sheet.aspect !== sheet.vh) fail('écran : hiérarchie et détail replié');
-  await page.click('.asc-row[data-k="itin"]'); await wait(700);
-  const itin = await page.evaluate(() => ({ stops: document.querySelectorAll('#ascSec-itin .stops li').length, exp: document.querySelector('.asc-row[data-k="itin"]').getAttribute('aria-expanded') }));
-  await page.click('.asc-row[data-k="itin"]'); await wait(600);
-  const itin2 = await page.evaluate(() => document.querySelectorAll('#ascSec-itin .stops li').length);
-  log('Itinerary:', JSON.stringify(itin), itin2); if (itin.stops !== 13 || itin.exp !== 'true' || itin2) fail('itinéraire déplié puis replié');
+  // lisibilité : le prochain objectif (nom, distance, barre), cette semaine, puis une liste dont chaque ligne ouvre son écran
+  if (sheet.cards !== 'Vitesse|Étapes|Itinéraire|Carnet de route|Trophées|Pause' || !sheet.week || !/Camp|Sommet|Prochaine expédition/.test(sheet.next) || !/m/.test(sheet.next) || sheet.steps !== 1 || sheet.rowsH < 260 || sheet.folded || sheet.aspect !== sheet.vh) fail('écran : prochain objectif, semaine, liste');
+  await page.click('.asc-row[data-k="itin"]'); await wait(900);
+  const itin = await page.evaluate(() => ({ stops: document.querySelectorAll('#ascSub .stops li').length, t: document.querySelector('.sheet-hd .t').textContent, back: !!document.querySelector('.sheet-hd [data-a="sheetBack"]') }));
+  await page.click('.sheet-hd [data-a="sheetBack"]'); await wait(1200);
+  const itin2 = await page.evaluate(() => !!document.querySelector('#ascScene') && !document.querySelector('#ascSub'));
+  log('Itinerary:', JSON.stringify(itin), itin2); if (itin.stops !== 13 || itin.t !== 'Itinéraire' || !itin.back || !itin2) fail('itinéraire en sous-écran, puis retour');
   await shot('02_sheet');
   // toucher un camp sur la montagne : bulle (nom, altitude, séances) ; une étape de la liste ; toucher ailleurs la ferme
   await page.evaluate(() => { document.querySelector('.asc-body').scrollTop = 0; }); await wait(300);
@@ -148,18 +148,15 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const bub = await page.evaluate(() => { const b = document.querySelector('#ascScene .asc-bub.on'), r = b && b.getBoundingClientRect(), h = document.querySelector('#ascScene').getBoundingClientRect();
     return { txt: b ? b.textContent.replace(/\s+/g, ' ') : '', inside: !!r && r.left >= h.left && r.right <= h.right, sel: !!document.querySelector('.asc-sel circle') }; });
   await shot('02b_bubble');
-  await page.evaluate(() => { const s = document.querySelector('#ascSteps .st-i.next'); s.scrollIntoView({ block: 'center' }); }); await wait(300);
-  await page.click('#ascSteps .st-i.next'); await wait(900);
-  const bub2 = await page.evaluate(() => { const b = document.querySelector('#ascScene .asc-bub.on'); return { txt: b ? b.textContent.replace(/\s+/g, ' ') : '', top: document.querySelector('.asc-body').scrollTop }; });
-  await page.click('#ascSteps .st-hd'); await wait(400);
+  await page.click('#ascSteps .an-row'); await wait(400);
   const bub3 = await page.evaluate(() => !!document.querySelector('#ascScene .asc-bub'));
-  await page.click('[data-a="ascAllSteps"]'); await wait(600);
-  const all = await page.evaluate(() => ({ n: document.querySelectorAll('#ascSteps .st-list .st-i').length, exp: ascCamps(ascent().key).length + 1 }));
-  log('Bubble:', JSON.stringify(bub), JSON.stringify(bub2), bub3, JSON.stringify(all));
+  await page.click('.asc-row[data-k="steps"]'); await wait(900);
+  const all = await page.evaluate(() => ({ n: document.querySelectorAll('#ascSub .st-list .st-i').length, exp: ascCamps(ascent().key).length + 1, next: !!document.querySelector('#ascSub .st-i.next') }));
+  log('Bubble:', JSON.stringify(bub), bub3, JSON.stringify(all));
   if (!bub.txt.includes(pt.name) || !/\d m/.test(bub.txt) || !/Atteint|séance/.test(bub.txt) || !bub.inside || !bub.sel) fail('bulle d\'un camp touché sur la montagne');
-  if (!/Prochaine étape/.test(bub2.txt) || !/séance/.test(bub2.txt) || bub2.top > 40 || bub3) fail('étape de la liste : bulle sur la montagne, fermée en touchant ailleurs');
-  if (all.n !== all.exp) fail('toutes les étapes');
-  await page.click('[data-a="ascAllSteps"]'); await wait(500);
+  if (bub3) fail('bulle fermée en touchant ailleurs');
+  if (all.n !== all.exp || !all.next) fail('toutes les étapes, en sous-écran');
+  await page.click('.sheet-hd [data-a="sheetBack"]'); await wait(1200);
   await page.evaluate(() => { document.querySelector('.asc-body').scrollTop = 900; }); await wait(300); await shot('03_sheet_reg');
   // « comment ça marche » : feuille empilée, retour vers l'écran
   await page.click('.sheet-hd .tr-how'); await wait(600);
@@ -168,12 +165,11 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const howBack = await page.evaluate(() => !!document.querySelector('#ascScene') && !document.querySelector('.asc-how'));
   log('How:', JSON.stringify(how), howBack);
   if (how.t !== 'Comment ça marche' || !how.back || how.req !== 5 || !howBack) fail('comment ça marche, puis retour');
-  // pause : repliée dans la carte de la semaine, cette semaine puis annulée
-  await page.evaluate(() => document.querySelector('#ascWeek').scrollIntoView({ block: 'center' })); await wait(200);
-  await page.click('[data-a="ascPauseMenu"]'); await wait(500);
-  await page.click('#ascPauseBox [data-a="ascPause"]'); await wait(300);
-  const pz = await page.evaluate(() => ({ p: S.ascent.pauses.slice(), on: !!document.querySelector('[data-a="ascPause"][aria-pressed="true"]'), paused: ascent().paused }));
-  await page.click('#ascPauseBox [data-a="ascPause"][aria-pressed="true"]'); await wait(300);
+  // pause : son écran (deux interrupteurs), cette semaine puis annulée
+  await page.evaluate(() => document.querySelector('.asc-row[data-k="pause"]').click()); await wait(900);
+  await page.click('#ascSub [data-a="ascPause"] >> nth=0'); await wait(300);
+  const pz = await page.evaluate(() => ({ p: S.ascent.pauses.slice(), on: !!document.querySelector('[data-a="ascPause"][aria-checked="true"]'), paused: ascent().paused }));
+  await page.click('#ascSub [data-a="ascPause"][aria-checked="true"]'); await wait(300);
   const pz2 = await page.evaluate(() => S.ascent.pauses.length);
   log('Pause:', JSON.stringify(pz), pz2);
   if (pz.p.length !== 1 || !pz.on || !pz.paused || pz2 !== 0) fail('pause déclarée puis annulée');

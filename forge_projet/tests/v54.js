@@ -44,10 +44,10 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   // (sans séance prête, la carte « Compose ta séance » mène directement à la séance de l'app)
   if (await page.$('#v-today .hero [data-a="chooseSession"]')) {
     await page.click('#v-today .hero [data-a="chooseSession"]'); await wait(450);
-    const sheet = await page.evaluate(() => [...document.querySelectorAll('.action-sheet .as-btn')].map(b => b.textContent.trim()));
+    const sheet = await page.evaluate(() => [...document.querySelectorAll('.cs-row .t')].map(b => b.textContent.trim()));
     log('Choose sheet:', JSON.stringify(sheet));
-    if (!sheet.includes("Laisse l'app choisir") || !sheet.some(t => /Séance express/.test(t)) || !sheet.includes('Composer moi-même') || sheet[sheet.length - 1] !== 'Annuler') fail('« Choisir une autre séance » : app, express, composer, annuler');
-    await page.click(".action-sheet .as-btn >> text=Laisse l'app choisir"); await wait(900);
+    if (!sheet.includes("Laisse l'app choisir") || !sheet.some(t => /Séance express/.test(t)) || !sheet.includes('Composer moi-même')) fail('« Choisir une autre séance » : app, express, composer');
+    await page.evaluate(t => [...document.querySelectorAll('.cs-row')].find(r => r.textContent.includes(t)).click(), "Laisse l'app choisir"); await wait(900);
   } else { await page.click('#v-today .hero [data-a="todayMode"][data-v="proposal"]'); await wait(900); }
   const prop = await page.evaluate(() => ({ mode: S.settings.todayTab, alts: [...document.querySelectorAll('#v-today .hero .hero-alt')].map(b => b.textContent.trim()),
     chips: document.querySelectorAll('#v-today .type-chip').length, swap: document.querySelectorAll('#v-today [data-a="swapExoOpen"]').length, count: !!document.querySelector('#v-today [data-a="draftCount"]'),
@@ -66,10 +66,11 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   if (adj.chips < 5 || adj.swap < 3 || !adj.count || !adj.add || adj2) fail('Ajuster : types, nombre, remplacer, ajouter ; puis replié');
   await page.evaluate(() => document.querySelector('#v-today').scrollTop = 0); await wait(200);
   await page.click('#v-today .hero [data-a="chooseSession"]'); await wait(450);
-  const sheet2 = await page.evaluate(() => [...document.querySelectorAll('.action-sheet .as-btn')].map(b => b.textContent.trim()));
+  const sheet2 = await page.evaluate(() => [...document.querySelectorAll('.cs-row .t')].map(b => b.textContent.trim()));
   log('Choose sheet (app):', JSON.stringify(sheet2));
-  if (!sheet2.includes('Autre proposition de l\'app') || !sheet2.some(t => /Séance express/.test(t)) || !(sheet2.includes('Revenir à ma séance') || sheet2.includes('Composer moi-même'))) fail('« Choisir une autre séance » depuis la séance de l\'app : autre proposition, express, revenir');
-  await page.click(sheet2.includes('Revenir à ma séance') ? '.action-sheet .as-btn >> text=Revenir à ma séance' : '.action-sheet .as-btn >> text=Composer moi-même'); await wait(900);
+  const back2 = sheet2.find(t => /^Revenir à/.test(t));
+  if (!sheet2.includes('Autre proposition') || !sheet2.some(t => /Séance express/.test(t)) || !(back2 || sheet2.includes('Composer moi-même'))) fail('« Choisir une autre séance » depuis la séance de l\'app : autre proposition, express, revenir');
+  await page.evaluate(t => [...document.querySelectorAll('.cs-row')].find(r => r.textContent.includes(t)).click(), back2 || 'Composer moi-même'); await wait(900);
   await page.evaluate(() => closeSheet()); await wait(500);
   if ((await page.evaluate(() => S.settings.todayTab)) !== 'custom' || !(await page.$('#v-today .hero.compose, #v-today .hero.planned, #v-today .hero.custom'))) fail('retour à Ma séance');
 

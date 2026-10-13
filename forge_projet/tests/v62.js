@@ -52,7 +52,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const ask = await page.evaluate(() => ({ btns: [...document.querySelectorAll('#overlay .as-btn')].map(b => b.textContent.trim()), msg: (document.querySelector('#overlay .as-msg') || {}).textContent }));
   await shot('02_ask');
   await tapText('#overlay .as-btn', "Pour aujourd'hui"); await wait(700);
-  const today = await page.evaluate(() => ({ eyebrow: document.querySelector('.hero .hero-eyebrow').textContent, go: !!document.querySelector('.hero .hero-go'),
+  const today = await page.evaluate(() => ({ eyebrow: (document.querySelector('.hero .hero-tag') || {}).textContent || '', go: !!document.querySelector('.hero .hero-go'),
     tpl: S.templates.find(t => t.id === 'tp').exos.length, custom: S.custom.exos.length }));
   log('Ask:', JSON.stringify(ask), '→', JSON.stringify(today));
   if (ask.btns.join('|') !== "Pour aujourd'hui seulement|Aussi pour les prochaines fois|Continuer à modifier" || !/Pectoraux/.test(ask.msg || '')
@@ -64,35 +64,40 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await tap('.group.builder [data-a="customSets"][data-d="1"]'); await wait(300);
   await tap('.hero .hero-mod'); await wait(600);
   await tapText('#overlay .as-btn', 'Aussi pour'); await wait(800);
-  const saved = await page.evaluate(() => ({ tpl: JSON.stringify(S.templates.find(t => t.id === 'tp').exos.map(e => [e.exoId, e.sets])), eyebrow: document.querySelector('.hero .hero-eyebrow').textContent,
+  const saved = await page.evaluate(() => ({ tpl: JSON.stringify(S.templates.find(t => t.id === 'tp').exos.map(e => [e.exoId, e.sets])), eyebrow: (document.querySelector('.hero .hero-tag') || {}).textContent || '',
     picts: document.querySelectorAll('.tpl-card2[data-id="tp"] .tc-picts > *').length }));
   log('Asked again without change:', again, '| saved:', JSON.stringify(saved));
   if (again || saved.tpl !== '[["dc_haltere",4],["pompes",3]]' || saved.eyebrow === "Modifiée pour aujourd'hui" || saved.picts !== 2) fail('« Aussi pour les prochaines fois » met à jour Mes séances');
 
-  // 3. Mon ascension : bouton i en simple cercle, titres au-dessus des cartes, séparateurs entre les rangées
+  // 3. Mon ascension, épurée : bouton i en simple cercle ; la scène, le prochain objectif, cette semaine, une liste
   await page.evaluate(() => openAscent()); await wait(1500);
   const asc = await page.evaluate(() => { const how = document.querySelector('#overlay .tr-how'), cs = getComputedStyle(how);
-    const after = [...document.querySelectorAll('.asc-rows .asc-clp + .asc-row')].map(r => getComputedStyle(r, '::before').height);
-    return { bg: cs.backgroundColor, ring: cs.boxShadow, stepsHead: !!document.querySelector('.asc-steps > .st-hd'), stepsCard: !!document.querySelector('.asc-steps > .asc-card .st-list'),
-      weekHead: !!document.querySelector('.asc-week > .aw-hd'), weekCard: !!document.querySelector('.asc-week > .asc-card .aw-msg'), seps: after.length, sepH: after[0] }; });
+    const seps = [...document.querySelectorAll('.asc-rows .asc-row + .asc-row')].map(r => getComputedStyle(r, '::before').height);
+    return { bg: cs.backgroundColor, ring: cs.boxShadow, next: (document.querySelector('#ascSteps .an-row') || {}).textContent, bar: !!document.querySelector('#ascSteps .exp-track'),
+      weekHead: !!document.querySelector('.asc-week > .aw-hd'), weekCard: !!document.querySelector('.asc-week > .asc-card .aw-msg'), pauseInWeek: !!document.querySelector('#ascWeek [data-a="ascPause"], #ascWeek .aw-pause'),
+      rows: [...document.querySelectorAll('.asc-row .t')].map(t => t.textContent).join('|'), seps: seps.length, sepH: seps[0], accordions: document.querySelectorAll('.asc-clp, .st-list').length }; });
   log('Ascent:', JSON.stringify(asc));
-  if (!/rgba\(0, 0, 0, 0\)|transparent/.test(asc.bg) || !/inset/.test(asc.ring) || !asc.stepsHead || !asc.stepsCard || !asc.weekHead || !asc.weekCard || asc.seps !== 4 || asc.sepH !== '0.5px') fail('Mon ascension : i en cercle, titres au-dessus des cartes, séparateurs');
+  if (!/rgba\(0, 0, 0, 0\)|transparent/.test(asc.bg) || !/inset/.test(asc.ring) || !/Camp 2 · .*58 m|Camp 2 · .*m/.test(asc.next || '') || !asc.bar || !asc.weekHead || !asc.weekCard || asc.pauseInWeek
+    || asc.rows !== 'Vitesse|Étapes|Itinéraire|Carnet de route|Trophées|Pause' || asc.seps !== 5 || asc.sepH !== '0.5px' || asc.accordions) fail('Mon ascension épurée : objectif, semaine, liste');
   await shot('03_ascent');
 
-  // 4. Régularité : vitesse actuelle, escalier des paliers (hauteur croissante), prochain palier, semaines datées et nommées
-  await tap('[data-a="ascSec"][data-k="reg"]'); await wait(700);
-  const rg = await page.evaluate(() => { const steps = [...document.querySelectorAll('.rg-step')];
-    return { now: (document.querySelector('.rg-now > b') || {}).textContent, steps: steps.length, cur: steps.findIndex(s => s.classList.contains('cur')),
-      rising: steps.every((s, i) => !i || s.querySelector('i').offsetHeight > steps[i - 1].querySelector('i').offsetHeight), cap: (document.querySelector('.rg-cap') || {}).textContent,
-      note: (document.querySelector('.asc-sec .note') || {}).textContent, weeks: [...document.querySelectorAll('.rg-weeks .rg-w')].map(w => w.className.replace('rg-w ', '') + ':' + w.querySelector('small').textContent),
-      icons: [...document.querySelectorAll('.rg-weeks .rg-w:not(.cur) i svg')].length, legend: [...document.querySelectorAll('.rg-legend .rg-w')].map(w => w.className.replace('rg-w ', '')),
-      old: document.querySelectorAll('.asc-sec .pal, .asc-sec .weeks, .asc-sec .legend').length }; });
-  log('Régularité:', JSON.stringify(rg));
+  // 4. Vitesse (sous-écran) : un chiffre, les facteurs, puis la régularité (escalier, prochain palier, semaines datées)
+  await tap('.asc-row[data-k="speed"]'); await wait(900);
+  const rg = await page.evaluate(() => { const steps = [...document.querySelectorAll('#ascSub .rg-step')];
+    return { title: document.querySelector('.sheet-hd .t').textContent, back: !!document.querySelector('.sheet-hd [data-a="sheetBack"]'), hero: (document.querySelector('#ascSub .sp-hero b') || {}).textContent,
+      factors: [...document.querySelectorAll('#ascSub .fx-r > span')].map(e => e.firstChild.textContent.trim()), steps: steps.length, cur: steps.findIndex(s => s.classList.contains('cur')),
+      rising: steps.every((s, i) => !i || s.querySelector('i').offsetHeight > steps[i - 1].querySelector('i').offsetHeight), cap: (document.querySelector('#ascSub .rg-cap') || {}).textContent,
+      note: (document.querySelector('#ascSub .note') || {}).textContent, weeks: [...document.querySelectorAll('#ascSub .rg-weeks .rg-w')].map(w => w.className.replace('rg-w ', '') + ':' + w.querySelector('small').textContent),
+      icons: [...document.querySelectorAll('#ascSub .rg-weeks .rg-w:not(.cur) i svg')].length, legend: [...document.querySelectorAll('#ascSub .rg-legend .rg-w')].map(w => w.className.replace('rg-w ', '')) }; });
+  log('Vitesse:', JSON.stringify(rg));
   const lastW = rg.weeks[rg.weeks.length - 1] || '';
-  if (rg.now !== '×0,5' || rg.steps !== 6 || rg.cur !== 0 || !rg.rising || !/×1 = vitesse normale/.test(rg.cap || '') || !/Encore 2 semaines à 3 séances pour passer à ×1/.test(rg.note || '')
-    || lastW !== 'cur:en cours' || !rg.weeks.some(w => /^frozen:\d+ \S+/.test(w)) || rg.icons !== rg.weeks.length - 1 || rg.legend.join() !== 'frozen,empty' || rg.old) fail('régularité lisible');
-  await page.evaluate(() => { const r = document.querySelector('[data-a="ascSec"][data-k="reg"]'), b = document.querySelector('#overlay .sheet-body'); b.scrollTop += r.getBoundingClientRect().top - 120; }); await wait(400);
-  await shot('04_regularity');
+  if (rg.title !== 'Vitesse de montée' || !rg.back || !/^\+\d+\s?m$/.test(rg.hero || '') || rg.factors[0] !== 'Effort' || !rg.factors.includes('Régularité') || rg.factors.includes('Par séance')
+    || rg.steps !== 6 || rg.cur !== 0 || !rg.rising || !/×1 = vitesse normale/.test(rg.cap || '') || !/Encore 2 semaines à 3 séances pour passer à ×1/.test(rg.note || '')
+    || lastW !== 'cur:en cours' || !rg.weeks.some(w => /^frozen:\d+ \S+/.test(w)) || rg.icons !== rg.weeks.length - 1 || rg.legend.join() !== 'frozen,empty') fail('vitesse et régularité lisibles');
+  await shot('04_speed');
+  await tap('.sheet-hd [data-a="sheetBack"]'); await wait(1200);
+  const backOk = await page.evaluate(() => !!document.querySelector('#ascScene') && !document.querySelector('#ascSub'));
+  if (!backOk) fail('retour à Mon ascension');
   await page.evaluate(() => closeSheet()); await wait(500);
 
   // 5. fiche exercice : une seule carte (conseil, puis historique ou « Première fois »)

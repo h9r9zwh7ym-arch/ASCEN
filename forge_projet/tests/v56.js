@@ -28,11 +28,11 @@ const APP = 'file://' + path.resolve(process.argv[2]);
 
   // 1. carte du jour : étiquette, titre, durée, 3 exercices puis « Voir les 5 exercices », « Commencer », une alternative
   const hero = await page.evaluate(() => { const h = document.querySelector('#v-today .hero');
-    return { k: h.querySelector('.hero-eyebrow').textContent, t: h.querySelector('.hero-title').textContent, rows: [...h.querySelectorAll('.hl-row')].filter(r => r.offsetHeight).length,
+    return { k: (h.querySelector('.hero-eyebrow, .hero-tag') || {}).textContent || '', t: h.querySelector('.hero-title').textContent, rows: [...h.querySelectorAll('.hl-row')].filter(r => r.offsetHeight).length,
       all: h.querySelectorAll('.hl-row').length, more: (h.querySelector('.hl-toggle') || {}).textContent, go: h.querySelector('.hero-go').textContent.trim(), alt: [...h.querySelectorAll('.hero-alt')].map(b => b.textContent.trim()),
       mod: (h.querySelector('.hero-mod') || {}).textContent, pills: !!document.querySelector('#v-today .stat-pills') }; });
   log('Hero:', JSON.stringify(hero)); await shot('01_home');
-  if (hero.k !== "Prévu aujourd'hui" || hero.t !== 'Haut du corps' || hero.rows !== 3 || hero.all !== 5 || hero.more !== 'Voir les 5 exercices' || hero.go !== 'Commencer' || hero.alt.join() !== 'Choisir une autre séance' || hero.mod !== 'Modifier' || hero.pills) fail('carte du jour');
+  if (hero.k || hero.t !== 'Haut du corps' || hero.rows !== 3 || hero.all !== 5 || hero.more !== 'Voir les 5 exercices' || hero.go !== 'Commencer' || hero.alt.join() !== 'Choisir une autre séance' || hero.mod !== 'Modifier' || hero.pills) fail('carte du jour');
   await page.click('.hl-toggle'); await wait(500);
   const all = await page.evaluate(() => ({ rows: [...document.querySelectorAll('.hero .hl-row')].filter(r => r.offsetHeight).length, t: document.querySelector('.hl-toggle').textContent }));
   if (all.rows !== 5 || all.t !== 'Voir moins') fail('« Voir les 5 exercices » sur place');
@@ -52,10 +52,10 @@ const APP = 'file://' + path.resolve(process.argv[2]);
 
   // 3. « Choisir une autre séance » : tes séances, l'app, l'express, composer ; charger une séance enregistrée
   await page.click('.hero [data-a="chooseSession"]'); await wait(450);
-  const acts = await page.evaluate(() => [...document.querySelectorAll('.action-sheet .as-btn')].map(b => b.textContent.trim()));
+  const acts = await page.evaluate(() => [...document.querySelectorAll('.cs-body .sh')].map(h => h.textContent + ':' + [...h.nextElementSibling.querySelectorAll('.cs-row .t')].map(t => t.textContent).join(',')));
   log('Choose:', JSON.stringify(acts)); await shot('03_choose');
-  if (acts.join('|') !== "Jambes|Laisse l'app choisir|Séance express · 10 min|Composer moi-même|Annuler") fail('« Choisir une autre séance »');
-  await page.click('.action-sheet .as-btn >> text=Jambes'); await wait(800);
+  if (acts.join('|') !== "Mes séances:Jambes|Proposée par l'app:Laisse l'app choisir|Sur le moment:Séance express,Composer moi-même") fail('« Choisir une autre séance » : trois familles');
+  await page.evaluate(t => [...document.querySelectorAll('.cs-row')].find(r => r.textContent.includes(t)).click(), 'Jambes'); await wait(800);
   const loaded = await page.evaluate(() => ({ t: document.querySelector('.hero .hero-title').textContent, n: document.querySelectorAll('.hero .hl-row').length, tab: S.settings.todayTab }));
   log('Loaded:', JSON.stringify(loaded)); if (loaded.t !== 'Jambes' || loaded.n !== 1 || loaded.tab !== 'custom') fail('séance enregistrée chargée dans la carte du jour');
 

@@ -3134,3 +3134,25 @@ body.live-focus #toast,body:has(#overlay.show) #toast{top:calc(10px + var(--sat)
 [data-sort].sorting>.row.lifted::before,[data-sort].sorting>.row.lifted+.row::before{opacity:0}
 .sort-hint{margin:8px 20px 0;font-size:var(--fs-foot);color:var(--label2);line-height:1.35}
 #tplEdBody .sort-hint{margin:8px 4px 0}
+/* Mon ascension, épurée : la scène, le prochain objectif, cette semaine, puis une liste ; chaque détail a son écran */
+.asc-next .an-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.asc-next .an-t{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:var(--fs-body);font-weight:650;line-height:1.25}
+.asc-next .an-t small{font-size:var(--fs-foot);font-weight:400;color:var(--label2)}
+.asc-next .an-r{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex:none;text-align:right}
+.asc-next .an-r b{font-size:calc(20rem/17);font-weight:700;color:var(--tint-ink);line-height:1.15;white-space:nowrap}
+.asc-next .an-r small{font-size:var(--fs-foot);color:var(--label2)}
+.asc-next .exp-track{margin:4px 0 2px}
+.asc-week .aw-n b{font-size:calc(20rem/17)}
+.asc-sub .asc-sec{padding:6px 0 20px;gap:12px}
+.asc-sub .sh{margin:14px 4px 0;padding:0}
+.asc-body .fx.asc-card{background:var(--bg2);padding:2px 16px;gap:0}
+.sp-hero{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;padding:2px 4px 2px}
+.sp-hero b{font-family:var(--num);font-size:calc(34rem/17);font-weight:700;letter-spacing:-.01em;color:var(--label)}
+.sp-hero span{font-size:var(--fs-sub);color:var(--label2)}
+.asc-sub .asc-steps{display:flex;flex-direction:column;gap:8px}
+.asc-sub .asc-steps .st-hd{padding:0 4px}
+#overlay .asc-sub h2.sh{margin:10px 4px 0;padding:0}
+.asc-sub .asc-steps .st-n{margin-left:0}
+.asc-sub .asc-pause{margin:0}
+.asc-sub .sort-hint{margin:0 4px}
+.asc-pause .switch:disabled{opacity:.4}
