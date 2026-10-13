@@ -1227,6 +1227,36 @@ a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est
   - Code retiré : `EQUIP_COLOR` (les icônes de matériel étaient déjà grises).
   - Test : `tests/v59.js` (balaye les écrans en clair et en sombre à la recherche des anciennes couleurs).
 
+- **Passe de vérification** (design, ergonomie, optimisation, robustesse) :
+  - **Contraste AA** : `--tint-ink` #A64A29 et `--label2` #636366 en clair (≥ 4,5:1 sur le blanc, le gris de
+    fond, les pastilles et les boutons teintés) ; texte des contrôles segmentés en couleur pleine.
+  - **Cibles de 44 pt réelles** : la zone agrandie par `::before` était coupée par `overflow:hidden` (le
+    débordement coupe aussi le toucher) sur les contrôles segmentés (le texte passe dans un `<span>`,
+    `segHTML`) et sur les rangées de puces défilantes (marge interne compensée) ; ajoutée aux jours du
+    calendrier, aux boutons − / + et à « Voir les données ».
+  - Derniers records : un seul par exercice (`recentPRs`). Saisie : claviers adaptés (prénom, recherche,
+    `enterkeyhint`), Entrée qui valide partout, nom d'équipement perso limité à 40 caractères et sans doublon.
+  - **Optimisation** : 195 règles et 7 animations CSS mortes retirées (−16 Ko, classes absentes de tout le
+    code ; captures avant/après identiques au pixel près) ; les vignettes 3D des trophées attendent la fin
+    des animations de fin de séance (`t3dQuiet`, `T3D.holdUntil` : Safari n'a pas `requestIdleCallback`,
+    le repli lançait Three.js et la compilation des shaders 16 ms après, en pleine montée du grimpeur).
+  - **Robustesse** (fuzzing de 24 états abîmés : chaque écran, une séance, aucune erreur) : chaque section
+    de l'état est validée à part (charges, matériel, trophées, réglages…), une valeur abîmée reprend sa
+    valeur par défaut au lieu de faire repartir l'app sur un historique vide ; programme importé nettoyé et
+    borné (`cleanImportedProgram` : fichier « null », 1 000 000 000 séries) ; fichiers importés limités en
+    taille ; double appui sur « Terminer » sans erreur ; une séance oubliée ouverte s'arrête à la dernière
+    série validée (`lastSetAt`, plus de 30 min sans série).
+  - Test : `tests/v60.js`.
+- **Navigation façon iOS** (`navGo`, `navSlide`, `NAV_BACKS`, ui_shell.js) : les sous-écrans de Progrès
+  entrent par la droite par-dessus le Résumé, qui recule d'un tiers sous un voile ; le retour fait
+  l'inverse et retrouve la position de défilement du Résumé (`progSet`, `progScroll`). Retour en glissant
+  depuis le bord gauche (24 px), suivi au doigt : relâché après un tiers ou d'un geste vif il revient,
+  sinon tout se remet en place. Même transition et même geste pour les feuilles ouvertes depuis une autre
+  (`openSheet` avec `child`, `showOverlay`). L'écran qui part est une copie figée (`navSnap`, animations
+  arrêtées à l'état final) placée APRÈS le vrai dans le document, pour que `qs(".sheet")` et `qs("#id")`
+  trouvent le vrai ; l'empilement passe par `.nav-top` / `.nav-under`. Pendant le geste, l'élément touché
+  est remplacé : ses événements tactiles ne remontent plus au document, on les écoute donc sur lui.
+
 Les sections plus haut qui parlent de Geist, Barlow, `#F4F3F1` ou `#FF6B3D` décrivent l'état d'avant cette refonte.
 
 ## 10. Cahier des charges d'origine (résumé)
