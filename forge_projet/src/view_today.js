@@ -560,7 +560,7 @@ function pickerListHTML(){
   const pool = availableExos().filter(e=>!picker.exclude.has(e.id)
     && (!picker.muscle || e.muscles.includes(picker.muscle))
     && (!picker.cat || (favOnly ? isIncluded(e.id) : exoCategory(e)===picker.cat))
-    && (!q || normName(e.n+" "+(EXO_ALIAS[e.id]||"")).includes(q) || e.muscles.some(m=>normName(MUSCLE_MAP[m].n).includes(q))));
+    && (!q || normName(e.n+" "+e.aka+" "+(EXO_ALIAS[e.id]||"")).includes(q) || e.muscles.some(m=>normName(MUSCLE_MAP[m].n).includes(q))));
   if(!pool.length) return `<div class="empty-state"><span class="em">${sfIcon("search","gray","lg")}</span>Aucun exercice ne correspond.</div>`;
   // favoris en tête (sans recherche ni filtre de matériel) : ils restent aussi dans leur catégorie
   const favs = favOnly || picker.cat ? [] : pool.filter(e=>isIncluded(e.id)).sort((a,b)=>a.n.localeCompare(b.n,"fr"));
@@ -1657,7 +1657,7 @@ Object.assign(ACT, {
       <div class="sheet-body">
       <div class="exo-hero r-${region}">
         <div class="exo-stage r-${region}">${exoAnimSVG(e)}</div>
-        <div class="nm">${esc(e.n)}</div>
+        <div class="nm">${esc(e.n)}</div>${e.aka ? `<div class="nm-aka">${esc(e.aka)}</div>` : ""}
         <div class="exo-tags"><span class="rtag r-${region}">${REGIONS[region].n}</span><span class="etag">${sfIcon(EQUIP_GLYPH[cat.id]||"wrench", "gray", "xs")} ${esc(cat.n)}</span>${e.equip.includes("bench")?`<span class="etag">+ banc</span>`:""}</div>
       </div>
       <div class="exo-muscle-chips">${e.muscles.map((m,i)=>`<span class="chip mchip ${i===0?"main":""}">${MUSCLE_MAP[m].n}${i===0?" <small>principal</small>":""}</span>`).join("")}</div>

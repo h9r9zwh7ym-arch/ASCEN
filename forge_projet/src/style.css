@@ -1068,20 +1068,22 @@ h2.sh .more.strong{font-weight:700}
 .ob-s2{color:var(--label2);font-size:var(--fs-sub);margin:0 4px 16px;line-height:1.4}
 .ob-points .row{gap:12px}
 .ob-opt{text-transform:none;letter-spacing:0;font-weight:500;color:var(--label2)}
-.ob-equip{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.ob-eq{position:relative;display:flex;align-items:center;gap:10px;min-height:56px;padding:10px 12px;border-radius:16px;background:var(--bg2);box-shadow:var(--shadow);text-align:left;font-weight:600;font-size:var(--fs-sub);transition:transform .15s cubic-bezier(.32,1.4,.4,1),box-shadow .2s}
-.ob-eq:active{transform:scale(.96)}
-.ob-eq.on{box-shadow:inset 0 0 0 2px var(--tint)}
-.ob-eq em{position:absolute;top:6px;right:6px;width:18px;height:18px;border-radius:9px;background:var(--tint);color:var(--on-tint);display:grid;place-items:center;opacity:0;transform:scale(.4);transition:opacity .2s,transform .3s cubic-bezier(.32,1.5,.4,1)}
-.ob-eq em svg{width:11px;height:11px}
-.ob-eq.on em{opacity:1;transform:none}
-.ob-goals{display:flex;flex-direction:column;gap:10px}
-.ob-goal{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:14px 16px;border-radius:16px;background:var(--bg2);box-shadow:var(--shadow);text-align:left;transition:box-shadow .2s,transform .15s}
-.ob-goal:active{transform:scale(.98)}
-.ob-goal b{font-size:var(--fs-callout)}
-.ob-goal small{color:var(--label2);font-size:var(--fs-foot)}
-.ob-goal.on{box-shadow:inset 0 0 0 2px var(--tint)}
+/* matériel et objectif : listes à cocher, comme les réglages iOS */
+.ob-list .ob-ck{flex:none;width:24px;height:24px;border-radius:12px;box-shadow:inset 0 0 0 1.5px var(--label3);display:grid;place-items:center;color:transparent;transition:background .2s,box-shadow .2s,color .2s}
+.ob-list .ob-ck svg{width:14px;height:14px;transform:scale(.4);transition:transform .3s cubic-bezier(.32,1.5,.4,1)}
+.ob-list .on .ob-ck{background:var(--tint);box-shadow:none;color:var(--on-tint)}
+.ob-list .on .ob-ck svg{transform:none}
+.ob-list .ob-goal .s{margin-top:1px}
 .ob-note{font-size:var(--fs-foot);color:var(--label2);margin:8px 4px 0;line-height:1.4}
+/* haltères : charges à toucher (même sélection que les nombres de séances) */
+.ob-kg{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.ob-w{height:44px;border-radius:12px;background:var(--fill2);font-family:var(--num);font-weight:600;font-size:var(--fs-sub);color:var(--label);font-variant-numeric:tabular-nums;transition:background .2s,color .2s,transform .15s}
+.ob-w:active{transform:scale(.94)}
+.ob-w.on{background:var(--label);color:var(--bg2)}
+.ob-kg-add{display:flex;gap:8px;margin-top:10px;align-items:center}
+.ob-kg-add .num-field{flex:1;min-width:0;margin:0}
+.ob-kg-add .btn{flex:none;width:auto;height:44px}
+.ob-kg-add .num-field.txt input{height:44px}
 .sheet-ft .btn.ghost{margin-top:4px}
 @media (prefers-reduced-motion:reduce){.ob-body.ob-in>*,.ob-hero img,.ob-logo{animation:none}}
 .ob-points .s,.ob-points .t{white-space:normal}
@@ -2636,6 +2638,33 @@ body.live-focus #v-today{padding-bottom:0}
   .sx .lv-asc{padding-bottom:4px}
   .sx-note{font-size:var(--fs-foot)}
 }
+/* l'en-tête de l'exercice ne se laisse plus écraser par la colonne (le nom passait sur le pictogramme en
+   iPhone SE) ; les petits écrans resserrent tout pour que « Valider la série » reste visible sans défiler */
+.sx-ex,.sx .sx-pic,.sx-name,.sx-sets,.sx-steps{flex:none}
+.sx .sx-pic{top:auto;right:auto}   /* l'ancien bouton ⓘ (.fc-info) le décalait de 14 px vers le bas, sur le nom */
+.sx-steps{padding-top:6px;padding-bottom:4px}
+@media (max-height:700px){
+  .content.sx{--pic:56px;--row:62px;--val:38px;--ring:150px}
+  .sx-note{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+  .sx .lv-asc{padding:0 0 6px}
+  .sx-sets{margin-top:8px}
+  .sx-steps{margin-top:8px}
+}
+@media (max-height:600px){
+  .content.sx{--pic:46px;--row:54px;--val:34px;--ring:128px}
+  .sx-note{display:none}
+  .sx-top{height:40px}
+  .sx .lp-bar{height:28px}
+  .sx-set{height:46px}
+  .sx .big-stepper.sx-row button.sx-pm{width:48px;height:48px;border-radius:24px}
+  .content.sx{--row:62px}
+  .sx .sx-next:not(.last){display:none}   /* la carte « à suivre » du repos le dit déjà */
+  .sx .sx-adj{margin-top:8px} .sx .sx-adj button{height:44px}
+  .sx .effort{margin-top:8px} .sx .ef-q{margin-bottom:6px}
+  .sx-upcard{margin-top:8px;padding:6px 14px} .sx-uptile{width:34px;height:34px}
+  .sx .sx-skip{margin-top:8px}
+  .sx .ring-time{font-size:44px}
+}
 /* liste de la séance : une seule couleur, comme les pictos */
 .ls-ring{background:conic-gradient(var(--tint) calc(var(--p)*1%),var(--fill) 0)}
 .ls-ring>span{color:var(--tint-ink)}
@@ -2971,6 +3000,7 @@ body.live-focus #v-today{padding-bottom:0}
 .te-split{margin:-2px 4px 10px;font-size:var(--fs-foot);color:var(--label2);font-variant-numeric:tabular-nums}
 .btn.ghost.te-del{color:var(--red)}
 /* premier lancement : le matériel coché prend l'orange, comme une case cochée */
+.ob-eq .sfi{transition:color .2s}
 .ob-eq.on .sfi{color:var(--tint-ink)}
 /* conseils et alertes : la même teinte que le reste */
 .dl-ic{background:var(--tint-bg);color:var(--tint-ink)}
@@ -3021,3 +3051,8 @@ body.live-focus #v-today{padding-bottom:0}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nav-dim{background:rgba(0,0,0,.4)} :root:not([data-theme="light"]) .nav-top{box-shadow:-10px 0 28px rgba(0,0,0,.5)}}
 :root[data-theme="dark"] .nav-dim{background:rgba(0,0,0,.4)}
 :root[data-theme="dark"] .nav-top{box-shadow:-10px 0 28px rgba(0,0,0,.5)}
+/* titres et sous-titres de lignes : deux lignes au besoin plutôt qu'un nom coupé par « … » */
+.row .t,.row .s{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
+.row .t{line-height:1.25}
+.row .s.wrap{display:block;-webkit-line-clamp:none;overflow:visible} /* textes d'explication : lus en entier */
+.exo-hero .nm-aka{margin-top:2px;font-size:var(--fs-sub);color:var(--label2);text-align:center}

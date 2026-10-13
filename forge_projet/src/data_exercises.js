@@ -562,11 +562,15 @@ const EXO_RAW = [
   "Les genoux restent collés au sol : la rotation vient du haut du dos."],
 ];
 
-const EXOS_ALL = EXO_RAW.map(([id,n,muscles,equip,pattern,uni,def,cues,safety])=>({
-  id,n,muscles,equip,pattern,uni,
-  sets:def.sets,repsMin:def.repsMin,repsMax:def.repsMax,restSec:def.restSec,
-  cues,safety
-}));
+// nom anglais entre parenthèses (« Squat gobelet (goblet squat) ») : il encombrait les listes et coupait les
+// noms ; il devient un alias (aka), trouvable par la recherche et l'import, affiché sous le nom sur la fiche.
+// Les précisions françaises (« (haltères) », « (pieds sur banc) ») restent dans le nom.
+const EXO_EN = /^(back squat|bear crawl|bicycle|clamshell|deadlift|flutter kicks|goblet squat|high knees|hollow hold|pull-apart|roll-up|squeeze press|step-up|swimming|up-down|woodchopper)$/;
+const EXOS_ALL = EXO_RAW.map(([id,n0,muscles,equip,pattern,uni,def,cues,safety])=>{
+  const m = /^(.*\S)\s*\(([^)]*)\)$/.exec(n0), en = !!(m && EXO_EN.test(m[2]));
+  return { id, n:en ? m[1] : n0, aka:en ? m[2] : "", muscles, equip, pattern, uni,
+    sets:def.sets, repsMin:def.repsMin, repsMax:def.repsMax, restSec:def.restSec, cues, safety };
+});
 // Retirés du catalogue (4.0) : variantes trop proches d'un autre exercice ou trop exotiques pour la
 // maison. Ils ne sont plus proposés ni affichés dans les listes, mais restent connus (EXO_MAP) pour
 // l'historique, les records et les séances enregistrées qui les contiennent encore.

@@ -316,15 +316,23 @@ Object.assign(ACT, {
       exos: clone(s.exos).map(ex=>({ exoId:ex.exoId, targetReps:ex.targetReps, sets:ex.sets.filter(st=>st.done) })) };
     renderHistEdit();
   },
-  heCancel(){ const s = histEdit && S.sessions.find(x=>x.id===histEdit.id); histEdit = null; if(s) openSheet(sessionDetailHTML(s)); else closeSheet(); },
+  // « Annuler », glisser vers le bas ou toucher le fond : avec des changements, on demande d'abord (comme iOS)
+  heCancel(){
+    if(histEdit && histEdit.dirty) return actionSheet({ label:"Modifications non enregistrées", msg:"Ce que tu as changé dans cette séance ne sera pas enregistré.",
+      actions:[{ t:"Ignorer les modifications", a:"heDiscard", danger:true }], cancel:"Continuer à modifier", cancelA:"heResume" });
+    ACT.heDiscard();
+  },
+  heDiscard(){ const s = histEdit && S.sessions.find(x=>x.id===histEdit.id); histEdit = null; if(s) openSheet(sessionDetailHTML(s)); else closeSheet(); },
+  heResume(){ if(histEdit) renderHistEdit(); else closeSheet(); },
   heVal(d, el){
     const st = histEdit && histEdit.exos[+d.i] && histEdit.exos[+d.i].sets[+d.j]; if(!st) return;
-    const v = heNum(el.value);
+    const v = heNum(el.value); histEdit.dirty = true;
     if(d.k==="reps") st.reps = v>0 ? Math.min(9999, Math.round(v)) : 0;
     else if(isNaN(v) || v<=0) delete st.weight; else st.weight = Math.min(500, round1(v));
   },
   heMeta(d, el){
     if(!histEdit) return;
+    histEdit.dirty = true;
     if(d.k==="date"){ if(/^\d{4}-\d{2}-\d{2}$/.test(el.value) && el.value<=todayISO()) histEdit.date = el.value; else el.value = histEdit.date; }
     else { const v = heNum(el.value); histEdit.min = v>0 ? Math.min(600, Math.round(v)) : 0; }
   },
@@ -332,10 +340,10 @@ Object.assign(ACT, {
     const ex = histEdit.exos[+d.i]; if(!ex) return;
     const last = ex.sets[ex.sets.length-1], def = EXO_MAP[ex.exoId];
     ex.sets.push(last ? Object.assign({}, last, { pr:undefined, effort:undefined }) : { reps: def ? def.repsMin : 10, done:true });
-    refreshHistEdit();
+    histEdit.dirty = true; refreshHistEdit();
   },
-  heDelSet(d){ const ex = histEdit.exos[+d.i]; if(!ex) return; ex.sets.splice(+d.j,1); if(!ex.sets.length) histEdit.exos.splice(+d.i,1); refreshHistEdit(); },
-  heDelExo(d){ histEdit.exos.splice(+d.i,1); refreshHistEdit(); },
+  heDelSet(d){ const ex = histEdit.exos[+d.i]; if(!ex) return; ex.sets.splice(+d.j,1); if(!ex.sets.length) histEdit.exos.splice(+d.i,1); histEdit.dirty = true; refreshHistEdit(); },
+  heDelExo(d){ histEdit.exos.splice(+d.i,1); histEdit.dirty = true; refreshHistEdit(); },
   heAddExo(){
     openPicker({ title:"Ajouter un exercice", multi:true, exclude:new Set(histEdit.exos.map(x=>x.exoId)),
       onCancel:()=>renderHistEdit(),
@@ -345,6 +353,7 @@ Object.assign(ACT, {
           const w = lt ? (lt==="bands" ? ((S.equipment.weights.bands||[])[0]||2) : sug.weight) : null;
           histEdit.exos.push({ exoId:id, sets:Array.from({ length:def.sets }, ()=>{ const o = { reps: sug.reps || def.repsMin, done:true }; if(w) o.weight = w; return o; }) });
         });
+        if(ids.length) histEdit.dirty = true;
         renderHistEdit();
       } });
   },

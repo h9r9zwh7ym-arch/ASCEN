@@ -462,9 +462,9 @@ function openModal(html, cls){
 }
 // feuille d'actions iOS (en bas de l'écran) : un message, des actions, et « Continuer » à part
 // une action est { t, a } (action existante) ou { t, run } (fonction, appelée après fermeture)
-function actionSheet({ msg, label, actions, cancel, onYes }){
+function actionSheet({ msg, label, actions, cancel, cancelA, onYes }){
   openModal(`<div class="as-group">${msg ? `<div class="as-msg">${msg}</div>` : ""}${actions.map((a,i)=>`<button class="as-btn${a.danger?" danger":""}" data-a="${a.run ? "asRun" : a.a}" data-i="${i}">${esc(a.t)}</button>`).join("")}</div>
-    <button class="as-btn as-cancel" data-a="closesheet">${esc(cancel||"Annuler")}</button>`, "action-sheet");
+    <button class="as-btn as-cancel" data-a="${cancelA||"closesheet"}">${esc(cancel||"Annuler")}</button>`, "action-sheet");
   const ov = qs("#overlay"), m = qs(".center-modal", ov);
   if(m && label) m.setAttribute("aria-label", label);
   ov._onYes = onYes || null; ov._asActs = actions;
@@ -500,6 +500,7 @@ function closeSheet(){
 // Une séance en cours d'édition avec des changements demande confirmation au lieu de fermer.
 function sheetDismissGuard(){
   if(typeof tplEdit!=="undefined" && tplEdit && tplEdit.dirty && qs("#tplEdBody")){ ACT.tplEdCancel(); return true; }
+  if(typeof histEdit!=="undefined" && histEdit && histEdit.dirty && qs("#heBody")){ ACT.heCancel(); return true; }
   return false;
 }
 function dismissSheet(){ if(sheetBack()) return; if(!sheetDismissGuard()) closeSheet(); }
@@ -782,7 +783,8 @@ document.addEventListener("click", e=>{
 document.addEventListener("keydown", e=>{
   if(e.key==="Enter" && e.target && e.target.id==="numInput"){ e.preventDefault(); ACT.numOk(); }
   // champs sans bouton propre : Entrée ferme le clavier ; recherche : idem (la liste est déjà filtrée)
-  if(e.key==="Enter" && e.target && /^(tplEdName|obName|obDb|obWhy|pickerSearch)$/.test(e.target.id||"")){ e.preventDefault(); e.target.blur(); }
+  if(e.key==="Enter" && e.target && /^(tplEdName|obName|obWhy|pickerSearch)$/.test(e.target.id||"")){ e.preventDefault(); e.target.blur(); }
+  if(e.key==="Enter" && e.target && e.target.id==="obDbAdd"){ e.preventDefault(); ACT.obDbAdd(); }
   if(e.key==="Enter" && e.target && e.target.id==="customEquipName"){ e.preventDefault(); ACT.addCustomEquip(); }
   if(e.key==="Enter" && e.target && e.target.id==="bodyIn"){ e.preventDefault(); ACT.bodyAdd(); }
   if(e.key==="Enter" && e.target && /^wadd-/.test(e.target.id||"")){ e.preventDefault(); ACT.addWeight({ id:e.target.id.slice(5) }); }

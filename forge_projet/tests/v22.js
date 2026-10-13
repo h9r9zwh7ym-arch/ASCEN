@@ -15,7 +15,11 @@ const OUT = (OUT_ROOT + '/v22'); fs.mkdirSync(OUT, { recursive: true });
   await shot('01_welcome');
   await page.fill('#obName', 'Yannick'); await page.click('[data-a="obNext"]'); await wait(500);
   await page.click('[data-a="obEquip"][data-id="dumbbells"]'); await page.click('[data-a="obEquip"][data-id="bench"]'); await wait(200);
-  await page.fill('#obDb', '6, 8,10 ; 12,5'); await shot('02_equip');
+  for (const w of ['6', '8', '10', '12.5']) await page.click(`[data-a="obDbW"][data-v="${w}"]`);
+  await page.click('[data-a="obDbW"][data-v="10"]'); await page.click('[data-a="obDbW"][data-v="10"]'); // décocher puis recocher
+  await page.fill('#obDbAdd', '11,25'); await page.press('#obDbAdd', 'Enter'); await wait(200);
+  log('Grid on:', await page.$$eval('.ob-w.on', b => b.map(x => x.textContent).join(' ')));
+  await shot('02_equip');
   await page.click('[data-a="obNext"]'); await wait(500);
   log('Dumbbells parsed:', await page.evaluate(() => JSON.stringify(S.equipment.weights.dumbbells)));
   await page.click('[data-a="obGoal"][data-v="force"]'); await page.click('[data-a="obDays"][data-v="4"]'); await page.click('[data-a="obLen"][data-v="court"]');

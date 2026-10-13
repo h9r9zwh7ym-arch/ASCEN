@@ -19,12 +19,11 @@ function obBody(){
     <div class="te-sec">Ton prénom <span class="ob-opt">facultatif</span></div>
     <div class="num-field txt"><input id="obName" type="text" maxlength="30" placeholder="Prénom" autocomplete="given-name" autocapitalize="words" autocorrect="off" spellcheck="false" enterkeyhint="done" value="${esc(S.settings.name||"")}"></div>`;
   if(obStep===1) return `<div class="ob-t2">Ton matériel</div><div class="ob-s2">Coche ce que tu as à la maison. Le poids du corps est toujours inclus.</div>
-    <div class="ob-equip">${OB_EQUIP.map(id=>{ const e = EQUIP_MAP[id]; const on = S.equipment.owned[id];
-      return `<button class="ob-eq ${on?"on":""}" data-a="obEquip" data-id="${id}" aria-pressed="${on}">${sfIcon(EQUIP_GLYPH[id]||"wrench", "gray")}<span>${esc(e.n)}</span><em>${icon("check")}</em></button>`; }).join("")}</div>
-    ${S.equipment.owned.dumbbells ? `<div class="te-sec">Tes haltères <span class="ob-opt">kg, séparés par des virgules</span></div>
-      <div class="num-field txt"><input id="obDb" type="text" inputmode="decimal" enterkeyhint="done" placeholder="Ex. 4, 6, 8, 10" value="${(S.equipment.weights.dumbbells||[]).join(", ")}"></div>` : ""}`;
+    <div class="group ob-list">${OB_EQUIP.map(id=>{ const e = EQUIP_MAP[id]; const on = !!S.equipment.owned[id];
+      return `<button class="row tap ob-eq ${on?"on":""}" data-a="obEquip" data-id="${id}" role="checkbox" aria-checked="${on}">${sfIcon(EQUIP_GLYPH[id]||"wrench", "gray")}<div class="grow"><div class="t">${esc(e.n)}</div></div><em class="ob-ck">${icon("check")}</em></button>`; }).join("")}</div>
+    ${S.equipment.owned.dumbbells ? obDbHTML() : ""}`;
   if(obStep===2) return `<div class="ob-t2">Ton objectif</div><div class="ob-s2">Il règle les fourchettes de répétitions et le volume proposé.</div>
-    <div class="ob-goals">${[["hypertrophie","Prendre du muscle","8 à 12 répétitions, ~10 séries par muscle et par semaine"],["force","Devenir plus fort·e","Moins de répétitions, charges plus lourdes"],["endurance","Endurance et tonus","Plus de répétitions, repos courts"]].map(([k,t,d])=>`<button class="ob-goal ${S.goals.overall===k?"on":""}" data-a="obGoal" data-v="${k}"><b>${t}</b><small>${d}</small></button>`).join("")}</div>
+    <div class="group ob-list" role="radiogroup" aria-label="Ton objectif">${[["hypertrophie","Prendre du muscle","8 à 12 répétitions, ~10 séries par muscle et par semaine"],["force","Devenir plus fort·e","Moins de répétitions, charges plus lourdes"],["endurance","Endurance et tonus","Plus de répétitions, repos courts"]].map(([k,t,d])=>`<button class="row tap ob-goal ${S.goals.overall===k?"on":""}" data-a="obGoal" data-v="${k}" role="radio" aria-checked="${S.goals.overall===k}"><div class="grow"><div class="t">${t}</div><div class="s">${d}</div></div><em class="ob-ck">${icon("check")}</em></button>`).join("")}</div>
     <div class="te-sec">Ton niveau</div>
     <div class="cal-alarm">${Object.keys(LEVEL_LABELS).map(k=>`<button class="chip ${(S.goals.level||"intermediaire")===k?"on":""}" data-a="obLevel" data-v="${k}">${LEVEL_LABELS[k]}</button>`).join("")}</div>
     <div class="ob-note" id="obLevelHint">${LEVEL_HINTS[S.goals.level||"intermediaire"]}</div>
@@ -50,36 +49,59 @@ function renderOnboarding(){
       : `<button class="btn" data-a="obNext">Continuer</button>` });
   const b = qs("#obBody"); if(b){ b.classList.remove("ob-in"); void b.offsetWidth; b.classList.add("ob-in"); }
 }
-// « 4, 6, 8 » ou « 4 6 8 » ; « 12,5 » (virgule décimale suivie d'un seul chiffre) = 12,5 kg
-function parseWeightList(txt){
-  const out = [];
-  txt.split(/[;\s]+/).forEach(tok=>{
-    if(!tok) return;
-    // « 12,5 » : virgule décimale ; « 8,10 » ou « 2.5,5 » : liste
-    if(/^\d+,\d$/.test(tok)) out.push(parseFloat(tok.replace(",",".")));
-    else tok.split(",").forEach(x=>{ const v = parseFloat(x); if(v>0) out.push(v); });
-  });
-  return out.filter(x=>x>0 && x<200);
+// Haltères : les charges courantes à toucher (pas de saisie au clavier, qui sur iPhone
+// n'offre que chiffres et virgule et rend « 4,6 » ambigu) ; « Autre » pour une charge rare.
+const OB_DB_KG = [1,2,2.5,3,4,5,6,7,8,9,10,12,12.5,14,15,16,17.5,18,20,22.5,24,25,27.5,30];
+function obDbHTML(){
+  const own = new Set(S.equipment.weights.dumbbells||[]);
+  const list = Array.from(new Set([...OB_DB_KG, ...own])).sort((a,b)=>a-b);
+  return `<div class="te-sec">Tes haltères <span class="ob-opt">kg par haltère</span></div>
+    <div class="ob-kg" role="group" aria-label="Charges de tes haltères">${list.map(w=>`<button class="ob-w ${own.has(w)?"on":""}" data-a="obDbW" data-v="${w}" aria-pressed="${own.has(w)}">${fmtW(w)}</button>`).join("")}</div>
+    <div class="ob-kg-add"><div class="num-field txt"><input id="obDbAdd" type="text" inputmode="decimal" enterkeyhint="done" maxlength="5" placeholder="Autre charge" aria-label="Autre charge, en kg"><span>kg</span></div><button class="btn sm" data-a="obDbAdd">Ajouter</button></div>
+    <div class="ob-note" id="obDbSum">${obDbSum()}</div>`;
+}
+function obDbSum(){
+  const n = (S.equipment.weights.dumbbells||[]).length;
+  return n ? `${n} charge${n>1?"s":""} cochée${n>1?"s":""}. Haltère réglable : coche chaque charge possible.` : "Haltère réglable : coche chaque charge possible.";
 }
 function obCollect(){
   const n = qs("#obName"); if(n) S.settings.name = n.value.trim();
   const w = qs("#obWhy"); if(w) S.settings.why = w.value.trim().slice(0,120);
-  const db = qs("#obDb");
-  if(db){ S.equipment.weights.dumbbells = Array.from(new Set(parseWeightList(db.value))).sort((a,b)=>a-b); }
 }
 function obDone(){ S.meta.onboarded = true; save(); }
 Object.assign(ACT, {
   obNext(){ obCollect(); obStep = Math.min(3, obStep+1); save(); renderOnboarding(); },
   obBack(){ obCollect(); obStep = Math.max(0, obStep-1); renderOnboarding(); },
   obSkip(){ obCollect(); obDone(); closeSheet(); regenerateDraft(); changed(); },
-  obEquip(d){ obCollect(); S.equipment.owned[d.id] = !S.equipment.owned[d.id]; save(); const b = qs("#obBody"); if(b){ b.innerHTML = obBody(); } sfx("seg"); },
-  obGoal(d){ S.goals.overall = d.v; qsa(".ob-goal").forEach(x=>x.classList.toggle("on", x.dataset.v===d.v)); save(); },
+  obEquip(d){
+    obCollect(); S.equipment.owned[d.id] = !S.equipment.owned[d.id]; save();
+    const b = qs("#obBody"); if(b){ const top = b.scrollTop; b.innerHTML = obBody(); b.scrollTop = top; }
+    // les charges apparaissent sous la grille : on les amène à l'écran
+    const kg = d.id==="dumbbells" && S.equipment.owned.dumbbells && qs("#obBody .ob-kg");
+    if(kg) setTimeout(()=>{ const r = kg.getBoundingClientRect(), br = b.getBoundingClientRect(); if(r.top > br.bottom-120) b.scrollTo({ top:b.scrollTop + r.top - br.top - 60, behavior:"smooth" }); }, 60);
+    sfx("seg");
+  },
+  obDbW(d){
+    const v = parseFloat(d.v), cur = new Set(S.equipment.weights.dumbbells||[]);
+    if(cur.has(v)) cur.delete(v); else cur.add(v);
+    S.equipment.weights.dumbbells = Array.from(cur).sort((a,b)=>a-b); save();
+    qsa('[data-a="obDbW"]').forEach(x=>{ const on = cur.has(parseFloat(x.dataset.v)); x.classList.toggle("on", on); x.setAttribute("aria-pressed", on); });
+    const s = qs("#obDbSum"); if(s) s.textContent = obDbSum(); sfx("seg");
+  },
+  obDbAdd(){
+    const i = qs("#obDbAdd"); if(!i) return;
+    const v = Math.round(parseFloat(String(i.value).replace(",", "."))*4)/4;
+    if(!(v>0 && v<200)){ i.value = ""; return toast("Indique une charge entre 0,25 et 200 kg"); }
+    S.equipment.weights.dumbbells = Array.from(new Set([...(S.equipment.weights.dumbbells||[]), v])).sort((a,b)=>a-b); save();
+    const b = qs("#obBody"), top = b && b.scrollTop; if(b){ b.innerHTML = obBody(); b.scrollTop = top; }
+  },
+  obGoal(d){ S.goals.overall = d.v; qsa(".ob-goal").forEach(x=>{ x.classList.toggle("on", x.dataset.v===d.v); x.setAttribute("aria-checked", x.dataset.v===d.v); }); save(); sfx("seg"); },
   obLevel(d){ S.goals.level = d.v; qsa('[data-a="obLevel"]').forEach(x=>x.classList.toggle("on", x.dataset.v===d.v)); const h = qs("#obLevelHint"); if(h) h.textContent = LEVEL_HINTS[d.v]; save(); },
   obDays(d){ S.goals.daysPerWeek = +d.v; qsa('[data-a="obDays"]').forEach(x=>x.classList.toggle("on", x.dataset.v===d.v)); save(); },
   obLen(d){ S.goals.sessionLength = d.v; qsa('[data-a="obLen"]').forEach(x=>x.classList.toggle("on", x.dataset.v===d.v)); save(); },
   obFinish(d){
     obCollect(); obDone();
-    if(d.v==="plan"){ wizardN = Math.min(6, Math.max(2, S.goals.daysPerWeek)); ACT.wizardCreate(); }
+    if(d.v==="plan"){ wizardN = Math.min(6, Math.max(2, S.goals.daysPerWeek)); ACT.wizardCreate({ first:true }); }
     else { closeSheet(); regenerateDraft(); renderViewAnimated("today"); }
   },
 });

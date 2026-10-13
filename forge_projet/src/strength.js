@@ -351,8 +351,8 @@ function deloadCardHTML(){
   return `<div class="dl-card stagger" style="--i:1">
     <span class="dl-ic">${ii("leaf")}</span>
     <div class="dl-main"><div class="dl-t">Semaine allégée conseillée</div>
-      <div class="dl-s">${esc(a.txt)} Une semaine plus légère aide à récupérer, sans perdre en force.</div>
-      <div class="dl-act"><button class="btn sm" data-a="deloadStart">Commencer</button><button class="btn tertiary sm" data-a="deloadLater">Plus tard</button></div></div>
+      <div class="dl-s">${esc(a.txt)}</div>
+      <div class="dl-act"><button class="btn sm" data-a="deloadStart">Alléger cette semaine</button><button class="btn tertiary sm" data-a="deloadLater">Plus tard</button></div></div>
     <button class="info-btn dl-x" data-a="deloadHow" aria-label="Pourquoi une semaine allégée ?">i</button>
   </div>`;
 }

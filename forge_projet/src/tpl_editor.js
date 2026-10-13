@@ -161,12 +161,8 @@ Object.assign(ACT, {
   tplEdCancel(){
     // la feuille d'enregistrement ne perd rien : les exercices restent dans Ma séance
     if(!tplEdit || !tplEdit.dirty || tplEdit.lite){ tplEdit = null; closeSheet(); return; }
-    openModal(`<div style="font-weight:700;font-size:calc(17rem/17);margin-bottom:6px">Abandonner les modifications ?</div>
-      <div style="color:var(--label2);font-size:var(--fs-sub);margin-bottom:18px">Ce que tu as changé dans cette séance ne sera pas enregistré.</div>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        <button class="btn danger" data-a="tplEdDiscard">Abandonner</button>
-        <button class="btn ghost" data-a="tplEdResume">Continuer l'édition</button>
-      </div>`);
+    actionSheet({ label:"Modifications non enregistrées", msg:"Ce que tu as changé dans cette séance ne sera pas enregistré.",
+      actions:[{ t:"Ignorer les modifications", a:"tplEdDiscard", danger:true }], cancel:"Continuer à modifier", cancelA:"tplEdResume" });
   },
   tplEdDiscard(){ tplEdit = null; closeSheet(); },
   tplEdResume(){ renderTplEditor(); },
@@ -191,7 +187,7 @@ Object.assign(ACT, {
   },
   weekWizard(){ openWeekWizard(); },
   wizardN(d){ wizardN = +d.v; const b = qs("#wzBody"); if(b) b.innerHTML = weekWizardBody(); const f = qs('[data-a="wizardCreate"]'); if(f) f.innerHTML = `<svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Créer mes ${wizardN} séances`; },
-  wizardCreate(){
+  wizardCreate(d){
     const split = WEEK_SPLITS[wizardN], days = split.map(s=>s[2]);
     S.templates.forEach(t=>{ t.days = (t.days||[]).filter(d=>!days.includes(d)); });
     const used = new Set(), made = [];
@@ -212,7 +208,8 @@ Object.assign(ACT, {
     made.forEach((id,k)=>{ const c = qs(`#v-today .tpl-card2[data-id="${id}"]`); if(!c) return;
       c.style.setProperty("--k", k); c.classList.add("pop-in"); setTimeout(()=>c.classList.remove("pop-in"), 1200); });
     toast(`${made.length} séances créées et placées dans ta semaine`, "sparkle");
-    setTimeout(()=>{ const w = qs("#v-today .wk-card"); if(w) w.scrollIntoView({ behavior:"smooth", block:"center" }); }, 420);
+    // depuis l'accueil : on montre la semaine remplie ; au premier lancement, l'accueil reste en haut
+    if(!(d && d.first)) setTimeout(()=>{ const w = qs("#v-today .wk-card"); if(w) w.scrollIntoView({ behavior:"smooth", block:"center" }); }, 420);
   },
   pickerCancel(){ const p = picker; if(p && p.onCancel) p.onCancel(); else closeSheet(); },
 });

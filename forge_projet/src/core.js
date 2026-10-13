@@ -479,6 +479,8 @@ function nb(n, w){ return `${n} ${w}${Math.abs(n)>=2?"s":""}`; }
 // fr-FR et pas fr-CH : Safari iOS écrit « 0.5 » en fr-CH, on veut la virgule partout
 function fmtNum(n){ return Math.round(n).toLocaleString("fr-FR"); }
 function fmtDec(n){ return round1(n).toLocaleString("fr-FR"); }
+// charge d'un matériel (11,25 kg garde ses deux décimales)
+function fmtW(w){ return (+w).toLocaleString("fr-FR", { maximumFractionDigits:2 }); }
 function fmtKg(kg){
   if(kg>=10000) return `${round1(kg/1000).toLocaleString("fr-FR")} t`;
   return `${fmtNum(kg)} kg`;

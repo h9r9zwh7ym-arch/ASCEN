@@ -454,7 +454,7 @@ function resolveExoRef(ref){
   if(ref.id && EXO_MAP[ref.id]) return EXO_MAP[ref.id];
   const target = normName(ref.nom||ref.name||ref.id||"");
   if(!target) return null;
-  let found = EXOS.find(e=>normName(e.n)===target || normName(e.id)===target);
+  let found = EXOS.find(e=>normName(e.n)===target || normName(e.id)===target || (e.aka && normName(e.aka)===target));
   if(found) return found;
   found = EXOS.find(e=>normName(e.n).includes(target) || target.includes(normName(e.n)));
   return found||null;
