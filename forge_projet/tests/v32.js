@@ -14,7 +14,7 @@ const OUT = path.join(OUT_ROOT, 'v32'); fs.mkdirSync(OUT, { recursive: true });
   const log = (...a) => console.log(`[${wk ? 'webkit' : 'chromium'}]`, ...a), wait = ms => page.waitForTimeout(ms), shot = n => page.screenshot({ path: `${OUT}/${wk ? 'wk_' : ''}${n}.png` });
   const fail = m => errors.push('ASSERT: ' + m);
   // historique au format compact, dont une séance abîmée (liste d'exercices illisible)
-  await page.addInitScript(() => { if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
+  await page.addInitScript(() => { if (sessionStorage.getItem('seeded') || localStorage.getItem('__seeded')) return; sessionStorage.setItem('seeded', '1'); localStorage.setItem('__seeded', '1'); // sessionStorage peut manquer au rechargement (Chromium chargé)
     const zs = []; for (let i = 0; i < 40; i++) { const d = new Date(2026, 0, 2 + i * 3), iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       zs.push({ i: 'z' + i, d: iso, o: 'c', a: d.getTime() + 18 * 3600e3, u: 1800, x: [['pompes', [[12], [10], ['11']]], ['dc_haltere', [[10, 20], [8, 22.5, 1]]], ['planche', [[45]]]] }); }
     zs.splice(7, 0, { i: 'bad', d: '2026-02-01', x: 'illisible' });

@@ -13,7 +13,7 @@ const OUT = path.join(OUT_ROOT, 'v26'); fs.mkdirSync(OUT, { recursive: true });
   const fail = m => errors.push('ASSERT: ' + m);
   const file = 'file://' + path.resolve(process.argv[2]);
   // historique réaliste : 18 mois, 3 séances par semaine
-  await page.addInitScript(() => { if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
+  await page.addInitScript(() => { if (sessionStorage.getItem('seeded') || localStorage.getItem('__seeded')) return; sessionStorage.setItem('seeded', '1'); localStorage.setItem('__seeded', '1'); // sessionStorage peut manquer au rechargement (Chromium chargé)
     const ex = ['pompes', 'dc_haltere', 'squat_gobelet', 'rowing_uni_haltere', 'planche', 'fentes_avant', 'curl_haltere', 'tractions'];
     const ss = []; const start = new Date(2025, 3, 1);
     for (let i = 0; i < 230; i++) { const d = new Date(start); d.setDate(d.getDate() + Math.floor(i * 7 / 3)); const iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');

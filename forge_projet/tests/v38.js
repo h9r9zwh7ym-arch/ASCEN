@@ -12,7 +12,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const log = (...a) => console.log(`[${wk ? 'webkit' : 'chromium'}]`, ...a);
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, timezoneId: 'Europe/Zurich', hasTouch: wk, isMobile: wk });
   const page = await ctx.newPage(); page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
-  await page.addInitScript(() => { if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
+  await page.addInitScript(() => { if (sessionStorage.getItem('seeded') || localStorage.getItem('__seeded')) return; sessionStorage.setItem('seeded', '1'); localStorage.setItem('__seeded', '1'); // sessionStorage peut manquer au rechargement (Chromium chargé)
     localStorage.setItem('forge.v1', JSON.stringify({ meta: { onboarded: true }, equipment: { owned: { dumbbells: true, bench: true } } })); });
   await page.goto(APP); await page.waitForSelector('#splash', { state: 'detached', timeout: 9000 }); await page.waitForTimeout(500);
   const shot = n => page.screenshot({ path: `${OUT}/${wk ? 'wk_' : ''}${n}.png` }), wait = ms => page.waitForTimeout(ms);
