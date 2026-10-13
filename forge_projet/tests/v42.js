@@ -81,12 +81,12 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const sen = await page.evaluate(() => { const a = strengthAt(todayISO()).index; S.goals.senior = true; DATA_VER++; const b = strengthAt(todayISO()).index; S.goals.senior = false; DATA_VER++; return { a, b }; });
   log('Senior:', JSON.stringify(sen)); if (!(sen.b < sen.a)) fail('baisse plus rapide à 65 ans et plus');
 
-  // double toucher rapide sur une section repliable : le contenu rouvert n'est pas vidé par la fin du repli
+  // double toucher rapide sur une séance de Mes séances : le contenu rouvert n'est pas vidé par la fin du repli
   await page.evaluate(() => switchTab('today')); await wait(400);
-  await page.evaluate(() => { if (!S.templates.length) S.templates.push({ id: 'tz', n: 'Test', days: [], exos: [{ exoId: 'pompes', sets: 3 }] }); uiState().tplOpen = true; renderView('today'); }); await wait(200);
-  await page.evaluate(() => { const b = () => document.querySelector('[data-a="toggleSection"][data-k="tplOpen"]'); b().click(); setTimeout(() => b().click(), 60); }); await wait(900);
-  const plan = await page.evaluate(() => ({ open: S.settings.ui.tplOpen, cards: document.querySelectorAll('.tpl-section:not(.mini) .tpl-card2').length, days: document.querySelectorAll('.wk-card .wk-day').length }));
-  log('Double tap on section:', JSON.stringify(plan)); if (!plan.open || !plan.cards || plan.days !== 7) fail('section rouverte pendant son repli');
+  await page.evaluate(() => { if (!S.templates.length) S.templates.push({ id: 'tz', n: 'Test', days: [], exos: [{ exoId: 'pompes', sets: 3 }] }); openTpls.clear(); renderView('today'); }); await wait(200);
+  await page.evaluate(() => { const b = () => document.querySelector('.tpl-card2 .tc-head'); b().click(); setTimeout(() => b().click(), 60); setTimeout(() => b().click(), 120); }); await wait(900);
+  const plan = await page.evaluate(() => { const c = document.querySelector('.tpl-card2'); return { open: c.classList.contains('open'), list: !!c.querySelector('.clp .tc-list'), days: document.querySelectorAll('.wk-card .wk-day').length }; });
+  log('Triple tap on a session:', JSON.stringify(plan)); if (!plan.open || !plan.list || plan.days !== 7) fail('séance rouverte pendant son repli');
   await browser.close();
   errors.forEach(e => log(e)); log(errors.length ? 'ERRORS: ' + errors.length : '=== NO ERRORS ===');
   process.exit(errors.length ? 1 : 0);

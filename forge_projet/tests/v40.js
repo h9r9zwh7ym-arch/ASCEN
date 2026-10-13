@@ -73,8 +73,10 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await shot('03_home_custom');
   await page.evaluate(() => ACT.todayMode({ v: 'proposal' })); await wait(500);
   await page.evaluate(() => { if (!document.querySelector('.type-chip')) ACT.propAdjust(); }); await wait(500);   // types : derrière « Ajuster »
-  const prop = await page.evaluate(() => ({ hero: document.querySelector('#v-today .hero').className, express: !!document.querySelector('.hero [data-a="chooseSession"]'),   // l'express est dans « Choisir une autre séance »
-    starts: document.querySelectorAll('#v-today [data-a="startSession"]').length, chips: [...document.querySelectorAll('.type-chip')].map(b => b.dataset.v) }));
+  const chips = await page.evaluate(() => [...document.querySelectorAll('.type-chip')].map(b => b.dataset.v));
+  await page.evaluate(() => { if (propAdjust) ACT.propAdjust(); }); await wait(500);   // « OK » : on règle, puis on lance (rien ne se lance pendant le réglage)
+  const prop = await page.evaluate(chips => ({ hero: document.querySelector('#v-today .hero').className, express: !!document.querySelector('.hero [data-a="chooseSession"]'),   // l'express est dans « Choisir une autre séance »
+    starts: document.querySelectorAll('#v-today [data-a="startSession"]').length, chips }), chips);
   log('Proposal:', JSON.stringify(prop));
   if (!/proposal/.test(prop.hero) || !prop.express || prop.starts !== 1 || !prop.chips.includes('pilates')) fail('proposition de l\'app en second choix');
 

@@ -42,12 +42,13 @@ const APP = 'file://' + path.resolve(process.argv[2]);
 
   // 2. « Modifier » : la liste éditable (séries, retrait, ajout, enregistrement) ; « OK » la referme
   await page.click('.hero .hero-mod'); await wait(600);
-  const ed = await page.evaluate(() => ({ list: !!document.querySelector('.hero .hero-list'), builder: document.querySelectorAll('.group.builder .row').length, sets: document.querySelectorAll('[data-a="customSets"]').length, save: !!document.querySelector('.save-row'), ok: document.querySelector('.hero .hero-mod').textContent }));
+  const ed = await page.evaluate(() => ({ list: !!document.querySelector('.hero .hero-list'), builder: document.querySelectorAll('.group.builder .row').length, sets: document.querySelectorAll('[data-a="customSets"]').length, save: !!document.querySelector('.save-row'), go: !!document.querySelector('.hero .hero-go'), ok: document.querySelector('.hero .hero-mod').textContent }));
   await shot('02_edit');
   await page.click('.hero .hero-mod'); await wait(600);
-  const ed2 = await page.evaluate(() => ({ list: !!document.querySelector('.hero .hero-list'), builder: document.querySelectorAll('.group.builder .row').length }));
+  const ed2 = await page.evaluate(() => ({ list: !!document.querySelector('.hero .hero-list'), builder: document.querySelectorAll('.group.builder .row').length, go: !!document.querySelector('.hero .hero-go') }));
   log('Edit:', JSON.stringify(ed), '→', JSON.stringify(ed2));
-  if (ed.list || ed.builder !== 5 || ed.sets !== 10 || !ed.save || ed.ok !== 'OK' || !ed2.list || ed2.builder) fail('« Modifier » puis « OK »');
+  // en édition : ni « Commencer » ni ligne d'enregistrement (la séance vient de Mes séances : le choix se fait à « OK », sans changement rien n'est demandé)
+  if (ed.list || ed.builder !== 5 || ed.sets !== 10 || ed.save || ed.go || ed.ok !== 'OK' || !ed2.list || ed2.builder || !ed2.go) fail('« Modifier » puis « OK »');
 
   // 3. « Choisir une autre séance » : tes séances, l'app, l'express, composer ; charger une séance enregistrée
   await page.click('.hero [data-a="chooseSession"]'); await wait(450);

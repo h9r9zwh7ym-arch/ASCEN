@@ -37,8 +37,9 @@ const OUT = path.join(OUT_ROOT, 'v31'); fs.mkdirSync(OUT, { recursive: true });
   await shot('03_save_sheet');
   await page.click('#tplEdSaveBtn'); await wait(700);
   const saved = await page.evaluate(() => ({ t: S.templates.map(t => t.n + ':' + t.days.join('')), linked: !!S.custom.tplId }));
-  const row2 = await page.$eval('.save-row', e => e.textContent.replace(/\s+/g, ' ').trim()); log('Saved:', JSON.stringify(saved), '| row:', row2);
-  if (saved.t.join() !== 'Haut rapide:2' || !saved.linked || !/Enregistrée/.test(row2) || !/Mer/.test(row2)) fail('séance enregistrée et planifiée');
+  // enregistrée : la ligne « Ajouter à Mes séances » disparaît (le choix « aujourd'hui seulement / aussi les prochaines fois » se fait à « OK ») ; la séance est dans Mes séances, le mercredi
+  const row2 = await page.evaluate(() => ({ row: !!document.querySelector('.save-row'), card: [...document.querySelectorAll('.tpl-card2')].map(c => c.querySelector('.tc-name').firstChild.textContent.trim() + ':' + c.querySelector('.tc-days').textContent.trim()).join('|') })); log('Saved:', JSON.stringify(saved), '| after:', JSON.stringify(row2));
+  if (saved.t.join() !== 'Haut rapide:2' || !saved.linked || row2.row || !/Haut rapide:Mer/.test(row2.card)) fail('séance enregistrée et planifiée');
   // 3. sans l'enregistrer : on peut commencer directement, rien n'est ajouté à Mes séances
   await page.evaluate(() => { S.custom = { exos: [{ exoId: 'pompes', sets: 3 }] }; save(); renderView('today'); }); await wait(300);
   await page.click('.save-row'); await wait(400); await page.click('[data-a="tplEdCancel"]'); await wait(400);

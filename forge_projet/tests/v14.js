@@ -48,10 +48,8 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await shot('03_tpl_menu');
   await tap('.center-modal [data-a="duplicateTemplate"]'); await wait(500);
   log('Templates after duplicate:', await page.evaluate(() => S.templates.map(t => t.n).join(' | ')));
-  // section repliée
-  await tap('[data-a="toggleSection"][data-k="tplOpen"]'); await wait(250);
-  log('Collapsed cards:', await page.$$eval('.tpl-card2', e => e.length), 'persisted:', await page.evaluate(() => S.settings.ui.tplOpen));
-  await tap('[data-a="toggleSection"][data-k="tplOpen"]'); await wait(250);
+  // Mes séances : plus de repli de section (il ne réduisait rien), la liste reste détaillée
+  log('Section toggle:', await page.$$eval('[data-a="toggleSection"]', e => e.length), '| cards:', await page.$$eval('.tpl-card2', e => e.length));
 
   // Ma séance : charger, réorganiser, info
   await tap('.tpl-card2 >> nth=1 >> .tc-head'); await wait(300);
