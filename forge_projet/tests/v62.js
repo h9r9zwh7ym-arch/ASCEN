@@ -55,7 +55,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const today = await page.evaluate(() => ({ eyebrow: (document.querySelector('.hero .hero-tag') || {}).textContent || '', go: !!document.querySelector('.hero .hero-go'),
     tpl: S.templates.find(t => t.id === 'tp').exos.length, custom: S.custom.exos.length }));
   log('Ask:', JSON.stringify(ask), '→', JSON.stringify(today));
-  if (ask.btns.join('|') !== "Pour aujourd'hui seulement|Aussi pour les prochaines fois|Continuer à modifier" || !/Pectoraux/.test(ask.msg || '')
+  if (ask.btns.join('|') !== "Pour aujourd'hui seulement|Aussi pour les prochaines fois|Annuler les modifications" || !/Pectoraux/.test(ask.msg || '')
     || today.eyebrow !== "Modifiée pour aujourd'hui" || !today.go || today.tpl !== 3 || today.custom !== 2) fail('« Pour aujourd\'hui seulement » ne touche pas Mes séances');
   // la même modification n'est pas redemandée ; un nouveau changement, si : « Aussi pour les prochaines fois » met à jour la séance
   await tap('.hero .hero-mod'); await wait(500); await tap('.hero .hero-mod'); await wait(600);

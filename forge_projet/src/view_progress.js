@@ -309,7 +309,6 @@ function allMedalsHTML(){
         <div class="medal-grid">${list.map((m,i)=>medalCardHTML(m,i+4)).join("")}</div>`;
     }).join("")}
     <h2 class="sh">Trophées secrets<span class="more" style="color:var(--label2)">${SECRETS.filter(m=>medalTier(m)).length}/${SECRETS.length}</span></h2>
-    <p class="hr-note" style="margin:-4px 20px 10px">Ils se dévoilent quand tu les découvres. Touche-en un pour un indice.</p>
     <div class="medal-grid">${SECRETS.slice().sort((a,b)=>medalTier(b)-medalTier(a)).map((m,i)=>medalCardHTML(m,i+4)).join("")}</div>`;
 }
 
@@ -396,7 +395,7 @@ function targetSheetHTML(){
       ${kinds.length>1 && !t.id ? `<div class="tg-seg">${segHTML("tgKind", [["kg","Charge"],["reps","Répétitions"]], t.kind, "tgKind")}</div>` : ""}
       <div class="te-sec">${t.kind==="kg" ? "Charge à atteindre (sur une série)" : t.kind==="sec" ? "Durée à tenir (sur une série)" : "Répétitions en une série"}</div>
       <div class="tg-step"><button data-a="tgStep" data-d="-${step}" aria-label="Diminuer l'objectif">−</button><div class="tg-val" id="tgVal">${fmtTarget(t.kind, t.value)}</div><button data-a="tgStep" data-d="${step}" aria-label="Augmenter l'objectif">+</button></div>
-      <p class="hr-note tg-hint">${t.value<=cur ? "Déjà atteint : vise un peu plus haut." : "Un objectif atteignable en quelques semaines motive le plus : ni trop facile, ni hors de portée."}</p>
+      <p class="hr-note tg-hint">${t.value<=cur ? "Déjà atteint : vise un peu plus haut." : ""}</p>
       ${t.id ? `<button class="btn ghost te-del" data-a="delTarget" data-id="${t.id}">Supprimer l'objectif</button>` : ""}
     </div>`;
 }
@@ -430,7 +429,7 @@ Object.assign(ACT, {
     t.value = Math.max(t.kind==="kg" ? 0.5 : 1, round1(t.value + parseFloat(d.d)));
     const v = qs("#tgVal"); if(v){ v.textContent = fmtTarget(t.kind, t.value); v.classList.remove("bump"); void v.offsetWidth; v.classList.add("bump"); }
     const cur = bestOf(t.exoId, t.kind), b = qs("#tgSave"); if(b) b.disabled = t.value<=cur;
-    const h = qs(".tg-hint"); if(h) h.textContent = t.value<=cur ? "Déjà atteint : vise un peu plus haut." : "Un objectif atteignable en quelques semaines motive le plus : ni trop facile, ni hors de portée.";
+    const h = qs(".tg-hint"); if(h) h.textContent = t.value<=cur ? "Déjà atteint : vise un peu plus haut." : "";
     if(t.id){ const real = S.targets.find(x=>x.id===t.id); if(real && t.value>cur){ real.value = t.value; delete real.doneAt; changed(); } }
     sfx("seg");
   },

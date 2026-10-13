@@ -109,8 +109,12 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   if (prof.asc || prof.badge) fail('profil sans ascension ni niveau');
   // À propos : les sources des montagnes et le lien vers « Comment ça marche » (retour vers À propos)
   await page.evaluate(() => ACT.openAbout()); await wait(500);
-  const ab = await page.evaluate(() => ({ src: /OpenStreetMap/.test(document.querySelector('.sheet-body').textContent) && /swisstopo/.test(document.querySelector('.sheet-body').textContent), link: !!document.querySelector('.about-link[data-a="ascHow"]') }));
-  await page.click('.about-link'); await wait(600);
+  // 2.1.2 : les sources ont leur écran (« Sources des reliefs ») ; « Comment ça marche » est une ligne de la liste
+  await page.click('.about-body [data-a="aboutPage"][data-k="sources"]'); await wait(700);
+  const src = await page.evaluate(() => /OpenStreetMap/.test(document.querySelector('.sheet-body').textContent) && /swisstopo/.test(document.querySelector('.sheet-body').textContent));
+  await page.click('.sheet-hd [data-a="sheetBack"]'); await wait(700);
+  const ab = await page.evaluate(src => ({ src, link: !!document.querySelector('.about-body [data-a="ascHow"]') }), src);
+  await page.click('.about-body [data-a="ascHow"]'); await wait(600);
   const ab2 = await page.evaluate(() => (document.querySelector('.sheet-hd .t') || {}).textContent);
   await page.click('.sheet-hd [data-a="sheetBack"]'); await wait(700);
   const ab3 = await page.evaluate(() => (document.querySelector('.sheet-hd .t') || {}).textContent);

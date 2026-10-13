@@ -13,6 +13,7 @@ function stepRow(t, v, a, less, more){
 const LEN_LABELS = { court:"Courte (≈ 20 min)", moyen:"Moyenne (≈ 35 min)", long:"Longue (≈ 50 min)" };
 // niveau dit en durée de pratique : clair, et sans accord à faire
 const LEVEL_LABELS = { debutant:"Moins d'un an", intermediaire:"1 à 3 ans", avance:"Plus de 3 ans" };
+
 const LEVEL_HINTS = { debutant:"Exercices accessibles, la technique d'abord.", intermediaire:"Tous les exercices standard.", avance:"Variantes exigeantes privilégiées." };
 
 function ownedEquipCount(){ return EQUIP_TYPES.filter(e=>!e.always && S.equipment.owned[e.id]).length; }
@@ -51,18 +52,23 @@ const MOTIV = [["beat","target","orange","Chiffre à battre en séance","Ta sér
 function motivSummary(){ const on = MOTIV.filter(([k])=>S.settings[k]!==false).length; return on===MOTIV.length ? "Toutes les aides actives" : on ? `${on} aide${on>1?"s":""} sur ${MOTIV.length} active${on>1?"s":""}` : "Aides désactivées"; }
 function sessionPrefsSummary(){
   const r = { court:"repos courts", normal:"repos conseillés", long:"repos longs" }[S.settings.rest||"normal"];
-  return [deloadActive() ? "semaine allégée en cours" : "", r, S.settings.stretching ? "étirements" : "", appPicksOn() ? "suggestions de l'app" : ""].filter(Boolean).join(" · ");
+  return [deloadActive() ? "semaine allégée en cours" : "", r, S.settings.warmup ? "échauffement" : "", S.settings.stretching ? "étirements" : "", appPicksOn() ? "suggestions de l'app" : ""].filter(Boolean).join(" · ");
 }
 function sessionPrefsHTML(){
   return `<div class="group">
       <div class="row rest-row">
         ${sfIcon("stopwatch","teal")}
-        <div class="grow"><div class="t">Temps de repos</div><div class="s">Appliqué à la durée conseillée de chaque exercice</div></div>
+        <div class="grow"><div class="t">Temps de repos</div></div>
       </div>
       <div class="rest-seg">${[["court","Court"],["normal","Conseillé"],["long","Long"]].map(([k,l])=>`<button class="chip ${(S.settings.rest||"normal")===k?"on":""}" data-a="setRest" data-v="${k}" aria-pressed="${(S.settings.rest||"normal")===k}">${l}</button>`).join("")}</div>
       <div class="row">
+        ${sfIcon("flame","orange")}
+        <div class="grow"><div class="t">Échauffement</div></div>
+        <button class="switch ${S.settings.warmup?"on":""}" role="switch" aria-checked="${!!S.settings.warmup}" aria-label="Échauffement" data-a="toggleWarmup"></button>
+      </div>
+      <div class="row">
         ${sfIcon("mat","indigo")}
-        <div class="grow"><div class="t">Étirements en fin de séance</div><div class="s">Ajoutés aux séances proposées par l'app</div></div>
+        <div class="grow"><div class="t">Étirements en fin de séance</div></div>
         <button class="switch ${S.settings.stretching?"on":""}" role="switch" aria-checked="${!!(S.settings.stretching)}" aria-label="Étirements en fin de séance" data-a="toggleStretching"></button>
       </div>
       <button class="row tap" style="width:100%" data-a="deloadHow">
@@ -72,7 +78,7 @@ function sessionPrefsHTML(){
       </button>
       <div class="row">
         ${sfIcon("sparkles","purple")}
-        <div class="grow"><div class="t">Suggestions de l'app</div><div class="s">« Laisse l'app choisir », « Compléter » et le programme de la semaine</div></div>
+        <div class="grow"><div class="t">Suggestions de l'app</div></div>
         <button class="switch ${appPicksOn()?"on":""}" role="switch" aria-checked="${!!(appPicksOn())}" aria-label="Suggestions de l'app dans Ma séance" data-a="toggleAppPicks"></button>
       </div>
     </div>`;
@@ -80,13 +86,13 @@ function sessionPrefsHTML(){
 function motivHTML(){
   return `<div class="group"><button class="row tap" style="width:100%" data-a="editWhy" data-from="motiv">
         ${sfIcon("heart","red")}
-        <div class="grow"><div class="t">Ton pourquoi</div><div class="s wrap">${S.settings.why ? `« ${esc(S.settings.why)} »` : "Ce qui te pousse à t'entraîner : rappelé quand tu reviens après quelques jours"}</div></div>
+        <div class="grow"><div class="t">Ton pourquoi</div><div class="s wrap">${S.settings.why ? `« ${esc(S.settings.why)} »` : ""}</div></div>
         <span class="chev">${icon("chev")}</span>
       </button></div>
-    <p class="sheet-note" style="margin-top:20px">Des aides pour garder l'envie. Toutes sont facultatives.</p><div class="group">
+    <div class="group" style="margin-top:20px">
       ${MOTIV.map(([k,ic,c,t,sub])=>`<div class="row">
         ${sfIcon(ic,c)}
-        <div class="grow"><div class="t">${t}</div><div class="s">${sub}</div></div>
+        <div class="grow"><div class="t">${t}</div></div>
         <button class="switch ${S.settings[k]!==false?"on":""}" role="switch" aria-checked="${!!(S.settings[k]!==false)}" aria-label="${t}" data-a="toggleMotiv" data-k="${k}"></button>
       </div>`).join("")}
     </div>`;
@@ -99,18 +105,18 @@ function dataMoreHTML(){
       </button>
       ${isStandalone() ? "" : `<button class="row tap" style="width:100%" data-a="openInstall">
         ${sfIcon("phone","blue")}
-        <div class="grow"><div class="t">Installer sur l'écran d'accueil</div><div class="s">Plein écran, hors ligne, données protégées</div></div>
+        <div class="grow"><div class="t">Installer sur l'écran d'accueil</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>`}
     </div>
     <div class="group" style="margin-top:14px">
       <button class="row tap" style="width:100%" data-a="restoreData">
         ${sfIcon("restore","teal")}
-        <div class="grow"><div class="t">Restaurer une sauvegarde</div><div class="s">Fichier de sauvegarde ASCEN</div></div>
+        <div class="grow"><div class="t">Restaurer une sauvegarde</div></div>
       </button>
       <button class="row tap" style="width:100%" data-a="exportCSV">
         ${sfIcon("list","teal")}
-        <div class="grow"><div class="t">Exporter l'historique (tableur)</div><div class="s">Toutes les séries, à ouvrir dans Numbers ou Excel</div></div>
+        <div class="grow"><div class="t">Exporter l'historique (tableur)</div></div>
       </button>
       <button class="row tap" style="width:100%" data-a="openExportImport">
         ${sfIcon("sparkles","purple")}
@@ -209,7 +215,7 @@ function renderProfil(){
         <span class="chev">${icon("chev")}</span>
       </button>
     </div>
-    <p class="hr-note" style="margin:16px 20px 40px">ASCEN v${APP_VERSION} — toutes les données restent stockées localement sur cet appareil.</p>
+    <div style="height:40px"></div>
   </div>`;
 }
 
@@ -333,7 +339,7 @@ function equipBodyHTML(){
       const own = new Set(S.equipment.weights.bands||[]);
       return `<div class="card" style="margin-top:12px">
         <div style="font-weight:700;margin-bottom:2px">${esc(e.n)}</div>
-        <div class="hr-note" style="margin:0 0 10px">${esc(e.hint)} La progression passera d'une résistance à la suivante.</div>
+        <div class="hr-note" style="margin:0 0 10px">${esc(e.hint)}</div>
         <div class="chips" style="padding:0">${[1,2,3,4,5].map(v=>`<button class="chip ${own.has(v)?"on":""}" data-a="toggleBand" data-v="${v}">${bandLabel(v)}</button>`).join("")}</div>
       </div>`;
     }
@@ -352,8 +358,7 @@ function equipBodyHTML(){
   const customs = S.equipment.custom.map(c=>`<div class="row">${sfIcon("wrench","gray")}<div class="grow"><div class="t">${esc(c.n)}</div></div><button class="icon-btn" data-a="removeCustom" data-id="${c.id}" aria-label="Retirer ${esc(c.n)}">${icon("close")}</button></div>`).join("");
   return `<div class="group">${rows}</div>${weightEditors}
     <h2 class="sh">Autre équipement</h2>
-    <div class="hr-note" style="margin-top:-6px">Pour mémoire seulement : non utilisé dans les séances proposées.</div>
-    <div class="group" style="margin-top:10px">${customs}
+    <div class="group">${customs}
       <div class="row"><input placeholder="Nom de l'équipement" id="customEquipName" maxlength="40" autocomplete="off" enterkeyhint="done" style="flex:1;border:0;background:transparent;height:100%;font-size:calc(17rem/17)"><button class="btn sm" data-a="addCustomEquip">Ajouter</button></div>
     </div>`;
 }
@@ -376,15 +381,12 @@ function goalsBodyHTML(){
     <h2 class="sh">Rythme</h2>
     <div class="group">${stepRow("Séances par semaine", S.goals.daysPerWeek, "stepDays", "Une séance de moins par semaine", "Une séance de plus par semaine")}
       ${stepRow("Exercices par séance", sessionSize(), "stepExoCount", "Moins d'exercices", "Plus d'exercices")}</div>
-    <p class="hr-note">${S.goals.exoCount ? "Nombre d'exercices choisi par toi. " : "Nombre d'exercices réglé selon la durée. "}Environ ${sessionSize()*3} séries et ${Math.round(sessionSize()*3*(40+75)/60/5)*5} minutes.</p>
+    <p class="hr-note">≈ ${sessionSize()*3} séries · ≈ ${Math.round(sessionSize()*3*(40+75)/60/5)*5} min</p>
     <h2 class="sh">Pratique de la musculation</h2><div class="chips">${Object.keys(LEVEL_LABELS).map(k=>`<button class="chip ${(S.goals.level||"intermediaire")===k?"on":""}" data-a="setLevel" data-v="${k}">${LEVEL_LABELS[k]}</button>`).join("")}</div>
-    <p class="hr-note">${LEVEL_HINTS[S.goals.level||"intermediaire"]}</p>
     <h2 class="sh">Âge</h2><div class="chips">${[[false,"Moins de 65 ans"],[true,"65 ans et plus"]].map(([v,l])=>`<button class="chip ${!!S.goals.senior===v?"on":""}" data-a="setSenior" data-v="${v?1:0}" aria-pressed="${!!S.goals.senior===v}">${l}</button>`).join("")}</div>
-    <p class="hr-note">Sert à l'indice de force : à partir de 65 ans, la force baisse plus vite pendant une pause.</p>
     <h2 class="sh">Durée de séance</h2><div class="chips">${lenChips}</div>
     <h2 class="sh">Groupes musculaires</h2>
-    <p class="hr-note" style="margin-top:-6px">Touche pour passer de normal à prioriser, puis à éviter.</p>
-    <div class="group" style="margin-top:10px">${emphasisRows}</div>`;
+    <div class="group">${emphasisRows}</div>`;
 }
 function openGoals(){
   openSheet(`<div class="sheet-hd"><span class="t">Objectifs</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body">${goalsBodyHTML()}</div>`);
@@ -420,11 +422,9 @@ function exoPrefsBodyHTML(){
     return `<h2 class="sh"><span class="sh-ico">${sfIcon(EQUIP_GLYPH[c.id]||"wrench", "gray","sm")}${esc(c.n)}</span><span class="more" style="color:var(--label2)">${list.length}</span></h2><div class="group">${list.map(e=>exoPrefRow(e)).join("")}</div>`;
   }).join("");
   const more = unavail.length ? `<details class="pref-more"><summary class="sh"><span>Sans ton matériel</span><span class="more">${unavail.length} ${icon("chev")}</span></summary>
-      <p class="hr-note" style="margin:0 20px 8px">Jamais proposés tant que le matériel manque. Tu peux déjà les exclure ou les mettre en favori pour plus tard.</p>
       <div class="group">${unavail.sort(sortFn).map(e=>exoPrefRow(e, missingEquipLabel(e))).join("")}</div></details>` : "";
   const favs = S.prefs.included.map(id=>EXO_MAP[id]).filter(Boolean).sort(sortFn);
-  return `<p class="hr-note" style="margin:0 20px 4px">${ii("star","star")} Favori : en tête du choix d'exercices et privilégié par l'app · Exclure : jamais proposé (blessure, goût…).</p>`
-    + (favs.length ? `<h2 class="sh"><span class="sh-ico">${sfIcon("star","yellow","sm")}Favoris</span><span class="more" style="color:var(--label2)">${favs.length}</span></h2><div class="group">${favs.map(e=>exoPrefRow(e)).join("")}</div>` : "") + cats + more;
+  return (favs.length ? `<h2 class="sh"><span class="sh-ico">${sfIcon("star","yellow","sm")}Favoris</span><span class="more" style="color:var(--label2)">${favs.length}</span></h2><div class="group">${favs.map(e=>exoPrefRow(e)).join("")}</div>` : "") + cats + more;
 }
 function openExoPrefs(){
   openSheet(`<div class="sheet-hd"><span class="t">Mes exercices</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body">${exoPrefsBodyHTML()}</div>`);
@@ -462,31 +462,38 @@ function appearanceBodyHTML(){
   const opts = [["light","Clair"],["dark","Sombre"],["auto","Automatique"]];
   return `<h2 class="sh" style="margin-top:6px">Thème de l'app</h2>
     <div class="group tt-group" role="radiogroup" aria-label="Thème de l'app">${opts.map(([v,l])=>`<button class="tt-opt${th===v?" on":""}" role="radio" aria-checked="${th===v}" data-a="setTheme" data-v="${v}">${themeThumb(v)}<span class="tt-l">${l}</span><span class="tt-r" aria-hidden="true">${icon("check")}</span></button>`).join("")}</div>
-    <p class="hr-note">Automatique suit le réglage de ton iPhone.</p>
     <h2 class="sh">Pendant la séance</h2>
     <div class="group"><div class="row${dark?" off":""}">
-      <div class="grow"><div class="t">Séance en sombre</div><div class="s">${dark ? "Toujours en sombre avec le thème Sombre" : on ? "Recommandé" : "La séance suit le thème de l'app"}</div></div>
+      <div class="grow"><div class="t">Séance en sombre</div></div>
       <button class="switch ${on?"on":""}" role="switch" aria-checked="${!!(on)}" aria-label="Séance en sombre" data-a="toggleLiveDark" ${dark?"disabled":""}></button>
-    </div></div>
-    <p class="hr-note">En noir, les chiffres se lisent mieux de loin et l'écran éblouit moins pendant l'effort. Le reste de l'app garde le thème choisi au-dessus.</p>`;
+    </div></div>`;
 }
 function openAppearance(){
   openSheet(`<div class="sheet-hd"><span class="t">Apparence</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body">${appearanceBodyHTML()}</div>`);
 }
 
 // ---------- À propos ----------
+// Comme les réglages d'une app iOS : l'icône, le nom et la version en tête, puis des listes titrées ; les
+// textes longs (sources, avertissement, droits) s'ouvrent chacun dans leur écran
+const ABOUT_PAGES = {
+  sources:["Sources des reliefs", ()=>`<p class="body">Les silhouettes des montagnes sont calculées depuis le relief réel :</p>
+    <div class="group about-list"><div class="row"><div class="grow"><div class="t">Suisse</div><div class="s wrap">swisstopo swissALTI3D</div></div></div>
+      <div class="row"><div class="grow"><div class="t">Reste du monde</div><div class="s wrap">Copernicus GLO-30, © DLR e.V. et Airbus, fourni par l'Union européenne et l'ESA</div></div></div>
+      <div class="row"><div class="grow"><div class="t">Voies et refuges</div><div class="s wrap">© contributeurs OpenStreetMap (ODbL)</div></div></div></div>`],
+  health:["Avertissement santé", ()=>`<p class="body">Les consignes d'exécution sont des repères techniques généraux. Elles ne remplacent pas l'avis d'un professionnel de santé ou d'un coach pour toute question médicale ou en cas de douleur.</p>`],
+};
 function openAbout(){
-  // restore : la feuille « Comment ça marche » ouverte d'ici revient sur À propos
+  const row = (a, t, val, extra)=>`<${a ? "button" : "div"} class="row${a ? " tap" : ""}"${a ? ` style="width:100%" data-a="${a}"${extra||""}` : ""}><div class="grow"><div class="t">${t}</div></div>${val ? `<span class="val">${val}</span>` : ""}${a ? `<span class="chev">${icon("chev")}</span>` : ""}</${a ? "button" : "div"}>`;
   openSheet(`<div class="sheet-hd"><span class="t">À propos</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
-    <div class="sheet-body">
-    <div class="about-logo">${ascenMark()}<span>Un cran plus haut, à chaque séance.</span></div>
-    <p class="body" style="margin-top:4px">ASCEN est une app de suivi de musculation pensée pour un usage solo sur iPhone. Elle propose une séance chaque jour à partir de ton matériel, de tes objectifs et de ton historique, grâce à un moteur de règles 100 % local — aucune donnée n'est envoyée sur un serveur.</p>
-    <h2 class="sh">Version</h2><p class="body">ASCEN v${APP_VERSION}</p>
-    <h2 class="sh">Données</h2><p class="body">Toutes les données (séances, matériel, objectifs, trophées) restent uniquement sur cet appareil. Aucun compte, aucun serveur.</p>
-    <h2 class="sh">Mon ascension</h2><p class="body">Chaque séance fait gravir de vraies montagnes, du Moléson à l'Everest. Silhouettes calculées depuis le relief réel (swisstopo swissALTI3D en Suisse ; ailleurs Copernicus GLO-30, © DLR e.V. et Airbus, fourni par l'Union européenne et l'ESA). Voies d'ascension et refuges : © contributeurs OpenStreetMap (ODbL).</p>
-    <button class="about-link" data-a="ascHow">Comment fonctionne l'ascension ${icon("chev")}</button>
-    <h2 class="sh">Avertissement</h2><p class="body">Les consignes d'exécution proposées sont des repères techniques généraux. Elles ne remplacent pas l'avis d'un professionnel de santé ou d'un coach pour toute question médicale ou en cas de douleur.</p>
-    <h2 class="sh">Droits d'auteur</h2><p class="body">${COPYRIGHT}</p>
+    <div class="sheet-body about-body">
+    <div class="about-hd"><img class="about-ic" src="icon-180.png" alt="" width="76" height="76"><b>ASCEN</b><span>Version ${APP_VERSION}</span></div>
+    <h2 class="sh">Application</h2>
+    <div class="group">${row("", "Données", "Sur cet appareil")}${row("", "Compte", "Aucun")}</div>
+    <h2 class="sh">Mon ascension</h2>
+    <div class="group">${row("ascHow", "Comment ça marche")}${row("aboutPage", "Sources des reliefs", "", ' data-k="sources"')}</div>
+    <h2 class="sh">Mentions</h2>
+    <div class="group">${row("aboutPage", "Avertissement santé", "", ' data-k="health"')}</div>
+    <p class="about-ft">${COPYRIGHT}</p>
     </div>`, { restore:openAbout });
 }
 
@@ -500,6 +507,12 @@ Object.assign(ACT, {
         <button class="btn ghost" data-a="closesheet" style="height:40px">Annuler</button>
       </div>`);
     setTimeout(()=>{ const i=qs("#nameInput"); if(i) i.focus(); }, 80);
+  },
+  aboutPage(d){
+    const P = ABOUT_PAGES[d.k]; if(!P) return;
+    openSheet(`<div class="sheet-hd"><span class="t">${P[0]}</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
+      <div class="sheet-body about-body">${P[1]()}</div>`, { child:true, restore:()=>ACT.aboutPage(d) });
+    sheetBackHead();
   },
   openSessionPrefs(){ prefsSheet("Réglages des séances", sessionPrefsHTML(), ()=>ACT.openSessionPrefs()); },
   openMotivation(){ prefsSheet("Motivation", motivHTML(), ()=>ACT.openMotivation()); },
@@ -515,7 +528,6 @@ Object.assign(ACT, {
   editWhy(d){
     whyFrom = d && d.from;
     openModal(`<div style="font-weight:700;font-size:calc(17rem/17);margin-bottom:6px">Ton pourquoi</div>
-      <div class="hr-note" style="margin-bottom:12px">Ce qui te pousse à t'entraîner. ASCEN te le rappelle quand tu reviens après quelques jours sans séance.</div>
       <div class="num-field txt"><input id="whyInput" type="text" maxlength="120" enterkeyhint="done" placeholder="Ex. être en forme pour la randonnée d'été" value="${esc(S.settings.why||"")}"></div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
         <button class="btn" data-a="saveWhy">Enregistrer</button>
@@ -600,6 +612,9 @@ Object.assign(ACT, {
     S.settings.appPicks = !appPicksOn(); el.classList.toggle("on", S.settings.appPicks); el.setAttribute("aria-pressed", S.settings.appPicks);
     changed(); renderView("today");
   },
+  toggleWarmup(d, el){
+    S.settings.warmup = !S.settings.warmup; el.classList.toggle("on", S.settings.warmup); el.setAttribute("aria-checked", S.settings.warmup); save(); sfx("toggle", S.settings.warmup);
+  },
   toggleStretching(d, el){
     S.settings.stretching = !S.settings.stretching; el.classList.toggle("on", S.settings.stretching);
     applyStretchSetting(); changed(); renderView("today");
@@ -672,30 +687,21 @@ Object.assign(ACT, {
 // ---------- espace de stockage ----------
 function fmtBytes(n){ return n<1024*1024 ? `${Math.max(1, Math.round(n/1024))} Ko` : `${fmtDec(n/1024/1024)} Mo`; }
 function storageRowText(){ const u = storageUsage(); return `${fmtBytes(u)} utilisés sur ~5 Mo · ${Math.max(1, Math.round(u/STORAGE_QUOTA*100))} %`; }
-function storageYearsLeft(){
-  // place moyenne d'une séance et rythme des 12 derniers mois
-  const n = S.sessions.length; if(n<5) return null;
-  const per = JSON.stringify(S.sessions.map(packSession)).length*2/n;
-  const since = addDaysISO(todayISO(), -365), perYear = Math.max(52, S.sessions.filter(s=>s.date>=since).length);
-  return Math.floor((STORAGE_QUOTA*0.9 - storageUsage())/(per*perYear));
-}
 Object.assign(ACT, {
   openStorage(){
-    const u = storageUsage(), pct = Math.min(100, u/STORAGE_QUOTA*100), yrs = storageYearsLeft();
+    const u = storageUsage(), pct = Math.min(100, u/STORAGE_QUOTA*100);
     openSheet(`<div class="sheet-hd"><span class="t">Espace de stockage</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
       <div class="sheet-body" id="stoBody">
         <div class="chart-card" style="margin-top:0">
           <div class="cc-h"><div class="cc-t">${fmtBytes(u)} sur ~5 Mo</div><div class="cc-s">${S.sessions.length} séance${S.sessions.length>1?"s":""} enregistrée${S.sessions.length>1?"s":""}</div></div>
           <div class="xpbar sto-bar"><span style="width:${Math.max(1.5, pct).toFixed(1)}%"></span></div>
-          ${yrs!=null ? `<p class="hr-note" style="margin:10px 0 0">Au rythme actuel, il reste de la place pour ${yrs>99?"<b>plus de 99 ans</b>":`environ <b>${yrs} ans</b>`} d'entraînement.</p>` : ""}
         </div>
         <div class="group" style="margin-top:14px">
-          <div class="row">${sfIcon("storage","green")}<div class="grow"><div class="t">Format compact</div><div class="s wrap">L'historique est enregistré sous une forme condensée, environ 2,5 fois plus légère.</div></div></div>
-          <div class="row">${sfIcon("shield","blue")}<div class="grow"><div class="t">Copie de secours</div><div class="s wrap">Chaque enregistrement est aussi copié, compressé, dans une copie de secours, sur ton téléphone. Si l'espace principal est plein ou effacé, l'app repart de cette copie.</div></div><div class="val" id="stoIdb"></div></div>
-          <div class="row">${sfIcon("phone","gray")}<div class="grow"><div class="t">Total sur l'appareil</div><div class="s wrap">Données, copie de secours et fichiers de l'app gardés pour le hors ligne. Les trophées 3D sont dessinés à la volée : aucune image n'est stockée.</div></div><div class="val" id="stoTotal"></div></div>
-          <div class="row">${sfIcon("lock","indigo")}<div class="grow"><div class="t">Protection</div><div class="s wrap" id="stoPersist">Vérification…</div></div></div>
+          <div class="row">${sfIcon("storage","green")}<div class="grow"><div class="t">Format compact</div></div><div class="val">≈ 2,5× plus léger</div></div>
+          <div class="row">${sfIcon("shield","blue")}<div class="grow"><div class="t">Copie de secours</div></div><div class="val" id="stoIdb"></div></div>
+          <div class="row">${sfIcon("phone","gray")}<div class="grow"><div class="t">Total sur l'appareil</div></div><div class="val" id="stoTotal"></div></div>
+          <div class="row">${sfIcon("lock","indigo")}<div class="grow"><div class="t">Protection</div><div class="s wrap" id="stoPersist"></div></div></div>
         </div>
-        <p class="hr-note" style="margin:12px 20px 0">Rien ne quitte ton téléphone. Pour ne rien perdre en changeant d'appareil, garde une sauvegarde dans Fichiers ou iCloud.</p>
         <div class="btnrow"><button class="btn secondary" data-a="backupData">${icon("bookmark")} Faire une sauvegarde</button></div>
       </div>`, { tall:true, child:true, restore:()=>ACT.openStorage() });
     sheetBackHead();
@@ -704,8 +710,8 @@ Object.assign(ACT, {
     const el = qs("#stoPersist");
     const setTxt = t=>{ if(el) el.textContent = t; };
     try{
-      if(navigator.storage && navigator.storage.persisted) navigator.storage.persisted().then(p=>setTxt(p ? "Stockage protégé : le système ne l'effacera pas pour libérer de la place." : isStandalone() ? "Stockage standard. L'app installée sur l'écran d'accueil garde ses données." : "Installe l'app sur l'écran d'accueil : Safari efface les données des sites non installés après 7 jours sans visite."));
-      else setTxt(isStandalone() ? "App installée : les données sont conservées." : "Installe l'app sur l'écran d'accueil pour protéger tes données.");
+      if(navigator.storage && navigator.storage.persisted) navigator.storage.persisted().then(p=>setTxt(p ? "Activée" : isStandalone() ? "Standard" : "Installe l'app sur l'écran d'accueil : Safari efface les données des sites non installés après 7 jours sans visite."));
+      else setTxt(isStandalone() ? "Standard" : "Installe l'app sur l'écran d'accueil pour protéger tes données.");
     }catch(e){ setTxt("—"); }
   },
 });

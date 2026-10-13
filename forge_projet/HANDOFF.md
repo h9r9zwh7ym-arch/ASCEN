@@ -1355,6 +1355,31 @@ a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est
     Pause. Chaque ligne pousse son écran (glissement iOS, retour par le bord) au lieu de déplier un accordéon.
     Vitesse : un chiffre (« +N m par séance »), les facteurs actifs, puis la régularité (escalier, prochain
     palier, semaines datées). Pause : deux interrupteurs et un pied de liste.
+- **Retours sur iPhone (3), version 2.1.2** (plan suivi : `PLAN.md`). Règle du lot : moins de texte, moins de touches.
+  - **Carte du jour en édition** : « OK » remplace « Modifier » (plus de barre Annuler / OK) ; la carte et la liste des
+    exercices forment un seul bloc (coins carrés au raccord, filet entre les deux, pas de titre « Exercices »). OK avec
+    des changements sur une séance liée à Mes séances : feuille d'actions « Pour aujourd'hui seulement » / « Aussi pour
+    les prochaines fois », et en bas, en rouge, « Annuler les modifications » (`heroRevert`, `actionSheet({cancelDanger})`).
+    Sans modèle à mettre à jour (séance composée, proposition ajustée) : OK garde tout et le toast « Séance modifiée »
+    offre « Annuler ». Proposition en ajustement : la liste colle aussi à la carte, nombre et type de séance dessous.
+  - **Phrases d'explication retirées** : Mes exercices (favori / exclure, « sans ton matériel »), Apparence (« Automatique
+    suit… », « Recommandé », note du mode sombre), Objectifs (niveau, âge, groupes ; l'estimation reste en chiffres),
+    Réglages des séances, Motivation, Données, pied du Profil, Espace de stockage (lignes en valeurs), choix de séance,
+    astuce de glissement (`sortHintHTML` supprimé), trophées cachés, objectifs, corrections de séries, carnet de route.
+    Les feuilles « Comment ça marche » et l'onboarding gardent leurs textes : on les ouvre pour lire.
+  - **Pause de l'ascension en boutons** : « Mettre cette semaine / la semaine prochaine en pause » ; une pause active
+    s'affiche (« Cette semaine en pause ») avec « Reprendre ». Elle finit seule le dimanche. Pied : pauses restantes.
+  - **À propos** : icône, nom, « Version 2.1.2 » ; listes titrées Application (données, compte), Mon ascension (comment
+    ça marche, sources des reliefs ›), Mentions (avertissement santé ›) ; copyright en pied. `APP_VERSION = "2.1.2"`.
+  - **Retour sans saut** : la pile des feuilles mémorise la position de défilement de l'écran parent (`_st` sur la
+    fonction de restauration) et la remet au retour, par le bouton comme par le glissement depuis le bord. Avant, le
+    parent revenait en haut, d'où le « petit retour en arrière » vu dans Mon ascension.
+  - **Échauffement (réglage, désactivé par défaut)** : la ligne « Échauffement : 1 série légère… » a disparu de la carte
+    d'exercice. Activé (Réglages des séances › Échauffement), un écran passe avant le 1er exercice : 4 mouvements de
+    30 s sans matériel choisis d'après les régions de la séance (`warmPlan`, `WARM_MOVES` : bras → épaules, poignets,
+    omoplates ; jambes → squats, hanches, chevilles), chrono guidé (« Lancer · 2 min »), « Passer l'échauffement »
+    toujours visible. État dans `S.draft.warm`, retiré à l'enregistrement.
+  - **Chrono de séance** (en haut à gauche) : 17 → 20 px.
 
 Les sections plus haut qui parlent de Geist, Barlow, `#F4F3F1` ou `#FF6B3D` décrivent l'état d'avant cette refonte.
 

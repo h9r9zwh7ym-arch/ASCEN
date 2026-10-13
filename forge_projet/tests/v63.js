@@ -2,7 +2,8 @@
 const OUT_ROOT = process.env.OUT_DIR || require('path').join(__dirname, 'out'); require('fs').mkdirSync(OUT_ROOT, { recursive: true });
 // Retours iPhone (2) : carte du jour sans « Prête à démarrer » (titre et « Modifier » sur la même ligne), « Annuler » en
 // édition, textes alignés ; « Choisir une séance » en trois familles ; maintenir une ligne pour changer l'ordre
-// (éditeur et liste du jour) ; éditeur sans textes en trop ; Mon ascension en sous-écrans, pause en interrupteurs.
+// (éditeur et liste du jour) ; éditeur sans textes en trop ; Mon ascension en sous-écrans, pause.
+// Retours (3) : en édition, « OK » seul ; « Annuler les modifications » est dans la feuille d'actions de OK ; pause en boutons.
 const __pw = require('playwright'); const path = require('path'); const fs = require('fs');
 const OUT = path.join(OUT_ROOT, 'v63'); fs.mkdirSync(OUT, { recursive: true });
 const APP = 'file://' + path.resolve(process.argv[2]);
@@ -41,26 +42,26 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   if (hero.eyebrow || hero.tag || !hero.sameLine || hero.mod !== 'Modifier' || hero.date !== hero.sec || hero.title !== hero.sec || hero.toggle !== hero.name) fail('carte du jour : titre et Modifier, textes alignés');
   await shot('01_home');
 
-  // 2. « Modifier » : barre Annuler / OK ; glisser une ligne change l'ordre ; « Annuler » demande puis revient à l'état d'avant
+  // 2. « Modifier » : « OK » à sa place ; glisser une ligne change l'ordre ; OK propose de garder ou d'annuler
   await tap('.hero .hero-mod'); await wait(700);
-  const bar = await page.evaluate(() => [...document.querySelectorAll('.hero .hero-bar button')].map(b => b.textContent.trim()).join('|'));
+  const bar = await page.evaluate(() => [...document.querySelectorAll('.hero button.hero-mod, .hero .hero-cancel')].map(b => b.textContent.trim()).join('|'));
   const before = await page.evaluate(() => S.custom.exos.map(e => e.exoId).join(','));
   const hint0 = await page.evaluate(() => (document.querySelector('#v-today .sort-hint') || {}).textContent || '');   // le geste, dit une fois
   await drag('.group.builder > .row', 3, 0);
   const moved = await page.evaluate(() => ({ order: S.custom.exos.map(e => e.exoId).join(','), sheet: !!document.querySelector('#overlay.open'), arrows: document.querySelectorAll('[data-a="customMove"], [data-a="toggleReorder"]').length }));
   await shot('02_dragged');
-  await tap('.hero [data-a="heroCancel"]'); await wait(600);
+  await tap('.hero [data-a="heroEdit"]'); await wait(600);
   const ask = await page.evaluate(() => [...document.querySelectorAll('#overlay .as-btn')].map(b => b.textContent.trim()).join('|'));
-  await page.evaluate(() => [...document.querySelectorAll('#overlay .as-btn')].find(b => /Ignorer/.test(b.textContent)).click()); await wait(800);
+  await page.evaluate(() => document.querySelector('#overlay .as-cancel').click()); await wait(800);
   const after = await page.evaluate(() => ({ order: S.custom.exos.map(e => e.exoId).join(','), edit: customEdit, go: !!document.querySelector('.hero .hero-go'), tpl: S.templates.find(t => t.id === 'tp').exos.map(e => e.exoId).join(',') }));
   log('Edit:', bar, '| before', before, '→ dragged', JSON.stringify(moved), '| ask', ask, '→', JSON.stringify(after));
-  if (!/Maintiens un exercice/.test(hint0)) fail('le geste pour changer l\'ordre est dit');
-  if (bar !== 'Annuler|OK' || moved.order !== 'curl_biceps,dc_haltere,pompes,planche' || moved.sheet || moved.arrows) fail('glisser une ligne de la séance du jour');
-  if (ask !== 'Ignorer les modifications|Continuer à modifier' || after.order !== before || after.edit || !after.go || after.tpl !== before) fail('« Annuler » revient à la séance d\'avant');
-  // sans changement : « Annuler » referme sans rien demander
-  await tap('.hero .hero-mod'); await wait(600); await tap('.hero [data-a="heroCancel"]'); await wait(600);
+  if (hint0) fail('pas d\'astuce à l\'écran pour le geste');
+  if (bar !== 'OK' || moved.order !== 'curl_biceps,dc_haltere,pompes,planche' || moved.sheet || moved.arrows) fail('glisser une ligne de la séance du jour');
+  if (ask !== "Pour aujourd'hui seulement|Aussi pour les prochaines fois|Annuler les modifications" || after.order !== before || after.edit || !after.go || after.tpl !== before) fail('« Annuler les modifications » revient à la séance d\'avant');
+  // sans changement : OK referme sans rien demander
+  await tap('.hero .hero-mod'); await wait(600); await tap('.hero [data-a="heroEdit"]'); await wait(600);
   const quiet = await page.evaluate(() => ({ sheet: !!document.querySelector('#overlay.open'), edit: customEdit }));
-  if (quiet.sheet || quiet.edit) fail('« Annuler » sans changement : pas de question');
+  if (quiet.sheet || quiet.edit) fail('OK sans changement : pas de question');
 
   // 3. « Choisir une séance » : trois familles
   await tap('.hero [data-a="chooseSession"]'); await wait(800);
@@ -84,19 +85,19 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   if (!/remplacera « Pectoraux »/.test(taken)) fail('éditeur : l\'avertissement d\'un jour déjà pris reste');
   await page.evaluate(() => { tplEdit = null; closeSheet(); }); await wait(500);
 
-  // 5. Mon ascension : la pause a son écran, deux interrupteurs
+  // 5. Mon ascension : la pause a son écran, des boutons (pas d'interrupteurs) ; « Reprendre » l'annule
   await page.evaluate(() => openAscent()); await wait(1500);
   await tap('.asc-row[data-k="pause"]'); await wait(900);
-  const pz = await page.evaluate(() => ({ t: document.querySelector('.sheet-hd .t').textContent, sw: [...document.querySelectorAll('#ascSub .switch')].map(s => s.getAttribute('aria-checked')).join(','), foot: !!document.querySelector('#ascSub .sort-hint') }));
-  await tap('#ascSub .switch'); await wait(400);
-  const pz2 = await page.evaluate(() => ({ sw: document.querySelector('#ascSub .switch').getAttribute('aria-checked'), n: S.ascent.pauses.length }));
-  await tap('#ascSub .switch'); await wait(400);
+  const pz = await page.evaluate(() => ({ t: document.querySelector('.sheet-hd .t').textContent, sw: [...document.querySelectorAll('#ascSub .switch')].length + ':' + [...document.querySelectorAll('#ascSub .pz-act')].map(b => b.textContent).join(','), foot: (document.querySelector('#ascSub .pz-left') || {}).textContent }));
+  await tap('#ascSub .pz-act'); await wait(400);
+  const pz2 = await page.evaluate(() => ({ sw: [...document.querySelectorAll('#ascSub .pz-on .t')].map(t => t.textContent).join(','), n: S.ascent.pauses.length }));
+  await tap('#ascSub .pz-undo'); await wait(400);
   const pz3 = await page.evaluate(() => S.ascent.pauses.length);
   await shot('05_pause');
   await tap('.sheet-hd [data-a="sheetBack"]'); await wait(1200);
   const row = await page.evaluate(() => document.querySelector('.asc-row[data-k="pause"] .val').textContent);
   log('Pause:', JSON.stringify(pz), JSON.stringify(pz2), pz3, row);
-  if (pz.t !== 'Pause' || pz.sw !== 'false,false' || !pz.foot || pz2.sw !== 'true' || pz2.n !== 1 || pz3 !== 0 || row !== 'vacances, maladie') fail('pause : interrupteurs dans son écran');
+  if (pz.t !== 'Pause' || pz.sw !== '0:Mettre cette semaine en pause,Mettre la semaine prochaine en pause' || pz.foot !== '2 pauses restantes ce trimestre' || pz2.sw !== 'Cette semaine en pause' || pz2.n !== 1 || pz3 !== 0 || row !== 'vacances, maladie') fail('pause : interrupteurs dans son écran');
 
   await browser.close();
   errors.forEach(e => log(e)); log(errors.length ? 'ERRORS: ' + errors.length : '=== NO ERRORS ===');

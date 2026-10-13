@@ -404,8 +404,7 @@ function ascCarnetHTML(a){
   cards.forEach(c=>{ last[c.k] = c.date; n[c.k] = (n[c.k] || 0) + 1; });
   const keys = Object.keys(last).sort((x, y)=>last[x]<last[y] ? 1 : last[x]>last[y] ? -1 : 0).filter(k=>k!==cur);
   if(cur) keys.unshift(cur);
-  return `<p class="sub">Une carte à chaque camp atteint : le terrain, une ligne du carnet, et l'histoire des lieux réels.</p>
-    ${keys.map((k, gi)=>{
+  return `${keys.map((k, gi)=>{
       const N = ascCamps(k).length + 1, cnt = `<span class="num">${n[k] || 0}/${N}</span>`, open = gi<2 || ascCarnetOpen.has(k);
       if(gi<2) return `<div class="pc-grp"><div class="pc-gh"><b>${esc(ASC_DATA[k].n)}</b>${cnt}</div>${ascCarnetRow(a, k)}</div>`;
       return `<div class="pc-grp"><button class="pc-gh tap${open ? " on" : ""}" data-a="ascCarnetGrp" data-k="${k}" aria-expanded="${open}"><b>${esc(ASC_DATA[k].n)}</b>${cnt}<span class="chev">${icon("chev")}</span></button>
@@ -533,12 +532,14 @@ function ascHudHTML(a){
 function ascSpeedNow(a){ return (a.effAvg || ascEffort(15))*a.mul*a.force/(1 + .25*a.lap); }
 // ---------- « Cette semaine » : le compte et une phrase ----------
 function ascPauseBoxHTML(a){
-  // deux interrupteurs, comme dans les réglages iOS ; l'explication en pied de liste
-  const thisW = weekKey(todayISO()), pz = ascPauses();
-  const row = (w, lbl)=>{ const on = pz.includes(w), off = !on && !a.pausesLeft;
-    return `<div class="row"><div class="grow"><div class="t">${lbl}</div></div><button class="switch ${on ? "on" : ""}" role="switch" aria-checked="${on}" aria-label="Pause ${lbl.toLowerCase()}" data-a="ascPause" data-w="${w}" ${off ? "disabled" : ""}></button></div>`; };
-  return `<div class="group asc-pause">${row(thisW, "Cette semaine")}${row(addDaysISO(thisW, 7), "La semaine prochaine")}</div>
-    <p class="sort-hint">Vacances, maladie : la semaine ne compte pas, ta série et ton altitude restent où elles sont. ${a.pausesLeft ? `Encore ${nb(a.pausesLeft, "pause")} ce trimestre.` : "Plus de pause disponible ce trimestre."}</p>`;
+  // des boutons, pas des interrupteurs : on met une semaine en pause d'un toucher, elle se termine seule le
+  // dimanche ; « Reprendre » l'annule si on s'entraîne finalement
+  const thisW = weekKey(todayISO()), nextW = addDaysISO(thisW, 7), pz = ascPauses(), lbl = w=>w===thisW ? "cette semaine" : "la semaine prochaine";
+  const on = [thisW, nextW].filter(w=>pz.includes(w)), off = [thisW, nextW].filter(w=>!pz.includes(w));
+  const active = on.map(w=>`<div class="row pz-on"><span class="pz-ic">${ascIc("pause")}</span><div class="grow"><div class="t">${w===thisW ? "Cette semaine" : "La semaine prochaine"} en pause</div></div><button class="pz-undo" data-a="ascPause" data-w="${w}">Reprendre</button></div>`).join("");
+  const offer = off.map(w=>`<button class="row tap pz-act" data-a="ascPause" data-w="${w}"${a.pausesLeft ? "" : " disabled"}>Mettre ${lbl(w)} en pause</button>`).join("");
+  return `${active ? `<div class="group asc-pause">${active}</div>` : ""}${offer ? `<div class="group asc-pause">${offer}</div>` : ""}
+    <p class="pz-left">${a.pausesLeft ? `${nb(a.pausesLeft, "pause")} restante${a.pausesLeft>1 ? "s" : ""} ce trimestre` : "Plus de pause ce trimestre"}</p>`;
 }
 function ascWeekHTML(a){
   const thisW = weekKey(todayISO()), W = a.weeks[a.weeks.length-1], n = W && W.w===thisW ? W.n : 0, g = a.goal, left = Math.max(0, g-n);

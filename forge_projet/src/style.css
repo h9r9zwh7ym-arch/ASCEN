@@ -1039,7 +1039,6 @@ h2.sh .more.strong{font-weight:700}
   html{font:-apple-system-body;font-family:var(--sans)}
 }
 .cal-alarm{display:flex;flex-wrap:wrap;gap:8px}
-.warmup{font-size:var(--fs-foot);color:var(--label2);background:var(--fill2);border-radius:12px;padding:8px 12px;margin:-6px 0 14px;line-height:1.35}
 .effort{margin:18px 0 2px;padding-top:14px;border-top:.5px solid var(--sep)}
 .note-act{justify-content:center;width:100%}
 .btnrow{flex-wrap:wrap}
@@ -1199,7 +1198,6 @@ h2.sh button.more::after{content:none}
 .ii{width:1em;height:1em;vertical-align:-.14em;flex:none;display:inline-block}
 .chip .ii{margin-right:3px;color:var(--orange)}
 .chip.pr .ii{color:inherit}
-.warmup .ii{color:var(--orange)}
 .ii.warn{color:var(--orange)}
 .ii.star{color:var(--yellow,#FFCC00)}
 .ii.tgt{color:var(--green)}
@@ -1485,9 +1483,6 @@ h2.sh{letter-spacing:0}
 .btn.big,.btn.big.validate{box-shadow:none}
 .sfi.lg{background:var(--c);box-shadow:inset 0 0 0 .5px rgba(0,0,0,.08)}
 .te-days button.on{box-shadow:none}
-.about-logo{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0 22px;color:var(--label)}
-.about-logo .ascen-mark{width:150px;height:41px}
-.about-logo span{font-size:var(--fs-sub);color:var(--label2)}
 /* Rewind : couverture encre,orange en accent ; les diapositives « braise » passent à l'orange ASCEN */
 .rwc-bg{background:radial-gradient(90% 90% at 90% 0%,rgba(188,87,54,.34),transparent 60%),#1C1C1E}
 .rwc-k{color:#E07A55;opacity:1}
@@ -2303,8 +2298,14 @@ html,body{overscroll-behavior:none}
 .asc-steps .st-more{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:44px;margin:-4px 0 -8px;border-top:.5px solid var(--sep);font-size:var(--fs-foot);font-weight:650;color:var(--tint-ink)}
 .asc-steps .st-more svg{width:13px;height:13px;transform:rotate(90deg);transition:transform .25s cubic-bezier(.32,.72,0,1)}
 .asc-steps .st-more[aria-expanded="true"] svg{transform:rotate(-90deg)}
-.about-link{display:inline-flex;align-items:center;gap:4px;min-height:44px;margin:4px 20px 0;padding:0;font-size:var(--fs-sub);font-weight:650;color:var(--tint-ink)}
-.about-link svg{width:13px;height:13px}
+/* À propos : icône, nom, version, puis des listes titrées */
+.about-hd{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 6px;text-align:center}
+.about-hd .about-ic{width:76px;height:76px;border-radius:17px;margin-bottom:10px;box-shadow:0 0 0 .5px var(--sep)}
+.about-hd b{font-size:var(--fs-t3);font-weight:700;letter-spacing:.06em;color:var(--label)}
+.about-hd span{font-size:var(--fs-sub);color:var(--label2)}
+.about-body .body{margin:0 4px 16px}
+.about-list .s.wrap{white-space:normal}
+.about-ft{margin:24px 16px 8px;text-align:center;font-size:var(--fs-foot);color:var(--label3)}
 .cel-asc .ca-hd small{display:block;font-size:calc(12.5rem/17);font-weight:500;color:var(--label2);margin-top:1px}
 .asc-how p b{color:var(--label);font-weight:650}
 .asc-week #ascPauseBox:empty{display:none}
@@ -2490,7 +2491,7 @@ body.live-focus #v-today{padding-bottom:0}
 .sx-top{height:52px;flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .sx-clock{display:flex;flex-direction:column;min-width:0}
 .sx-clock small{font-size:var(--fs-foot);color:var(--label2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sx-clock span{font-family:var(--num);font-size:var(--fs-body);font-weight:600;line-height:1.25;font-variant-numeric:tabular-nums}
+.sx-clock span{font-family:var(--num);font-size:calc(20rem/17);font-weight:600;line-height:1.2;font-variant-numeric:tabular-nums}
 .sx .sx-end{height:44px;padding:0 4px;margin-right:-4px;background:none;color:var(--label2);font-size:var(--fs-body);font-weight:600}
 .sx .sx-end:active{opacity:.5}
 .sx .live-head{padding:0;flex:none}
@@ -2519,7 +2520,7 @@ body.live-focus #v-today{padding-bottom:0}
 .sx .sx-menu{position:absolute;left:auto;right:0;top:calc(4px + var(--pic)/2 - 22px);width:44px;height:44px;border-radius:22px;background:var(--bg2);color:var(--label);display:grid;place-items:center;letter-spacing:0}
 .sx-menu svg{width:20px;height:4px}
 .sx-note{margin-top:8px;padding:0 8px;font-size:var(--fs-sub);line-height:1.35;color:var(--label2)}
-.sx .sx-note.exo-note,.sx .sx-note.warmup{margin:8px 0 0;padding:0 8px;border-radius:0;background:none;border:0;font-size:var(--fs-sub);text-align:center}
+.sx .sx-note.exo-note{margin:8px 0 0;padding:0 8px;border-radius:0;background:none;border:0;font-size:var(--fs-sub);text-align:center}
 .sx-note .note-act{display:inline;padding:0;margin:0;background:none;color:var(--tint-ink);font-weight:600;font-size:inherit}
 /* les séries */
 .sx-sets{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:8px;margin-top:12px}
@@ -3112,10 +3113,13 @@ body.live-focus #toast,body:has(#overlay.show) #toast{top:calc(10px + var(--sat)
 .hero .hero-hd{align-items:flex-start;min-height:0}
 .hero .hero-hd .hero-title{flex:1;min-width:0;margin-top:0}
 .hero .hero-hd .hero-mod{margin:-5px -8px -5px 0;flex:none}
-.hero .hero-bar{display:flex;align-items:center;justify-content:space-between;margin:-10px -8px -2px}
-.hero .hero-bar button{min-height:44px;padding:0 8px;background:none;font-size:var(--fs-body);color:var(--tint-ink)}
-.hero .hero-bar .hero-cancel{font-weight:400}
-.hero .hero-bar .hero-mod{margin:0;font-size:var(--fs-body);font-weight:700}
+/* en édition : « OK » à la place de « Modifier », et la liste continue la carte (un seul bloc, filet entre les deux) */
+.hero .hero-hd .hero-mod.on{font-size:var(--fs-body);font-weight:700}
+.hero.editing{margin-bottom:0;padding-bottom:14px;border-bottom-left-radius:0;border-bottom-right-radius:0}
+.hero.editing+.group{position:relative;margin-top:0;border-top-left-radius:0;border-top-right-radius:0;margin-left:var(--gutter);margin-right:var(--gutter)}
+.hero.editing+.group::before{content:"";position:absolute;left:16px;right:0;top:0;height:.5px;background:var(--sep);z-index:1}
+.hero.editing+.group+.btnrow,.hero.editing+.group+.exo-count{margin-top:12px}
+.as-btn.as-cancel.danger{color:var(--red)}
 .hero .hero-meta .hero-tag{color:var(--tint-ink);font-weight:600}
 /* accueil : la date et le titre sur la même ligne que les titres de section (20 px), « Voir les N exercices »
    sur celle des noms d'exercices */
@@ -3132,8 +3136,6 @@ body.live-focus #toast,body:has(#overlay.show) #toast{top:calc(10px + var(--sat)
 [data-sort].sorting>.row{transition:transform .22s cubic-bezier(.2,.8,.2,1)}
 [data-sort].sorting>.row.lifted{z-index:5;transition:box-shadow .2s;background:var(--bg2);border-radius:14px;box-shadow:0 12px 28px rgba(0,0,0,.18),0 2px 6px rgba(0,0,0,.08)}
 [data-sort].sorting>.row.lifted::before,[data-sort].sorting>.row.lifted+.row::before{opacity:0}
-.sort-hint{margin:8px 20px 0;font-size:var(--fs-foot);color:var(--label2);line-height:1.35}
-#tplEdBody .sort-hint{margin:8px 4px 0}
 /* Mon ascension, épurée : la scène, le prochain objectif, cette semaine, puis une liste ; chaque détail a son écran */
 .asc-next .an-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .asc-next .an-t{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:var(--fs-body);font-weight:650;line-height:1.25}
@@ -3154,5 +3156,23 @@ body.live-focus #toast,body:has(#overlay.show) #toast{top:calc(10px + var(--sat)
 #overlay .asc-sub h2.sh{margin:10px 4px 0;padding:0}
 .asc-sub .asc-steps .st-n{margin-left:0}
 .asc-sub .asc-pause{margin:0}
-.asc-sub .sort-hint{margin:0 4px}
+.asc-sub .asc-pause+.asc-pause{margin-top:20px}
+.asc-pause .pz-act{width:100%;justify-content:flex-start;color:var(--tint-ink);font-size:var(--fs-body)}
+.asc-pause .pz-act[disabled]{color:var(--label3)}
+.asc-pause .pz-ic{flex:none;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--green);color:#fff}
+.asc-pause .pz-ic svg{width:16px;height:16px}
+.asc-pause .pz-undo{flex:none;min-height:44px;margin:-8px -8px -8px 0;padding:0 8px;background:none;color:var(--tint-ink);font-size:var(--fs-body);font-weight:600}
+.pz-left{margin:8px 16px 0;font-size:var(--fs-foot);color:var(--label2);line-height:1.35}
 .asc-pause .switch:disabled{opacity:.4}
+
+/* échauffement (réglage) : le mouvement en cours, son chrono, la liste des 4 mouvements */
+.sx-warm .sx-wh{display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;margin-top:4px}
+.sx-warm .sx-wh small{font-size:var(--fs-sub);font-weight:600;color:var(--tint-ink)}
+.sx-warm .sx-wh b{font-size:var(--fs-t2);font-weight:700;line-height:1.2}
+.sx-warm .sx-ring{margin:18px auto 8px}
+.sx-wl{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column}
+.sx-wl li{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:40px;padding:0 4px;font-size:var(--fs-sub);color:var(--label2);border-top:.5px solid var(--sep)}
+.sx-wl li:first-child{border-top:0}
+.sx-wl li.cur{color:var(--label);font-weight:600}
+.sx-wl li.done{color:var(--label3);text-decoration:line-through}
+.sx-wl li b{font-weight:500;font-variant-numeric:tabular-nums}

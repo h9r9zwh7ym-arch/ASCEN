@@ -456,9 +456,11 @@ function sheetBackHead(){
 }
 function sheetBack(){
   if(sheetStack.length){
-    const r = sheetStack.pop();
+    const r = sheetStack.pop(), st = r._st;
     sheetRestoring = true;
     try{ r(); } catch(e){ sheetStack = []; closeSheet(); } finally{ sheetRestoring = false; }
+    // l'écran d'avant revient là où on l'avait laissé (sinon il repart du haut : un saut au retour)
+    const bd = st && qs("#overlay .sheet:not(.nav-ghost) .sheet-body"); if(bd) bd.scrollTop = st;
     return true;
   }
   if(sheetOnBack){ const f = sheetOnBack; sheetOnBack = null; f(); return true; }
@@ -468,7 +470,10 @@ function openSheet(html, opts){
   opts = opts||{};
   if(!sheetRestoring){
     if(!sheetShown()) sheetStack = [];
-    else if(opts.child && sheetRestore) sheetStack.push(sheetRestore);
+    else if(opts.child && sheetRestore){
+      const bd = qs("#overlay .sheet:not(.nav-ghost) .sheet-body");
+      sheetRestore._st = bd ? bd.scrollTop : 0; sheetStack.push(sheetRestore);
+    }
   }
   navSheetDir = sheetRestoring ? "pop" : opts.child && sheetStack.length ? "push" : null;
   sheetRestore = opts.restore || null;
@@ -482,9 +487,9 @@ function openModal(html, cls){
 }
 // feuille d'actions iOS (en bas de l'écran) : un message, des actions, et « Continuer » à part
 // une action est { t, a } (action existante) ou { t, run } (fonction, appelée après fermeture)
-function actionSheet({ msg, label, actions, cancel, cancelA, cancelId, onYes }){
+function actionSheet({ msg, label, actions, cancel, cancelA, cancelId, cancelDanger, onYes }){
   openModal(`<div class="as-group">${msg ? `<div class="as-msg">${msg}</div>` : ""}${actions.map((a,i)=>`<button class="as-btn${a.danger?" danger":""}" data-a="${a.run ? "asRun" : a.a}" data-i="${i}">${esc(a.t)}</button>`).join("")}</div>
-    <button class="as-btn as-cancel" data-a="${cancelA||"closesheet"}"${cancelId?` data-id="${esc(cancelId)}"`:""}>${esc(cancel||"Annuler")}</button>`, "action-sheet");
+    <button class="as-btn as-cancel${cancelDanger ? " danger" : ""}" data-a="${cancelA||"closesheet"}"${cancelId?` data-id="${esc(cancelId)}"`:""}>${esc(cancel||"Annuler")}</button>`, "action-sheet");
   const ov = qs("#overlay"), m = qs(".center-modal", ov);
   if(m && label) m.setAttribute("aria-label", label);
   ov._onYes = onYes || null; ov._asActs = actions;
@@ -604,7 +609,6 @@ let suppressSheetClick = 0;
 // la liste défile. Les contrôles de la ligne (séries, retirer…) gardent leur rôle ; un toucher bref reste un toucher.
 const SORTS = {};
 // sous une liste qu'on peut réordonner : le geste, dit une fois (jusqu'au premier déplacement)
-function sortHintHTML(n){ return n>1 && !S.meta.sortHint ? `<p class="sort-hint">Maintiens un exercice pour changer l'ordre.</p>` : ""; }
 let sortDrag = null, sortDropAt = 0;
 function sortScroller(el){ return el.closest(".sheet-body") || el.closest(".view") || document.scrollingElement; }
 function sortEnd(cancel){
@@ -620,7 +624,7 @@ function sortEnd(cancel){
   setTimeout(()=>{
     st.rows.forEach(r=>{ r.style.transform = ""; r.style.transition = ""; });
     st.list.classList.remove("sorting");
-    if(to!==i && SORTS[st.list.dataset.sort]){ if(!S.meta.sortHint){ S.meta.sortHint = 1; save(); } SORTS[st.list.dataset.sort](i, to); }
+    if(to!==i && SORTS[st.list.dataset.sort]) SORTS[st.list.dataset.sort](i, to);
   }, 230);
 }
 function sortUpdate(st){

@@ -134,7 +134,7 @@ function heroHTML(mode, draft){
     const pend = S.custom.pendingDays && S.custom.pendingDays.length;
     return `<div class="hero compose stagger" style="--i:2">
       <div class="hero-hd"><span class="hero-title">Compose ta séance</span></div>
-      <span class="hero-sub">${pend ? `Pour le ${pendingDaysLabel()} : choisis tes exercices, puis enregistre-la.` : "Choisis tes exercices : séries, charges et repos sont calculés pour toi."}</span>
+      ${pend ? `<span class="hero-sub">Pour le ${pendingDaysLabel()}</span>` : ""}
       <button class="hero-go" data-a="customAddOpen">Choisir mes exercices</button>
       ${appPicksOn() ? `<button class="hero-alt" data-a="todayMode" data-v="proposal">Ou laisse l'app choisir</button>` : S.templates.length ? `<button class="hero-alt" data-a="chooseSession">Choisir une autre séance</button>` : ""}
     </div>`;
@@ -166,11 +166,11 @@ function heroHTML(mode, draft){
   // en édition (Modifier, Ajuster), la liste éditable suit la carte : la carte ne la répète pas, et on ne
   // lance rien d'ici. On modifie, « OK », puis « Commencer » (comme l'édition d'une liste sur iOS)
   const editing = (kind==="custom" && customEdit) || (kind==="proposal" && (propAdjust || !draft.exos.length));
-  // en édition : « Annuler » (ignorer les modifications) et « OK », comme une liste iOS en mode édition
-  const bar = editing ? `<div class="hero-bar"><button class="hero-cancel" data-a="heroCancel">Annuler</button>
-      <button class="hero-mod on" data-a="${kind==="custom" ? "heroEdit" : "propAdjust"}"${kind==="custom" ? "" : ` aria-expanded="true"`}>OK</button></div>` : "";
+  // en édition : un seul bouton, « OK », à la place de « Modifier » ; s'il y a eu des changements, c'est la
+  // feuille d'actions qui propose de les garder ou de les annuler. La liste éditable suit, collée à la carte.
+  if(editing) mod = `<button class="hero-mod on" data-a="${kind==="custom" ? "heroEdit" : "propAdjust"}"${kind==="custom" ? "" : ` aria-expanded="true"`}>OK</button>`;
   return `<div class="hero ${kind}${editing ? " editing" : ""} stagger" style="--i:2">
-    ${bar}<div class="hero-hd"><span class="hero-title">${title}</span>${editing ? "" : mod}</div>
+    <div class="hero-hd"><span class="hero-title">${title}</span>${mod}</div>
     <span class="hero-meta">${tag ? `<span class="hero-tag">${tag}</span>` : ""}${meta.map(m=>`<span>${m}</span>`).join("")}</span>
     ${editing ? "" : `${heroListHTML(entries)}
     <button class="hero-go" ${act}>Commencer</button>
@@ -259,14 +259,16 @@ function proposalPaneHTML(draft){
   const rows = draft.exos.map((ex,i)=>isStretchEntry(ex) ? "" : rowOf(ex,i)).join("");
   const coolRows = draft.exos.map((ex,i)=>isStretchEntry(ex) ? rowOf(ex,i) : "").join("");
   freshIds = new Set();
-  return `${types}
-    ${hero}
+  const glued = heroShown && adj;   // collée à la carte du jour en édition
+  return `${glued ? `<div class="group prop-list adj">${rows}</div>` : ""}
+    ${glued ? "" : types}
+    ${glued ? "" : hero}
     ${adj ? `<div class="exo-count">
       <div class="ec-t"><b>${mainN}</b> exercice${mainN>1?"s":""} · ${main.reduce((t,e)=>t+e.sets.length,0)} séries · ≈ ${estimateMinutes(draft)} min</div>
       <div class="mini-step"><button aria-label="Un exercice de moins" data-a="draftCount" data-d="-1" ${mainN<=1?"disabled":""}>−</button><span>${mainN}</span><button aria-label="Un exercice de plus" data-a="draftCount" data-d="1" ${draft.exos.length>=10?"disabled":""}>+</button></div>
     </div>
     ${!imported && mainN < Math.min(sessionSize(), draft.resolvedType==="core"?5:10) ? `<div class="ec-limit">Ton matériel limite ce type de séance à ${mainN} exercice${mainN>1?"s":""}. Le « + » ajoute un exercice d'un autre groupe.</div>` : ""}` : ""}
-    <div class="group prop-list ${adj?"adj":""}" style="margin-top:8px">${rows}</div>
+    ${glued ? types : `<div class="group prop-list ${adj?"adj":""}" style="margin-top:8px">${rows}</div>`}
     ${coolRows ? `<div class="cool-h">${ii("leaf")}<span>Étirements · retour au calme</span></div><div class="group cool-group">${coolRows}</div>` : ""}
     <div class="btnrow">
       ${adj ? `<button class="btn tertiary sm" data-a="addExoOpen">${icon("plus")} Ajouter</button>` : ""}
@@ -442,8 +444,7 @@ function saveRowHTML(){
   // déjà dans Mes séances : le choix (aujourd'hui seulement ou aussi les prochaines fois) se fait à « OK »
   if(customTpl()) return "";
   const pend = S.custom.pendingDays && S.custom.pendingDays.length;
-  return `<button class="save-row" data-a="saveTemplateOpen">${sfIcon("bookmarkG","indigo")}<span class="grow"><span class="t">${pend?`Prévoir pour le ${pendingDaysLabel()}`:"Ajouter à Mes séances"}</span>
-    <span class="s">Facultatif : pour la retrouver et la placer dans ton planning</span></span><span class="chev">${icon("chev")}</span></button>`;
+  return `<button class="save-row" data-a="saveTemplateOpen">${sfIcon("bookmarkG","indigo")}<span class="grow"><span class="t">${pend?`Prévoir pour le ${pendingDaysLabel()}`:"Ajouter à Mes séances"}</span></span><span class="chev">${icon("chev")}</span></button>`;
 }
 function customPaneHTML(){
   const c = S.custom.exos;
@@ -457,7 +458,7 @@ function customPaneHTML(){
     return `<div class="builder-empty stagger" style="--i:4">
       <div class="be-row"><div class="be-ico">${sfIcon("pencil","orange","lg")}</div>
       <div><div class="be-t">${pend ? "Compose ta séance" : done ? "Encore une séance ?" : "Autre chose en tête ?"}</div>
-      <div class="be-s">${pend ? `Pour le ${pendingDaysLabel()} : choisis tes exercices, puis enregistre-la.` : (appPicksOn() ? "Choisis tes exercices ou laisse l'app te proposer une base." : "Choisis tes exercices : séries, charges et repos sont calculés pour toi.")}</div></div></div>
+      ${pend ? `<div class="be-s">Pour le ${pendingDaysLabel()}</div>` : ""}</div></div>
       <div class="be-actions">
         <button class="btn secondary sm" data-a="customAddOpen">${icon("plus")} Choisir</button>
         ${appPicksOn() ? `<button class="btn tertiary sm" data-a="customFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> L'app choisit</button>` : ""}
@@ -477,9 +478,10 @@ function customPaneHTML(){
   const inHero = !done;
   const sets = c.reduce((t,e)=>t+e.sets,0);
   const preview = { exos: c.map(e=>({ exoId:e.exoId, sets:new Array(e.sets).fill(0) })) };
-  return `<h2 class="sh"><span class="sh-t">${inHero ? "Exercices" : esc(S.custom.name||"Ma séance")}</span>${inHero ? "" : `<span class="sh-actions"><button class="more danger" data-a="customClear">Vider</button></span>`}</h2>
-    ${inHero ? "" : `<div class="sh-sub">${nb(c.length, "exercice")} · ${nb(sets, "série")} · ≈ ${estimateMinutes(preview)} min</div>`}
-    <div class="group builder" data-sort="custom">${rows}</div>${sortHintHTML(c.length)}
+  // dans la carte du jour, la liste continue la carte (même bloc) : pas de titre entre les deux
+  return `${inHero ? "" : `<h2 class="sh"><span class="sh-t">${esc(S.custom.name||"Ma séance")}</span><span class="sh-actions"><button class="more danger" data-a="customClear">Vider</button></span></h2>
+    <div class="sh-sub">${nb(c.length, "exercice")} · ${nb(sets, "série")} · ≈ ${estimateMinutes(preview)} min</div>`}
+    <div class="group builder" data-sort="custom">${rows}</div>
     <div class="btnrow">
       <button class="btn tertiary sm" data-a="customAddOpen">${icon("plus")} Ajouter</button>
       ${appPicksOn() ? `<button class="btn tertiary sm" data-a="customFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Compléter</button>` : ""}
@@ -667,12 +669,12 @@ setInterval(()=>{
 
 // anneau du repos : grand, le temps au centre ; à zéro il passe à l'orange (« C'est reparti ») un court instant
 const RING_R = 112, RING_C = 2*Math.PI*RING_R;
-function ringSVG(remain, total){
+function ringSVG(remain, total, label){
   const frac = total>0 ? Math.max(0,remain)/total : 0;
   return `<div class="ring-wrap sx-ring"><svg viewBox="0 0 248 248" aria-hidden="true">
     <circle class="ring-bg" cx="124" cy="124" r="${RING_R}"/>
     <circle class="ring-fg" id="ringFg" cx="124" cy="124" r="${RING_R}" stroke-dasharray="${RING_C.toFixed(1)}" stroke-dashoffset="${(RING_C*(1-frac)).toFixed(1)}"/>
-  </svg><div class="ring-label"><div class="ring-sub" id="ringSub">Repos</div><div class="ring-time" id="ringTime" role="timer">${fmtMMSS(Math.max(0,remain))}</div></div></div>`;
+  </svg><div class="ring-label"><div class="ring-sub" id="ringSub">${label||"Repos"}</div><div class="ring-time" id="ringTime" role="timer">${fmtMMSS(Math.max(0,remain))}</div></div></div>`;
 }
 function updateFocusRing(remain, total){
   const t = qs("#ringTime"), fg = qs("#ringFg");
@@ -695,6 +697,7 @@ function renderFocusRegionInner(draft){
   const idx = Math.min(liveFocusIdx, draft.exos.length-1);
   liveFocusIdx = idx;
   const ex = draft.exos[idx], def = EXO_MAP[ex.exoId];
+  if(warmPending(draft)) return warmCardHTML(draft);
   if(!liveCounts(draft).left) return sessionCompleteHTML(draft);
   return renderFocusCard(idx, ex, def);
 }
@@ -897,10 +900,8 @@ function renderFocusCard(idx, ex, def){
   if(hold && hold.exi===idx) return holdCardHTML(idx, ex, def, si, header, animClass, sets);
   const rr = restReady; restReady = false; // animation « c'est reparti » après le repos
   setTimeout(()=>{ valRoll = {}; }, 0);
-  const warm = kgType(def) && (st.weight||0)>=8 && !S.draft.exos.some(e=>e.sets.some(x=>x.done))
-    ? `<div class="sx-note warmup">Échauffement : 1 série légère (≈ ${fmtDec(Math.max(1, Math.round((st.weight||0)*0.5)))} kg) de 8 à 10 répétitions avant de commencer.</div>` : "";
   const note = ex.note && !noteIsBeat(ex) ? `<div class="sx-note exo-note">${esc(ex.note)}${ex.harder&&EXO_MAP[ex.harder]&&!ex.sets.some(s=>s.done)?` <button class="note-act" data-a="swapHarder" data-idx="${idx}">Essayer maintenant</button>`:""}</div>` : "";
-  return `<div class="focus-card sx-card r-${regionOf(def)} ${animClass}" data-exi="${idx}">${header}${warm}${note}
+  return `<div class="focus-card sx-card r-${regionOf(def)} ${animClass}" data-exi="${idx}">${header}${note}
     <div class="sx-grow"></div>
     ${sets(si)}
     ${sxStepsHTML(idx, ex, def, si, st)}
@@ -911,6 +912,50 @@ function renderFocusCard(idx, ex, def){
       : `<button class="btn big validate ${rr?"ready":""}" data-a="validateSet" data-exi="${idx}">Valider la série</button>`}
   </div>`;
 }
+// ---------- échauffement (réglage « Échauffement ») ----------
+// Avant le premier exercice : 4 mouvements de 30 s sans matériel, choisis d'après les régions que la séance
+// travaille (une séance de bras n'échauffe que le haut du corps). Chrono guidé ; « Passer » à tout moment.
+const WARM_MOVES = {
+  push: [["Cercles de bras", 30], ["Pompes contre un mur", 30], ["Ouvertures de bras", 30]],
+  pull: [["Rotations des épaules", 30], ["Serrer les omoplates", 30], ["Rotations des poignets", 30]],
+  legs: [["Squats au poids du corps", 30], ["Balancements de jambe", 30], ["Cercles de hanches", 30], ["Montées sur pointes", 30]],
+  core: [["Rotations du buste", 30], ["Chat-vache", 30], ["Montées de genoux", 30]],
+};
+function warmPlan(draft){
+  const w = {};
+  draft.exos.forEach(ex=>{ const d = EXO_MAP[ex.exoId]; if(!d || isStretch(d)) return; const r = regionOf(d); w[r] = (w[r]||0) + ex.sets.length; });
+  const regs = Object.keys(w).sort((a, b)=>w[b]-w[a]); if(!regs.length) regs.push("core");
+  // chacune son tour, de la plus travaillée à la moins travaillée
+  const out = [];
+  for(let k = 0; out.length<4 && k<4; k++) regs.forEach(r=>{ const m = WARM_MOVES[r][k]; if(m && out.length<4) out.push(m); });
+  for(let k = 0; out.length<4 && k<4; k++) regs.forEach(r=>{ WARM_MOVES[r].forEach(m=>{ if(out.length<4 && !out.includes(m)) out.push(m); }); });
+  return out.map(m=>m.slice());
+}
+function warmStart(draft){ if(S.settings.warmup && draft.exos.length) draft.warm = { moves:warmPlan(draft), i:0, end:0 }; }
+function warmPending(draft){ return !!(draft.warm && draft.warm.moves && !draft.exos.some(e=>e.sets.some(s=>s.done))); }
+function warmRemain(W){ const m = W.moves[W.i]; return W.end ? Math.max(0, Math.ceil((W.end-Date.now())/1000)) : m[1]; }
+function warmCardHTML(draft){
+  const W = draft.warm, cur = W.moves[W.i], total = W.moves.reduce((t, m)=>t+m[1], 0);
+  return `<div class="focus-card sx-card sx-warm">
+    <div class="sx-wh"><small>Échauffement</small><b>${esc(cur[0])}</b></div>
+    ${ringSVG(warmRemain(W), cur[1], `${W.i+1} sur ${W.moves.length}`)}
+    <ol class="sx-wl">${W.moves.map((m, i)=>`<li class="${i<W.i ? "done" : i===W.i ? "cur" : ""}"><span>${esc(m[0])}</span><b class="num">${m[1]} s</b></li>`).join("")}</ol>
+    <div class="sx-grow"></div>
+    ${W.end ? "" : `<button class="btn big validate" data-a="warmGo">Lancer · ${Math.round(total/60)} min</button>`}
+    <button class="btn big sx-skip skip" data-a="warmSkip">Passer l'échauffement</button>
+  </div>`;
+}
+function warmFinish(){ if(!S.draft) return; delete S.draft.warm; save(); refreshFocusRegion(); }
+setInterval(()=>{
+  const W = S.draft && S.draft.startedAt && S.draft.warm; if(!W || !W.end || !W.moves) return;
+  const left = warmRemain(W);
+  if(left>0){ if(currentTab==="today") updateFocusRing(left, W.moves[W.i][1]);
+    if(left<=3 && left!==W.tick && !document.hidden){ W.tick = left; sfx("restTick"); } return; }
+  if(W.i>=W.moves.length-1){ sfx("restEnd"); haptic(20); warmFinish(); toast("Échauffement terminé", "check"); return; }
+  W.i++; W.end = Date.now() + W.moves[W.i][1]*1000; W.tick = 0; save(); sfx("set"); haptic(12);
+  if(currentTab==="today") refreshFocusRegion();
+}, 250);
+
 // la charge puis les répétitions : gros chiffres, gros boutons ; en bas, la série à battre
 function sxStepsHTML(idx, ex, def, si, st){
   const lt = loadableTypeOf(def), bands = lt==="bands", timed = isTimed(def);
@@ -1006,7 +1051,7 @@ function finalizeSession(){
   const stop = last && last>start && end-last>30*60e3 ? last+60e3 : end;
   draft.completedAt = new Date(stop).toISOString();
   draft.durationSec = isFinite(start) ? Math.max(0, Math.round((stop-start)/1000)) : 0;
-  delete draft.lastSetAt;
+  delete draft.lastSetAt; delete draft.warm;
   draft.exos = draft.exos.filter(ex=>ex.sets.some(s=>s.done));
   // séries meilleures que la même série la dernière fois (comptées avant d'ajouter la séance)
   if(S.settings.beat!==false) draft.beats = draftBeats(draft);
@@ -1101,7 +1146,7 @@ function applyPlannedSession(force){
 let swipe = null;
 let suppressClicksUntil = 0;
 document.addEventListener("pointerdown", e=>{
-  const card = e.target.closest && e.target.closest(".focus-card");
+  const card = e.target.closest && e.target.closest(".focus-card:not(.sx-warm)");
   if(!card || !S.draft || !S.draft.startedAt || (e.pointerType==="mouse" && e.button!==0)) return;
   swipe = { card, x:e.clientX, y:e.clientY, dx:0, active:false, id:e.pointerId, t:performance.now() };
 });
@@ -1177,21 +1222,19 @@ Object.assign(ACT, {
             ACT.heroEditDone();
             const l = qs("#v-today .tpl-list"); if(l) l.outerHTML = tplListHTML();
             toast(`« ${t.n} » mise à jour dans Mes séances`, "check"); } }],
-        cancel:"Continuer à modifier" });
+        cancel:"Annuler les modifications", cancelA:"heroRevert", cancelDanger:true });
     }
+    // sans modèle à mettre à jour : les changements sont gardés, « Annuler » reste possible un instant
+    const sn = heroSnap, changed = customEdit && sn && JSON.stringify(sn.custom)!==JSON.stringify(S.custom);
     ACT.heroEditDone();
+    if(changed) toast("Séance modifiée", "check", ()=>{ S.custom = sn.custom; save(); heroRerender(); });
   },
-  // « Annuler » en édition : la séance revient à ce qu'elle était ; avec des changements, on demande d'abord
-  heroCancel(){
-    const sn = heroSnap, prop = !!(sn && sn.draft);
-    const same = !sn || (prop ? JSON.stringify(sn.draft)===JSON.stringify(S.draft) : JSON.stringify(sn.custom)===JSON.stringify(S.custom));
-    const back = ()=>{
-      if(sn){ if(prop) S.draft = sn.draft; else S.custom = sn.custom; }
-      heroSnap = null; customEdit = false; propAdjust = false; save(); sfx("close"); heroRerender();
-    };
-    if(same) return back();
-    actionSheet({ label:"Modifications non enregistrées", msg:"Les changements faits sur cette séance seront perdus.",
-      actions:[{ t:"Ignorer les modifications", danger:true, run:back }], cancel:"Continuer à modifier" });
+  // « Annuler les modifications » (feuille d'actions de OK) : la séance revient à son état d'avant « Modifier »
+  heroRevert(){
+    closeSheet();
+    const sn = heroSnap;
+    if(sn){ if(sn.draft) S.draft = sn.draft; else S.custom = sn.custom; }
+    heroSnap = null; customEdit = false; propAdjust = false; save(); sfx("close"); heroRerender();
   },
   // la séance prévue se modifie sur place, comme celle du jour (sa copie du jour devient éditable)
   heroEditPlanned(d){
@@ -1216,12 +1259,12 @@ Object.assign(ACT, {
     const row = (a, ic, t, sub, extra)=>`<button class="row tap cs-row" data-a="${a}"${extra||""}>${ic}<div class="grow"><div class="t">${t}</div>${sub ? `<div class="s">${sub}</div>` : ""}</div></button>`;
     const mine = S.templates.filter(t=>t.id!==cur).map(t=>{ const d = EXO_MAP[(t.exos[0]||{}).exoId];
       return row("csTemplate", d ? exoIcon(d) : sfIcon("bookmarkG", "indigo"), esc(t.n), `${(t.days||[]).length ? daysLabel(t.days)+" · " : ""}${nb(t.exos.length, "exercice")} · ≈ ${tplMinutes(t)} min`, ` data-id="${t.id}"`); });
-    if(prop && (S.custom.exos.length || plannedTemplate())) mine.unshift(row("csMine", sfIcon("bookmarkG", "indigo"), `Revenir à « ${esc(S.custom.exos.length ? (S.custom.name||"Ma séance") : plannedTemplate().n)} »`, "Ta séance du jour"));
+    if(prop && (S.custom.exos.length || plannedTemplate())) mine.unshift(row("csMine", sfIcon("bookmarkG", "indigo"), `Revenir à « ${esc(S.custom.exos.length ? (S.custom.name||"Ma séance") : plannedTemplate().n)} »`, ""));
     const app = [];
-    if(prop && draft.source!=="imported") app.push(row("csRegen", sfIcon("sparkles", "orange"), "Autre proposition", "Une nouvelle séance choisie par l'app"));
-    else if(appPicksOn() && !prop) app.push(row("csApp", sfIcon("sparkles", "orange"), "Laisse l'app choisir", "Selon ton matériel et les muscles à travailler cette semaine"));
-    const now = [row("csExpress", sfIcon("stopwatch", "green"), "Séance express", "10 min, tout le corps · commence tout de suite"),
-      row("csCompose", sfIcon("pencil", "blue"), "Composer moi-même", "Choisis tes exercices un par un")];
+    if(prop && draft.source!=="imported") app.push(row("csRegen", sfIcon("sparkles", "orange"), "Autre proposition"));
+    else if(appPicksOn() && !prop) app.push(row("csApp", sfIcon("sparkles", "orange"), "Laisse l'app choisir"));
+    const now = [row("csExpress", sfIcon("stopwatch", "green"), "Séance express", "10 min · tout le corps"),
+      row("csCompose", sfIcon("pencil", "blue"), "Composer moi-même")];
     const sec = (h, rows)=>rows.length ? `<h2 class="sh">${h}</h2><div class="group">${rows.join("")}</div>` : "";
     openSheet(`<div class="sheet-hd"><span class="t" id="ovTitle">Choisir une séance</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
       <div class="sheet-body cs-body">${sec("Mes séances", mine)}${sec("Proposée par l'app", app)}${sec("Sur le moment", now)}</div>`);
@@ -1234,6 +1277,8 @@ Object.assign(ACT, {
   csCompose(){ closeSheet(); customEdit = false; heroSnap = null; S.custom = { exos:[] }; S.settings.todayTab = "custom"; save(); renderTodaySoft(); ACT.customAddOpen(); },
   // la séance proposée : réglages fins dépliés ou repliés, sur place
   propAdjust(){
+    const sn = heroSnap, changed = propAdjust && sn && sn.draft && JSON.stringify(sn.draft)!==JSON.stringify(S.draft);
+    if(changed) setTimeout(()=>toast("Séance modifiée", "check", ()=>{ S.draft = sn.draft; save(); heroRerender(); }), 0);
     heroSnap = propAdjust ? null : { draft: clone(getOrCreateDraft()) };
     propAdjust = !propAdjust; sfx(propAdjust ? "open" : "close");
     const v = qs("#v-today"), pane = v && qs(".seg-pane", v), draft = getOrCreateDraft();
@@ -1346,7 +1391,9 @@ Object.assign(ACT, {
     sfx("step", dir>0); save(); renderView("today");
   },
   setType(d){ regenerateDraft(d.v); renderTodaySoft(); },
-  startSession(){ if(!S.draft.exos.length) return; S.draft.startedAt = new Date().toISOString(); liveFocusIdx = 0; completeShown = false; save(); scrollTodayTop(); renderViewAnimated("today"); showLaunch(S.draft); },
+  warmGo(){ const W = S.draft && S.draft.warm; if(!W || W.end) return; W.end = Date.now() + W.moves[W.i][1]*1000; save(); sfx("go"); refreshFocusRegion(); },
+  warmSkip(){ warmFinish(); sfx("swipe"); },
+  startSession(){ if(!S.draft.exos.length) return; S.draft.startedAt = new Date().toISOString(); warmStart(S.draft); liveFocusIdx = 0; completeShown = false; save(); scrollTodayTop(); renderViewAnimated("today"); showLaunch(S.draft); },
   regenSession(){ regenerateDraft(); renderTodaySoft(); toast("Nouvelle proposition");
     // l'icône du bouton fait un tour : on voit que c'est bien une autre proposition
     const ic = qs('#v-today [data-a="regenSession"] svg');
@@ -1451,7 +1498,7 @@ Object.assign(ACT, {
   startExpress(){
     if(S.draft && S.draft.startedAt) return;
     const s = buildExpressSession(); if(!s.exos.length) return;
-    S.draft = s; S.draft.startedAt = new Date().toISOString();
+    S.draft = s; S.draft.startedAt = new Date().toISOString(); warmStart(S.draft);
     liveFocusIdx = 0; completeShown = false;
     save(); scrollTodayTop(); renderViewAnimated("today");
     showLaunch(S.draft);
@@ -1461,7 +1508,7 @@ Object.assign(ACT, {
     S.draft = buildCustomSession(S.custom.exos, S.custom.name);
     const planned = plannedTemplate();
     if(S.custom.tplId){ S.draft.tplId = S.custom.tplId; S.draft.planned = !!planned && planned.id===S.custom.tplId; }
-    S.draft.startedAt = new Date().toISOString();
+    S.draft.startedAt = new Date().toISOString(); warmStart(S.draft);
     liveFocusIdx = 0; completeShown = false;
     save(); scrollTodayTop(); renderViewAnimated("today");
     showLaunch(S.draft);
@@ -1794,7 +1841,7 @@ function doneSetsBodyHTML(exi){
       ${s.pr ? `<span class="ds-pr" title="Record">${ii("bolt")}</span>` : ""}
       <button class="icon-btn ds-undo" data-a="dsUndo" data-exi="${exi}" data-si="${si}" aria-label="Annuler la validation de la série ${si+1}">${icon("undo")}</button>
     </div>`).join("");
-  return `<p class="hr-note" style="margin:0 20px 12px">Ajuste une série validée par erreur, ou annule sa validation : elle redeviendra la prochaine à faire.</p><div class="group">${rows || `<div class="row"><div class="grow s">Aucune série validée.</div></div>`}</div>`;
+  return `<div class="group">${rows || `<div class="row"><div class="grow s">Aucune série validée.</div></div>`}</div>`;
 }
 function openDoneSets(exi){
   const def = EXO_MAP[S.draft.exos[exi].exoId];

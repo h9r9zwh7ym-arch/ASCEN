@@ -41,7 +41,7 @@ function tplEdBodyHTML(){
     ${e.lite ? `<div class="te-sec te-sec-row"><span>Exercices</span><span class="te-sum">${e.exos.length} · ${nb(sets, "série")} · ≈ ${tplMinutes(e)} min</span></div>
       <div class="te-lite">${e.exos.map(x=>EXO_MAP[x.exoId]?`<span>${esc(EXO_MAP[x.exoId].n)} <b>${x.sets}×</b></span>`:"").join("")}</div>` : `
     <div class="te-sec te-sec-row"><span>Exercices</span>${e.exos.length?`<span class="te-sum">${e.exos.length} · ${nb(sets, "série")} · ≈ ${tplMinutes(e)} min</span>`:""}</div>
-    ${e.exos.length ? `<div class="group builder te-list" data-sort="tpl">${rows}</div>${sortHintHTML(e.exos.length)}` : `<div class="te-empty">${appPicksOn() ? "Ajoute des exercices, ou laisse l'app en proposer." : "Ajoute des exercices à cette séance."}</div>`}
+    ${e.exos.length ? `<div class="group builder te-list" data-sort="tpl">${rows}</div>` : `<div class="te-empty">${appPicksOn() ? "Ajoute des exercices, ou laisse l'app en proposer." : "Ajoute des exercices à cette séance."}</div>`}
     <div class="te-actions">
       <button class="btn secondary sm" data-a="tplEdAdd">${icon("plus")} Ajouter</button>
       ${appPicksOn() ? `<button class="btn secondary sm" data-a="tplEdFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Compléter</button>` : ""}

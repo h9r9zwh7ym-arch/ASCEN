@@ -6,15 +6,15 @@ pensé, il n'a pas besoin de s'expliquer. Chaque étape se termine par des captu
 
 ## 1. Modifier la carte du jour (view_today.js, style.css)
 
-- [ ] Retirer « Annuler » de la carte en édition : le seul bouton reste **OK**.
-- [ ] OK sans changement : on sort de l'édition directement.
-- [ ] OK avec changements → feuille d'actions :
+- [x] Retirer « Annuler » de la carte en édition : le seul bouton reste **OK**.
+- [x] OK sans changement : on sort de l'édition directement.
+- [x] OK avec changements → feuille d'actions :
   « Pour aujourd'hui seulement » · « Aussi pour les prochaines fois » ·
   **« Annuler les modifications »** (rouge, restaure `heroSnap`) ;
   le bouton du bas de la feuille devient « Continuer à modifier » → **« Annuler »** n'existe
   plus en double : le bouton du bas ferme la feuille (on reste en édition).
   Séance planifiée (`heroEditPlanned`) et proposition (`propAdjust`) : même logique.
-- [ ] Lier visuellement la carte titre et la liste : en édition, la carte du titre et la
+- [x] Lier visuellement la carte titre et la liste : en édition, la carte du titre et la
   liste des exercices forment **un seul bloc** (même fond, coins arrondis seulement en haut
   et en bas, filet fin entre les deux, plus d'espace vide).
 - Test : v12 / v63 adaptés (plus de `heroCancel` sur la carte).
@@ -22,33 +22,33 @@ pensé, il n'a pas besoin de s'expliquer. Chaque étape se termine par des captu
 ## 2. Chasse aux phrases inutiles (toute l'app)
 
 Retirer les notes qui expliquent ce qu'on voit déjà :
-- [ ] Mes exercices : la ligne « ★ Favori : … · Exclure : … » ; la note « Sans ton matériel ».
-- [ ] Apparence : « Automatique suit le réglage… », « Recommandé », note sous Séance en sombre.
-- [ ] Objectifs : notes sous Pratique, Âge, Groupes musculaires (garder l'estimation
+- [x] Mes exercices : la ligne « ★ Favori : … · Exclure : … » ; la note « Sans ton matériel ».
+- [x] Apparence : « Automatique suit le réglage… », « Recommandé », note sous Séance en sombre.
+- [x] Objectifs : notes sous Pratique, Âge, Groupes musculaires (garder l'estimation
   « ≈ N séries · N min », réduite à ces chiffres).
-- [ ] Réglages des séances : sous-titres des lignes (« Appliqué à… », « Ajoutés aux… »,
+- [x] Réglages des séances : sous-titres des lignes (« Appliqué à… », « Ajoutés aux… »,
   « « Laisse l'app choisir »… »).
-- [ ] Motivation : « Des aides pour garder l'envie… », sous-titre de « Ton pourquoi » vide.
-- [ ] Données : sous-titres descriptifs (« Fichier de sauvegarde ASCEN », « Toutes les séries… »).
-- [ ] Profil : la note de pied « ASCEN v… — toutes les données… ».
-- [ ] Ascension › Pause : le pied explicatif (voir 3).
-- [ ] Astuce « Maintiens un exercice pour changer l'ordre » : gardée une seule fois, puis jamais.
+- [x] Motivation : « Des aides pour garder l'envie… », sous-titre de « Ton pourquoi » vide.
+- [x] Données : sous-titres descriptifs (« Fichier de sauvegarde ASCEN », « Toutes les séries… »).
+- [x] Profil : la note de pied « ASCEN v… — toutes les données… ».
+- [x] Ascension › Pause : le pied explicatif (voir 3).
+- [x] Astuce « Maintiens un exercice pour changer l'ordre » : gardée une seule fois, puis jamais.
 - Garder ce qui informe vraiment (valeurs, états, erreurs, avertissements).
 
 ## 3. Pause de l'ascension en boutons (view_ascent.js)
 
-- [ ] Remplacer les interrupteurs par des **boutons d'action** :
+- [x] Remplacer les interrupteurs par des **boutons d'action** :
   pas de pause → « Mettre cette semaine en pause » / « Mettre la semaine prochaine en pause » ;
   pause active → état affiché (« Cette semaine est en pause ») + « Reprendre » (annule).
-- [ ] Une ligne de valeur courte : « N pauses restantes ce trimestre ».
-- [ ] Une pause se termine seule à la fin de la semaine : rien à défaire.
+- [x] Une ligne de valeur courte : « N pauses restantes ce trimestre ».
+- [x] Une pause se termine seule à la fin de la semaine : rien à défaire.
 - Tests v63 adaptés (plus de `.switch` dans la pause).
 
 ## 4. À propos, comme une app pro (view_profil.js, init.js)
 
-- [ ] `APP_VERSION = "2.1.2"`.
-- [ ] En-tête : logo, nom, « Version 2.1.2 » centrés.
-- [ ] Listes groupées avec titres : **Application** (Version, Données : sur cet appareil),
+- [x] `APP_VERSION = "2.1.2"`.
+- [x] En-tête : logo, nom, « Version 2.1.2 » centrés.
+- [x] Listes groupées avec titres : **Application** (Version, Données : sur cet appareil),
   **Ascension** (Comment ça marche ›, Sources des reliefs ›),
   **Mentions** (Avertissement santé ›, Droits d'auteur ›). Les textes longs passent dans
   des sous-écrans poussés (retour par glissement).
@@ -58,27 +58,37 @@ Retirer les notes qui expliquent ce qu'on voit déjà :
 Symptôme : petit « retour en arrière » au glissement depuis un sous-écran.
 Causes probables : la feuille parente est redessinée en haut (position de défilement
 perdue), la scène se recharge à vide, la barre des étapes rejoue.
-- [ ] Mesurer (captures image par image pendant le geste).
-- [ ] La pile de feuilles mémorise la position de défilement du parent et la remet au retour
+- [x] Mesurer (captures image par image pendant le geste).
+- [x] La pile de feuilles mémorise la position de défilement du parent et la remet au retour
   (vaut pour toutes les feuilles).
-- [ ] Au retour, l'ascension ne rejoue ni la montée ni les transitions (scène posée à l'état final).
+- [x] Au retour, l'ascension ne rejoue ni la montée ni les transitions (scène posée à l'état final).
 
 ## 6. Échauffement en option, chrono plus grand (view_today.js, view_profil.js)
 
-- [ ] Retirer la ligne « Échauffement : 1 série légère… » de la carte d'exercice.
-- [ ] Réglage « Échauffement » (Réglages des séances), désactivé par défaut.
-- [ ] Activé : au début de la séance, un écran d'échauffement **avant** le 1er exercice,
+- [x] Retirer la ligne « Échauffement : 1 série légère… » de la carte d'exercice.
+- [x] Réglage « Échauffement » (Réglages des séances), désactivé par défaut.
+- [x] Activé : au début de la séance, un écran d'échauffement **avant** le 1er exercice,
   adapté aux régions travaillées (haut du corps → épaules, bras, poignets ; bas → hanches,
   genoux, chevilles ; gainage), 4 mouvements × 30 s, chrono guidé ;
   « Passer » toujours visible, enchaîne sur le 1er exercice à la fin.
-- [ ] Chrono de séance en haut à gauche légèrement plus grand (`.sx-clock span`).
+- [x] Chrono de séance en haut à gauche légèrement plus grand (`.sx-clock span`).
 - Test v64.
 
-## 7. Idées d'amélioration (à proposer, pas à faire d'office)
+## 7. Idées d'amélioration (proposées, à valider avant de les faire)
 
-Ergonomie, motivation, design : liste courte en fin de livraison, classée par valeur.
+Classées par valeur pour l'usage à la maison :
+1. **Saisie en un geste pendant la série** : glisser verticalement sur le chiffre des répétitions ou de la charge
+   (comme une molette) au lieu de toucher − / + plusieurs fois.
+2. **Repos qui démarre seul à la validation, écran verrouillé compris** : notification locale à la fin du repos
+   (la PWA installée le permet sur iOS 16.4+), pour poser le téléphone sans le regarder.
+3. **Widget « séance du jour » / raccourci Siri** (« Démarrer ma séance ») via un lien direct `?start=1`.
+4. **Fin de séance : une seule image partageable** (l'altitude gagnée + les records), comme la carte de sommet.
+5. **Rappel doux le jour prévu** (notification locale à l'heure habituelle de séance, apprise de l'historique).
+6. **Mode « une main »** : boutons Valider / Passer le repos regroupés dans le tiers bas, plus grands sur grand écran.
+7. **Haptique distincte** : série validée, record, fin de repos (trois motifs reconnaissables sans regarder).
+8. **Design** : une icône par mouvement d'échauffement (pictos animés comme les exercices).
 
 ## Livraison
 
-- [ ] Test v64 (points 1 à 6), tests existants adaptés, suite complète + audits + monkey.
-- [ ] HANDOFF.md, cache `forge-v48`, build, commit, push sur `claude/new-session-wotw1c`.
+- [x] Test v64 (points 1 à 6), tests existants adaptés, suite complète + audits + monkey.
+- [x] HANDOFF.md, cache `forge-v48`, build, commit, push sur `claude/new-session-wotw1c`.
