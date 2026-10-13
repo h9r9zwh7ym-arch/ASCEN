@@ -12,7 +12,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const browser = await (wk ? __pw.webkit.launch() : __pw.chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined }));
   const errors = []; const fail = m => errors.push('ASSERT: ' + m);
   const log = (...a) => console.log(`[${wk ? 'webkit' : 'chromium'}]`, ...a);
-  const seed = settings => () => { if (sessionStorage.getItem('s')) return; sessionStorage.setItem('s', 1);
+  const seed = settings => () => { if (sessionStorage.getItem('s') || localStorage.getItem('__seeded')) return; sessionStorage.setItem('s', 1); localStorage.setItem('__seeded', '1');
     const ss = []; for (let k = 30; k >= 3; k -= 3) { const d = new Date(); d.setDate(d.getDate() - k);
       ss.push({ id: 's' + k, date: d.toLocaleDateString('sv'), durationSec: 2400, exos: [{ exoId: 'dc_haltere', sets: [0, 1, 2].map(() => ({ reps: 10, weight: 14, done: true })) }] }); }
     localStorage.setItem('forge.v1', JSON.stringify({ meta: { onboarded: true, backupNudgeAt: Date.now() }, settings: window.__set || {},

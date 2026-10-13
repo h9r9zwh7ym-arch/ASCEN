@@ -12,7 +12,7 @@ const SKIP = /^(confirmReset|restoreData|triggerImport|backupData|exportCSV|copy
   const page = await ctx.newPage(); const errs = [];
   let lastA = '';
   page.on('pageerror', e => errs.push('PAGEERROR: ' + e.message + ' (après ' + lastA + ')\n' + String(e.stack || '').split('\n').slice(1, 5).join('\n'))); page.on('dialog', d => d.dismiss());
-  await page.addInitScript(() => { if (sessionStorage.getItem('s')) return; sessionStorage.setItem('s', 1);
+  await page.addInitScript(() => { if (sessionStorage.getItem('s') || localStorage.getItem('__seeded')) return; sessionStorage.setItem('s', 1); localStorage.setItem('__seeded', '1');
     const ids = ['dc_haltere', 'rowing_uni_haltere', 'squat_gobelet', 'curl_biceps', 'planche', 'pompes']; const ss = [];
     for (let k = 90; k >= 2; k -= 3) { const d = new Date(); d.setDate(d.getDate() - k); ss.push({ id: 's' + k, date: d.toISOString().slice(0, 10), durationSec: 2400,
       exos: ids.map(id => ({ exoId: id, sets: [0, 1, 2].map(j => ({ reps: id === 'planche' ? 40 : 10 - j, weight: /haltere|gobelet|curl/.test(id) ? 12 : undefined, done: true })) })) }); }

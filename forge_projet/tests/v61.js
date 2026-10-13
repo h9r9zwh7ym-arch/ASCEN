@@ -11,7 +11,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const browser = await (wk ? __pw.webkit.launch() : __pw.chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined }));
   const errors = []; const fail = m => errors.push('ASSERT: ' + m);
   const log = (...a) => console.log(`[${wk ? 'webkit' : 'chromium'}]`, ...a);
-  const seed = () => { if (sessionStorage.getItem('s')) return; sessionStorage.setItem('s', 1);
+  const seed = () => { if (sessionStorage.getItem('s') || localStorage.getItem('__seeded')) return; sessionStorage.setItem('s', 1); localStorage.setItem('__seeded', '1');
     const ss = [];
     for (let k = 40; k >= 2; k -= 4) { const d = new Date(); d.setDate(d.getDate() - k);
       ss.push({ id: 's' + k, date: d.toLocaleDateString('sv'), durationSec: 2100, name: 'Haut du corps',

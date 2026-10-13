@@ -11,7 +11,8 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, timezoneId: 'Europe/Zurich', hasTouch: wk, isMobile: wk });
   const errors = []; const fail = m => errors.push('ASSERT: ' + m);
   const log = (...a) => console.log(`[${wk ? 'webkit' : 'chromium'}]`, ...a);
-  await ctx.addInitScript(() => { if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1'); if (localStorage.getItem('forge.v1')) return;
+  await ctx.addInitScript(() => { if (sessionStorage.getItem('seeded') || localStorage.getItem('__seeded')) return; sessionStorage.setItem('seeded', '1'); localStorage.setItem('__seeded', '1'); // marqueur hors des clés de l'app : l'effacement le garde, et sessionStorage peut manquer au rechargement (Chromium chargé)
+    if (localStorage.getItem('forge.v1')) return;
     localStorage.setItem('forge.v1', JSON.stringify({ meta: { onboarded: true, savedAt: 1 }, sessions: [{ id: 'a', date: '2026-09-20', exos: [{ exoId: 'pompes', sets: [{ reps: 10, done: true }] }] }] })); });
   const open = async () => { const p = await ctx.newPage(); p.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
     await p.goto(APP); await p.waitForSelector('#splash', { state: 'detached', timeout: 8000 }); await p.waitForTimeout(700); return p; };

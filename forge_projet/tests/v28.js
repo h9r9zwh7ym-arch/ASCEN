@@ -11,7 +11,7 @@ const OUT = path.join(OUT_ROOT, 'v28'); fs.mkdirSync(OUT, { recursive: true });
   page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message)); page.on('console', m => { if (m.type() === 'error') errors.push('CONSOLE: ' + m.text()); });
   const log = (...a) => console.log(`[${wk ? 'webkit' : 'chromium'}]`, ...a), wait = ms => page.waitForTimeout(ms), shot = n => page.screenshot({ path: `${OUT}/${wk ? 'wk_' : ''}${n}.png` });
   const fail = m => errors.push('ASSERT: ' + m);
-  await page.addInitScript(() => { if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
+  await page.addInitScript(() => { if (sessionStorage.getItem('seeded') || localStorage.getItem('__seeded')) return; sessionStorage.setItem('seeded', '1'); localStorage.setItem('__seeded', '1');
     localStorage.setItem('forge.v1', JSON.stringify({ meta: { onboarded: true }, equipment: { owned: { dumbbells: true, bench: true } }, sessions: [] })); });
   await page.goto('file://' + path.resolve(process.argv[2]));
   await page.waitForSelector('#splash', { state: 'detached', timeout: 8000 }); await wait(400);

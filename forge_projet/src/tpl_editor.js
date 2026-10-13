@@ -4,14 +4,13 @@
 // nom, jours de la semaine, exercices et séries. Le programme de la semaine génère
 // plusieurs séances d'un coup (répartition selon le nombre de jours) et les place.
 
-let tplEdit = null; // { id, n, days, exos:[{exoId,sets}], fromCustom, lite, dirty, order }
+let tplEdit = null; // { id, n, days, exos:[{exoId,sets}], fromCustom, lite, dirty }
 
 function openTplEditor(id, preset){
   const t = id && S.templates.find(x=>x.id===id);
   tplEdit = t ? { id:t.id, n:t.n, days:(t.days||[]).slice(), exos:clone(t.exos) } : { id:null, n:"", days:[], exos:[] };
   if(preset) Object.assign(tplEdit, clone(preset));
   tplEdit.dirty = !!(preset && preset.exos && preset.exos.length && !t);
-  tplEdit.order = false;
   renderTplEditor();
 }
 function tplEdTakenDays(){
@@ -22,16 +21,10 @@ function tplEdTakenDays(){
 function tplEdBodyHTML(){
   const e = tplEdit, taken = tplEdTakenDays();
   const sets = e.exos.reduce((a,x)=>a+x.sets,0);
-  const regions = {}; e.exos.forEach(x=>{ const d=EXO_MAP[x.exoId]; if(d) regions[regionOf(d)]=(regions[regionOf(d)]||0)+x.sets; });
-  // répartition en clair (séries par région), seulement si elle apprend quelque chose (au moins 2 régions)
-  const regs = Object.keys(REGIONS).filter(r=>regions[r]);
-  const balance = regs.length>1 ? `<div class="te-split">Séries : ${regs.map(r=>`${r==="core" ? "Gainage" : REGIONS[r].n} ${regions[r]}`).join(" · ")}</div>` : "";
   const stolen = e.days.filter(d=>taken[d]);
   const rows = e.exos.map((x,i)=>{
     const d = EXO_MAP[x.exoId]; if(!d) return "";
-    const ctl = e.order
-      ? `<div class="mini-step order"><button aria-label="Monter" data-a="tplEdMove" data-i="${i}" data-d="-1" ${i===0?"disabled":""}>↑</button><button aria-label="Descendre" data-a="tplEdMove" data-i="${i}" data-d="1" ${i===e.exos.length-1?"disabled":""}>↓</button></div>`
-      : `<div class="mini-step"><button aria-label="Une série de moins pour ${esc(d.n)}" data-a="tplEdSets" data-i="${i}" data-d="-1">−</button><span>${x.sets}×</span><button aria-label="Plus de séries" data-a="tplEdSets" data-i="${i}" data-d="1">+</button></div>
+    const ctl = `<div class="mini-step"><button aria-label="Une série de moins pour ${esc(d.n)}" data-a="tplEdSets" data-i="${i}" data-d="-1">−</button><span>${x.sets}×</span><button aria-label="Plus de séries" data-a="tplEdSets" data-i="${i}" data-d="1">+</button></div>
          <button class="icon-btn" aria-label="Retirer ${esc(d.n)}" data-a="tplEdRemove" data-i="${i}">${icon("close")}</button>`;
     return `<div class="row te-row ${x.fresh?"fresh":""}">${exoIcon(d)}<div class="grow"><div class="t">${esc(d.n)}</div><div class="s">${esc(MUSCLE_MAP[d.muscles[0]].n)}</div></div>${ctl}</div>`;
   }).join("");
@@ -44,20 +37,19 @@ function tplEdBodyHTML(){
       const on = e.days.includes(i);
       return `<button class="${on?"on":""} ${taken[i]?"taken":""}" data-a="tplEdDay" data-d="${i}" aria-pressed="${on}"><b>${j}</b><small>${on?ii("check"):taken[i]?esc(taken[i]):""}</small></button>`;
     }).join("")}</div>
-    <div class="te-hint">${stolen.length ? `${ii("warn","warn")} ${stolen.map(d=>JOURS[(d+1)%7]).join(", ")} : remplacera « ${esc(taken[stolen[0]])} ».` : e.days.length ? `Ajoutée à ton planning : elle s'affichera directement ${e.days.length>1?"ces jours-là":"ce jour-là"} à l'ouverture de l'app.` : "Aucun jour : elle restera disponible dans Mes séances, hors planning."}</div>
+    ${stolen.length ? `<div class="te-hint">${ii("warn","warn")} ${stolen.map(d=>JOURS[(d+1)%7]).join(", ")} : remplacera « ${esc(taken[stolen[0]])} ».</div>` : ""}
     ${e.lite ? `<div class="te-sec te-sec-row"><span>Exercices</span><span class="te-sum">${e.exos.length} · ${nb(sets, "série")} · ≈ ${tplMinutes(e)} min</span></div>
-      ${balance}
       <div class="te-lite">${e.exos.map(x=>EXO_MAP[x.exoId]?`<span>${esc(EXO_MAP[x.exoId].n)} <b>${x.sets}×</b></span>`:"").join("")}</div>` : `
     <div class="te-sec te-sec-row"><span>Exercices</span>${e.exos.length?`<span class="te-sum">${e.exos.length} · ${nb(sets, "série")} · ≈ ${tplMinutes(e)} min</span>`:""}</div>
-    ${e.exos.length ? `${balance}
-      <div class="group builder te-list ${e.order?"reorder":""}">${rows}</div>` : `<div class="te-empty">${appPicksOn() ? "Ajoute des exercices, ou laisse l'app en proposer." : "Ajoute des exercices à cette séance."}</div>`}
+    ${e.exos.length ? `<div class="group builder te-list" data-sort="tpl">${rows}</div>${sortHintHTML(e.exos.length)}` : `<div class="te-empty">${appPicksOn() ? "Ajoute des exercices, ou laisse l'app en proposer." : "Ajoute des exercices à cette séance."}</div>`}
     <div class="te-actions">
       <button class="btn secondary sm" data-a="tplEdAdd">${icon("plus")} Ajouter</button>
       ${appPicksOn() ? `<button class="btn secondary sm" data-a="tplEdFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Compléter</button>` : ""}
-      ${e.exos.length>1?`<button class="btn secondary sm" data-a="tplEdOrder">${e.order?"OK":"Ordre"}</button>`:""}
     </div>
     ${e.id?`<button class="btn ghost te-del" data-a="tplEdDelete">Supprimer cette séance</button>`:""}`}`;
 }
+// glisser une ligne de l'éditeur : nouvel ordre des exercices
+SORTS.tpl = (i, j)=>{ if(!tplEdit) return; const a = tplEdit.exos, [x] = a.splice(i, 1); a.splice(j, 0, x); tplEdit.dirty = true; refreshTplEditor(); };
 function renderTplEditor(){
   openSheet(`<div class="sheet-hd te-hd">
       <button class="te-cancel" data-a="tplEdCancel">Annuler</button>
@@ -137,13 +129,6 @@ Object.assign(ACT, {
     const go = ()=>{ if(tplEdit!==ed) return; ed.exos.splice(+d.i,1); ed.dirty = true; refreshTplEditor(); };
     if(row){ row.classList.add("leaving"); setTimeout(go, 200); } else go();
   },
-  tplEdMove(d){
-    const i = +d.i, j = i+parseInt(d.d,10), a = tplEdit.exos;
-    if(j<0 || j>=a.length) return;
-    [a[i],a[j]] = [a[j],a[i]]; a[j].fresh = true;
-    tplEdit.dirty = true; refreshTplEditor();
-  },
-  tplEdOrder(){ tplEdit.order = !tplEdit.order; refreshTplEditor(); },
   tplEdAdd(){
     openPicker({ title:"Ajouter des exercices", multi:true, exclude:new Set(tplEdit.exos.map(x=>x.exoId)),
       onCancel:()=>renderTplEditor(),

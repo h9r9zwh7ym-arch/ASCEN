@@ -598,6 +598,76 @@ function dismissSheet(){ if(sheetBack()) return; if(!sheetDismissGuard()) closeS
 })();
 let suppressSheetClick = 0;
 
+// ---------- glisser pour changer l'ordre d'une liste ([data-sort]) ----------
+// Maintenir une ligne (≈ ¼ s) la soulève ; elle suit le doigt, les autres s'écartent pour lui faire place ;
+// au lâcher elle se pose dans son créneau, puis la liste est réordonnée (SORTS[nom](de, vers)). Près du bord,
+// la liste défile. Les contrôles de la ligne (séries, retirer…) gardent leur rôle ; un toucher bref reste un toucher.
+const SORTS = {};
+// sous une liste qu'on peut réordonner : le geste, dit une fois (jusqu'au premier déplacement)
+function sortHintHTML(n){ return n>1 && !S.meta.sortHint ? `<p class="sort-hint">Maintiens un exercice pour changer l'ordre.</p>` : ""; }
+let sortDrag = null, sortDropAt = 0;
+function sortScroller(el){ return el.closest(".sheet-body") || el.closest(".view") || document.scrollingElement; }
+function sortEnd(cancel){
+  const st = sortDrag; sortDrag = null; if(!st) return;
+  clearTimeout(st.timer); cancelAnimationFrame(st.raf);
+  if(!st.on) return;
+  sortDropAt = Date.now();
+  const R = st.rects, i = st.i, to = cancel ? i : st.to;
+  const off = to>i ? (R[to].top+R[to].h) - (R[i].top+R[i].h) : to<i ? R[to].top - R[i].top : 0;
+  st.row.style.transition = "transform .22s cubic-bezier(.2,.8,.2,1), box-shadow .22s";
+  st.row.style.transform = `translateY(${off}px)`; st.row.classList.remove("lifted");
+  if(cancel) st.rows.forEach(r=>{ if(r!==st.row) r.style.transform = ""; });
+  setTimeout(()=>{
+    st.rows.forEach(r=>{ r.style.transform = ""; r.style.transition = ""; });
+    st.list.classList.remove("sorting");
+    if(to!==i && SORTS[st.list.dataset.sort]){ if(!S.meta.sortHint){ S.meta.sortHint = 1; save(); } SORTS[st.list.dataset.sort](i, to); }
+  }, 230);
+}
+function sortUpdate(st){
+  const dy = st.y - st.y0 + (st.sc.scrollTop - st.s0), R = st.rects, i = st.i;
+  st.row.style.transform = `translateY(${dy}px) scale(1.02)`;
+  const c = R[i].top + R[i].h/2 + dy; let to = i;
+  for(let k=i+1; k<R.length; k++) if(c > R[k].top + R[k].h/2) to = k;
+  for(let k=i-1; k>=0; k--) if(c < R[k].top + R[k].h/2) to = k;
+  if(to!==st.to){ st.to = to; haptic(6); }
+  st.rows.forEach((r, k)=>{ if(k===i) return; const sh = k>i && k<=to ? -R[i].h : k<i && k>=to ? R[i].h : 0; r.style.transform = sh ? `translateY(${sh}px)` : ""; });
+}
+function sortTick(){
+  const st = sortDrag; if(!st || !st.on) return;
+  const b = st.sc===document.scrollingElement ? { top:0, bottom:innerHeight } : st.sc.getBoundingClientRect();
+  const v = st.y < b.top+56 ? -Math.ceil((b.top+56-st.y)/6) : st.y > b.bottom-56 ? Math.ceil((st.y-b.bottom+56)/6) : 0;
+  if(v){ st.sc.scrollTop += v; sortUpdate(st); }
+  st.raf = requestAnimationFrame(sortTick);
+}
+document.addEventListener("pointerdown", e=>{
+  if(sortDrag || e.button>0) return;
+  const row = e.target.closest && e.target.closest("[data-sort] > .row"); if(!row) return;
+  if(e.target.closest("input, select, textarea, .mini-step, .icon-btn, .chip")) return;
+  const list = row.parentElement, rows = [...list.children].filter(r=>r.classList.contains("row"));
+  if(rows.length<2) return;
+  const st = sortDrag = { list, row, rows, x0:e.clientX, y0:e.clientY, y:e.clientY, on:false };
+  st.timer = setTimeout(()=>{
+    if(sortDrag!==st) return;
+    st.on = true; st.i = st.to = rows.indexOf(row);
+    st.rects = rows.map(r=>{ const b = r.getBoundingClientRect(); return { top:b.top, h:b.height }; });
+    st.sc = sortScroller(list); st.s0 = st.sc.scrollTop;
+    list.classList.add("sorting"); row.classList.add("lifted"); haptic(12); sfx("tick");
+    try{ const sel = getSelection(); if(sel) sel.removeAllRanges(); }catch(err){}
+    st.raf = requestAnimationFrame(sortTick);
+  }, 260);
+}, true);
+document.addEventListener("pointermove", e=>{
+  const st = sortDrag; if(!st) return;
+  if(!st.on){ if(Math.hypot(e.clientX-st.x0, e.clientY-st.y0)>8){ clearTimeout(st.timer); sortDrag = null; } return; }
+  st.y = e.clientY; sortUpdate(st);
+}, true);
+document.addEventListener("pointerup", ()=>sortEnd(false), true);
+document.addEventListener("pointercancel", ()=>sortEnd(true), true);
+// pendant le glissement, le doigt ne fait pas défiler la page (iOS) ; après le lâcher, pas de « toucher »
+document.addEventListener("touchmove", e=>{ if(sortDrag && sortDrag.on && e.cancelable) e.preventDefault(); }, { passive:false });
+document.addEventListener("click", e=>{ if(Date.now()-sortDropAt<400){ e.stopPropagation(); e.preventDefault(); } }, true);
+document.addEventListener("contextmenu", e=>{ if(sortDrag) e.preventDefault(); });
+
 // ---------- navigation poussée, façon iOS ----------
 // Un écran poussé entre par la droite par-dessus le précédent, qui recule d'un tiers sous un voile ; le
 // retour fait l'inverse, au bouton ou en glissant depuis le bord gauche (le doigt mène l'écran, on relâche

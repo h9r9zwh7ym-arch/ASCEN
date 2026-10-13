@@ -14,7 +14,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const open = async (state, dark) => {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: dark ? 'dark' : 'light', timezoneId: 'Europe/Zurich', hasTouch: wk, isMobile: wk });
     const page = await ctx.newPage(); page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message)); page.on('dialog', d => { errors.push('DIALOG: ' + d.message()); d.dismiss(); });
-    await page.addInitScript(s => { if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1'); localStorage.setItem('forge.v1', s); }, JSON.stringify(state));
+    await page.addInitScript(s => { if (sessionStorage.getItem('seeded') || localStorage.getItem('__seeded')) return; sessionStorage.setItem('seeded', '1'); localStorage.setItem('__seeded', '1'); localStorage.setItem('forge.v1', s); }, JSON.stringify(state));
     await page.goto(APP); await page.waitForSelector('#splash', { state: 'detached', timeout: 9000 }); await page.waitForTimeout(500); return page;
   };
   const startLive = p => p.evaluate(async () => { S.custom = { exos: [{ exoId: 'dc_haltere', sets: 3 }, { exoId: 'curl_biceps', sets: 3 }, { exoId: 'squat_gobelet', sets: 3 }] }; ACT.startCustom();

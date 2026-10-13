@@ -580,10 +580,7 @@ h2.sh button.more{font-size:var(--fs-sub);font-weight:500;color:var(--tint-ink)}
 
 /* ---- Ma séance : équilibre par zone ---- */
 .sh-actions{display:flex;gap:16px}
-.mini-step.order button{font-size:16px}
 .mini-step button[disabled]{opacity:.25}
-.group.builder.reorder .row{animation:wiggle .35s ease}
-@keyframes wiggle{0%,100%{transform:none}30%{transform:translateX(-3px)}60%{transform:translateX(3px)}}
 
 /* ---- fiche exercice ---- */
 .exo-hero{padding:4px 16px 2px}
@@ -617,7 +614,7 @@ h2.sh button.more{font-size:var(--fs-sub);font-weight:500;color:var(--tint-ink)}
 .ls-ring>span{color:var(--rc,var(--tint))}
 .ls-ring .picto{width:17px;height:17px}
 @media (prefers-reduced-motion:reduce){
-  .xico,.tc-list,.exo-hero .xico,.group.builder.reorder .row{animation:none!important;transition:none!important}
+  .xico,.tc-list,.exo-hero .xico{animation:none!important;transition:none!important}
 }
 
 /* ================= v1.5 : accueil,hiérarchie,animations ================= */
@@ -3012,7 +3009,6 @@ body.live-focus #v-today{padding-bottom:0}
 .num-field.txt input{text-align:left;font-size:var(--fs-body);font-weight:400;height:48px}
 .num-field.txt input::placeholder{color:var(--label3)}
 #tplEdBody>.te-sec,#wzBody>.te-sec,#obBody>.te-sec{margin-left:4px;margin-right:4px}
-.te-split{margin:-2px 4px 10px;font-size:var(--fs-foot);color:var(--label2);font-variant-numeric:tabular-nums}
 .btn.ghost.te-del{color:var(--red)}
 /* premier lancement : le matériel coché prend l'orange, comme une case cochée */
 .ob-eq .sfi{transition:color .2s}
@@ -3111,3 +3107,30 @@ body.live-focus #toast,body:has(#overlay.show) #toast{top:calc(10px + var(--sat)
 .tpl-add.wp-wizard:active{background:none;opacity:.6;transform:none}
 /* Modifier la séance du jour : la liste éditable se termine par ses boutons, avant « Cette semaine » */
 .home .seg-pane>.btnrow:last-child,.home .seg-pane>.save-row:last-child{margin-bottom:28px}
+/* Carte du jour : le titre porte la ligne (plus d'étiquette « Prête à démarrer »), « Modifier » sur sa première
+   ligne ; en édition, une barre « Annuler / OK » ; l'étiquette utile (modifiée, proposée…) ouvre la ligne de détails */
+.hero .hero-hd{align-items:flex-start;min-height:0}
+.hero .hero-hd .hero-title{flex:1;min-width:0;margin-top:0}
+.hero .hero-hd .hero-mod{margin:-5px -8px -5px 0;flex:none}
+.hero .hero-bar{display:flex;align-items:center;justify-content:space-between;margin:-10px -8px -2px}
+.hero .hero-bar button{min-height:44px;padding:0 8px;background:none;font-size:var(--fs-body);color:var(--tint-ink)}
+.hero .hero-bar .hero-cancel{font-weight:400}
+.hero .hero-bar .hero-mod{margin:0;font-size:var(--fs-body);font-weight:700}
+.hero .hero-meta .hero-tag{color:var(--tint-ink);font-weight:600}
+/* accueil : la date et le titre sur la même ligne que les titres de section (20 px), « Voir les N exercices »
+   sur celle des noms d'exercices */
+.home .home-head .lt,.home .home-head .eyebrow{padding-left:0;padding-right:0}
+.hl-toggle{margin-left:46px}
+/* Choisir une séance : trois sections (Mes séances, proposée par l'app, sur le moment) */
+.cs-body .group{margin-bottom:8px}
+.cs-row{width:100%;text-align:left;min-height:60px}
+.cs-row .s{white-space:normal}
+.cs-row>.sfi,.cs-row>.xico{flex:none;width:34px;height:34px;display:grid;place-items:center}
+/* glisser pour changer l'ordre : la ligne se soulève, les autres s'écartent */
+[data-sort]>.row{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+[data-sort].sorting{overflow:visible}
+[data-sort].sorting>.row{transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+[data-sort].sorting>.row.lifted{z-index:5;transition:box-shadow .2s;background:var(--bg2);border-radius:14px;box-shadow:0 12px 28px rgba(0,0,0,.18),0 2px 6px rgba(0,0,0,.08)}
+[data-sort].sorting>.row.lifted::before,[data-sort].sorting>.row.lifted+.row::before{opacity:0}
+.sort-hint{margin:8px 20px 0;font-size:var(--fs-foot);color:var(--label2);line-height:1.35}
+#tplEdBody .sort-hint{margin:8px 4px 0}

@@ -12,7 +12,7 @@ const OUT = path.join(OUT_ROOT, 'v31'); fs.mkdirSync(OUT, { recursive: true });
   page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
   const log = (...a) => console.log(`[${wk ? 'webkit' : 'chromium'}]`, ...a), wait = ms => page.waitForTimeout(ms), shot = n => page.screenshot({ path: `${OUT}/${wk ? 'wk_' : ''}${n}.png` });
   const fail = m => errors.push('ASSERT: ' + m);
-  await page.addInitScript(() => { if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
+  await page.addInitScript(() => { if (sessionStorage.getItem('seeded') || localStorage.getItem('__seeded')) return; sessionStorage.setItem('seeded', '1'); localStorage.setItem('__seeded', '1');
     const d = new Date(); d.setDate(d.getDate() - 30); const iso = d.toISOString().slice(0, 10);
     localStorage.setItem('forge.v1', JSON.stringify({ meta: { onboarded: true }, settings: { todayTab: 'custom' }, equipment: { owned: { dumbbells: true, bench: true } },
       sessions: [{ id: 's1', date: iso, durationSec: 1500, exos: [{ exoId: 'pompes', sets: [{ reps: 12, done: true }, { reps: 10, done: true }] }] }] })); });

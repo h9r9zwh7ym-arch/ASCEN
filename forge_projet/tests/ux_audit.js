@@ -7,7 +7,7 @@ const __pw = require('playwright'); const path = require('path');
   const b = await __pw.chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: dark ? 'dark' : 'light', hasTouch: true });
   const page = await ctx.newPage();
-  await page.addInitScript(() => { if (sessionStorage.getItem('s')) return; sessionStorage.setItem('s', 1);
+  await page.addInitScript(() => { if (sessionStorage.getItem('s') || localStorage.getItem('__seeded')) return; sessionStorage.setItem('s', 1); localStorage.setItem('__seeded', '1');
     const ex = ['dc_haltere', 'rowing_uni_haltere', 'pompes', 'squat_gobelet', 'planche']; const ss = [];
     for (let i = 0; i < 30; i++) { const d = new Date(); d.setDate(d.getDate() - 1 - i * 3); const iso = d.toISOString().slice(0, 10);
       ss.push({ id: 's' + i, date: iso, startedAt: iso + 'T07:00:00Z', completedAt: iso + 'T07:40:00Z', durationSec: 2400, exos: ex.map(e => ({ exoId: e, sets: [1, 2, 3].map(j => ({ reps: e === 'planche' ? 40 : 10, weight: /haltere|gobelet/.test(e) ? 12 : undefined, done: true })) })) }); }

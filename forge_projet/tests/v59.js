@@ -12,7 +12,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const browser = await (wk ? __pw.webkit.launch() : __pw.chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined }));
   const errors = []; const fail = m => errors.push('ASSERT: ' + m);
   const log = (...a) => console.log(`[${wk ? 'webkit' : 'chromium'}]`, ...a);
-  const seed = () => { if (sessionStorage.getItem('s')) return; sessionStorage.setItem('s', 1); const ss = [];
+  const seed = () => { if (sessionStorage.getItem('s') || localStorage.getItem('__seeded')) return; sessionStorage.setItem('s', 1); localStorage.setItem('__seeded', '1'); const ss = [];
     for (let k = 90; k >= 2; k -= 2) { const d = new Date(); d.setDate(d.getDate() - k);
       ss.push({ id: 's' + k, date: d.toLocaleDateString('sv'), startedAt: d.toISOString(), durationSec: 2400, name: 'Haut du corps', tplId: 'tp1',
         exos: [{ exoId: 'dc_haltere', sets: [0, 1, 2].map(() => ({ reps: 10, weight: 8 + Math.floor((90 - k) / 15) * 2, done: true })) }, { exoId: 'rowing_uni_haltere', sets: [0, 1].map(() => ({ reps: 10, weight: 12, done: true })) },

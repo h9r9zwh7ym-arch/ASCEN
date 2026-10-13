@@ -11,7 +11,7 @@ const OUT = path.join(OUT_ROOT, 'v24'); fs.mkdirSync(OUT, { recursive: true });
   page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message)); page.on('console', m => { if (m.type() === 'error') errors.push('CONSOLE: ' + m.text()); });
   const log = (...a) => console.log(...a), wait = ms => page.waitForTimeout(ms), shot = n => page.screenshot({ path: `${OUT}/${wk ? 'wk_' : ''}${n}.png` });
   const fail = m => errors.push('ASSERT: ' + m);
-  await page.addInitScript(() => { if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
+  await page.addInitScript(() => { if (sessionStorage.getItem('seeded') || localStorage.getItem('__seeded')) return; sessionStorage.setItem('seeded', '1'); localStorage.setItem('__seeded', '1');
     const mk = (id, date, w, reps, pr) => ({ id, date, source: 'custom', startedAt: date + 'T08:00:00.000Z', completedAt: date + 'T08:40:00.000Z', durationSec: 2400,
       exos: [{ exoId: 'dc_haltere', sets: [{ reps, weight: w, done: true, ...(pr ? { pr: true } : {}) }, { reps, weight: w, done: true }] }, { exoId: 'pompes', sets: [{ reps: 12, done: true }] }] });
     localStorage.setItem('forge.v1', JSON.stringify({ meta: { onboarded: true, prCount: 1 }, equipment: { owned: { dumbbells: true, bench: true }, weights: { dumbbells: [10, 12, 14, 16, 18, 20, 22] } },

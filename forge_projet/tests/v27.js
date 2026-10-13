@@ -11,7 +11,7 @@ const OUT = path.join(OUT_ROOT, 'v27'); fs.mkdirSync(OUT, { recursive: true });
   page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message)); page.on('console', m => { if (m.type() === 'error' && !/GPU stall|WebGL|swiftshader/i.test(m.text())) errors.push('CONSOLE: ' + m.text()); });
   const log = (...a) => console.log(...a), wait = ms => page.waitForTimeout(ms), shot = n => page.screenshot({ path: `${OUT}/${wk ? 'wk_' : ''}${n}.png` });
   const fail = m => errors.push('ASSERT: ' + m);
-  await page.addInitScript(() => { if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
+  await page.addInitScript(() => { if (sessionStorage.getItem('seeded') || localStorage.getItem('__seeded')) return; sessionStorage.setItem('seeded', '1'); localStorage.setItem('__seeded', '1');
     const ss = []; for (let i = 0; i < 30; i++) { const d = new Date(2026, 6, 1 + i * 2); const iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
       ss.push({ id: 's' + i, date: iso, source: 'custom', durationSec: 2400, exos: [{ exoId: 'pompes', sets: [{ reps: 12, done: true }, { reps: 12, done: true }] }] }); }
     localStorage.setItem('forge.v1', JSON.stringify({ meta: { onboarded: true }, sessions: ss })); });

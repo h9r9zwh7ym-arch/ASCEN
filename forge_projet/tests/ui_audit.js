@@ -10,7 +10,7 @@ const OUT = path.join(OUT_ROOT, process.env.AUDIT_DIR || 'audit_ui'); fs.mkdirSy
   const page = await ctx.newPage(); const errors = [];
   page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
   // encoche simulée : les zones de sécurité iOS (47 px en haut, 34 en bas) sont injectées via une variable
-  await page.addInitScript(() => { if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
+  await page.addInitScript(() => { if (sessionStorage.getItem('seeded') || localStorage.getItem('__seeded')) return; sessionStorage.setItem('seeded', '1'); localStorage.setItem('__seeded', '1');
     const ex = ['dc_haltere', 'rowing_uni_haltere', 'pompes', 'elevations_laterales', 'squat_gobelet', 'planche', 'fentes_avant', 'curl_biceps'];
     const ss = []; for (let i = 0; i < 44; i++) { const d = new Date(2026, 5, 1 + i * 2.2); if (d > new Date(2026, 8, 27)) break;
       const iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');

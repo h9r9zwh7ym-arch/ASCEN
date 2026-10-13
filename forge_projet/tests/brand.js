@@ -8,7 +8,7 @@ const OUT = path.join(OUT_ROOT, process.env.BRAND_DIR || 'brand'); fs.mkdirSync(
   const browser = await (wk ? __pw.webkit.launch() : __pw.chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] }));
   const file = 'file://' + path.resolve(process.argv[2]);
   const errors = [];
-  const seed = () => { if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
+  const seed = () => { if (sessionStorage.getItem('seeded') || localStorage.getItem('__seeded')) return; sessionStorage.setItem('seeded', '1'); localStorage.setItem('__seeded', '1');
     const ex = ['dc_haltere', 'rowing_uni_haltere', 'pompes', 'elevations_laterales', 'squat_gobelet', 'planche'];
     const ss = []; for (let i = 0; i < 40; i++) { const d = new Date(2026, 5, 1 + i * 2.5); if (d > new Date(2026, 8, 26)) break;
       const iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');

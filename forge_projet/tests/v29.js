@@ -12,7 +12,7 @@ const OUT = path.join(OUT_ROOT, 'v29'); fs.mkdirSync(OUT, { recursive: true });
   const log = (...a) => console.log(`[${wk ? 'webkit' : 'chromium'}]`, ...a), wait = ms => page.waitForTimeout(ms), shot = n => page.screenshot({ path: `${OUT}/${wk ? 'wk_' : ''}${n}.png` });
   const fail = m => errors.push('ASSERT: ' + m);
   // 1. état abîmé : entrées illisibles, exercices inconnus, types inattendus
-  await page.addInitScript(() => { if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
+  await page.addInitScript(() => { if (sessionStorage.getItem('seeded') || localStorage.getItem('__seeded')) return; sessionStorage.setItem('seeded', '1'); localStorage.setItem('__seeded', '1');
     localStorage.setItem('forge.v1', JSON.stringify({ meta: { onboarded: true },
       sessions: [null, { date: 'hier' }, { date: '2026-09-01', exos: 'x' },
         { id: 'ok1', date: '2026-09-02', durationSec: 1800, exos: [{ exoId: 'pompes', sets: [{ reps: 12, done: true }, null] }, { exoId: 'exercice_disparu', sets: [{ reps: 8, done: true }] }, 7] },

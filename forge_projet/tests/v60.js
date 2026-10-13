@@ -12,7 +12,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const browser = await (wk ? __pw.webkit.launch() : __pw.chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined }));
   const errors = []; const fail = m => errors.push('ASSERT: ' + m);
   const log = (...a) => console.log(`[${wk ? 'webkit' : 'chromium'}]`, ...a);
-  const seed = () => { if (sessionStorage.getItem('s')) return; sessionStorage.setItem('s', 1); const ss = [];
+  const seed = () => { if (sessionStorage.getItem('s') || localStorage.getItem('__seeded')) return; sessionStorage.setItem('s', 1); localStorage.setItem('__seeded', '1'); const ss = [];
     for (let k = 60; k >= 2; k -= 2) { const d = new Date(); d.setDate(d.getDate() - k);
       ss.push({ id: 's' + k, date: d.toLocaleDateString('sv'), durationSec: 2400, name: 'Haut du corps', exos: [{ exoId: 'dc_haltere', sets: [0, 1, 2].map(j => ({ reps: 10, weight: 8 + Math.floor((60 - k) / 10) * 2, done: true, pr: k <= 6 && !j })) }, { exoId: 'squat_gobelet', sets: [0, 1].map(j => ({ reps: 12, weight: 12 + (k <= 4 ? 2 : 0), done: true, pr: k === 4 && !j })) }] }); }
     localStorage.setItem('forge.v1', JSON.stringify({ meta: { onboarded: true, backupNudgeAt: Date.now(), lastBackup: new Date().toLocaleDateString('sv') }, settings: { name: 'Yannick' },

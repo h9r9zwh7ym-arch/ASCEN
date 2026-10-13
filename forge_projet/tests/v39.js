@@ -12,7 +12,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const log = (...a) => console.log(`[${wk ? 'webkit' : 'chromium'}]`, ...a);
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, timezoneId: 'Europe/Zurich', hasTouch: wk, isMobile: wk });
   const page = await ctx.newPage(); page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
-  await page.addInitScript(() => { if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
+  await page.addInitScript(() => { if (sessionStorage.getItem('seeded') || localStorage.getItem('__seeded')) return; sessionStorage.setItem('seeded', '1'); localStorage.setItem('__seeded', '1');
     const ss = []; for (let k = 60; k >= 3; k -= 3) { const d = new Date(); d.setDate(d.getDate() - k);
       ss.push({ id: 's' + k, date: d.toISOString().slice(0, 10), note: k === 3 ? 'Dos; "raide"' : undefined, exos: [{ exoId: 'dc_haltere', sets: [{ reps: 10, weight: 12, done: true }, { reps: 8, weight: 12, done: true }] }, { exoId: 'planche', sets: [{ reps: 45, done: true }] }] }); }
     localStorage.setItem('forge.v1', JSON.stringify({ meta: { onboarded: true, backupNudgeAt: Date.now() }, equipment: { owned: { dumbbells: true, bench: true }, weights: { dumbbells: [4, 6, 8, 10, 12, 14] } }, sessions: ss })); });

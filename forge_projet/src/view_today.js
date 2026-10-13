@@ -11,6 +11,8 @@ let stripBump = -1; // pastille du bandeau qui « rebondit » après une série 
 let justDone = null; // {exi, si} : série qui vient d'être validée (animation du point)
 let savedFresh = false; // repos qui suit une validation : la coche « Série N enregistrée » se dessine une fois
 let customEdit = false; // carte du jour : « Modifier » rend la liste éditable (séries, retrait, ajout, enregistrement)
+let heroSnap = null;     // la séance telle qu'avant « Modifier » / « Ajuster » : « Annuler » y revient
+function editSnap(){ if(!customEdit) heroSnap = { custom: clone(S.custom) }; }
 let heroAll = false;    // carte du jour : « Voir les N exercices » déplié
 
 function fmtDuration(sec){
@@ -131,45 +133,45 @@ function heroHTML(mode, draft){
   if(kind==="compose"){
     const pend = S.custom.pendingDays && S.custom.pendingDays.length;
     return `<div class="hero compose stagger" style="--i:2">
-      <div class="hero-hd"><span class="hero-eyebrow">Ma séance</span></div>
-      <span class="hero-title">Compose ta séance</span>
+      <div class="hero-hd"><span class="hero-title">Compose ta séance</span></div>
       <span class="hero-sub">${pend ? `Pour le ${pendingDaysLabel()} : choisis tes exercices, puis enregistre-la.` : "Choisis tes exercices : séries, charges et repos sont calculés pour toi."}</span>
       <button class="hero-go" data-a="customAddOpen">Choisir mes exercices</button>
       ${appPicksOn() ? `<button class="hero-alt" data-a="todayMode" data-v="proposal">Ou laisse l'app choisir</button>` : S.templates.length ? `<button class="hero-alt" data-a="chooseSession">Choisir une autre séance</button>` : ""}
     </div>`;
   }
-  let eyebrow, title, meta, entries, act, mod = "";
+  let tag = "", title, meta, entries, act, mod = "";
   const planned = plannedTemplate();
   if(kind==="planned"){
-    eyebrow = "Prévu aujourd'hui"; title = esc(planned.n);
+    title = esc(planned.n);
     entries = planned.exos.map(e=>({ id:e.exoId, dose:tplDose(e.exoId, e.sets) }));
     meta = [nb(planned.exos.length, "exercice"), nb(planned.exos.reduce((a,e)=>a+e.sets,0), "série"), `≈ ${tplMinutes(planned)} min`];
     act = `data-a="startTemplate" data-id="${planned.id}"`;
     mod = `<button class="hero-mod" data-a="heroEditPlanned" data-id="${planned.id}">Modifier</button>`;
   } else if(kind==="custom"){
-    eyebrow = !customEdit && customDiffers(customTpl()) ? "Modifiée pour aujourd'hui" : planned && S.custom.tplId===planned.id ? "Prévu aujourd'hui" : "Prête à démarrer";
+    tag = !customEdit && customDiffers(customTpl()) ? "Modifiée pour aujourd'hui" : "";
     title = esc(S.custom.name||"Ma séance");
     entries = S.custom.exos.map(e=>({ id:e.exoId, dose:tplDose(e.exoId, e.sets) }));
     meta = [nb(entries.length, "exercice"), nb(S.custom.exos.reduce((a,e)=>a+e.sets,0), "série"), `≈ ${estimateMinutes({ exos:S.custom.exos.map(e=>({ exoId:e.exoId, sets:new Array(e.sets).fill(0) })) })} min`];
     act = `data-a="startCustom"`;
-    mod = `<button class="hero-mod${customEdit ? " on" : ""}" data-a="heroEdit" aria-pressed="${customEdit}">${customEdit ? "OK" : "Modifier"}</button>`;
+    mod = `<button class="hero-mod" data-a="heroEdit">Modifier</button>`;
   } else {
     const t = SESSION_TYPE_MAP[draft.type]||SESSION_TYPES[0], rt = SESSION_TYPE_MAP[draft.resolvedType];
-    const lastS = S.sessions[S.sessions.length-1], away = lastS ? daysBetween(lastS.date, todayISO()) : 0;
-    eyebrow = draft.source==="imported" ? "Programme importé" : away>=10 ? "Bon retour !" : "Proposée par l'app";
+    tag = draft.source==="imported" ? "Programme importé" : "Proposée par l'app";
     title = draft.source==="imported" ? esc(draft.name||"Séance importée") : draft.type==="auto" && rt ? rt.n : t.n;
     entries = draft.exos.map(ex=>({ id:ex.exoId, dose:propDose(ex) }));
     meta = [nb(mainExos(draft).length, "exercice"), nb(mainExos(draft).reduce((t,e)=>t+e.sets.length,0), "série"), `≈ ${estimateMinutes(draft)} min`];
     act = `data-a="startSession"`;
-    mod = `<button class="hero-mod${propAdjust ? " on" : ""}" data-a="propAdjust" aria-expanded="${propAdjust}">${propAdjust ? "OK" : "Ajuster"}</button>`;
+    mod = `<button class="hero-mod" data-a="propAdjust" aria-expanded="false">Ajuster</button>`;
   }
   // en édition (Modifier, Ajuster), la liste éditable suit la carte : la carte ne la répète pas, et on ne
   // lance rien d'ici. On modifie, « OK », puis « Commencer » (comme l'édition d'une liste sur iOS)
   const editing = (kind==="custom" && customEdit) || (kind==="proposal" && (propAdjust || !draft.exos.length));
+  // en édition : « Annuler » (ignorer les modifications) et « OK », comme une liste iOS en mode édition
+  const bar = editing ? `<div class="hero-bar"><button class="hero-cancel" data-a="heroCancel">Annuler</button>
+      <button class="hero-mod on" data-a="${kind==="custom" ? "heroEdit" : "propAdjust"}"${kind==="custom" ? "" : ` aria-expanded="true"`}>OK</button></div>` : "";
   return `<div class="hero ${kind}${editing ? " editing" : ""} stagger" style="--i:2">
-    <div class="hero-hd"><span class="hero-eyebrow">${eyebrow}</span>${mod}</div>
-    <span class="hero-title">${title}</span>
-    <span class="hero-meta">${meta.map(m=>`<span>${m}</span>`).join("")}</span>
+    ${bar}<div class="hero-hd"><span class="hero-title">${title}</span>${editing ? "" : mod}</div>
+    <span class="hero-meta">${tag ? `<span class="hero-tag">${tag}</span>` : ""}${meta.map(m=>`<span>${m}</span>`).join("")}</span>
     ${editing ? "" : `${heroListHTML(entries)}
     <button class="hero-go" ${act}>Commencer</button>
     <button class="hero-alt" data-a="chooseSession">Choisir une autre séance</button>`}
@@ -277,7 +279,6 @@ function proposalPaneHTML(draft){
 // ---------- séances enregistrées & planning ----------
 function uiState(){ return S.settings.ui || (S.settings.ui = { planOpen:true }); }
 let openTpls = new Set();   // séances enregistrées dépliées
-let reorderMode = false;
 
 function tplRegion(t){
   const c = {};
@@ -423,6 +424,16 @@ function templatesHTML(){
 
 // Enregistrer ou non la séance composée : enregistrée, elle rejoint « Mes séances » et, avec des jours, le planning
 function pendingDaysLabel(){ return (S.custom.pendingDays||[]).slice().sort().map(d=>JOURS[(d+1)%7]).join(", "); }
+// glisser une ligne de Ma séance : nouvel ordre (la séance reste en édition)
+SORTS.custom = (i, j)=>ACT.customMove({ idx:i, d:j-i });
+// redessine la carte du jour et ce qui la suit, sur place (hauteur animée)
+function heroRerender(){
+  const v = qs("#v-today"), pane = v && qs(".seg-pane", v), draft = getOrCreateDraft();
+  if(!pane || draft.startedAt){ renderView("today"); return; }
+  const mode = S.settings.todayTab==="proposal" ? "proposal" : "custom";
+  morphHeight(pane, ()=>{ pane.innerHTML = `${sessionsToday().length ? "" : heroHTML(mode, draft)}${mode==="custom" ? customPaneHTML() : proposalPaneHTML(draft)}`; });
+  v._ver = DATA_VER;
+}
 // la séance du jour vient-elle de Mes séances, et en diffère-t-elle ?
 function customTpl(){ return S.custom.tplId && S.templates.find(x=>x.id===S.custom.tplId) || null; }
 const exoSig = list=>JSON.stringify(list.map(e=>[e.exoId, e.sets]));
@@ -455,9 +466,7 @@ function customPaneHTML(){
   }
   const rows = c.map((e,i)=>{
     const def = EXO_MAP[e.exoId]; if(!def) return "";
-    const actions = reorderMode
-      ? `<div class="mini-step order"><button aria-label="Monter" data-a="customMove" data-idx="${i}" data-d="-1" ${i===0?"disabled":""}>↑</button><button aria-label="Descendre" data-a="customMove" data-idx="${i}" data-d="1" ${i===c.length-1?"disabled":""}>↓</button></div>`
-      : `<div class="mini-step">
+    const actions = `<div class="mini-step">
         <button aria-label="Moins de séries" data-a="customSets" data-idx="${i}" data-d="-1">−</button><span>${e.sets}×</span><button aria-label="Plus de séries" data-a="customSets" data-idx="${i}" data-d="1">+</button>
       </div>
       <button class="icon-btn" aria-label="Retirer ${esc(def.n)}" data-a="customRemove" data-idx="${i}">${icon("close")}</button>`;
@@ -468,9 +477,9 @@ function customPaneHTML(){
   const inHero = !done;
   const sets = c.reduce((t,e)=>t+e.sets,0);
   const preview = { exos: c.map(e=>({ exoId:e.exoId, sets:new Array(e.sets).fill(0) })) };
-  return `<h2 class="sh"><span class="sh-t">${inHero ? "Exercices" : esc(S.custom.name||"Ma séance")}</span><span class="sh-actions">${reorderMode?`<button class="more danger" data-a="customClear">Vider</button><button class="more strong" data-a="toggleReorder">OK</button>`:`<button class="more" data-a="toggleReorder">${inHero ? "Réordonner" : "Modifier"}</button>`}</span></h2>
+  return `<h2 class="sh"><span class="sh-t">${inHero ? "Exercices" : esc(S.custom.name||"Ma séance")}</span>${inHero ? "" : `<span class="sh-actions"><button class="more danger" data-a="customClear">Vider</button></span>`}</h2>
     ${inHero ? "" : `<div class="sh-sub">${nb(c.length, "exercice")} · ${nb(sets, "série")} · ≈ ${estimateMinutes(preview)} min</div>`}
-    <div class="group builder ${reorderMode?"reorder":""}">${rows}</div>
+    <div class="group builder" data-sort="custom">${rows}</div>${sortHintHTML(c.length)}
     <div class="btnrow">
       <button class="btn tertiary sm" data-a="customAddOpen">${icon("plus")} Ajouter</button>
       ${appPicksOn() ? `<button class="btn tertiary sm" data-a="customFill"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Compléter</button>` : ""}
@@ -1172,6 +1181,18 @@ Object.assign(ACT, {
     }
     ACT.heroEditDone();
   },
+  // « Annuler » en édition : la séance revient à ce qu'elle était ; avec des changements, on demande d'abord
+  heroCancel(){
+    const sn = heroSnap, prop = !!(sn && sn.draft);
+    const same = !sn || (prop ? JSON.stringify(sn.draft)===JSON.stringify(S.draft) : JSON.stringify(sn.custom)===JSON.stringify(S.custom));
+    const back = ()=>{
+      if(sn){ if(prop) S.draft = sn.draft; else S.custom = sn.custom; }
+      heroSnap = null; customEdit = false; propAdjust = false; save(); sfx("close"); heroRerender();
+    };
+    if(same) return back();
+    actionSheet({ label:"Modifications non enregistrées", msg:"Les changements faits sur cette séance seront perdus.",
+      actions:[{ t:"Ignorer les modifications", danger:true, run:back }], cancel:"Continuer à modifier" });
+  },
   // la séance prévue se modifie sur place, comme celle du jour (sa copie du jour devient éditable)
   heroEditPlanned(d){
     const t = S.templates.find(x=>x.id===d.id); if(!t) return;
@@ -1179,26 +1200,41 @@ Object.assign(ACT, {
     ACT.heroEditDone();
   },
   heroEditDone(){
-    customEdit = !customEdit; reorderMode = false; sfx(customEdit ? "open" : "close");
+    if(!customEdit) editSnap(); else heroSnap = null;
+    customEdit = !customEdit; sfx(customEdit ? "open" : "close");
     const v = qs("#v-today"), pane = v && qs(".seg-pane", v), draft = getOrCreateDraft();
     if(!pane || draft.startedAt){ renderView("today"); return; }
     morphHeight(pane, ()=>{ pane.innerHTML = `${sessionsToday().length ? "" : heroHTML("custom", draft)}${customPaneHTML()}`; });
     v._ver = DATA_VER;
   },
   // « Choisir une autre séance » : tes séances enregistrées, la séance de l'app, l'express, composer
+  // « Choisir une autre séance » : trois familles bien distinctes, comme des sections iOS : tes séances
+  // (Mes séances), celle que l'app propose, et ce qui se décide sur le moment (express, composer)
   chooseSession(){
-    const cur = S.settings.todayTab==="proposal" ? null : S.custom.exos.length ? S.custom.tplId : (plannedTemplate()||{}).id;
     const prop = S.settings.todayTab==="proposal", draft = getOrCreateDraft();
-    const acts = prop && draft.source!=="imported" ? [{ t:"Autre proposition de l'app", run:()=>ACT.regenSession() }] : [];
-    S.templates.filter(t=>t.id!==cur).forEach(t=>acts.push({ t:t.n, run:()=>ACT.loadTemplate({ id:t.id }) }));
-    if(appPicksOn() && S.settings.todayTab!=="proposal") acts.push({ t:"Laisse l'app choisir", run:()=>ACT.todayMode({ v:"proposal" }) });
-    if(S.settings.todayTab==="proposal" && (S.custom.exos.length || plannedTemplate())) acts.push({ t:"Revenir à ma séance", run:()=>ACT.todayMode({ v:"custom" }) });
-    acts.push({ t:"Séance express · 10 min", run:()=>ACT.startExpress() });
-    acts.push({ t:"Composer moi-même", run:()=>{ customEdit = false; S.custom = { exos:[] }; S.settings.todayTab = "custom"; save(); renderTodaySoft(); ACT.customAddOpen(); } });
-    actionSheet({ label:"Choisir une autre séance", msg:"Choisir une autre séance", actions:acts });
+    const cur = S.custom.exos.length ? S.custom.tplId : (plannedTemplate()||{}).id;   // ta séance du jour : pas deux fois
+    const row = (a, ic, t, sub, extra)=>`<button class="row tap cs-row" data-a="${a}"${extra||""}>${ic}<div class="grow"><div class="t">${t}</div>${sub ? `<div class="s">${sub}</div>` : ""}</div></button>`;
+    const mine = S.templates.filter(t=>t.id!==cur).map(t=>{ const d = EXO_MAP[(t.exos[0]||{}).exoId];
+      return row("csTemplate", d ? exoIcon(d) : sfIcon("bookmarkG", "indigo"), esc(t.n), `${(t.days||[]).length ? daysLabel(t.days)+" · " : ""}${nb(t.exos.length, "exercice")} · ≈ ${tplMinutes(t)} min`, ` data-id="${t.id}"`); });
+    if(prop && (S.custom.exos.length || plannedTemplate())) mine.unshift(row("csMine", sfIcon("bookmarkG", "indigo"), `Revenir à « ${esc(S.custom.exos.length ? (S.custom.name||"Ma séance") : plannedTemplate().n)} »`, "Ta séance du jour"));
+    const app = [];
+    if(prop && draft.source!=="imported") app.push(row("csRegen", sfIcon("sparkles", "orange"), "Autre proposition", "Une nouvelle séance choisie par l'app"));
+    else if(appPicksOn() && !prop) app.push(row("csApp", sfIcon("sparkles", "orange"), "Laisse l'app choisir", "Selon ton matériel et les muscles à travailler cette semaine"));
+    const now = [row("csExpress", sfIcon("stopwatch", "green"), "Séance express", "10 min, tout le corps · commence tout de suite"),
+      row("csCompose", sfIcon("pencil", "blue"), "Composer moi-même", "Choisis tes exercices un par un")];
+    const sec = (h, rows)=>rows.length ? `<h2 class="sh">${h}</h2><div class="group">${rows.join("")}</div>` : "";
+    openSheet(`<div class="sheet-hd"><span class="t" id="ovTitle">Choisir une séance</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
+      <div class="sheet-body cs-body">${sec("Mes séances", mine)}${sec("Proposée par l'app", app)}${sec("Sur le moment", now)}</div>`);
   },
+  csTemplate(d){ ACT.loadTemplate({ id:d.id }); },
+  csMine(){ closeSheet(); ACT.todayMode({ v:"custom" }); },
+  csRegen(){ closeSheet(); ACT.regenSession(); },
+  csApp(){ closeSheet(); ACT.todayMode({ v:"proposal" }); },
+  csExpress(){ closeSheet(); ACT.startExpress(); },
+  csCompose(){ closeSheet(); customEdit = false; heroSnap = null; S.custom = { exos:[] }; S.settings.todayTab = "custom"; save(); renderTodaySoft(); ACT.customAddOpen(); },
   // la séance proposée : réglages fins dépliés ou repliés, sur place
   propAdjust(){
+    heroSnap = propAdjust ? null : { draft: clone(getOrCreateDraft()) };
     propAdjust = !propAdjust; sfx(propAdjust ? "open" : "close");
     const v = qs("#v-today"), pane = v && qs(".seg-pane", v), draft = getOrCreateDraft();
     if(!pane || draft.startedAt){ renderView("today"); return; }
@@ -1213,6 +1249,7 @@ Object.assign(ACT, {
     qs("#pickerList").scrollTop = 0;
   },
   customFill(){
+    editSnap();
     const have = S.custom.exos.map(e=>e.exoId);
     const target = sessionSize();
     const n = Math.max(have.length ? 1 : 3, target-have.length);
@@ -1257,12 +1294,10 @@ Object.assign(ACT, {
     const ch = el.querySelector(".sec-chev"); if(ch) ch.classList.toggle("open", open);
     animateCollapse(qs(".clp", card), open, open ? tplBodyHTML(t) : null);
   },
-  toggleReorder(){ reorderMode = !reorderMode; changed(); },
   customMove(d){
     const i = +d.idx, j = i+parseInt(d.d,10), a = S.custom.exos;
     if(j<0 || j>=a.length) return;
-    [a[i],a[j]] = [a[j],a[i]];
-    freshIds.add(a[j].exoId);
+    const [x] = a.splice(i, 1); a.splice(j, 0, x);
     save(); changed();
   },
   startTemplate(d){
@@ -1283,7 +1318,7 @@ Object.assign(ACT, {
     const day = +d.d;
     if(S.custom.tplId || !S.custom.exos.length) S.custom = { exos:[], pendingDays:[day] };
     else S.custom.pendingDays = [day];
-    S.settings.todayTab = "custom"; reorderMode = false;
+    S.settings.todayTab = "custom";
     closeSheet(); save(); scrollTodayTop(); renderTodaySoft();
     toast(`Compose ta séance, puis enregistre-la pour le ${JOURS[(day+1)%7]}`);
   },
@@ -1382,6 +1417,7 @@ Object.assign(ACT, {
   // --- Ma séance ---
   customAddOpen(){
     openPicker({ title:"Choisir des exercices", multi:true, exclude:new Set(S.custom.exos.map(e=>e.exoId)), onDone:ids=>{
+      editSnap();
       ids.forEach(id=>{ S.custom.exos.push({ exoId:id, sets:EXO_MAP[id].sets }); freshIds.add(id); });
       customEdit = true; // en train de composer : la liste reste éditable (séries, retrait, Compléter) jusqu'à « OK »
       closeSheet(); save(); changed();

@@ -12,7 +12,7 @@ const OUT = OUT_ROOT + '/v23'; fs.mkdirSync(OUT, { recursive: true });
   const fail = m => errors.push('ASSERT: ' + m);
   const file = 'file://' + path.resolve(process.argv[2]);
   // 1) migration d'un état v2.1 (banc, barre, élastiques en kg)
-  await page.addInitScript(() => { if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1'); localStorage.setItem('forge.v1', JSON.stringify({ meta: { onboarded: true }, equipment: { owned: { bench: true, barbell: true, bands: true, dumbbells: true }, weights: { bands: [5, 10, 20], dumbbells: [10] } },
+  await page.addInitScript(() => { if (sessionStorage.getItem('seeded') || localStorage.getItem('__seeded')) return; sessionStorage.setItem('seeded', '1'); localStorage.setItem('__seeded', '1'); localStorage.setItem('forge.v1', JSON.stringify({ meta: { onboarded: true }, equipment: { owned: { bench: true, barbell: true, bands: true, dumbbells: true }, weights: { bands: [5, 10, 20], dumbbells: [10] } },
     sessions: [{ id: 'a', date: '2026-07-10', source: 'custom', completedAt: '2026-07-10T10:00:00Z', exos: [{ exoId: 'planche', sets: [{ reps: 60, done: true }] }, { exoId: 'pompes', sets: [{ reps: 10, done: true }] }, { exoId: 'tirage_elastique', sets: [{ reps: 15, weight: 20, done: true }, { reps: 15, weight: 10, done: true }] }] },
                { id: 'b', date: '2026-08-12', source: 'custom', completedAt: '2026-08-12T10:00:00Z', exos: [{ exoId: 'pompes', sets: [{ reps: 12, done: true }] }] },
                { id: 'c', date: '2026-08-20', source: 'custom', completedAt: '2026-08-20T10:00:00Z', exos: [{ exoId: 'pompes', sets: [{ reps: 12, done: true }] }] }] })); });

@@ -5,7 +5,7 @@ const OUT = path.join(process.env.OUT_DIR || path.join(__dirname, 'out'), 'tour'
   const b = await __pw.chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, colorScheme: process.env.DARK ? 'dark' : 'light', hasTouch: true });
   const page = await ctx.newPage(); const errs = []; page.on('pageerror', e => errs.push(e.message));
-  await page.addInitScript(() => { if (sessionStorage.getItem('s')) return; sessionStorage.setItem('s', 1);
+  await page.addInitScript(() => { if (sessionStorage.getItem('s') || localStorage.getItem('__seeded')) return; sessionStorage.setItem('s', 1); localStorage.setItem('__seeded', '1');
     const ids = ['dc_haltere', 'rowing_uni_haltere', 'squat_gobelet', 'curl_biceps', 'planche', 'pompes', 'fentes_avant', 'elevations_laterales']; const ss = [];
     for (let k = 120; k >= 2; k -= 2) { if (k % 7 === 0) continue; const d = new Date(); d.setDate(d.getDate() - k);
       ss.push({ id: 's' + k, date: d.toISOString().slice(0, 10), startedAt: d.toISOString(), durationSec: 2400 + (k % 5) * 300, note: k === 4 ? 'Bonne énergie' : undefined,

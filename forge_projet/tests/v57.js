@@ -15,7 +15,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const log = (...a) => console.log(`[${wk ? 'webkit' : 'chromium'}]`, ...a);
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, timezoneId: 'Europe/Zurich', hasTouch: wk, isMobile: wk });
   const page = await ctx.newPage(); page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
-  await page.addInitScript(() => { if (sessionStorage.getItem('s')) return; sessionStorage.setItem('s', 1);
+  await page.addInitScript(() => { if (sessionStorage.getItem('s') || localStorage.getItem('__seeded')) return; sessionStorage.setItem('s', 1); localStorage.setItem('__seeded', '1');
     const wd = (new Date().getDay() + 6) % 7, ss = [];
     for (let k = 100; k >= 1; k -= 3) { const d = new Date(); d.setDate(d.getDate() - k);
       ss.push({ id: 's' + k, date: d.toLocaleDateString('sv'), durationSec: 1800 + (k % 4) * 300, name: k % 2 ? 'Haut du corps' : 'Jambes',
