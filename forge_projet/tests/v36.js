@@ -19,7 +19,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   // 1. A lance un défi et enregistre : B le voit, sans rien écrire lui-même
   await A.evaluate(() => { ACT.startChallenge({ id: 'pompes100' }); persistNow(); }); await B.waitForTimeout(600);
   const b1 = await B.evaluate(() => ({ ch: S.challenges.map(c => c.id), toast: document.getElementById('toast').textContent, pending: !!persistTimer }));
-  log('B after A saved:', JSON.stringify(b1)); if (!b1.ch.includes('pompes100') || !/autre onglet/.test(b1.toast) || b1.pending) fail('B reprend la version de A');
+  log('B after A saved:', JSON.stringify(b1)); if (!b1.ch.includes('pompes100') || !/Données mises à jour/.test(b1.toast) || b1.pending) fail('B reprend la version de A');
   // 2. B ajoute une séance : A la voit (les deux séances restent)
   await B.evaluate(() => { S.sessions.push({ id: 'b', date: '2026-09-22', exos: [{ exoId: 'pompes', sets: [{ reps: 12, done: true }] }] }); save(); persistNow(); }); await A.waitForTimeout(600);
   const a2 = await A.evaluate(() => ({ n: S.sessions.length, ch: S.challenges.length }));

@@ -106,7 +106,7 @@ function exoProjection(){
 
 function overviewPaneHTML(){
   if(!S.sessions.length){
-    return `<div class="empty-state"><span class="em">${sfIcon("chart","orange","lg")}</span>Tes statistiques apparaîtront ici après ta première séance : progression de force, muscles travaillés, records…</div>`;
+    return emptyHTML("chart", "Tes progrès commencent ici", "Force, muscles travaillés, records : tout s'affiche après ta première séance.", EMPTY_GO);
   }
   return `${forceSumHTML()}${muscleSumHTML()}${recordsSumHTML()}${thenNowListHTML()}${progLinksHTML()}`;
 }
@@ -171,10 +171,13 @@ function recordsSumHTML(){
       <span class="chev">${icon("chev")}</span></button>`).join("")}</div>`;
 }
 // Ta force (écran poussé) : la carte complète, statut, régions, alertes et projections
-function forcePaneHTML(){ return S.sessions.length && S.settings.trend!==false ? strengthCardHTML() : `<div class="empty-state">Active « Progression de force » dans Profil › Motivation pour suivre ta force.</div>`; }
+function forcePaneHTML(){
+  if(S.settings.trend===false) return emptyHTML("trendUp", "Suivi de force désactivé", "Ta courbe depuis tes débuts, ton statut et les alertes de pause.", `<button class="btn sm es-cta" data-a="trendOn">Activer</button>`);
+  return S.sessions.length ? strengthCardHTML() : emptyHTML("trendUp", "Pas encore de courbe", "Ta courbe de force démarre après ta première séance.", EMPTY_GO);
+}
 // Statistiques (écran poussé) : séances, durée, séries et tonnage dans le temps, puis tes habitudes
 function statsPaneHTML(){
-  if(!S.sessions.length) return `<div class="empty-state"><span class="em">${sfIcon("chart","orange","lg")}</span>Tes statistiques apparaîtront ici après ta première séance.</div>`;
+  if(!S.sessions.length) return emptyHTML("chart", "Pas encore de statistiques", "Séances, durée, séries et charges s'afficheront après ta première séance.", EMPTY_GO);
   return `<div class="chart-card hist-chart stagger" style="--i:0">
       ${segHTML("histMetric", HIST_METRICS, histMetric, "histMetric")}
       ${segHTML("histRange", HIST_RANGES, histRange, "histRange").replace('class="seg"','class="seg sm"')}
@@ -189,7 +192,7 @@ function habitsHTML(){
     [["calendar","red"],"Jour préféré", wd?JOURS[(wd.i+1)%7]:"–", moment?`plutôt ${moment}`:""],
     [["trophy","yellow"],"Meilleure semaine", bw?`${bw.n} séance${bw.n>1?"s":""}`:"–", bw?`semaine du ${fmtDate(bw.wk)}`:""],
     [["chart","blue"],"Rythme moyen", `${weeklyAverage(8).toLocaleString("fr-FR")} / sem.`, "sur les 8 dernières semaines"],
-    [["dumbbell","orange"],"Exercices pratiqués", distinctExosCount(), `${sessionsInYear()} séances cette année`],
+    [["dumbbell","orange"],"Exercices pratiqués", distinctExosCount(), `${nb(sessionsInYear(), "séance")} cette année`],
   ];
   return `<h2 class="sh">Tes habitudes</h2>
     <div class="group habits">${rows.map((r,i)=>`<div class="row stat-row stagger" style="--i:${i+7}">
@@ -200,7 +203,7 @@ function habitsHTML(){
 }
 // Muscles : la carte de la semaine et le stimulus de chaque muscle (séries pondérées, repères sourcés)
 function musclesPaneHTML(){
-  if(!S.sessions.length) return `<div class="empty-state"><span class="em">${sfIcon("person","orange","lg")}</span>Après ta première séance, tu verras ici quels muscles tu travailles, et assez ou non.</div>`;
+  if(!S.sessions.length) return emptyHTML("person", "Pas encore de muscles travaillés", "Après ta première séance, tu verras ici les muscles travaillés, et s'ils le sont assez.", EMPTY_GO);
   return weekMuscleMapHTML();
 }
 // Objectifs et défis : objectifs chiffrés et défis en cours
@@ -227,7 +230,7 @@ function exoSeries(id){
 
 function exosPaneHTML(){
   const ids = trainedExoIds();
-  if(!ids.length) return `<div class="empty-state"><span class="em">${sfIcon("dumbbell","orange","lg")}</span>Termine des séances pour suivre ta progression exercice par exercice.</div>`;
+  if(!ids.length) return emptyHTML("dumbbell", "Aucun exercice suivi", "Termine une séance pour suivre ta progression exercice par exercice.", EMPTY_GO);
   return `<h2 class="sh">Tous mes exercices</h2>
     <div class="sh-sub">Courbe : 1RM estimé pour les exercices chargés, meilleure série pour le poids du corps.</div>
     <div class="group">${ids.map((id,i)=>{
@@ -297,7 +300,7 @@ function medalsPaneHTML(){
 // l'onglet garde le résumé et les 3 prochains paliers, les seuls qui demandent une action)
 function allMedalsRowHTML(){
   const all = MEDALS, won = all.filter(m=>medalTier(m)).length;
-  return `<div class="group all-medals-g"><button class="row tap" data-a="allMedals">${sfIcon("trophy","yellow")}<div class="grow"><div class="t">Tous les trophées</div><div class="s">${won} gagnés sur ${all.length}, dont ${nb(SECRETS.length, "secret")}</div></div><span class="chev">${icon("chev")}</span></button></div>`;
+  return `<div class="group all-medals-g"><button class="row tap" data-a="allMedals">${sfIcon("trophy","yellow")}<div class="grow"><div class="t">Tous les trophées</div><div class="s">${won} sur ${all.length} · ${nb(SECRETS.length, "secret")} à découvrir</div></div><span class="chev">${icon("chev")}</span></button></div>`;
 }
 function allMedalsHTML(){
   return `${MEDAL_CATS.map(([cat,label])=>{

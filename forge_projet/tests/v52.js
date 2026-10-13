@@ -62,7 +62,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   if (!(eng.before > 0) || !eng.back.descent || !(eng.back.eBack > 0) || eng.back.after !== null || eng.back.eTo < eng.back.from) fail('retour en force : double jusqu\'à l\'altitude perdue, puis normal');
   if (!eng.noBack) fail('pas de retour en force sans descente');
   if (!/^Aujourd'hui, Camp 1 est à ta portée/.test(eng.promise || '') || eng.newcomer !== "Camp 1 à ta portée aujourd'hui") fail('promesse du jour sur l\'accueil');
-  if (eng.risk.t.trim() !== 'Série de 4 sem. en jeu' || /en jeu/.test(eng.risk.goal)) fail('série en jeu dans la carte de la semaine');
+  if (eng.risk.t.trim() !== '4 sem. d\'affilée en jeu' || /en jeu/.test(eng.risk.goal)) fail('série en jeu dans la carte de la semaine');
   if (eng.monday) fail('série en jeu : seulement sans marge');
   if (!eng.far.gravir || eng.far.months) fail('frise : pas de délai lointain');
 

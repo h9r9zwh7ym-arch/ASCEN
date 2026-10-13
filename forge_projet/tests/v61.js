@@ -70,6 +70,64 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   log('Aliases:', JSON.stringify(names));
   if (names.n < 10 || names.paren.length) fail('noms anglais séparés');
 
+  // 4. lot B : feuilles modales (rôle, titre, fond inerte), interrupteurs, Objectifs en liste et steppers compacts
+  await page.evaluate(() => { switchTab('profil'); openGoals(); }); await wait(600);
+  const goals = await page.evaluate(() => { const d = document.querySelector('#overlay .sheet');
+    return { modal: d.getAttribute('aria-modal'), label: (document.getElementById(d.getAttribute('aria-labelledby') || 'x') || {}).textContent, inert: document.querySelector('#app').inert && document.querySelector('.tabbar').inert,
+      focus: document.activeElement === d, radios: [...document.querySelectorAll('#overlay .ck-row[role="radio"]')].map(r => r.textContent.trim().split(/\s{2,}|\n/)[0]).length, mini: document.querySelectorAll('#overlay .mini-step').length,
+      hd: parseFloat(getComputedStyle(document.querySelector('#overlay .sheet-body h2.sh')).fontSize), title: parseFloat(getComputedStyle(document.querySelector('#overlay .sheet-hd .t')).fontSize) }; });
+  await page.click('#overlay .ck-row[data-v="endurance"]'); await wait(300);
+  const goal2 = await page.evaluate(() => ({ g: S.goals.overall, on: document.querySelector('#overlay .ck-row.on').dataset.v, aria: document.querySelector('#overlay .ck-row[data-v="endurance"]').getAttribute('aria-checked') }));
+  await page.evaluate(() => closeSheet()); await wait(450);
+  const freed = await page.evaluate(() => !document.querySelector('#app').inert && !document.querySelector('.tabbar').inert);
+  log('Goals sheet:', JSON.stringify(goals), JSON.stringify(goal2), 'freed', freed);
+  if (goals.modal !== 'true' || goals.label !== 'Objectifs' || !goals.inert || !goals.focus || !freed) fail('feuille modale : rôle, titre, fond inerte, focus');
+  if (goals.radios !== 3 || goals.mini !== 2 || !(goals.hd < goals.title + 0.5) || goal2.g !== 'endurance' || goal2.on !== 'endurance' || goal2.aria !== 'true') fail('Objectifs : liste à cocher, steppers compacts, en-têtes discrets');
+  await page.evaluate(() => openAppearance()); await wait(500);
+  const sw = await page.evaluate(() => { const b = document.querySelector('#overlay .switch'); return { role: b.getAttribute('role'), before: b.getAttribute('aria-checked'), pressed: b.hasAttribute('aria-pressed') }; });
+  await page.click('#overlay .switch'); await wait(200);
+  const sw2 = await page.evaluate(() => document.querySelector('#overlay .switch').getAttribute('aria-checked'));
+  await page.click('#overlay .switch'); await wait(200);
+  log('Switch:', JSON.stringify(sw), sw2);
+  if (sw.role !== 'switch' || sw.pressed || sw2 === sw.before) fail('interrupteurs lus comme tels');
+  await page.evaluate(() => closeSheet()); await wait(400);
+
+  // 5. suppression d'une séance : feuille d'actions, « Annuler » revient au détail
+  await page.evaluate(() => { switchTab('progress'); openSheet(sessionDetailHTML(S.sessions[0])); }); await wait(500);
+  await page.click('[data-a="deleteSession"]'); await wait(400);
+  const del = await page.evaluate(() => ({ as: !!document.querySelector('.action-sheet'), danger: (document.querySelector('.as-btn.danger') || {}).textContent }));
+  await page.click('.as-cancel'); await wait(500);
+  const back = await page.evaluate(() => !!document.querySelector('#overlay [data-a="histEdit"]'));
+  log('Delete:', JSON.stringify(del), 'cancel → detail', back);
+  if (!del.as || del.danger !== 'Supprimer la séance' || !back) fail('suppression : feuille d\'actions et retour au détail');
+  await page.evaluate(() => closeSheet()); await wait(400);
+
+  // 6. couleurs et textes : stimulus à l'orange de la marque, pas de « Le plus travaillé » en double, phrase de priorité en clair
+  await page.evaluate(() => ACT.progressTab({ v: 'muscles', instant: true })); await wait(800);
+  const mus = await page.evaluate(() => { const i = document.querySelector('.wv-row.z-ok .wv-track i, .wv-row.z-high .wv-track i'), t = document.createElement('b'); t.style.color = 'var(--tint)'; document.body.appendChild(t); const tint = getComputedStyle(t).color; t.remove();
+    return { bar: i ? getComputedStyle(i).backgroundColor : tint, tint, top: !!document.querySelector('.mm-top'), prio: stimTargetsText([{ id: 'ischios', n: 'Ischios', sets: 1 }, { id: 'biceps', n: 'Biceps', sets: 2.5 }]) }; });
+  log('Muscles:', JSON.stringify(mus));
+  if (mus.bar !== mus.tint || mus.top || mus.prio !== 'En priorité cette semaine : ischio-jambiers (1 série sur 4), biceps (2,5 séries sur 4).') fail('stimulus à l\'orange, sans doublon, phrase claire');
+  await page.evaluate(() => ACT.progressTab({ v: 'overview', instant: true })); await wait(300);
+
+  // 7. nouvel utilisateur : états vides au même format (symbole gris, titre, texte, une action)
+  const ctx2 = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'Europe/Zurich' });
+  const p2 = await ctx2.newPage(); p2.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
+  await p2.addInitScript(() => localStorage.setItem('forge.v1', JSON.stringify({ meta: { onboarded: true } })));
+  await p2.goto(APP); await p2.waitForSelector('#splash', { state: 'detached', timeout: 15000 }); await p2.waitForTimeout(500);
+  const empties = [];
+  for (const v of ['overview', 'force', 'stats', 'muscles', 'exos']) {
+    await p2.evaluate(v => { if (currentTab !== 'progress') switchTab('progress'); ACT.progressTab({ v, instant: true }); }, v); await p2.waitForTimeout(400);
+    empties.push(await p2.evaluate(() => { const e = document.querySelector('#v-progress .empty-state'); if (!e) return null; const p = e.querySelector('.sfi svg > *'), cs = p && getComputedStyle(p);
+      return { t: (e.querySelector('.es-t') || {}).textContent, cta: (e.querySelector('.es-cta') || {}).textContent, stroke: cs ? (cs.stroke !== 'none' ? cs.stroke : cs.fill) : '' }; }));
+  }
+  const gray = await p2.evaluate(() => { const t = document.createElement('i'); t.style.color = 'var(--label3)'; document.body.appendChild(t); const c = getComputedStyle(t).color; t.remove(); return c; });
+  await p2.evaluate(() => document.querySelector('#v-progress .es-cta').click()); await p2.waitForTimeout(500);
+  const went = await p2.evaluate(() => currentTab);
+  log('Empty states:', JSON.stringify(empties), '→', went);
+  if (empties.some(e => !e || !e.t || e.cta !== 'Commencer une séance' || (e.stroke && e.stroke !== gray)) || went !== 'today') fail('états vides harmonisés');
+  await ctx2.close();
+
   await browser.close();
   errors.forEach(e => log(e)); log(errors.length ? 'ERRORS: ' + errors.length : '=== NO ERRORS ===');
   process.exit(errors.length ? 1 : 0);

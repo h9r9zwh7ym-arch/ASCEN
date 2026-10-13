@@ -115,6 +115,11 @@ function sfIcon(name, color, extra){
 }
 
 function icon(name){ return `<svg viewBox="0 0 24 24">${ICONS[name]||""}</svg>`; }
+// état vide, comme sur iOS : grand symbole gris, titre, une ou deux lignes d'explication, une action au plus
+const EMPTY_GO = `<button class="btn sm es-cta" data-a="tab" data-id="today">Commencer une séance</button>`;
+function emptyHTML(ic, t, s, cta, style){
+  return `<div class="empty-state"${style?` style="${style}"`:""}>${ic?`<span class="em">${sfIcon(ic,"gray","lg")}</span>`:""}<div class="es-t">${t}</div>${s?`<div class="es-s">${s}</div>`:""}${cta||""}</div>`;
+}
 // ---------- logotype ASCEN ----------
 // Mot dessiné au trait (une seule épaisseur, bouts arrondis) ; la barre du A est relevée près du
 // sommet et porte l'orange. ASCEN_MONO = ce A seul (icône d'app, petites tailles).
@@ -394,9 +399,22 @@ let dirtyOnClose = false;
 // _gen : chaque ouverture incrémente le compteur, pour qu'une fermeture en cours
 // (nettoyage différé de 300 ms) n'efface pas une sheet ouverte entre-temps.
 let overlayGen = 0;
+// feuille ouverte : elle seule est lue par VoiceOver et reçoit le focus ; le reste de l'app est inerte
+let ovReturnFocus = null;
+function overlayInert(on){ ["#app",".tabbar","#restbar"].forEach(s=>{ const e = qs(s); if(e) e.inert = on; }); }
+function overlayA11y(ov, wasOpen){
+  const dlg = ov.querySelector(".sheet,.center-modal"); if(!dlg) return;
+  dlg.setAttribute("aria-modal", "true"); dlg.tabIndex = -1;
+  const t = dlg.querySelector(".sheet-hd .t, .ob-t2");
+  if(t){ t.id = "ovTitle"; dlg.setAttribute("aria-labelledby", "ovTitle"); }
+  if(!wasOpen) ovReturnFocus = document.activeElement;
+  overlayInert(true);
+  try{ dlg.focus({ preventScroll:true }); }catch(e){}
+}
 function showOverlay(inner, kind){
   const ov = qs("#overlay");
   const gen = ++overlayGen;
+  const wasOpen = ov.classList.contains("open");
   hideTip();
   // feuille ouverte depuis une autre (ou retour) : la nouvelle glisse par-dessus l'ancienne, comme une page
   const dir = navSheetDir; navSheetDir = null;
@@ -407,10 +425,12 @@ function showOverlay(inner, kind){
   if(snap){
     const cur = ov.querySelector(".sheet");
     ov.classList.add("open"); ov.dataset.kind = kind;
+    overlayA11y(ov, wasOpen);
     navSlide(snap, cur, dir, true);
     return;
   }
   ov.classList.add("open");
+  overlayA11y(ov, wasOpen);   // une fois affichée : le focus n'est pas donné à un élément masqué
   if(typeof syncStatusBar==="function") syncStatusBar(true);
   ov.dataset.kind = kind;
   // contenu en courte cascade à l'ouverture (pas quand la feuille se redessine ensuite)
@@ -462,9 +482,9 @@ function openModal(html, cls){
 }
 // feuille d'actions iOS (en bas de l'écran) : un message, des actions, et « Continuer » à part
 // une action est { t, a } (action existante) ou { t, run } (fonction, appelée après fermeture)
-function actionSheet({ msg, label, actions, cancel, cancelA, onYes }){
+function actionSheet({ msg, label, actions, cancel, cancelA, cancelId, onYes }){
   openModal(`<div class="as-group">${msg ? `<div class="as-msg">${msg}</div>` : ""}${actions.map((a,i)=>`<button class="as-btn${a.danger?" danger":""}" data-a="${a.run ? "asRun" : a.a}" data-i="${i}">${esc(a.t)}</button>`).join("")}</div>
-    <button class="as-btn as-cancel" data-a="${cancelA||"closesheet"}">${esc(cancel||"Annuler")}</button>`, "action-sheet");
+    <button class="as-btn as-cancel" data-a="${cancelA||"closesheet"}"${cancelId?` data-id="${esc(cancelId)}"`:""}>${esc(cancel||"Annuler")}</button>`, "action-sheet");
   const ov = qs("#overlay"), m = qs(".center-modal", ov);
   if(m && label) m.setAttribute("aria-label", label);
   ov._onYes = onYes || null; ov._asActs = actions;
@@ -487,6 +507,9 @@ function closeSheet(){
   ov.classList.remove("show");
   if(typeof syncStatusBar==="function") syncStatusBar(false);
   sheetStack = []; sheetRestore = null; sheetOnBack = null;
+  overlayInert(false);
+  const rf = ovReturnFocus; ovReturnFocus = null;
+  if(rf && rf.isConnected && rf.focus) try{ rf.focus({ preventScroll:true }); }catch(e){}
   const gen = overlayGen;
   setTimeout(()=>{
     if(gen!==overlayGen) return;
@@ -779,6 +802,8 @@ document.addEventListener("click", e=>{
   const el = e.target.closest("[data-a]");
   if(!el) return;
   runAction(el.dataset.a, el, e);
+  // interrupteurs : l'état lu par VoiceOver suit l'état affiché
+  if(el.classList.contains("switch") && el.isConnected){ el.setAttribute("aria-checked", el.classList.contains("on")); el.removeAttribute("aria-pressed"); }
 });
 document.addEventListener("keydown", e=>{
   if(e.key==="Enter" && e.target && e.target.id==="numInput"){ e.preventDefault(); ACT.numOk(); }

@@ -23,7 +23,7 @@ function obBody(){
       return `<button class="row tap ob-eq ${on?"on":""}" data-a="obEquip" data-id="${id}" role="checkbox" aria-checked="${on}">${sfIcon(EQUIP_GLYPH[id]||"wrench", "gray")}<div class="grow"><div class="t">${esc(e.n)}</div></div><em class="ob-ck">${icon("check")}</em></button>`; }).join("")}</div>
     ${S.equipment.owned.dumbbells ? obDbHTML() : ""}`;
   if(obStep===2) return `<div class="ob-t2">Ton objectif</div><div class="ob-s2">Il règle les fourchettes de répétitions et le volume proposé.</div>
-    <div class="group ob-list" role="radiogroup" aria-label="Ton objectif">${[["hypertrophie","Prendre du muscle","8 à 12 répétitions, ~10 séries par muscle et par semaine"],["force","Devenir plus fort·e","Moins de répétitions, charges plus lourdes"],["endurance","Endurance et tonus","Plus de répétitions, repos courts"]].map(([k,t,d])=>`<button class="row tap ob-goal ${S.goals.overall===k?"on":""}" data-a="obGoal" data-v="${k}" role="radio" aria-checked="${S.goals.overall===k}"><div class="grow"><div class="t">${t}</div><div class="s">${d}</div></div><em class="ob-ck">${icon("check")}</em></button>`).join("")}</div>
+    <div class="group ob-list" role="radiogroup" aria-label="Ton objectif">${checkRows(Object.keys(GOAL_LABELS), GOAL_LABELS, S.goals.overall, "obGoal", GOAL_HINTS)}</div>
     <div class="te-sec">Ton niveau</div>
     <div class="cal-alarm">${Object.keys(LEVEL_LABELS).map(k=>`<button class="chip ${(S.goals.level||"intermediaire")===k?"on":""}" data-a="obLevel" data-v="${k}">${LEVEL_LABELS[k]}</button>`).join("")}</div>
     <div class="ob-note" id="obLevelHint">${LEVEL_HINTS[S.goals.level||"intermediaire"]}</div>
@@ -37,7 +37,7 @@ function obBody(){
     <div class="ob-note">ASCEN te le rappellera les jours où la motivation manque.</div>`;
   const split = WEEK_SPLITS[Math.min(6, Math.max(2, S.goals.daysPerWeek))];
   return `<div class="ob-t2">Ta semaine</div><div class="ob-s2">ASCEN peut créer tes ${split.length} séances et les placer dans la semaine. Chaque jour prévu, ta séance s'affichera directement.</div>
-    <div class="group wz-list">${split.map(([type,name,day],i)=>`<div class="row wz-row" style="--k:${i}"><span class="wz-day">${JOURS_COURTS[day]}</span><div class="grow"><div class="t">${esc(name)}</div><div class="s">${esc(SESSION_TYPE_MAP[type].n)}</div></div></div>`).join("")}</div>
+    <div class="group wz-list">${split.map(([type,name,day],i)=>`<div class="row wz-row" style="--k:${i}"><span class="wz-day">${JOURS_COURTS[day]}</span><div class="grow"><div class="t">${esc(name)}</div>${wzSub(name, SESSION_TYPE_MAP[type].n)}</div></div>`).join("")}</div>
     <div class="ob-note">Tu pourras changer les jours, les exercices et les noms quand tu veux.</div>`;
 }
 function renderOnboarding(){
@@ -95,7 +95,7 @@ Object.assign(ACT, {
     S.equipment.weights.dumbbells = Array.from(new Set([...(S.equipment.weights.dumbbells||[]), v])).sort((a,b)=>a-b); save();
     const b = qs("#obBody"), top = b && b.scrollTop; if(b){ b.innerHTML = obBody(); b.scrollTop = top; }
   },
-  obGoal(d){ S.goals.overall = d.v; qsa(".ob-goal").forEach(x=>{ x.classList.toggle("on", x.dataset.v===d.v); x.setAttribute("aria-checked", x.dataset.v===d.v); }); save(); sfx("seg"); },
+  obGoal(d){ S.goals.overall = d.v; qsa('[data-a="obGoal"]').forEach(x=>{ x.classList.toggle("on", x.dataset.v===d.v); x.setAttribute("aria-checked", x.dataset.v===d.v); }); save(); sfx("seg"); },
   obLevel(d){ S.goals.level = d.v; qsa('[data-a="obLevel"]').forEach(x=>x.classList.toggle("on", x.dataset.v===d.v)); const h = qs("#obLevelHint"); if(h) h.textContent = LEVEL_HINTS[d.v]; save(); },
   obDays(d){ S.goals.daysPerWeek = +d.v; qsa('[data-a="obDays"]').forEach(x=>x.classList.toggle("on", x.dataset.v===d.v)); save(); },
   obLen(d){ S.goals.sessionLength = d.v; qsa('[data-a="obLen"]').forEach(x=>x.classList.toggle("on", x.dataset.v===d.v)); save(); },

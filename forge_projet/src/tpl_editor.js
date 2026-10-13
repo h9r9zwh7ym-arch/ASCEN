@@ -45,10 +45,10 @@ function tplEdBodyHTML(){
       return `<button class="${on?"on":""} ${taken[i]?"taken":""}" data-a="tplEdDay" data-d="${i}" aria-pressed="${on}"><b>${j}</b><small>${on?ii("check"):taken[i]?esc(taken[i]):""}</small></button>`;
     }).join("")}</div>
     <div class="te-hint">${stolen.length ? `${ii("warn","warn")} ${stolen.map(d=>JOURS[(d+1)%7]).join(", ")} : remplacera « ${esc(taken[stolen[0]])} ».` : e.days.length ? `Ajoutée à ton planning : elle s'affichera directement ${e.days.length>1?"ces jours-là":"ce jour-là"} à l'ouverture de l'app.` : "Aucun jour : elle restera disponible dans Mes séances, hors planning."}</div>
-    ${e.lite ? `<div class="te-sec te-sec-row"><span>Exercices</span><span class="te-sum">${e.exos.length} · ${sets} séries · ≈ ${tplMinutes(e)} min</span></div>
+    ${e.lite ? `<div class="te-sec te-sec-row"><span>Exercices</span><span class="te-sum">${e.exos.length} · ${nb(sets, "série")} · ≈ ${tplMinutes(e)} min</span></div>
       ${balance}
       <div class="te-lite">${e.exos.map(x=>EXO_MAP[x.exoId]?`<span>${esc(EXO_MAP[x.exoId].n)} <b>${x.sets}×</b></span>`:"").join("")}</div>` : `
-    <div class="te-sec te-sec-row"><span>Exercices</span>${e.exos.length?`<span class="te-sum">${e.exos.length} · ${sets} séries · ≈ ${tplMinutes(e)} min</span>`:""}</div>
+    <div class="te-sec te-sec-row"><span>Exercices</span>${e.exos.length?`<span class="te-sum">${e.exos.length} · ${nb(sets, "série")} · ≈ ${tplMinutes(e)} min</span>`:""}</div>
     ${e.exos.length ? `${balance}
       <div class="group builder te-list ${e.order?"reorder":""}">${rows}</div>` : `<div class="te-empty">${appPicksOn() ? "Ajoute des exercices, ou laisse l'app en proposer." : "Ajoute des exercices à cette séance."}</div>`}
     <div class="te-actions">
@@ -93,6 +93,8 @@ function openWeekWizard(){
   wizardN = Math.min(6, Math.max(2, S.goals.daysPerWeek||3));
   renderWeekWizard();
 }
+// sous-titre du type de séance, sauf s'il répète le nom (« Haut du corps A » / « Haut du corps »)
+function wzSub(name, type){ return name.toLowerCase().startsWith(type.toLowerCase()) ? "" : `<div class="s">${esc(type)}</div>`; }
 function weekWizardBody(){
   const split = WEEK_SPLITS[wizardN];
   const clash = S.templates.filter(t=>(t.days||[]).some(d=>split.some(s=>s[2]===d)));
@@ -102,7 +104,7 @@ function weekWizardBody(){
     <div class="te-sec">Ta semaine</div>
     <div class="group wz-list">${split.map(([type,name,day],i)=>{
       const t = SESSION_TYPE_MAP[type];
-      return `<div class="row wz-row" style="--k:${i}"><span class="wz-day">${JOURS_COURTS[day]}</span><div class="grow"><div class="t">${esc(name)}</div><div class="s">${esc(t.n)}</div></div></div>`;
+      return `<div class="row wz-row" style="--k:${i}"><span class="wz-day">${JOURS_COURTS[day]}</span><div class="grow"><div class="t">${esc(name)}</div>${wzSub(name, t.n)}</div></div>`;
     }).join("")}</div>
     ${clash.length?`<div class="te-hint">${ii("warn","warn")} Ces jours sont déjà pris par ${clash.map(t=>`« ${esc(t.n)} »`).join(", ")} : ces séances seront gardées mais retirées de ces jours.</div>`:""}`;
 }

@@ -56,13 +56,13 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   // 3. supprimer une séance de l'historique → « Annuler » la rétablit (même identifiant, même place)
   p = await open(base);
   await p.evaluate(() => { switchTab('history'); ACT.deleteSession({ id: 'a1' }); }); await p.waitForTimeout(300);
-  await p.click('[data-a="confirmYes"]'); await p.waitForTimeout(400);
+  await p.click('.as-btn.danger'); await p.waitForTimeout(400);
   const d1 = await p.evaluate(() => ({ ids: S.sessions.map(s => s.id).join(), toast: document.getElementById('toast').textContent }));
   await p.click('#toast .t-undo'); await p.waitForTimeout(300);
   const d2 = await p.evaluate(() => S.sessions.map(s => s.id).join());
   log('Undo delete session:', JSON.stringify(d1), '→', d2); if (d1.ids !== 'a2' || d2 !== 'a1,a2') fail('annuler la suppression d\'une séance');
   // sans toucher « Annuler », le message disparaît et la suppression reste
-  await p.evaluate(() => { ACT.deleteSession({ id: 'a2' }); }); await p.waitForTimeout(300); await p.click('[data-a="confirmYes"]'); await p.waitForTimeout(5600);
+  await p.evaluate(() => { ACT.deleteSession({ id: 'a2' }); }); await p.waitForTimeout(300); await p.click('.as-btn.danger'); await p.waitForTimeout(5600);
   const d3 = await p.evaluate(() => ({ ids: S.sessions.map(s => s.id).join(), shown: document.getElementById('toast').classList.contains('show'), undo: typeof toastUndoFn === 'function' }));
   log('Undo expired:', JSON.stringify(d3)); if (d3.ids !== 'a1' || d3.shown || d3.undo) fail('« Annuler » expire après 5 s');
   // taille du texte : hors Safari, 17 px ; retour haptique sans erreur

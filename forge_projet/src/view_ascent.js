@@ -499,7 +499,7 @@ function ascStepsListHTML(a){
     const X = ASC_DATA[a.next], ok = a.series>=a.nextReq;
     html += `<div class="st-gap"></div><div class="st-i exp-next-i ${ok ? "open" : "locked"}"><span class="st-node">${ascIc(ok ? "flag" : "lock")}</span>
       <span class="st-t">Prochaine expédition<small>${esc(X.n)} · <span class="num">${fmtNum(X.top)} m</span></small></span>
-      <span class="st-r">${ok ? `<b>à ta prochaine séance</b>` : `<b>série de ${a.nextReq} sem.</b><small>tu en as ${a.series}</small>`}</span></div>`;
+      <span class="st-r">${ok ? `<b>à ta prochaine séance</b>` : `<b>${a.nextReq} sem. d'affilée</b><small>tu en as ${a.series}</small>`}</span></div>`;
   }
   return html;
 }
@@ -597,7 +597,7 @@ function ascSecBody(k, a){
     const done = new Set(a.summits.filter(s=>s.lap===a.lap).map(s=>s.key)), any = new Set(a.summits.map(s=>s.key));
     return `${a.lap ? `<p class="sub">${a.lap+1}ᵉ tour de l'itinéraire.</p>` : ""}${ASC_GROUPS.map(([stage, keys])=>`<div class="stage">${stage}</div><ol class="stops">${keys.map(x=>{
       const n = ASC_ORDER.indexOf(x), D = ASC_DATA[x], isDone = done.has(x), cur = n===a.idx && !a.wait, locked = !isDone && !cur && ASC_REQ[x]>a.series;
-      const right = isDone ? "atteint" : cur ? `en cours · ${Math.round(Math.max(0, Math.min(1, a.done))*100)} %` : locked ? `série de ${ASC_REQ[x]} sem.` : any.has(x) ? "déjà gravi" : "";
+      const right = isDone ? "atteint" : cur ? `en cours · ${Math.round(Math.max(0, Math.min(1, a.done))*100)} %` : locked ? `${ASC_REQ[x]} sem. d'affilée` : any.has(x) ? "déjà gravi" : "";
       return `<li class="${isDone ? "done" : cur ? "cur" : locked ? "locked" : ""}"><span class="node">${isDone ? ascIc("check") : locked ? ascIc("lock") : ""}</span><span class="stop-t">${esc(D.n)}<small>${esc(D.region)}</small></span><span class="stop-r"><b class="num">${fmtNum(D.top)} m</b>${right}</span></li>`; }).join("")}</ol>`).join("")}`;
   }
   if(k==="carnet") return ascCarnetHTML(a);
@@ -622,7 +622,7 @@ function ascHowHTML(){
     <p>Chaque séance : <b>effort × régularité × force</b>.</p>
     <ul class="how-list">
       <li><b>Effort</b> : tes séries difficiles, 20 au plus. Une série faite exprès facile compte moitié.</li>
-      <li><b>Régularité</b> : ta série de semaines où tu tiens ton objectif, de ×0,5 au départ à ×3 après 20 semaines.</li>
+      <li><b>Régularité</b> : tes semaines d'affilée où tu tiens ton objectif, de ×0,5 au départ à ×3 après 20 semaines.</li>
       <li><b>Force</b> : ton indice de force. 10 % de force en plus, 6 % de vitesse en plus.</li>
       <li><b>Records et progrès</b> : un record compte pour ${ASC_BONUS.pr} séries de plus (${ASC_BONUS.prMax} au plus par séance), une série mieux que la dernière fois pour ${ASC_BONUS.beat} de plus (${ASC_BONUS.beatMax} au plus).</li>
       <li><b>Élan de départ</b> : tes premières séances montent au moins à ${ascX(ASC_ELAN[0])} ; l'élan s'estompe jusqu'à ta ${ASC_ELAN[1]}ᵉ séance, la régularité prend le relais.</li>
@@ -630,12 +630,12 @@ function ascHowHTML(){
     <h3>Chaque semaine</h3>
     <ul class="how-list">
       <li><b>Objectif tenu</b> : la série avance.</li>
-      <li><b>Raté une fois</b> : la série est gelée ; une 2ᵉ fois en 4 semaines, un palier de moins.</li>
+      <li><b>Raté une fois</b> : la régularité est gelée ; une 2ᵉ fois en 4 semaines, un palier de moins.</li>
       <li><b>Aucune séance</b> : un palier de moins et retour au camp précédent. Les sommets gagnés restent acquis, et la séance suivante compte double jusqu'à l'altitude perdue (retour en force).</li>
       <li><b>Pause ou semaine allégée</b> : rien ne se perd (${ASC_PAUSE_MAX} pauses par trimestre).</li>
     </ul>
     <h3>Les grandes montagnes</h3>
-    <p>Pour partir, il faut une série :</p>
+    <p>Pour partir, il te faut des semaines d'affilée :</p>
     <ul class="how-req">${Object.keys(byReq).map(Number).sort((x, y)=>x-y).map(r=>`<li><b class="num">${r} sem.</b><span>${esc(ascList(byReq[r]))}</span></li>`).join("")}</ul>
     <p>La dernière ligne droite (les 12 derniers %, hachurés sur la barre) se fait à pleine vitesse si ta force est à ${Math.round(ASC_FORM_OK*100)} % de son meilleur niveau des 6 derniers mois, sinon à mi-vitesse.</p>
     <h3>La montagne</h3>
@@ -836,7 +836,7 @@ function liveAscHTML(draft){
   const L = ascLive(draft); if(!L) return "";
   // point de départ des « +X m » : l'état au premier affichage de cette séance (ou après un rechargement)
   if(!liveAscPrev || liveAscPrev.id!==draft.id) liveAscPrev = { id:draft.id, gain:L.e ? L.e.gain : 0, alt:L.alt, camps:L.e ? L.e.camps.slice() : [], summit:!!(L.e && L.e.summit), key:L.k, pct:L.pct };
-  if(L.waiting) return `<div class="lv-asc wait" id="liveAsc">${ascIc("peak")}<span class="la-next">Au sommet ${esc(ascDu(L.k))} · la série de ${L.nextReq} sem. ouvre ${esc(ascLe(L.next))}</span></div>`;
+  if(L.waiting) return `<div class="lv-asc wait" id="liveAsc">${ascIc("peak")}<span class="la-next">Au sommet ${esc(ascDu(L.k))} · ${L.nextReq} sem. d'affilée ouvrent ${esc(ascLe(L.next))}</span></div>`;
   const e = L.e, gain = e ? e.gain : 0;
   let next;
   if(L.wait) next = `<b>Sommet ${esc(ascDu(L.k))} atteint !</b>`;

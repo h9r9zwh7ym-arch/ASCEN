@@ -40,7 +40,8 @@ function stimTargets(exos){
   }catch(e){ return []; }
 }
 function stimTargetsText(t){
-  return t.length ? `Priorité à ${t.slice(0,3).map(r=>`${r.n.toLowerCase()} (${fmtDec(r.sets)}/${STIM.min} séries)`).join(", ")}, en retard cette semaine.` : "";
+  // nom entier du muscle dans une phrase (« ischio-jambiers », pas « ischios »)
+  return t.length ? `En priorité cette semaine : ${t.slice(0,3).map(r=>`${((MUSCLE_MAP[r.id]||r).n).toLowerCase()} (${fmtDec(r.sets)} ${r.sets>=2?"séries":"série"} sur ${STIM.min})`).join(", ")}.` : "";
 }
 // score d'un groupe musculaire : plus il a été délaissé récemment, plus il est prioritaire ;
 // un muscle sous le seuil de la semaine gagne jusqu'à 4 points, sauf s'il récupère encore
@@ -481,7 +482,7 @@ function buildSessionFromImported(prog){
   const exos = [];
   (prog && Array.isArray(prog.exercices) ? prog.exercices : []).forEach(ref=>{
     const exo = resolveExoRef(ref);
-    if(!exo){ warnings.push(`Exercice non reconnu : "${ref.nom||ref.id||"?"}" (ignoré).`); return; }
+    if(!exo){ warnings.push(`Exercice ignoré (inconnu d'ASCEN) : « ${ref.nom||ref.id||"?"} »`); return; }
     const setsN = Math.min(10, Math.max(1, parseInt(ref.series, 10) || exo.sets || 3));
     let reps = [exo.repsMin, exo.repsMax];
     if(typeof ref.reps==="string" && ref.reps.includes("-")){
@@ -569,10 +570,10 @@ Le champ "poids" est facultatif (ASCEN peut le calculer automatiquement). Propos
 
 function importProgramJSON(text){
   let data;
-  try{ data = JSON.parse(text); }catch(e){ return { ok:false, error:"Le fichier n'est pas un JSON valide." }; }
+  try{ data = JSON.parse(text); }catch(e){ return { ok:false, error:"Ce fichier n'est pas un programme lisible. Redemande-le à l'IA au format indiqué." }; }
   const sessions = cleanImportedProgram(data && typeof data==="object" ? (Array.isArray(data) ? data : data.sessions) : null);
   if(!sessions.length){
-    return { ok:false, error:"Format inattendu : aucune clé \"sessions\" trouvée." };
+    return { ok:false, error:"Ce fichier n'est pas un programme lisible. Redemande-le à l'IA au format indiqué." };
   }
   const warnings = [];
   sessions.forEach(s=>{

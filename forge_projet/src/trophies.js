@@ -127,7 +127,7 @@ const MEDALS = [
   { id:"hold", g:"shield", c:"gray",     cat:"volume", n:"Gainage d'acier", unit:"minutes de maintien", one:"minute de maintien", t:[5,60,300,1200], val:holdMinutes, fmt:v=>v<10?round1(v).toLocaleString("fr-FR"):fmtNum(v), desc:"Temps total passé sur les exercices chronométrés (planche, chaise, suspension…). Le diamant représente 20 heures." },
   { id:"bodyweight", g:"person", c:"green",cat:"volume", n:"Poids du corps", unit:"répétitions au poids du corps", one:"répétition au poids du corps", t:[500,5000,25000,100000], val:bodyweightReps },
   { id:"legs", g:"leg", c:"green",     cat:"explore", n:"Jamais sans les jambes", unit:"séances avec 3 séries de jambes ou plus", one:"séance avec 3 séries de jambes ou plus", t:[1,20,100,300], val:legDays },
-  { id:"architect", g:"ruler", c:"purple",cat:"explore", n:"Architecte", unit:"séances enregistrées", one:"séance enregistrée", t:[1,3,6,10], val:()=>S.templates.length, desc:"Construis ta bibliothèque de séances et place-les dans ta semaine." },
+  { id:"architect", g:"ruler", c:"purple",cat:"explore", n:"Architecte", unit:"séances dans Mes séances", one:"séance dans Mes séances", t:[1,3,6,10], val:()=>S.templates.length, desc:"Construis ta bibliothèque de séances et place-les dans ta semaine." },
   { id:"custom", g:"pencil", c:"orange",   cat:"style", n:"Sur mesure", unit:"séances composées par toi", one:"séance composée par toi", t:[1,10,50,200], val:countSessions(s=>s.source==="custom") },
 
   // ---- trophées secrets (v2.4) : cachés jusqu'à leur découverte, un seul palier ----
@@ -524,7 +524,7 @@ function showCelebration(session, ups, hits, won){
     ${typeof lastDoneForSave!=="undefined" && lastDoneForSave ? `<div class="cel-save">
       <div class="cs-t">Garder cette séance ?</div>
       <div class="cs-s">Enregistre-la pour la refaire ou la placer dans ta semaine.</div>
-      <button class="btn secondary" data-a="saveDoneSession">${icon("bookmark")} Enregistrer cette séance</button>
+      <button class="btn secondary" data-a="saveDoneSession">${icon("bookmark")} Ajouter à Mes séances</button>
     </div>` : ""}
     <div class="cel-ft"><button class="btn big" ${summit ? `data-a="ascCelSummit" data-id="${esc(session.id)}"` : 'data-a="closesheet"'}>${summit ? "Voir le sommet" : "Terminé"}</button></div>
   </div>`, "cel-page");

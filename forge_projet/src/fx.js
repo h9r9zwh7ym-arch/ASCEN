@@ -122,7 +122,7 @@ function showLaunch(session){
         <div class="la-title">C'est parti !</div>
         <div class="la-name">${esc(name)}</div>
         <div class="la-picts">${ids.map((id,i)=>`<span style="--k:${i}">${exoPicto(EXO_MAP[id])}</span>`).join("")}</div>
-        <div class="la-meta">${ids.length ? `${session.exos.length} exercices · ${sets} séries` : ""}</div>
+        <div class="la-meta">${ids.length ? `${nb(session.exos.length, "exercice")} · ${nb(sets, "série")}` : ""}</div>
         <div class="la-line">${esc(line)}</div>
       </div>
     </div>

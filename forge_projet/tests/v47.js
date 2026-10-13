@@ -34,10 +34,10 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     return { d, upper: runs.map(r => r.filter(m => ['dos', 'biceps', 'epaules'].includes(m)).length), stim: draft.stim, add };
   });
   log('Engine:', JSON.stringify(eng));
-  if (!(eng.d.dos === 1 && eng.d.biceps === 1 && eng.d.quad <= 0) || eng.upper.some(n => n < 2) || !/^Priorité à/.test(eng.stim || '') || !eng.add.some(m => ['dos', 'biceps', 'epaules'].includes(m))) fail('propositions guidées par le stimulus');
+  if (!(eng.d.dos === 1 && eng.d.biceps === 1 && eng.d.quad <= 0) || eng.upper.some(n => n < 2) || !/^En priorité cette semaine : /.test(eng.stim || '') || !eng.add.some(m => ['dos', 'biceps', 'epaules'].includes(m))) fail('propositions guidées par le stimulus');
   await wait(300);
   const line = await page.evaluate(() => (document.querySelector('#v-today .pc-stim') || {}).textContent || '');
-  log('Proposal line:', line); if (!/en retard cette semaine/.test(line)) fail('ligne d\'explication dans la proposition');
+  log('Proposal line:', line); if (!/En priorité cette semaine/.test(line)) fail('ligne d\'explication dans la proposition');
   await shot('01_proposal');
 
   // 2. carte Stimulus : « Composer une séance pour ces muscles » remplit Ma séance

@@ -55,9 +55,9 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const eq = await page.evaluate(() => { const b = document.querySelector('.ob-eq[data-id="kettlebell"]'); return { on: b.classList.contains('on'), aria: b.getAttribute('aria-checked'), ck: getComputedStyle(b.querySelector('.ob-ck')).backgroundColor, ico: getComputedStyle(b.querySelector('.sfi')).color }; });
   await page.screenshot({ path: `${OUT}/${wk ? 'wk_' : ''}02_ob_equip.png` });
   await page.click('[data-a="obNext"]'); await wait(500);
-  await page.click('.ob-goal[data-v="force"]'); await wait(300);
-  const goal = await page.evaluate(() => ({ on: [...document.querySelectorAll('.ob-goal.on')].map(b => b.dataset.v), ck: getComputedStyle(document.querySelector('.ob-goal.on .ob-ck')).backgroundColor,
-    off: getComputedStyle(document.querySelector('.ob-goal:not(.on) .ob-ck')).backgroundColor, why: getComputedStyle(document.querySelector('#obWhy')).textAlign }));
+  await page.click('.ck-row[data-v="force"]'); await wait(300);
+  const goal = await page.evaluate(() => ({ on: [...document.querySelectorAll('.ck-row.on')].map(b => b.dataset.v), ck: getComputedStyle(document.querySelector('.ck-row.on .ob-ck')).backgroundColor,
+    off: getComputedStyle(document.querySelector('.ck-row:not(.on) .ob-ck')).backgroundColor, why: getComputedStyle(document.querySelector('#obWhy')).textAlign }));
   await page.screenshot({ path: `${OUT}/${wk ? 'wk_' : ''}03_ob_goal.png` });
   const tint = await tokenRGB(page, '--tint'), tintInk = await tokenRGB(page, '--tint-ink');
   log('Onboarding:', JSON.stringify(ob0), JSON.stringify(eq), JSON.stringify(goal));

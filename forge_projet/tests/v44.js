@@ -49,7 +49,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     return { abs: !!z, op: z ? +cs.fillOpacity : 0, fill: cs && cs.fill, stroke: off.stroke !== 'none', tint, legend: document.querySelectorAll('.mm-legend').length, scale: document.querySelectorAll('.mm-scale .sc i').length, top: (document.querySelector('.mm-top') || {}).textContent }; });
   log('Muscle map:', JSON.stringify(mm));
   const hex = '#' + ((mm.fill || '').match(/\d+/g) || []).map(x => (+x).toString(16).padStart(2, '0')).join('');
-  if (!mm.abs || mm.op < 0.45 || hex.toLowerCase() !== mm.tint.toLowerCase() || !mm.stroke || mm.legend || mm.scale !== 4 || !/^Le plus travaillé/.test(mm.top || '')) fail('carte des muscles contrastée, une seule teinte');
+  if (!mm.abs || mm.op < 0.45 || hex.toLowerCase() !== mm.tint.toLowerCase() || !mm.stroke || mm.legend || mm.scale !== 4 || mm.top) fail('carte des muscles contrastée, une seule teinte');
   await shot('02_muscle_map');
   // stimulus : barre grise sous le seuil, verte au-delà, repères 4 et 10, plus de losange ; détails dans « À propos »
   const st = await page.evaluate(() => ({ foot: !!document.querySelector('.wv-foot, .wv-src, .wv-track u'), key: [...document.querySelectorAll('.stim-key span')].map(e => e.textContent.trim()), ticks: [...document.querySelectorAll('.wv-ticks em')].map(e => e.textContent),

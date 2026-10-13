@@ -40,7 +40,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const cal = await page.evaluate(() => { const b = document.querySelector('.hc-on'); return { up: __hit(b, -21), side: __hit(b, 0, 21) }; });
   log('Calendar day:', JSON.stringify(cal)); if (!cal.up || !cal.side) fail('jour du calendrier : cible de 44 pt');
   await page.evaluate(() => openGoals()); await wait(600);
-  const step = await page.evaluate(() => { const b = document.querySelector('.stepper button'); return { up: __hit(b, -21), down: __hit(b, 21) }; });
+  const step = await page.evaluate(() => { const b = document.querySelector('#overlay .mini-step button'); return { up: __hit(b, -21), down: __hit(b, 21) }; });
   log('Stepper:', JSON.stringify(step)); if (!step.up || !step.down) fail('boutons − / + : cible de 44 pt');
   await page.evaluate(() => closeSheet()); await wait(400);
   await page.evaluate(() => { switchTab('today'); openPicker({ title: 'x', multi: true, onDone: () => {} }); }); await wait(800);

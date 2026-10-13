@@ -73,10 +73,10 @@ function weekMuscleMapHTML(){
   const pos = v=>(v/max*100).toFixed(1);
   const zones = { none:0, low:0, ok:0, high:0 }; rows.forEach(r=>zones[stimZone(r.sets)]++);
   return `<div class="chart-card mm-card stagger" style="--i:1">
-    <div class="cc-h"><div class="cc-t">Muscles de la semaine</div><div class="cc-s">7 derniers jours · touche un muscle pour le détail</div></div>
+    <div class="cc-h"><div class="cc-t">Muscles de la semaine</div><div class="cc-s">7 derniers jours</div></div>
     ${muscleMapSVG(lv, tips, { cls:"mm-week", mono:true, label:"Muscles travaillés cette semaine" })}
     <div class="mm-scale"><span>0</span><span class="sc">${scale}</span><span>${STIM.high}+ séries</span></div>
-    ${top.length ? `<div class="mm-top">Le plus travaillé : ${top.map(r=>`<span><b>${esc(r.n)}</b>&nbsp;${fmtDec(r.sets)}</span>`).join(" · ")}</div>` : `<div class="mm-top">Aucun muscle travaillé ces 7 derniers jours.</div>`}
+    ${top.length ? "" : `<div class="mm-top">Aucun muscle travaillé ces 7 derniers jours.</div>`}
   </div>
   <div class="chart-card stim-card stagger" style="--i:2">
     <div class="cc-h tr-h"><div><div class="cc-t">Stimulus par muscle</div><div class="cc-s">Séries des 7 derniers jours, par muscle</div></div>

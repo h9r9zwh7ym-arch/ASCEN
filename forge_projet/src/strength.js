@@ -240,7 +240,7 @@ function strengthCardHTML(){
     return `<div class="tr-reg r-${r}"><i></i><span>${r==="core" ? "Gainage" : REGIONS[r].n}</span><b>${pctTxt(v)}</b>${down ? `<em>${ii("warn")}</em>` : ""}</div>`; }).join("");
   return `<div class="chart-card trend-card stagger" style="--i:1">${head}
     <div class="tr-hero"><span class="tr-v" ${(()=>{ const p = Math.round(last.v-100); return `data-count="${Math.abs(p)}" data-pre="${p>0?"+":p<0?"−":""}" data-unit="%" data-thin="1"`; })()}>${pctTxt(last.v)}</span>${wk>0 ? `<span class="tr-d ${d>0?"up":d<0?"down":""}">${d>0?"+":d<0?"−":"±"}${Math.abs(d)} pts en ${nb(wk,"semaine")}</span>` : ""}</div>
-    <button class="tr-status st-${status.c}" data-a="strengthHow" aria-label="Statut : ${status.n}. Voir comment il est calculé"><span class="tr-dot"></span><span><b>${status.n}</b> · ${fmtDec(round1(L.acute))} série${round1(L.acute)>=2?"s":""} difficile${round1(L.acute)>=2?"s":""} sur 7 jours (habituel : ${fmtDec(round1(L.chronic))})</span></button>
+    <button class="tr-status st-${status.c}" data-a="strengthHow" aria-label="Statut : ${status.n}. Voir comment il est calculé"><span class="tr-dot"></span><span><b>${status.n}</b> · ${fmtDec(round1(L.acute))} série${round1(L.acute)>=2?"s":""} difficile${round1(L.acute)>=2?"s":""} sur 7 jours (d'habitude : ${Math.round(L.chronic)})</span></button>
     ${lineChart(pts.map(p=>({ label:fmtDate(p.wk), v:p.v-100, tip:`Semaine du ${fmtDate(p.wk)} : ${pctTxt(p.v)} (${nb(p.n,"muscle")})` })), { aria:"Progression de force par semaine", fmt:v=>pctTxt(v+100), tickFmt:v=>(v>0?"+":v<0?"−":"")+Math.abs(v)+"\u202f%" })}
     ${regions ? `<div class="tr-regs">${regions}</div>` : ""}
     ${lines.map(l=>`<div class="tr-line">${l}</div>`).join("")}
@@ -395,7 +395,7 @@ Object.assign(ACT, {
       <p>Après ${DELOAD.every} semaines chargées d'affilée (au moins 2 séances par semaine), si ta charge s'emballe (statut « Surcharge »), ou si ta force estimée baisse alors que tu t'entraînes autant. Jamais deux fois en moins de 4 semaines.</p>
       <div class="group" style="margin-top:16px"><div class="row">
         <div class="grow"><div class="t">Me la proposer automatiquement</div><div class="s">Une carte sur l'accueil, au bon moment</div></div>
-        <button class="switch ${S.settings.deloadTips!==false?"on":""}" aria-label="Proposer automatiquement les semaines allégées" aria-pressed="${S.settings.deloadTips!==false}" data-a="deloadToggleTips"></button>
+        <button class="switch ${S.settings.deloadTips!==false?"on":""}" role="switch" aria-checked="${!!(S.settings.deloadTips!==false)}" aria-label="Proposer automatiquement les semaines allégées" data-a="deloadToggleTips"></button>
       </div></div>
       <div class="btnrow">${on ? `<button class="btn secondary" data-a="deloadStop">Arrêter la semaine allégée</button>` : `<button class="btn" data-a="deloadStart">${icon("play")} Commencer maintenant</button>`}</div>
       <h3>Sources</h3>

@@ -1,5 +1,15 @@
 // ================= VUE : PROFIL =================
-const GOAL_LABELS = { force:"Force", hypertrophie:"Prise de masse", endurance:"Endurance" };
+// objectif principal : mêmes mots et même ordre qu'au premier lancement
+const GOAL_LABELS = { hypertrophie:"Prendre du muscle", force:"Gagner en force", endurance:"Endurance et tonus" };
+const GOAL_HINTS = { hypertrophie:"8 à 12 répétitions, ~10 séries par muscle et par semaine", force:"Moins de répétitions, charges plus lourdes", endurance:"Plus de répétitions, repos courts" };
+// liste à cocher (une seule réponse), comme les réglages iOS
+function checkRows(keys, labels, cur, a, hints){
+  return keys.map(k=>`<button class="row tap ck-row ${cur===k?"on":""}" data-a="${a}" data-v="${k}" role="radio" aria-checked="${cur===k}"><div class="grow"><div class="t">${labels[k]}</div>${hints&&hints[k]?`<div class="s">${hints[k]}</div>`:""}</div><em class="ob-ck">${icon("check")}</em></button>`).join("");
+}
+// rangée avec un stepper compact à droite
+function stepRow(t, v, a, less, more){
+  return `<div class="row"><div class="grow t">${t}</div><div class="mini-step"><button data-a="${a}" data-d="-1" aria-label="${less}">−</button><span>${v}</span><button data-a="${a}" data-d="1" aria-label="${more}">+</button></div></div>`;
+}
 const LEN_LABELS = { court:"Courte (≈ 20 min)", moyen:"Moyenne (≈ 35 min)", long:"Longue (≈ 50 min)" };
 const LEVEL_LABELS = { debutant:"Débutant·e", intermediaire:"Intermédiaire", avance:"Avancé·e" };
 const LEVEL_HINTS = { debutant:"Moins d'un an de musculation régulière : exercices accessibles, technique d'abord.", intermediaire:"Un à trois ans de pratique : tous les exercices standard.", avance:"Plus de trois ans : variantes exigeantes privilégiées." };
@@ -27,7 +37,7 @@ function trophiesCardHTML(){
   const next = MEDALS.filter(m=>!m.secret).map(m=>({ m, p:medalProgress(m) })).filter(x=>x.p.next!=null).sort((a,b)=>b.p.pct-a.p.pct).slice(0, 4-recent.length);
   const thumbs = recent.map(r=>`<span class="pt-th">${medalHTML(r.m, r.t, "sm", true)}</span>`).join("") + next.map(x=>`<span class="pt-th next">${medalHTML(x.m, x.p.t+1, "sm", true)}</span>`).join("");
   return `<h2 class="sh">Trophées</h2>
-    <button class="pt-card stagger" style="--i:1" data-a="openTrophies" aria-label="Trophées : ${won} gagnés sur ${total}. Voir tous les trophées">
+    <button class="pt-card stagger" style="--i:1" data-a="openTrophies" aria-label="Trophées : ${won} sur ${total} ${won>1?"gagnés":"gagné"}. Voir tous les trophées">
       <span class="pt-thumbs" aria-hidden="true">${thumbs}</span>
       <span class="pt-foot"><span>${won} gagné${won>1?"s":""} sur ${total}</span><span class="chev">${icon("chev")}</span></span>
     </button>`;
@@ -52,7 +62,7 @@ function sessionPrefsHTML(){
       <div class="row">
         ${sfIcon("mat","indigo")}
         <div class="grow"><div class="t">Étirements en fin de séance</div><div class="s">Ajoutés aux séances proposées par l'app</div></div>
-        <button class="switch ${S.settings.stretching?"on":""}" aria-label="Étirements en fin de séance" data-a="toggleStretching"></button>
+        <button class="switch ${S.settings.stretching?"on":""}" role="switch" aria-checked="${!!(S.settings.stretching)}" aria-label="Étirements en fin de séance" data-a="toggleStretching"></button>
       </div>
       <button class="row tap" style="width:100%" data-a="deloadHow">
         ${sfIcon("leaf","green")}
@@ -62,7 +72,7 @@ function sessionPrefsHTML(){
       <div class="row">
         ${sfIcon("sparkles","purple")}
         <div class="grow"><div class="t">Suggestions de l'app</div><div class="s">« Laisse l'app choisir », « Compléter » et le programme de la semaine</div></div>
-        <button class="switch ${appPicksOn()?"on":""}" aria-label="Suggestions de l'app dans Ma séance" aria-pressed="${appPicksOn()}" data-a="toggleAppPicks"></button>
+        <button class="switch ${appPicksOn()?"on":""}" role="switch" aria-checked="${!!(appPicksOn())}" aria-label="Suggestions de l'app dans Ma séance" data-a="toggleAppPicks"></button>
       </div>
     </div>`;
 }
@@ -76,7 +86,7 @@ function motivHTML(){
       ${MOTIV.map(([k,ic,c,t,sub])=>`<div class="row">
         ${sfIcon(ic,c)}
         <div class="grow"><div class="t">${t}</div><div class="s">${sub}</div></div>
-        <button class="switch ${S.settings[k]!==false?"on":""}" aria-label="${t}" aria-pressed="${S.settings[k]!==false}" data-a="toggleMotiv" data-k="${k}"></button>
+        <button class="switch ${S.settings[k]!==false?"on":""}" role="switch" aria-checked="${!!(S.settings[k]!==false)}" aria-label="${t}" data-a="toggleMotiv" data-k="${k}"></button>
       </div>`).join("")}
     </div>`;
 }
@@ -96,7 +106,7 @@ function dataMoreHTML(){
     <div class="group" style="margin-top:14px">
       <button class="row tap" style="width:100%" data-a="restoreData">
         ${sfIcon("restore","teal")}
-        <div class="grow"><div class="t">Restaurer une sauvegarde</div><div class="s">Fichier .json créé par ASCEN (ou Forge)</div></div>
+        <div class="grow"><div class="t">Restaurer une sauvegarde</div><div class="s">Fichier de sauvegarde ASCEN</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
       <button class="row tap" style="width:100%" data-a="exportCSV">
@@ -106,7 +116,7 @@ function dataMoreHTML(){
       </button>
       <button class="row tap" style="width:100%" data-a="openExportImport">
         ${sfIcon("sparkles","purple")}
-        <div class="grow"><div class="t">Exporter / importer un programme</div><div class="s">${S.importedProgram.length? S.importedProgram.length+" séance(s) importée(s) en attente" : "Aucun programme importé"}</div></div>
+        <div class="grow"><div class="t">Programme par IA</div><div class="s">${S.importedProgram.length? nb(S.importedProgram.length, "séance")+" à ajouter" : "Aucun programme importé"}</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
       <button class="row tap" style="width:100%" data-a="openStorage">
@@ -175,12 +185,12 @@ function renderProfil(){
       <div class="row">
         ${sfIcon("speaker","gray")}
         <div class="grow"><div class="t">Sons</div></div>
-        <button class="switch ${S.settings.sound!==false?"on":""}" aria-label="Sons" data-a="toggleSound"></button>
+        <button class="switch ${S.settings.sound!==false?"on":""}" role="switch" aria-checked="${!!(S.settings.sound!==false)}" aria-label="Sons" data-a="toggleSound"></button>
       </div>
       <div class="row sub-setting ${S.settings.sound===false?"off":""}">
         ${sfIcon("tap","gray")}
         <div class="grow"><div class="t">Clics de l'interface</div></div>
-        <button class="switch ${S.settings.uiSound!==false?"on":""}" aria-label="Clics de l'interface" data-a="toggleUiSound"></button>
+        <button class="switch ${S.settings.uiSound!==false?"on":""}" role="switch" aria-checked="${!!(S.settings.uiSound!==false)}" aria-label="Clics de l'interface" data-a="toggleUiSound"></button>
       </div>
       <button class="row tap" style="width:100%" data-a="openAppearance">
         ${sfIcon("contrast","gray")}
@@ -281,16 +291,19 @@ function restoreData(){
     let data;
     // une sauvegarde de plusieurs années pèse moins de 2 Mo : au-delà de 50 Mo, ce n'en est pas une
     try{ if(f.size>5e7) throw 0; const o = JSON.parse(await f.text()); data = o && o.data ? o.data : o; }catch(e){ data = null; }
-    if(!data || typeof data!=="object" || !(Array.isArray(data.sessions) || Array.isArray(data.zs))){ openModal(`<div style="font-weight:700;color:var(--red)">Fichier non reconnu</div><div class="hr-note" style="margin-top:8px">Choisis un fichier de sauvegarde créé par ASCEN (ascen-sauvegarde-….json) ou par Forge.</div><button class="btn secondary" style="margin-top:14px" data-a="closesheet">OK</button>`); return; }
+    if(!data || typeof data!=="object" || !(Array.isArray(data.sessions) || Array.isArray(data.zs))){ openModal(`<div style="font-weight:700;color:var(--red)">Fichier non reconnu</div><div class="hr-note" style="margin-top:8px">Choisis un fichier de sauvegarde créé par ASCEN (ascen-sauvegarde-….json).</div><button class="btn secondary" style="margin-top:14px" data-a="closesheet">OK</button>`); return; }
     const n = (Array.isArray(data.sessions) && data.sessions.length ? data.sessions : data.zs || []).length, t = Array.isArray(data.templates) ? data.templates.length : 0;
-    confirmSheet({ title:"Restaurer cette sauvegarde ?", html:`${n} séance${n>1?"s":""} et ${t} séance${t>1?"s":""} enregistrée${t>1?"s":""}. Les données actuelles de cet appareil seront remplacées (une copie de secours est gardée).`, ok:"Restaurer", danger:true, onOk:()=>{
+    confirmSheet({ title:"Restaurer cette sauvegarde ?", html:`${nb(n, "séance")} dans l'historique${t ? ` et ${t} dans Mes séances` : ""}. Les données actuelles de cet appareil seront remplacées ; tu pourras annuler juste après.`, ok:"Restaurer", danger:true, onOk:()=>{
       try{ localStorage.setItem(STORAGE_KEY+".avant-restauration", JSON.stringify(S)); }catch(e){}
       let st; try{ st = normalizeState(data); }catch(e){ ERR_LOG.push({ at:new Date().toISOString(), where:"restauration", msg:String(e && e.message || e).slice(0,200) }); toast("Sauvegarde illisible : rien n'a été changé", "warn"); return; }
       if(S.draft) stopRestTimer();
+      const prev = S;
       S = st;
       S.meta.lastBackup = S.meta.lastBackup || todayISO();
       save(); persistNow(); applyTheme(); checkMedals(true);
-      renderViewAnimated(currentTab); toast(`Sauvegarde restaurée : ${n} séance${n>1?"s":""}`);
+      renderViewAnimated(currentTab);
+      // « Annuler » remet les données d'avant (elles restent aussi en copie dans le stockage)
+      toast(`Sauvegarde restaurée : ${nb(n, "séance")}`, null, ()=>{ S = prev; save(); persistNow(); applyTheme(); renderViewAnimated(currentTab); toast("Données d'avant remises"); });
     }});
   });
   inp.click();
@@ -316,7 +329,7 @@ function equipBodyHTML(){
     return `<div class="row">
       ${sfIcon(EQUIP_GLYPH[e.id]||"wrench", "gray")}
       <div class="grow"><div class="t">${esc(e.n)}</div>${e.hint && !e.loadable ? `<div class="s wrap">${esc(e.hint)}</div>` : ""}</div>
-      <button class="switch ${on?"on":""}" data-a="toggleEquip" data-id="${e.id}"></button>
+      <button class="switch ${on?"on":""}" role="switch" aria-checked="${!!(on)}" aria-label="${esc(e.n)}" data-a="toggleEquip" data-id="${e.id}"></button>
     </div>`;
   }).join("");
   const weightEditors = EQUIP_TYPES.filter(e=>e.loadable && S.equipment.owned[e.id]).map(e=>{
@@ -355,7 +368,6 @@ function refreshEquip(){ const b=qs(".sheet-body"); if(b) b.innerHTML = equipBod
 
 // ---------- Objectifs ----------
 function goalsBodyHTML(){
-  const overallChips = Object.keys(GOAL_LABELS).map(k=>`<button class="chip ${S.goals.overall===k?"on":""}" data-a="setGoalOverall" data-v="${k}">${GOAL_LABELS[k]}</button>`).join("");
   const lenChips = Object.keys(LEN_LABELS).map(k=>`<button class="chip ${S.goals.sessionLength===k?"on":""}" data-a="setSessionLength" data-v="${k}">${LEN_LABELS[k]}</button>`).join("");
   const emphasisRows = MUSCLES.filter(m=>m.id!=="cardio").map(m=>{
     const v = S.goals.emphasis[m.id]||"normal";
@@ -364,29 +376,24 @@ function goalsBodyHTML(){
       <button class="chip ${v==="prioriser"?"on":""}" data-a="cycleEmphasis" data-id="${m.id}">${v==="prioriser"?"Prioriser":v==="eviter"?"À éviter":"Normal"}</button>
     </div>`;
   }).join("");
-  return `<h2 class="sh" style="margin-top:6px">Objectif principal</h2><div class="chips">${overallChips}</div>
-    <h2 class="sh">Fréquence visée</h2>
-    <div class="field" style="padding:10px 14px"><div class="stepper">
-      <button data-a="stepDays" data-d="-1">−</button><div class="val">${S.goals.daysPerWeek}×/sem.</div><button data-a="stepDays" data-d="1">+</button>
-    </div></div>
+  return `<h2 class="sh" style="margin-top:6px">Objectif principal</h2><div class="group ob-list" role="radiogroup" aria-label="Objectif principal">${checkRows(Object.keys(GOAL_LABELS), GOAL_LABELS, S.goals.overall, "setGoalOverall", GOAL_HINTS)}</div>
+    <h2 class="sh">Rythme</h2>
+    <div class="group">${stepRow("Séances par semaine", S.goals.daysPerWeek, "stepDays", "Une séance de moins par semaine", "Une séance de plus par semaine")}
+      ${stepRow("Exercices par séance", sessionSize(), "stepExoCount", "Moins d'exercices", "Plus d'exercices")}</div>
+    <p class="hr-note">${S.goals.exoCount ? "Nombre d'exercices choisi par toi. " : "Nombre d'exercices réglé selon la durée. "}Environ ${sessionSize()*3} séries, ≈ ${Math.round(sessionSize()*3*(40+75)/60/5)*5} min.</p>
     <h2 class="sh">Niveau</h2><div class="chips">${Object.keys(LEVEL_LABELS).map(k=>`<button class="chip ${(S.goals.level||"intermediaire")===k?"on":""}" data-a="setLevel" data-v="${k}">${LEVEL_LABELS[k]}</button>`).join("")}</div>
     <p class="hr-note">${LEVEL_HINTS[S.goals.level||"intermediaire"]}</p>
     <h2 class="sh">Âge</h2><div class="chips">${[[false,"Moins de 65 ans"],[true,"65 ans et plus"]].map(([v,l])=>`<button class="chip ${!!S.goals.senior===v?"on":""}" data-a="setSenior" data-v="${v?1:0}" aria-pressed="${!!S.goals.senior===v}">${l}</button>`).join("")}</div>
-    <p class="hr-note">Sert à l'indice de force : à partir de 65 ans, la force baisse plus vite quand on s'arrête (méta-analyse de Bosquet, 2013).</p>
+    <p class="hr-note">Sert à l'indice de force : à partir de 65 ans, la force baisse plus vite pendant une pause.</p>
     <h2 class="sh">Durée de séance</h2><div class="chips">${lenChips}</div>
-    <h2 class="sh">Exercices par séance proposée</h2>
-    <div class="field" style="padding:10px 14px"><div class="stepper">
-      <button data-a="stepExoCount" data-d="-1" aria-label="Moins d'exercices">−</button><div class="val">${sessionSize()} exercices</div><button data-a="stepExoCount" data-d="1" aria-label="Plus d'exercices">+</button>
-    </div></div>
-    <p class="hr-note">${S.goals.exoCount ? "Réglage personnalisé. " : "Réglé automatiquement selon la durée. "}Environ ${sessionSize()*3} séries, ≈ ${Math.round(sessionSize()*3*(40+75)/60/5)*5} min.</p>
     <h2 class="sh">Groupes musculaires</h2>
-    <p class="hr-note" style="margin-top:-6px">Touche un groupe pour faire défiler : normal → à prioriser → à éviter.</p>
+    <p class="hr-note" style="margin-top:-6px">Touche pour passer de normal à prioriser, puis à éviter.</p>
     <div class="group" style="margin-top:10px">${emphasisRows}</div>`;
 }
 function openGoals(){
   openSheet(`<div class="sheet-hd"><span class="t">Objectifs</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body">${goalsBodyHTML()}</div>`);
 }
-function refreshGoals(){ const b=qs(".sheet-body"); if(b) b.innerHTML = goalsBodyHTML(); }
+function refreshGoals(){ const b=qs(".sheet-body"); if(b){ const st = b.scrollTop; b.innerHTML = goalsBodyHTML(); b.scrollTop = st; } }
 
 // ---------- Mes exercices : favoris et exclus ----------
 // Exercices inclus / exclus : chaque catégorie ne liste que ce que ton matériel permet (tous au
@@ -437,14 +444,14 @@ function refreshExoPrefs(){
 // ---------- Export / import IA ----------
 function exportImportBodyHTML(){
   const importedRows = S.importedProgram.map((s,i)=>`<div class="row"><div class="grow t">${esc(s.nom||("Séance "+(i+1)))}</div>${i===0?'<span class="chip on">Prochaine</span>':""}</div>`).join("");
-  return `<p class="body">Génère un prompt résumant ton profil (matériel, objectifs, historique) à coller dans l'IA de ton choix. Elle te répondra avec un programme au format JSON que tu peux ensuite importer ici.</p>
-    <div class="btnrow" style="margin-top:16px"><button class="btn" data-a="copyPrompt">Copier le prompt</button></div>
+  return `<p class="body">Copie cette demande dans l'IA de ton choix : elle y trouvera ton matériel, tes objectifs et ton historique, et te renverra un fichier de programme à importer ici.</p>
+    <div class="btnrow" style="margin-top:16px"><button class="btn" data-a="copyPrompt">Copier la demande</button></div>
     <div class="field" style="margin-top:12px"><textarea readonly rows="6" style="width:100%;border:0;background:transparent;font-size:calc(13rem/17);padding:10px 0;resize:vertical">${esc(buildExportPrompt())}</textarea></div>
-    <div class="btnrow"><button class="btn secondary" data-a="triggerImport">Importer le fichier JSON reçu</button></div>
+    <div class="btnrow"><button class="btn secondary" data-a="triggerImport">Importer le fichier reçu</button></div>
     ${S.importedProgram.length? `<h2 class="sh">Programme importé</h2><div class="group">${importedRows}</div><div class="btnrow"><button class="btn ghost te-del" data-a="clearImported">Supprimer le programme importé</button></div>`:""}`;
 }
 function openExportImport(){
-  openSheet(`<div class="sheet-hd"><span class="t">Suggestion par IA</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body">${exportImportBodyHTML()}</div>`, { child:true, restore:openExportImport });
+  openSheet(`<div class="sheet-hd"><span class="t">Programme par IA</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body">${exportImportBodyHTML()}</div>`, { child:true, restore:openExportImport });
   sheetBackHead();
 }
 
@@ -463,7 +470,7 @@ function appearanceBodyHTML(){
     <h2 class="sh">Pendant la séance</h2>
     <div class="group"><div class="row${dark?" off":""}">
       <div class="grow"><div class="t">Séance en sombre</div><div class="s">${dark ? "Toujours en sombre avec le thème Sombre" : on ? "Recommandé" : "La séance suit le thème de l'app"}</div></div>
-      <button class="switch ${on?"on":""}" aria-label="Séance en sombre" aria-pressed="${on}" data-a="toggleLiveDark" ${dark?"disabled":""}></button>
+      <button class="switch ${on?"on":""}" role="switch" aria-checked="${!!(on)}" aria-label="Séance en sombre" data-a="toggleLiveDark" ${dark?"disabled":""}></button>
     </div></div>
     <p class="hr-note">En noir, les chiffres se lisent mieux de loin et l'écran éblouit moins pendant l'effort. Le reste de l'app garde le thème choisi au-dessus.</p>`;
 }
@@ -479,7 +486,7 @@ function openAbout(){
     <div class="about-logo">${ascenMark()}<span>Un cran plus haut, à chaque séance.</span></div>
     <p class="body" style="margin-top:4px">ASCEN est une app de suivi de musculation pensée pour un usage solo sur iPhone. Elle propose une séance chaque jour à partir de ton matériel, de tes objectifs et de ton historique, grâce à un moteur de règles 100 % local — aucune donnée n'est envoyée sur un serveur.</p>
     <h2 class="sh">Version</h2><p class="body">ASCEN v${APP_VERSION}</p>
-    <h2 class="sh">Données</h2><p class="body">Toutes les données (séances, matériel, objectifs, trophées) restent stockées uniquement sur cet appareil, dans le stockage local du navigateur. Aucun compte, aucun serveur.</p>
+    <h2 class="sh">Données</h2><p class="body">Toutes les données (séances, matériel, objectifs, trophées) restent uniquement sur cet appareil. Aucun compte, aucun serveur.</p>
     <h2 class="sh">Mon ascension</h2><p class="body">Chaque séance fait gravir de vraies montagnes, du Moléson à l'Everest. Silhouettes calculées depuis le relief réel (swisstopo swissALTI3D en Suisse ; ailleurs Copernicus GLO-30, © DLR e.V. et Airbus, fourni par l'Union européenne et l'ESA). Voies d'ascension et refuges : © contributeurs OpenStreetMap (ODbL).</p>
     <button class="about-link" data-a="ascHow">Comment fonctionne l'ascension ${icon("chev")}</button>
     <h2 class="sh">Avertissement</h2><p class="body">Les consignes d'exécution proposées sont des repères techniques généraux. Elles ne remplacent pas l'avis d'un professionnel de santé ou d'un coach pour toute question médicale ou en cas de douleur.</p>
@@ -549,7 +556,7 @@ Object.assign(ACT, {
   removeCustom(d){
     const c = S.equipment.custom.find(x=>x.id===d.id); if(!c) return;
     S.equipment.custom = S.equipment.custom.filter(x=>x!==c); save(); refreshEquip();
-    toast(`${c.n} retiré`, null, ()=>{ if(S.equipment.custom.includes(c)) return; S.equipment.custom.push(c); save(); refreshEquip(); });
+    toast(`Retiré : ${c.n}`, null, ()=>{ if(S.equipment.custom.includes(c)) return; S.equipment.custom.push(c); save(); refreshEquip(); });
   },
 
   setGoalOverall(d){ S.goals.overall = d.v; save(); refreshGoals(); },
@@ -574,7 +581,7 @@ Object.assign(ACT, {
   copyPrompt(){
     const text = buildExportPrompt();
     if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(text).then(()=>toast("Prompt copié !")).catch(()=>toast("Copie impossible — sélectionne le texte manuellement"));
+      navigator.clipboard.writeText(text).then(()=>toast("Demande copiée")).catch(()=>toast("Copie impossible — sélectionne le texte manuellement"));
     } else toast("Sélectionne le texte ci-dessous pour le copier");
   },
   triggerImport(){ const f = qs("#fileImport"); if(f) f.click(); },
@@ -587,6 +594,7 @@ Object.assign(ACT, {
     const sub = qs(".sub-setting"); if(sub) sub.classList.toggle("off", !S.settings.sound);
     if(S.settings.sound) sfx("set");
   },
+  trendOn(){ S.settings.trend = true; save(); changed(); },
   toggleMotiv(d, el){
     if(!["beat","nextGoal","trend","thenNow"].includes(d.k)) return;
     S.settings[d.k] = S.settings[d.k]===false; el.classList.toggle("on", S.settings[d.k]); el.setAttribute("aria-pressed", S.settings[d.k]);
@@ -683,11 +691,11 @@ Object.assign(ACT, {
         <div class="chart-card" style="margin-top:0">
           <div class="cc-h"><div class="cc-t">${fmtBytes(u)} sur ~5 Mo</div><div class="cc-s">${S.sessions.length} séance${S.sessions.length>1?"s":""} enregistrée${S.sessions.length>1?"s":""}</div></div>
           <div class="xpbar sto-bar"><span style="width:${Math.max(1.5, pct).toFixed(1)}%"></span></div>
-          ${yrs!=null ? `<p class="hr-note" style="margin:10px 0 0">Au rythme actuel, il reste de la place pour environ <b>${yrs>99?"plus de 99":yrs} ans</b> d'entraînement.</p>` : ""}
+          ${yrs!=null ? `<p class="hr-note" style="margin:10px 0 0">Au rythme actuel, il reste de la place pour ${yrs>99?"<b>plus de 99 ans</b>":`environ <b>${yrs} ans</b>`} d'entraînement.</p>` : ""}
         </div>
         <div class="group" style="margin-top:14px">
           <div class="row">${sfIcon("storage","green")}<div class="grow"><div class="t">Format compact</div><div class="s wrap">L'historique est enregistré sous une forme condensée, environ 2,5 fois plus légère.</div></div></div>
-          <div class="row">${sfIcon("shield","blue")}<div class="grow"><div class="t">Copie de secours</div><div class="s wrap">Chaque enregistrement est aussi copié, compressé, dans une seconde base (IndexedDB). Si l'espace principal est plein ou effacé, l'app repart de cette copie.</div></div><div class="val" id="stoIdb"></div></div>
+          <div class="row">${sfIcon("shield","blue")}<div class="grow"><div class="t">Copie de secours</div><div class="s wrap">Chaque enregistrement est aussi copié, compressé, dans une copie de secours, sur ton téléphone. Si l'espace principal est plein ou effacé, l'app repart de cette copie.</div></div><div class="val" id="stoIdb"></div></div>
           <div class="row">${sfIcon("phone","gray")}<div class="grow"><div class="t">Total sur l'appareil</div><div class="s wrap">Données, copie de secours et fichiers de l'app gardés pour le hors ligne. Les trophées 3D sont dessinés à la volée : aucune image n'est stockée.</div></div><div class="val" id="stoTotal"></div></div>
           <div class="row">${sfIcon("lock","indigo")}<div class="grow"><div class="t">Protection</div><div class="s wrap" id="stoPersist">Vérification…</div></div></div>
         </div>

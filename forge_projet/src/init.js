@@ -125,7 +125,7 @@ function init(){
       const res = file.size>2e6 ? { ok:false, error:"Fichier trop volumineux pour un programme." } : importProgramJSON(await file.text());
       fi.value = "";
       if(res.ok){
-        toast(`Programme importé : ${res.count} séance(s)`);
+        toast(`Programme importé : ${nb(res.count, "séance")}`);
         changed();
         if(res.warnings && res.warnings.length){
           setTimeout(()=>openModal(`<div style="font-weight:700">Avertissements</div>
@@ -154,7 +154,7 @@ function onExternalState(){
   if(!(S.draft && S.draft.startedAt) && typeof stopRestTimer==="function") stopRestTimer();
   applyTheme();
   if(qs("#overlay").classList.contains("open")) dirtyOnClose = true; else renderView(currentTab);
-  toast("Données mises à jour depuis un autre onglet");
+  toast("Données mises à jour");
 }
 // Taille du texte réglée sur l'iPhone (Réglages › Luminosité et affichage › Taille du texte) :
 // Safari expose la taille « corps de texte » via la police système -apple-system-body. Toute

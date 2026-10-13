@@ -239,14 +239,14 @@ function proposalPaneHTML(draft){
       <div class="pc-eyebrow">${draft.type==="auto"?"Choisie pour toi":"Séance proposée"}</div>
       <div class="pc-title">${title}</div>
       ${draft.reason?`<div class="pc-reason">${esc(draft.reason)}</div>`:""}${stim}
-      ${draft.exos.length?`<div class="pc-meta"><span>${mainExos(draft).length} exercices</span><span>${mainExos(draft).reduce((t,e)=>t+e.sets.length,0)} séries</span><span>≈ ${estimateMinutes(draft)} min</span></div>
+      ${draft.exos.length?`<div class="pc-meta"><span>${nb(mainExos(draft).length, "exercice")}</span><span>${nb(mainExos(draft).reduce((t,e)=>t+e.sets.length,0), "série")}</span><span>≈ ${estimateMinutes(draft)} min</span></div>
       <div class="pc-muscles">${focus.map(m=>`<span>${MUSCLE_MAP[m].n}</span>`).join("")}</div>`:""}
     </div>`;
   }
   const types = adj && !imported ? `<div class="type-scroll">${typeChips}</div>` : "";
   if(!draft.exos.length){
     return `${types}${hero}
-      <div class="empty-state"><span class="em">${sfIcon("toolbox","gray","lg")}</span>Pas d'exercice disponible pour ce type de séance avec ton matériel.<br>Essaie un autre type, ou complète ton matériel dans l'onglet Profil.</div>`;
+      ${emptyHTML("toolbox", "Aucun exercice possible", "Pas d'exercice pour ce type de séance avec ton matériel. Essaie un autre type, ou complète ton matériel dans le Profil.")}`;
   }
   // exercices de force, puis (si le réglage est actif) le bloc d'étirements dans sa propre section
   if(heroShown && !adj) return hero; // « Autre proposition » est dans « Choisir une autre séance »
@@ -355,7 +355,7 @@ function weekCardHTML(){
       </button>
       <div class="wk-week">
         <div class="wk-days">${days}</div>
-        <div class="wk-foot"><span class="wk-cnt"><b>${done}</b> sur ${goal} séances</span>${risk ? `<span class="wk-risk">${ii("flame")}Série de ${streak} sem. en jeu</span>` : streak>0 ? `<span>${nb(streak, "semaine")} d'affilée${si.recent ? " · joker utilisé" : ""}</span>` : ""}</div>
+        <div class="wk-foot"><span class="wk-cnt"><b>${done}</b> sur ${goal} séances</span>${risk ? `<span class="wk-risk">${ii("flame")}${streak} sem. d'affilée en jeu</span>` : streak>0 ? `<span>${nb(streak, "semaine")} d'affilée${si.recent ? " · joker utilisé" : ""}</span>` : ""}</div>
       </div>
     </div>
   </section>`;
@@ -452,7 +452,7 @@ function saveRowHTML(){
       <span class="s">${same ? ((t.days||[]).length ? "Planifiée : "+daysLabel(t.days) : "Aucun jour planifié") : "Modifiée : touche pour mettre à jour"}</span></span><span class="chev">${icon("chev")}</span></button>`;
   }
   const pend = S.custom.pendingDays && S.custom.pendingDays.length;
-  return `<button class="save-row" data-a="saveTemplateOpen">${sfIcon("bookmarkG","indigo")}<span class="grow"><span class="t">${pend?`Enregistrer pour le ${pendingDaysLabel()}`:"Enregistrer cette séance"}</span>
+  return `<button class="save-row" data-a="saveTemplateOpen">${sfIcon("bookmarkG","indigo")}<span class="grow"><span class="t">${pend?`Prévoir pour le ${pendingDaysLabel()}`:"Ajouter à Mes séances"}</span>
     <span class="s">Facultatif : pour la retrouver et la placer dans ton planning</span></span><span class="chev">${icon("chev")}</span></button>`;
 }
 function customPaneHTML(){
@@ -561,7 +561,7 @@ function pickerListHTML(){
     && (!picker.muscle || e.muscles.includes(picker.muscle))
     && (!picker.cat || (favOnly ? isIncluded(e.id) : exoCategory(e)===picker.cat))
     && (!q || normName(e.n+" "+e.aka+" "+(EXO_ALIAS[e.id]||"")).includes(q) || e.muscles.some(m=>normName(MUSCLE_MAP[m].n).includes(q))));
-  if(!pool.length) return `<div class="empty-state"><span class="em">${sfIcon("search","gray","lg")}</span>Aucun exercice ne correspond.</div>`;
+  if(!pool.length) return emptyHTML("search", "Aucun résultat", "Vérifie l'orthographe ou essaie un autre mot.");
   // favoris en tête (sans recherche ni filtre de matériel) : ils restent aussi dans leur catégorie
   const favs = favOnly || picker.cat ? [] : pool.filter(e=>isIncluded(e.id)).sort((a,b)=>a.n.localeCompare(b.n,"fr"));
   const favBlock = favs.length ? `<div class="pick-h fav">${sfIcon("star","yellow","sm")} Favoris <span class="pick-n">${favs.length}</span></div><div class="group">${favs.map(e=>pickRowHTML(e)).join("")}</div>` : "";
@@ -613,7 +613,7 @@ function renderTodayLive(draft){
   const top = `<div class="sx-top"><div class="sx-clock"><small>${esc(liveName(draft))}</small><span id="liveClock">${fmtClock(elapsedSec(draft))}</span></div>
     <button class="sx-end nb-done" data-a="finishSession">Terminer</button></div>`;
   if(!draft.exos.length){
-    return `<div class="content live sx">${top}<div class="empty-state"><span class="em">${sfIcon("toolbox","gray","lg")}</span>Tous les exercices ont été retirés.<br>Ajoute-en un pour continuer.</div>
+    return `<div class="content live sx">${top}${emptyHTML("toolbox", "Plus d'exercice", "Tous les exercices ont été retirés. Ajoute-en un pour continuer.")}
     <div class="btnrow"><button class="btn" data-a="addExoOpen">${icon("plus")} Ajouter un exercice</button></div></div>`;
   }
   return `<div class="content live sx">${top}
@@ -638,7 +638,7 @@ function liveHeadHTML(draft){
     const d = e.sets.filter(s=>s.done).length, k = e.sets.length;
     return `<span class="lp-seg ${i===cur?"current":""} ${d===k?"full":""}"><i style="width:${Math.round(d/k*100)}%"></i></span>`;
   }).join("");
-  return `<button class="lp-bar" style="--n:${n}" data-a="openOverview" aria-label="Exercice ${cur+1} sur ${n}, ${c.done} séries sur ${c.total} faites. Voir les exercices de la séance">${segs}</button>
+  return `<button class="lp-bar" style="--n:${n}" data-a="openOverview" aria-label="Exercice ${cur+1} sur ${n}, ${c.done} ${c.done>1?"séries":"série"} sur ${c.total} ${c.done>1?"faites":"faite"}. Voir les exercices de la séance">${segs}</button>
     ${typeof liveAscHTML==="function" ? liveAscHTML(draft) : ""}`;
 }
 // prochain exercice qui reste à faire après « from » (en bouclant), ou -1
@@ -840,7 +840,7 @@ function sxSetVal(def, s){
 function sxSetSpeech(def, s){
   if(isTimed(def)) return `${s.reps||0} secondes`;
   const lt = loadableTypeOf(def);
-  return `${s.reps||0} répétitions${lt && lt!=="bands" && s.weight ? ` à ${fmtDec(s.weight)} kilos` : lt==="bands" && s.weight ? `, ${bandLabel(s.weight)}` : ""}`;
+  return `${nb(s.reps||0, "répétition")}${lt && lt!=="bands" && s.weight ? ` à ${fmtDec(s.weight)} kilos` : lt==="bands" && s.weight ? `, ${bandLabel(s.weight)}` : ""}`;
 }
 // les séries de l'exercice : faites (✓, touchées = corriger), en cours (cadre orange), à venir
 function sxSetsHTML(idx, ex, def, si, jd){
@@ -1078,15 +1078,15 @@ function openPlanDaySheet(day){
   const label = JOURS[(day+1)%7];
   const rows = S.templates.map(t=>`<button class="row tap" data-a="planSet" data-d="${day}" data-id="${t.id}">
       ${cur&&cur.id===t.id ? `<span class="xico done">${icon("check")}</span>` : (EXO_MAP[(t.exos[0]||{}).exoId] ? `<span class="xico r-${tplRegion(t)}">${exoPicto(EXO_MAP[t.exos[0].exoId])}</span>` : `<span class="xico">${icon("bookmark")}</span>`)}
-      <div class="grow"><div class="t">${esc(t.n)}</div><div class="s">${t.exos.length} exercices · ${t.exos.reduce((a,e)=>a+e.sets,0)} séries</div></div>
+      <div class="grow"><div class="t">${esc(t.n)}</div><div class="s">${nb(t.exos.length, "exercice")} · ${nb(t.exos.reduce((a,e)=>a+e.sets,0), "série")}</div></div>
     </button>`).join("");
   openSheet(`<div class="sheet-hd"><span class="t">Le ${label}</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
     <div class="sheet-body">
       ${cur ? `<div class="pd-cur r-${tplRegion(cur)}"><span class="tc-bar-s"></span><div class="grow"><div class="pd-k">Prévu le ${label}</div><div class="pd-t">${esc(cur.n)}</div></div>
         <button class="btn secondary sm" data-a="tplOpenEditor" data-id="${cur.id}">${icon("edit")} Modifier</button></div>` : ""}
-      ${S.templates.length ? `<p class="body" style="margin-bottom:12px">${cur?"Changer pour une autre séance :":`Quelle séance enregistrée veux-tu faire chaque ${label} ?`}</p><div class="group">${rows}</div>
+      ${S.templates.length ? `<p class="body" style="margin-bottom:12px">${cur?"Changer pour une autre séance :":`Laquelle de Mes séances veux-tu faire chaque ${label} ?`}</p><div class="group">${rows}</div>
         ${cur?`<div class="btnrow"><button class="btn ghost" data-a="planSet" data-d="${day}">Ne rien prévoir le ${label}</button></div>`:""}`
-      : `<div class="empty-state" style="padding:24px 20px"><span class="em">${sfIcon("bookmarkG","indigo","lg")}</span>Tu n'as pas encore de séance enregistrée.</div>`}
+      : emptyHTML("bookmarkG", "Mes séances est vide", "Compose une séance : tu pourras la garder pour ce jour.", "", "padding:24px 20px")}
       <div class="btnrow"><button class="btn ${S.templates.length?"secondary":""}" data-a="planNew" data-d="${day}">${icon("plus")} Composer une séance pour le ${label}</button></div>
     </div>`);
 }
@@ -1232,7 +1232,7 @@ Object.assign(ACT, {
   templateMenu(d){
     const t = S.templates.find(x=>x.id===d.id); if(!t) return;
     openModal(`<div class="tm-head r-${tplRegion(t)}"><span class="tc-bar"></span><div><div style="font-weight:700;font-size:calc(17rem/17)">${esc(t.n)}</div>
-      <div class="hr-note" style="margin:2px 0 0">${t.exos.length} exercices · ${(t.days||[]).length?daysLabel(t.days):"aucun jour fixe"}</div></div></div>
+      <div class="hr-note" style="margin:2px 0 0">${nb(t.exos.length, "exercice")} · ${(t.days||[]).length?daysLabel(t.days):"aucun jour fixe"}</div></div></div>
       <div class="menu-list">
         <button data-a="startTemplate" data-id="${t.id}">${icon("play")}<span>Commencer maintenant</span></button>
         <button data-a="tplOpenEditor" data-id="${t.id}">${icon("edit")}<span>Modifier (exercices, jours, nom)</span></button>
@@ -1337,7 +1337,7 @@ Object.assign(ACT, {
       const [ex] = draft.exos.splice(i,1); if(!ex) return;
       if(liveFocusIdx>=draft.exos.length) liveFocusIdx = Math.max(0,draft.exos.length-1);
       changed();
-      toast(`${EXO_MAP[ex.exoId] ? EXO_MAP[ex.exoId].n : "Exercice"} retiré`, null, ()=>{
+      toast(`Retiré : ${EXO_MAP[ex.exoId] ? EXO_MAP[ex.exoId].n : "exercice"}`, null, ()=>{
         if(S.draft!==draft || draft.exos.includes(ex)) return;
         draft.exos.splice(Math.min(i, draft.exos.length), 0, ex); if(draft.startedAt) liveFocusIdx = Math.min(i, draft.exos.length-1); changed();
       });
@@ -1400,12 +1400,12 @@ Object.assign(ACT, {
     const go = ()=>{
       const [ex] = S.custom.exos.splice(i,1); if(!ex) return; changed();
       const list = S.custom.exos;
-      toast(`${EXO_MAP[ex.exoId] ? EXO_MAP[ex.exoId].n : "Exercice"} retiré`, null, ()=>{ if(S.custom.exos!==list || list.includes(ex)) return; list.splice(Math.min(i, list.length), 0, ex); changed(); });
+      toast(`Retiré : ${EXO_MAP[ex.exoId] ? EXO_MAP[ex.exoId].n : "exercice"}`, null, ()=>{ if(S.custom.exos!==list || list.includes(ex)) return; list.splice(Math.min(i, list.length), 0, ex); changed(); });
     };
     if(row){ row.classList.add("leaving"); setTimeout(go, 220); } else go();
   },
   customClear(){
-    confirmSheet({ title:"Vider ma séance ?", html:"Les exercices choisis seront retirés. Tes séances enregistrées ne changent pas.", ok:"Vider", danger:true,
+    confirmSheet({ title:"Vider ma séance ?", html:"Les exercices choisis seront retirés. Mes séances ne changent pas.", ok:"Vider", danger:true,
       onOk:()=>{ S.custom = { exos:[] }; save(); renderTodaySoft(); } });
   },
   startExpress(){
@@ -1448,7 +1448,7 @@ Object.assign(ACT, {
   },
   deleteTemplate(d){
     const t = S.templates.find(x=>x.id===d.id); if(!t) return;
-    confirmSheet({ title:`Supprimer « ${t.n} » ?`, html:"La séance enregistrée et ses jours de planning seront supprimés.", ok:"Supprimer", danger:true, onOk:()=>{
+    confirmSheet({ title:`Supprimer « ${t.n} » ?`, html:"Elle sera retirée de Mes séances, avec ses jours prévus. L'historique ne change pas.", ok:"Supprimer", danger:true, onOk:()=>{
       const i = S.templates.indexOf(t), wasCustom = S.custom.tplId===d.id;
       S.templates = S.templates.filter(x=>x.id!==d.id);
       if(wasCustom) delete S.custom.tplId;
@@ -1507,7 +1507,7 @@ Object.assign(ACT, {
     if(el && el.classList.contains("fav-toggle")){ el.classList.toggle("on", on); el.setAttribute("aria-pressed", on); el.setAttribute("aria-label", on ? "Retirer des favoris" : "Ajouter aux favoris");
       el.classList.remove("pop"); if(on){ void el.offsetWidth; el.classList.add("pop"); } }
     haptic(10); sfx(on ? "fav" : "close"); closeModalIfMenu();
-    toast(on ? `${n} ajouté aux favoris` : `${n} retiré des favoris`, "star");
+    toast(on ? `Ajouté aux favoris : ${n}` : `Retiré des favoris : ${n}`, "star");
     if(picker){ const l = qs("#pickerList"); if(l) l.innerHTML = pickerListHTML(); }
   },
   focusMenu(d){
@@ -1527,7 +1527,7 @@ Object.assign(ACT, {
   openOverview(){ openSheet(`<div class="sheet-hd"><span class="t">Exercices de la séance</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body">${overviewBodyHTML()}</div>`); },
   removeExoOverview(d){
     const draft = S.draft, i = +d.idx, [ex] = draft.exos.splice(i,1); if(!ex) return;
-    toast(`${EXO_MAP[ex.exoId] ? EXO_MAP[ex.exoId].n : "Exercice"} retiré`, null, ()=>{
+    toast(`Retiré : ${EXO_MAP[ex.exoId] ? EXO_MAP[ex.exoId].n : "exercice"}`, null, ()=>{
       if(S.draft!==draft || draft.exos.includes(ex)) return;
       draft.exos.splice(Math.min(i, draft.exos.length), 0, ex); save(); refreshFocusRegion();
       const b = qs(".sheet-body"); if(b && qs("#overlay").classList.contains("open")) b.innerHTML = overviewBodyHTML();

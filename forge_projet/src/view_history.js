@@ -84,7 +84,7 @@ function renderHistory(){
   if(!S.sessions.length){
     return `<div class="navbar"><div class="nb-title">Historique</div></div><div class="content">
       <h1 class="lt">Progrès</h1>${progViewSeg("history")}
-      <div class="empty-state"><span class="em">${sfIcon("history","indigo","lg")}</span>Aucune séance enregistrée pour l'instant.<br>Termine ta première séance pour la voir ici.</div>
+      ${emptyHTML("history", "Aucune séance pour l'instant", "Termine ta première séance pour la retrouver ici.", EMPTY_GO)}
     </div>`;
   }
   const cur = todayISO().slice(0,7), first = firstSessionDate().slice(0,7);
@@ -248,16 +248,17 @@ Object.assign(ACT, {
     switchTab("today");
     toast("Séance chargée dans « Ma séance »");
   },
+  // feuille d'actions iOS ; « Annuler » revient au détail de la séance (pas à l'écran d'avant)
   deleteSession(d){
-    confirmSheet({ title:"Supprimer cette séance ?", html:"Elle disparaîtra de l'historique et des statistiques. Les trophées déjà obtenus sont conservés.", ok:"Supprimer", danger:true,
-      onOk:()=>{
+    actionSheet({ label:"Supprimer cette séance ?", msg:"Elle disparaîtra de l'historique et des statistiques. Les trophées déjà obtenus sont conservés.", cancelA:"openSessionDetail", cancelId:d.id,
+      actions:[{ t:"Supprimer la séance", danger:true, run:()=>{
         const s = S.sessions.find(x=>x.id===d.id); if(!s) return;
         S.sessions = S.sessions.filter(x=>x!==s); recomputePRFlags(); save(); changed();
         toast("Séance supprimée", "trash", ()=>{
           if(S.sessions.some(x=>x.id===s.id)) return;
           S.sessions.push(s); S.sessions.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0); sessionTouched(s); recomputePRFlags(); save(); changed();
         });
-      } });
+      } }] });
   },
 });
 VIEWS.history = renderHistory;
