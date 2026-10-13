@@ -92,7 +92,8 @@ const APP = 'file://' + path.resolve(process.argv[2]);
         const ed = await page.evaluate(() => ({ day: getComputedStyle(document.querySelector('.te-days button.on')).backgroundColor, split: (document.querySelector('.te-split') || {}).textContent || '',
           bar: !!document.querySelector('#tplEdBody .region-bar'), name: getComputedStyle(document.querySelector('#tplEdName')).textAlign, del: getComputedStyle(document.querySelector('.te-del')).color }));
         log('Editor:', JSON.stringify(ed));
-        if (ed.day !== await tokenRGB(page, '--label') || !/Poussée \d+ · Tirage \d+/.test(ed.split) || ed.bar || ed.name !== 'left' || ed.del !== await tokenRGB(page, '--red')) fail('éditeur : jours en encre, répartition en clair, nom à gauche, suppression en rouge');
+        // (la répartition par région a été retirée : seul le résumé « N · séries · ≈ min » reste au-dessus de la liste)
+        if (ed.day !== await tokenRGB(page, '--label') || ed.split || ed.bar || ed.name !== 'left' || ed.del !== await tokenRGB(page, '--red')) fail('éditeur : jours en encre, pas de répartition, nom à gauche, suppression en rouge');
         await page.screenshot({ path: `${OUT}/${pre}05_editor.png` });
       }
       if (n === 'programme' && await page.evaluate(() => !!document.querySelector('#wzBody .tc-bar-s'))) fail('programme : barres de couleur');
