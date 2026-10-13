@@ -28,7 +28,8 @@ const OUT = path.join(OUT_ROOT, 'v31'); fs.mkdirSync(OUT, { recursive: true });
   // 2. composer, puis choisir de l'enregistrer (facultatif) avec un jour → planning
   await page.evaluate(() => ACT.customFill()); await wait(500);   // (le remplissage par l'app : « Compléter »)
   const row = await page.$eval('.save-row', e => e.textContent.replace(/\s+/g, ' ').trim()).catch(() => null); log('Save row:', row);
-  if (!/Ajouter à Mes séances/.test(row || '') || !/Facultatif/.test(row || '')) fail('ligne « Ajouter à Mes séances » facultative');
+  // 2.1.2 : la ligne se suffit (plus de sous-titre « Facultatif : … »)
+  if (!/Ajouter à Mes séances/.test(row || '') || /Facultatif/.test(row || '')) fail('ligne « Ajouter à Mes séances », sans explication');
   await page.$eval('.save-row', e => e.scrollIntoView({ block: 'center' })); await wait(200); await shot('02_composed');
   await page.click('.save-row'); await wait(500);
   const title = await page.textContent('.te-hd .t'); const editable = !!(await page.$('[data-a="tplEdAdd"]'));
