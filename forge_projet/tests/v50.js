@@ -169,11 +169,11 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const howBack = await page.evaluate(() => !!document.querySelector('#ascScene') && !document.querySelector('.asc-how'));
   log('How:', JSON.stringify(how), howBack);
   if (how.t !== 'Comment ça marche' || !how.back || how.req !== 5 || !howBack) fail('comment ça marche, puis retour');
-  // pause : son écran (deux interrupteurs), cette semaine puis annulée
+  // pause : son écran (des boutons depuis la 2.1.2), cette semaine puis « Reprendre »
   await page.evaluate(() => document.querySelector('.asc-row[data-k="pause"]').click()); await wait(900);
-  await page.click('#ascSub [data-a="ascPause"] >> nth=0'); await wait(300);
-  const pz = await page.evaluate(() => ({ p: S.ascent.pauses.slice(), on: !!document.querySelector('[data-a="ascPause"][aria-checked="true"]'), paused: ascent().paused }));
-  await page.click('#ascSub [data-a="ascPause"][aria-checked="true"]'); await wait(300);
+  await page.click('#ascSub .pz-act >> nth=0'); await wait(300);
+  const pz = await page.evaluate(() => ({ p: S.ascent.pauses.slice(), on: !!document.querySelector('#ascSub .pz-on .pz-undo'), paused: ascent().paused }));
+  await page.click('#ascSub .pz-undo'); await wait(300);
   const pz2 = await page.evaluate(() => S.ascent.pauses.length);
   log('Pause:', JSON.stringify(pz), pz2);
   if (pz.p.length !== 1 || !pz.on || !pz.paused || pz2 !== 0) fail('pause déclarée puis annulée');
