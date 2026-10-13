@@ -509,7 +509,8 @@ function closeSheet(){
   sheetStack = []; sheetRestore = null; sheetOnBack = null;
   overlayInert(false);
   const rf = ovReturnFocus; ovReturnFocus = null;
-  if(rf && rf.isConnected && rf.focus) try{ rf.focus({ preventScroll:true }); }catch(e){}
+  // le focus revient au bouton qui a ouvert la feuille (jamais à un champ : le clavier ressortirait)
+  if(rf && rf.isConnected && rf.focus && !/^(INPUT|TEXTAREA|SELECT)$/.test(rf.tagName)) try{ rf.focus({ preventScroll:true }); }catch(e){}
   const gen = overlayGen;
   setTimeout(()=>{
     if(gen!==overlayGen) return;
