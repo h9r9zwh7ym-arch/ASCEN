@@ -78,7 +78,9 @@ require('fs').mkdirSync(OUT, { recursive: true });
   log('Templates:', await page.evaluate(() => S.templates.map(t => t.n)));
   await shot('05_custom_built');
 
-  // --- démarrer ma séance et tout valider ---
+  // --- démarrer ma séance et tout valider : « OK » referme l'édition, puis « Commencer » ---
+  await page.click('.hero .hero-mod'); await wait(600);
+  if (await page.$('#overlay.open .as-btn')) { await page.click('#overlay .as-btn >> nth=0'); await wait(500); }
   await page.click('[data-a="startCustom"]'); await page.waitForSelector('#launch', { state: 'detached', timeout: 6000 });
   await wait(400);
   await shot('06_live');
