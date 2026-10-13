@@ -53,7 +53,7 @@ const OUT = path.join(OUT_ROOT, 'v25'); fs.mkdirSync(OUT, { recursive: true });
   await page.evaluate(() => openPicker({ title: 'Choisir des exercices', multi: true, onDone: () => closeSheet() })); await wait(600);
   const doses = await page.$$eval('.pick-row .dose', els => els.slice(0, 40).map(e => e.textContent));
   log('Doses:', doses.slice(0, 4).join(' | '), '… timed:', doses.find(d => / s$/.test(d)));
-  if (!doses.length || !doses.every(d => /^\d × \d+–\d+ (s|reps)$/.test(d))) fail('dose absente ou mal formée');
+  if (!doses.length || !doses.every(d => /^\d × \d+–\d+ (s|rép\.)$/.test(d))) fail('dose absente ou mal formée');
   if (!doses.some(d => / s$/.test(d))) fail('pas de durée pour les exercices chronométrés');
   await shot('01_picker');
   await page.evaluate(() => closeSheet()); await wait(400);
