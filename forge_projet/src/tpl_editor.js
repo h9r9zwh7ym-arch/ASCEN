@@ -31,8 +31,8 @@ function tplEdBodyHTML(){
     const d = EXO_MAP[x.exoId]; if(!d) return "";
     const ctl = e.order
       ? `<div class="mini-step order"><button aria-label="Monter" data-a="tplEdMove" data-i="${i}" data-d="-1" ${i===0?"disabled":""}>↑</button><button aria-label="Descendre" data-a="tplEdMove" data-i="${i}" data-d="1" ${i===e.exos.length-1?"disabled":""}>↓</button></div>`
-      : `<div class="mini-step"><button aria-label="Moins de séries" data-a="tplEdSets" data-i="${i}" data-d="-1">−</button><span>${x.sets}×</span><button aria-label="Plus de séries" data-a="tplEdSets" data-i="${i}" data-d="1">+</button></div>
-         <button class="icon-btn" aria-label="Retirer" data-a="tplEdRemove" data-i="${i}">${icon("close")}</button>`;
+      : `<div class="mini-step"><button aria-label="Une série de moins pour ${esc(d.n)}" data-a="tplEdSets" data-i="${i}" data-d="-1">−</button><span>${x.sets}×</span><button aria-label="Plus de séries" data-a="tplEdSets" data-i="${i}" data-d="1">+</button></div>
+         <button class="icon-btn" aria-label="Retirer ${esc(d.n)}" data-a="tplEdRemove" data-i="${i}">${icon("close")}</button>`;
     return `<div class="row te-row ${x.fresh?"fresh":""}">${exoIcon(d)}<div class="grow"><div class="t">${esc(d.n)}</div><div class="s">${esc(MUSCLE_MAP[d.muscles[0]].n)}</div></div>${ctl}</div>`;
   }).join("");
   e.exos.forEach(x=>delete x.fresh);
@@ -106,7 +106,7 @@ function weekWizardBody(){
       const t = SESSION_TYPE_MAP[type];
       return `<div class="row wz-row" style="--k:${i}"><span class="wz-day">${JOURS_COURTS[day]}</span><div class="grow"><div class="t">${esc(name)}</div>${wzSub(name, t.n)}</div></div>`;
     }).join("")}</div>
-    ${clash.length?`<div class="te-hint">${ii("warn","warn")} Ces jours sont déjà pris par ${clash.map(t=>`« ${esc(t.n)} »`).join(", ")} : ces séances seront gardées mais retirées de ces jours.</div>`:""}`;
+    ${clash.length?`<div class="te-hint">${ii("warn","warn")}<span>${clash.map(t=>`« ${esc(t.n)} »`).join(clash.length>2?", ":" et ").replace(/, ([^,]*)$/, " et $1")} ${clash.length>1?"occupent":"occupe"} déjà ces jours : ${clash.length>1?"elles restent":"elle reste"} dans Mes séances, sans jour prévu.</span></div>`:""}`;
 }
 function renderWeekWizard(){
   openSheet(`<div class="sheet-hd"><span class="t">Programme de la semaine</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>

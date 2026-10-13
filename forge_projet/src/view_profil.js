@@ -11,8 +11,9 @@ function stepRow(t, v, a, less, more){
   return `<div class="row"><div class="grow t">${t}</div><div class="mini-step"><button data-a="${a}" data-d="-1" aria-label="${less}">−</button><span>${v}</span><button data-a="${a}" data-d="1" aria-label="${more}">+</button></div></div>`;
 }
 const LEN_LABELS = { court:"Courte (≈ 20 min)", moyen:"Moyenne (≈ 35 min)", long:"Longue (≈ 50 min)" };
-const LEVEL_LABELS = { debutant:"Débutant·e", intermediaire:"Intermédiaire", avance:"Avancé·e" };
-const LEVEL_HINTS = { debutant:"Moins d'un an de musculation régulière : exercices accessibles, technique d'abord.", intermediaire:"Un à trois ans de pratique : tous les exercices standard.", avance:"Plus de trois ans : variantes exigeantes privilégiées." };
+// niveau dit en durée de pratique : clair, et sans accord à faire
+const LEVEL_LABELS = { debutant:"Moins d'un an", intermediaire:"1 à 3 ans", avance:"Plus de 3 ans" };
+const LEVEL_HINTS = { debutant:"Exercices accessibles, la technique d'abord.", intermediaire:"Tous les exercices standard.", avance:"Variantes exigeantes privilégiées." };
 
 function ownedEquipCount(){ return EQUIP_TYPES.filter(e=>!e.always && S.equipment.owned[e.id]).length; }
 
@@ -43,10 +44,10 @@ function trophiesCardHTML(){
     </button>`;
 }
 // ---------- réglages regroupés (loi de Hick : peu de choix sur l'écran, le détail à un toucher) ----------
-const MOTIV = [["beat","target","orange","Objectif à battre en séance","Ta série de la dernière fois et ce qu'il faut pour la dépasser"],
+const MOTIV = [["beat","target","orange","Chiffre à battre en séance","Ta série de la dernière fois et ce qu'il faut pour la dépasser"],
   ["nextGoal","flag","red","Prochain cap sur l'accueil","Le but le plus proche : record à battre, trophée, muscle à reprendre"],
   ["trend","trendUp","green","Progression de force","Ta courbe depuis tes débuts, ton statut et les alertes de pause"],
-  ["thenNow","chart","blue","Toi, il y a 3 mois","Tes séries d'avant face à celles de maintenant"]];
+  ["thenNow","chart","blue","Avant et maintenant","Tes séries d'avant face à celles de maintenant"]];
 function motivSummary(){ const on = MOTIV.filter(([k])=>S.settings[k]!==false).length; return on===MOTIV.length ? "Toutes les aides actives" : on ? `${on} aide${on>1?"s":""} sur ${MOTIV.length} active${on>1?"s":""}` : "Aides désactivées"; }
 function sessionPrefsSummary(){
   const r = { court:"repos courts", normal:"repos conseillés", long:"repos longs" }[S.settings.rest||"normal"];
@@ -95,7 +96,6 @@ function dataMoreHTML(){
       <button class="row tap" style="width:100%" data-a="backupData">
         ${sfIcon("download","green")}
         <div class="grow"><div class="t">Sauvegarder mes données</div><div class="s">${backupStatusText()}</div></div>
-        <span class="chev">${icon("chev")}</span>
       </button>
       ${isStandalone() ? "" : `<button class="row tap" style="width:100%" data-a="openInstall">
         ${sfIcon("phone","blue")}
@@ -107,12 +107,10 @@ function dataMoreHTML(){
       <button class="row tap" style="width:100%" data-a="restoreData">
         ${sfIcon("restore","teal")}
         <div class="grow"><div class="t">Restaurer une sauvegarde</div><div class="s">Fichier de sauvegarde ASCEN</div></div>
-        <span class="chev">${icon("chev")}</span>
       </button>
       <button class="row tap" style="width:100%" data-a="exportCSV">
         ${sfIcon("list","teal")}
         <div class="grow"><div class="t">Exporter l'historique (tableur)</div><div class="s">Toutes les séries, à ouvrir dans Numbers ou Excel</div></div>
-        <span class="chev">${icon("chev")}</span>
       </button>
       <button class="row tap" style="width:100%" data-a="openExportImport">
         ${sfIcon("sparkles","purple")}
@@ -126,10 +124,8 @@ function dataMoreHTML(){
       </button>
     </div>
     <div class="group" style="margin-top:14px">
-      <button class="row tap" style="width:100%" data-a="confirmReset">
-        ${sfIcon("trash","red")}
+      <button class="row tap row-danger" style="width:100%" data-a="confirmReset">
         <div class="grow"><div class="t">Réinitialiser toutes les données</div></div>
-        <span class="chev">${icon("chev")}</span>
       </button>
     </div>`;
 }
@@ -223,7 +219,7 @@ function renderProfil(){
 function isStandalone(){ return !!(window.navigator.standalone || (window.matchMedia && matchMedia("(display-mode: standalone)").matches)); }
 function backupStatusText(){
   const b = S.meta.lastBackup;
-  if(!b) return S.sessions.length ? "Jamais sauvegardé — recommandé" : "Un fichier à garder dans Fichiers ou iCloud";
+  if(!b) return S.sessions.length ? "Aucune sauvegarde pour l'instant" : "Un fichier à garder dans Fichiers ou iCloud";
   const n = daysBetween(b, todayISO()), since = S.sessions.length-(S.meta.backupSessions||0);
   return `Dernière : ${n===0?"aujourd'hui":n===1?"hier":`il y a ${n} jours`}${since>0?` · ${since} séance${since>1?"s":""} depuis`:""}`;
 }
@@ -311,7 +307,7 @@ function restoreData(){
 function openInstall(){
   openSheet(`<div class="sheet-hd"><span class="t">Installer ASCEN</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
     <div class="sheet-body">
-      <p class="body" style="margin:0 20px 14px">Installée sur l'écran d'accueil, ASCEN s'ouvre en plein écran comme une vraie app, fonctionne sans réseau, et Safari ne peut plus effacer tes données après quelques jours sans visite.</p>
+      <p class="body" style="margin:0 20px 14px">Installée sur l'écran d'accueil, ASCEN s'ouvre en plein écran, fonctionne sans réseau, et Safari ne peut plus effacer tes données après quelques jours sans visite.</p>
       <div class="group install-steps">
         <div class="row"><span class="step-n">1</span><div class="grow"><div class="t">Touche le bouton Partager</div><div class="s wrap">Le carré avec une flèche vers le haut, dans la barre de Safari</div></div></div>
         <div class="row"><span class="step-n">2</span><div class="grow"><div class="t">Choisis « Sur l'écran d'accueil »</div><div class="s wrap">Fais défiler la liste si besoin</div></div></div>
@@ -356,7 +352,7 @@ function equipBodyHTML(){
   const customs = S.equipment.custom.map(c=>`<div class="row">${sfIcon("wrench","gray")}<div class="grow"><div class="t">${esc(c.n)}</div></div><button class="icon-btn" data-a="removeCustom" data-id="${c.id}" aria-label="Retirer ${esc(c.n)}">${icon("close")}</button></div>`).join("");
   return `<div class="group">${rows}</div>${weightEditors}
     <h2 class="sh">Autre équipement</h2>
-    <div class="hr-note" style="margin-top:-6px">Pour mémoire : ces équipements n'influencent pas les séances proposées. Le matériel ci-dessus, lui, est pris en compte.</div>
+    <div class="hr-note" style="margin-top:-6px">Pour mémoire seulement : non utilisé dans les séances proposées.</div>
     <div class="group" style="margin-top:10px">${customs}
       <div class="row"><input placeholder="Nom de l'équipement" id="customEquipName" maxlength="40" autocomplete="off" enterkeyhint="done" style="flex:1;border:0;background:transparent;height:100%;font-size:calc(17rem/17)"><button class="btn sm" data-a="addCustomEquip">Ajouter</button></div>
     </div>`;
@@ -380,8 +376,8 @@ function goalsBodyHTML(){
     <h2 class="sh">Rythme</h2>
     <div class="group">${stepRow("Séances par semaine", S.goals.daysPerWeek, "stepDays", "Une séance de moins par semaine", "Une séance de plus par semaine")}
       ${stepRow("Exercices par séance", sessionSize(), "stepExoCount", "Moins d'exercices", "Plus d'exercices")}</div>
-    <p class="hr-note">${S.goals.exoCount ? "Nombre d'exercices choisi par toi. " : "Nombre d'exercices réglé selon la durée. "}Environ ${sessionSize()*3} séries, ≈ ${Math.round(sessionSize()*3*(40+75)/60/5)*5} min.</p>
-    <h2 class="sh">Niveau</h2><div class="chips">${Object.keys(LEVEL_LABELS).map(k=>`<button class="chip ${(S.goals.level||"intermediaire")===k?"on":""}" data-a="setLevel" data-v="${k}">${LEVEL_LABELS[k]}</button>`).join("")}</div>
+    <p class="hr-note">${S.goals.exoCount ? "Nombre d'exercices choisi par toi. " : "Nombre d'exercices réglé selon la durée. "}Environ ${sessionSize()*3} séries et ${Math.round(sessionSize()*3*(40+75)/60/5)*5} minutes.</p>
+    <h2 class="sh">Pratique de la musculation</h2><div class="chips">${Object.keys(LEVEL_LABELS).map(k=>`<button class="chip ${(S.goals.level||"intermediaire")===k?"on":""}" data-a="setLevel" data-v="${k}">${LEVEL_LABELS[k]}</button>`).join("")}</div>
     <p class="hr-note">${LEVEL_HINTS[S.goals.level||"intermediaire"]}</p>
     <h2 class="sh">Âge</h2><div class="chips">${[[false,"Moins de 65 ans"],[true,"65 ans et plus"]].map(([v,l])=>`<button class="chip ${!!S.goals.senior===v?"on":""}" data-a="setSenior" data-v="${v?1:0}" aria-pressed="${!!S.goals.senior===v}">${l}</button>`).join("")}</div>
     <p class="hr-note">Sert à l'indice de force : à partir de 65 ans, la force baisse plus vite pendant une pause.</p>
@@ -490,7 +486,7 @@ function openAbout(){
     <h2 class="sh">Mon ascension</h2><p class="body">Chaque séance fait gravir de vraies montagnes, du Moléson à l'Everest. Silhouettes calculées depuis le relief réel (swisstopo swissALTI3D en Suisse ; ailleurs Copernicus GLO-30, © DLR e.V. et Airbus, fourni par l'Union européenne et l'ESA). Voies d'ascension et refuges : © contributeurs OpenStreetMap (ODbL).</p>
     <button class="about-link" data-a="ascHow">Comment fonctionne l'ascension ${icon("chev")}</button>
     <h2 class="sh">Avertissement</h2><p class="body">Les consignes d'exécution proposées sont des repères techniques généraux. Elles ne remplacent pas l'avis d'un professionnel de santé ou d'un coach pour toute question médicale ou en cas de douleur.</p>
-    <h2 class="sh">Copyright</h2><p class="body">${COPYRIGHT}</p>
+    <h2 class="sh">Droits d'auteur</h2><p class="body">${COPYRIGHT}</p>
     </div>`, { restore:openAbout });
 }
 

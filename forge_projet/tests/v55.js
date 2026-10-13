@@ -81,7 +81,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.click('.sx-end'); await wait(450);
   const sheet = await page.evaluate(() => ({ msg: (document.querySelector('.action-sheet .as-msg') || {}).textContent, acts: [...document.querySelectorAll('.action-sheet .as-btn')].map(b => b.textContent) }));
   log('Finish sheet:', JSON.stringify(sheet)); await shot('04_finish_sheet');
-  if (!/1 série sur 8 faite/.test(sheet.msg || '') || sheet.acts.join('|') !== 'Enregistrer et terminer|Abandonner la séance|Continuer') fail('feuille « Terminer »');
+  if (!/1 série sur 8 faite/.test(sheet.msg || '') || sheet.acts.join('|') !== 'Enregistrer et terminer|Abandonner la séance|Reprendre la séance') fail('feuille « Terminer »');
   await page.click('.action-sheet .as-cancel'); await wait(450);
   if (!(await page.evaluate(() => !!S.draft && !document.querySelector('#overlay.open')))) fail('« Continuer » garde la séance');
   await page.click('.sx-end'); await wait(450); await page.click('[data-a="abandonNow"]'); await wait(500);

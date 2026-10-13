@@ -133,7 +133,7 @@ Object.assign(ACT, {
       <h3>Les repères</h3>
       <p><b>${STIM.min} séries</b> par semaine : le seuil à partir duquel un gain de muscle devient mesurable. <b>${STIM.high} séries</b> et plus : le gain continue, mais de plus en plus lentement. Pour gagner seulement en force, environ 3 séries par semaine suffisent.</p>
       <h3>Ta semaine</h3>
-      <p>${under.length && under.length<rows.length ? `À renforcer : ${under.slice(0,4).map(esc).join(", ")}. ` : ""}${twice}/${rows.length} muscles travaillés au moins 2 jours sur 7 : répartir les séries sur 2 jours aide un peu plus qu'une seule grosse séance.</p>
+      <p>${under.length && under.length<rows.length ? `À renforcer : ${under.slice(0,4).map(n=>esc(n.toLowerCase())).join(", ")}. ` : ""}${twice}/${rows.length} muscles travaillés au moins 2 jours sur 7 : répartir les séries sur 2 jours aide un peu plus qu'une seule grosse séance.</p>
       <h3>Sources</h3>
       <ul class="how-src">
         <li><a href="https://sportrxiv.org/index.php/server/preprint/view/460" target="_blank" rel="noopener">Pelland et al. 2024 : volume, fréquence et gains de force et de muscle (méta-régression, 67 études)</a></li>

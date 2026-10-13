@@ -122,13 +122,13 @@ function histMonthHTML(){
       <span class="chev">${icon("chev")}</span>
     </button>`;
   }).join("");
-  return `<section class="hc-card stagger" style="--i:0" aria-label="Calendrier de ${esc(title)}">
+  return `<section class="hc-card stagger" style="--i:0" aria-label="Calendrier ${esc(deMois(title.toLowerCase()))}">
       <div class="hc-head">
         <button class="hc-nav" data-a="histNav" data-d="-1" aria-label="Mois précédent : ${MOIS_LONG[parseISO(prev+"-01").getMonth()]}" ${key<=first ? "disabled" : ""}>${icon("chevL")}</button>
         <div class="hc-title"><b>${esc(title)}</b><span>${list.length ? `${nb(list.length,"séance")}${dur ? " · "+fmtDuration(dur) : ""}` : "Aucune séance"}${adh ? ` · ${adh.done} ${adh.planned>1 ? "des" : "de la"} ${adh.planned>1 ? adh.planned+" prévues" : "prévue"}` : ""}</span></div>
         <button class="hc-nav" data-a="histNav" data-d="1" aria-label="Mois suivant : ${MOIS_LONG[parseISO(next+"-01").getMonth()]}" ${key>=cur ? "disabled" : ""}>${icon("chev")}</button>
       </div>
-      <div class="hc-grid" role="group" aria-label="Jours de ${esc(title)}"><span class="hc-w" aria-hidden="true">L</span><span class="hc-w" aria-hidden="true">M</span><span class="hc-w" aria-hidden="true">M</span><span class="hc-w" aria-hidden="true">J</span><span class="hc-w" aria-hidden="true">V</span><span class="hc-w" aria-hidden="true">S</span><span class="hc-w" aria-hidden="true">D</span>${cells}</div>
+      <div class="hc-grid" role="group" aria-label="Jours ${esc(deMois(title.toLowerCase()))}"><span class="hc-w" aria-hidden="true">L</span><span class="hc-w" aria-hidden="true">M</span><span class="hc-w" aria-hidden="true">M</span><span class="hc-w" aria-hidden="true">J</span><span class="hc-w" aria-hidden="true">V</span><span class="hc-w" aria-hidden="true">S</span><span class="hc-w" aria-hidden="true">D</span>${cells}</div>
     </section>
     ${rk ? `<div class="group rc-entry stagger" style="--i:1"><button class="row tap" style="width:100%" data-a="openRecap" data-kind="month" data-key="${rk}">${sfIcon("sparkles","gray")}<div class="grow"><div class="t">Rewind ${deMois(MOIS_LONG[parseISO(rk+"-01").getMonth()])}</div></div><span class="chev">${icon("chev")}</span></button></div>` : ""}
     ${list.length ? `<h2 class="sh">Séances</h2><div class="group hs-group">${rows}</div>` : `<p class="hr-note center hs-none">Aucune séance en ${mName}.</p>`}`;
@@ -191,7 +191,7 @@ function sessionDetailHTML(s){
     return `<div class="row" style="align-items:flex-start">
       ${exoIcon(def)}
       <div class="grow"><div class="t">${esc(def.n)}</div>
-      <div class="set-chips">${sets.map(st=>`<span class="chip ${st.pr?"pr":""}">${st.pr?ii("bolt"):""}${st.reps||"?"}${loadSuffix(def, st.weight)}</span>`).join("")}</div></div>
+      <div class="set-chips">${sets.map(st=>`<span class="chip ${st.pr?"pr":""}">${st.pr?ii("bolt"):""}${st.reps ? st.reps+(isTimed(def) ? " s" : loadSuffix(def, st.weight) ? "" : " rép.") : "–"}${loadSuffix(def, st.weight)}</span>`).join("")}</div></div>
     </div>`;
   }).join("");
   const time = s.startedAt ? new Date(s.startedAt).toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit"}) : "";
@@ -246,7 +246,7 @@ Object.assign(ACT, {
     S.settings.todayTab = "custom";
     save(); closeSheet();
     switchTab("today");
-    toast("Séance chargée dans « Ma séance »");
+    toast("Séance prête dans Ma séance");
   },
   // feuille d'actions iOS ; « Annuler » revient au détail de la séance (pas à l'écran d'avant)
   deleteSession(d){
@@ -272,7 +272,7 @@ function heSetRow(def, i, j, st){
     ? `<select class="he-sel" data-c="heVal" data-i="${i}" data-j="${j}" data-k="weight" aria-label="Résistance de l'élastique">${[1,2,3,4,5].map(v=>`<option value="${v}" ${Math.round(st.weight||0)===v?"selected":""}>${bandLabel(v)}</option>`).join("")}</select>`
     : lt ? `<span class="he-x">×</span><input class="he-in" type="text" inputmode="decimal" maxlength="5" value="${st.weight!=null?fmtDec(st.weight):""}" placeholder="0" data-c="heVal" data-i="${i}" data-j="${j}" data-k="weight" aria-label="Charge en kg"><span class="he-u">kg</span>` : "";
   return `<div class="he-set"><span class="he-n">${j+1}</span>
-    <input class="he-in" type="text" inputmode="numeric" maxlength="4" value="${st.reps||""}" placeholder="0" data-c="heVal" data-i="${i}" data-j="${j}" data-k="reps" aria-label="${timed?"Secondes":"Répétitions"}"><span class="he-u">${timed?"s":"reps"}</span>
+    <input class="he-in" type="text" inputmode="numeric" maxlength="4" value="${st.reps||""}" placeholder="0" data-c="heVal" data-i="${i}" data-j="${j}" data-k="reps" aria-label="${timed?"Secondes":"Répétitions"}"><span class="he-u">${timed?"s":"rép."}</span>
     ${load}<span class="grow"></span>
     <button class="icon-btn he-del" aria-label="Retirer la série ${j+1}" data-a="heDelSet" data-i="${i}" data-j="${j}">${icon("close")}</button></div>`;
 }

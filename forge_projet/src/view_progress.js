@@ -232,14 +232,13 @@ function exosPaneHTML(){
   const ids = trainedExoIds();
   if(!ids.length) return emptyHTML("dumbbell", "Aucun exercice suivi", "Termine une séance pour suivre ta progression exercice par exercice.", EMPTY_GO);
   return `<h2 class="sh">Tous mes exercices</h2>
-    <div class="sh-sub">Courbe : 1RM estimé pour les exercices chargés, meilleure série pour le poids du corps.</div>
     <div class="group">${ids.map((id,i)=>{
     const { def, loaded, pts } = exoSeries(id);
     if(!def) return "";
     const pr = exoPRs(id);
     return `<button class="row tap stagger" style="--i:${Math.min(i,12)}" data-a="openExoChart" data-id="${id}">
       ${exoIcon(def)}
-      <div class="grow"><div class="t">${esc(def.n)}</div><div class="s">${pts.length} séance${pts.length>1?"s":""} · ${loaded&&pr.maxWeight?"record "+fmtDec(pr.maxWeight)+" kg":"record "+Math.max(...pts.map(p=>p.best))+(isTimed(def)?" s":" reps")}</div></div>
+      <div class="grow"><div class="t">${esc(def.n)}</div><div class="s">${pts.length} séance${pts.length>1?"s":""} · ${loaded&&pr.maxWeight?"record "+fmtDec(pr.maxWeight)+" kg":"record "+Math.max(...pts.map(p=>p.best))+(isTimed(def)?" s":" rép.")}</div></div>
       ${sparkline(pts.slice(-10).map(p=>p.best))}
       <span class="chev">${icon("chev")}</span>
     </button>`;
@@ -250,10 +249,10 @@ function exoChartSheet(id){
   const { def, loaded, pts } = exoSeries(id);
   const pr = exoPRs(id);
   const lbl = p => fmtDate(p.s.date);
-  const main = lineChart(pts.map(p=>({ label:lbl(p), v:p.best, tip:`${fmtDate(p.s.date,"long")} : ${loaded?fmtDec(p.best)+" kg (1RM estimé)":p.best+" reps"}` })),
-    { fmt: v=> loaded ? fmtDec(v)+" kg" : v+" reps", aria: loaded?"1RM estimé par séance":"Meilleure série par séance" });
+  const main = lineChart(pts.map(p=>({ label:lbl(p), v:p.best, tip:`${fmtDate(p.s.date,"long")} : ${loaded?fmtDec(p.best)+" kg (1RM estimé)":p.best+" rép."}` })),
+    { fmt: v=> loaded ? fmtDec(v)+" kg" : v+" rép.", aria: loaded?"1RM estimé par séance":"Meilleure série par séance" });
   const last12 = pts.slice(-12);
-  const cols = columnChart(last12.map(p=>({ label:lbl(p), v: loaded?Math.round(p.vol):p.reps, tip:`${fmtDate(p.s.date,"long")} : ${loaded?fmtKg(p.vol):p.reps+" reps"}` })), { fmt: v=> loaded?fmtKg(v):v+" reps" });
+  const cols = columnChart(last12.map(p=>({ label:lbl(p), v: loaded?Math.round(p.vol):p.reps, tip:`${fmtDate(p.s.date,"long")} : ${loaded?fmtKg(p.vol):p.reps+" rép."}` })), { fmt: v=> loaded?fmtKg(v):v+" rép." });
   const hist = pts.slice(-8).reverse().map(p=>`<div class="row" style="align-items:flex-start">
       <div class="grow"><div class="t" style="font-size:calc(15rem/17)">${esc(fmtDate(p.s.date,"long"))}</div>
       <div class="set-chips">${p.done.map(st=>`<span class="chip ${st.pr?"pr":""}">${st.pr?ii("bolt"):""}${st.reps}${loadSuffix(def, st.weight)}</span>`).join("")}</div></div>
@@ -354,7 +353,7 @@ Object.assign(ACT, {
 // « progresser » (Locke & Latham). On en garde peu d'actifs à la fois pour rester lisible.
 const TARGET_MAX = 6;
 function targetKindsFor(def){ return isTimed(def) ? ["sec"] : kgType(def) ? ["kg","reps"] : ["reps"]; }
-function fmtTarget(kind, v, short){ return kind==="kg" ? fmtDec(v)+" kg" : kind==="sec" ? `${Math.round(v)} s` : short ? `${Math.round(v)} reps` : nb(Math.round(v), "répétition"); }
+function fmtTarget(kind, v, short){ return kind==="kg" ? fmtDec(v)+" kg" : kind==="sec" ? `${Math.round(v)} s` : short ? `${Math.round(v)} rép.` : nb(Math.round(v), "répétition"); }
 // meilleure valeur sur une série : répétitions, charge (au moins 1 répétition) ou secondes
 function bestOf(exoId, kind){
   return memo("best:"+exoId+":"+kind, ()=>{
@@ -396,7 +395,7 @@ function targetSheetHTML(){
       <div class="group"><div class="row">${exoIcon(def)}<div class="grow"><div class="t">${esc(def.n)}</div><div class="s">${cur ? `Ton record : ${fmtTarget(t.kind, cur)}` : "Pas encore pratiqué"}</div></div></div></div>
       ${kinds.length>1 && !t.id ? `<div class="tg-seg">${segHTML("tgKind", [["kg","Charge"],["reps","Répétitions"]], t.kind, "tgKind")}</div>` : ""}
       <div class="te-sec">${t.kind==="kg" ? "Charge à atteindre (sur une série)" : t.kind==="sec" ? "Durée à tenir (sur une série)" : "Répétitions en une série"}</div>
-      <div class="tg-step"><button data-a="tgStep" data-d="-${step}" aria-label="Moins">−</button><div class="tg-val" id="tgVal">${fmtTarget(t.kind, t.value)}</div><button data-a="tgStep" data-d="${step}" aria-label="Plus">+</button></div>
+      <div class="tg-step"><button data-a="tgStep" data-d="-${step}" aria-label="Diminuer l'objectif">−</button><div class="tg-val" id="tgVal">${fmtTarget(t.kind, t.value)}</div><button data-a="tgStep" data-d="${step}" aria-label="Augmenter l'objectif">+</button></div>
       <p class="hr-note tg-hint">${t.value<=cur ? "Déjà atteint : vise un peu plus haut." : "Un objectif atteignable en quelques semaines motive le plus : ni trop facile, ni hors de portée."}</p>
       ${t.id ? `<button class="btn ghost te-del" data-a="delTarget" data-id="${t.id}">Supprimer l'objectif</button>` : ""}
     </div>`;

@@ -210,7 +210,7 @@ function pctTxt(v){ const p = Math.round(v-100); return (p>0?"+":p<0?"−":"")+M
 function strengthCardHTML(){
   if(S.settings.trend===false || !S.sessions.length) return "";
   const pts = strengthSeries(12);
-  const head = `<div class="cc-h tr-h"><div><div class="cc-t">Progression de force</div><div class="cc-s">depuis tes débuts, muscle par muscle · 0 % = ton niveau de départ</div></div>
+  const head = `<div class="cc-h tr-h"><div><div class="cc-t">Progression de force</div><div class="cc-s">depuis tes débuts</div></div>
     <button class="tr-how" data-a="strengthHow" aria-label="Comment la progression est calculée">i</button></div>`;
   if(pts.length<2){
     // avant la courbe : où on en est (3 séances du même exercice), en trois pastilles qui se remplissent
@@ -231,7 +231,7 @@ function strengthCardHTML(){
   if(slope>0.2) lines.push(`${ii("trendUp")}<span>À ce rythme : environ <b>${pctTxt(Math.round(Math.min(last.v+slope*8, last.v*1.15)))}</b> dans 2 mois.</span>`); // estimation prudente : indice ×1,15 au plus
   else if(!lines.length) lines.push(`${ii("target")}<span>Stable ces dernières semaines : une répétition ou un cran de charge en plus relance la courbe.</span>`);
   const pj = exoProjection();
-  if(pj && !pj.flat){ const u = v=>kgType(pj.def) ? `${fmtDec(v)} kg` : `${fmtNum(v)}${isTimed(pj.def) ? " s" : " reps"}`;
+  if(pj && !pj.flat){ const u = v=>kgType(pj.def) ? `${fmtDec(v)} kg` : `${fmtNum(v)}${isTimed(pj.def) ? " s" : " rép."}`;
     lines.push(`${ii("target")}<span>${esc(pj.def.n)} : de ${u(pj.cur)} à environ <b>${u(pj.proj)}</b> vers le ${fmtDate(pj.date)}, si tu gardes ce rythme.</span>`); }
   // par région : la moyenne des muscles de la région
   const st = strengthAt(todayISO()), reg = {};
@@ -239,7 +239,7 @@ function strengthCardHTML(){
   const regions = Object.keys(REGIONS).filter(r=>reg[r]).map(r=>{ const l = reg[r], v = Math.round(100*l.reduce((a,m)=>a+m.ratio,0)/l.length), down = l.some(m=>m.f<1);
     return `<div class="tr-reg r-${r}"><i></i><span>${r==="core" ? "Gainage" : REGIONS[r].n}</span><b>${pctTxt(v)}</b>${down ? `<em>${ii("warn")}</em>` : ""}</div>`; }).join("");
   return `<div class="chart-card trend-card stagger" style="--i:1">${head}
-    <div class="tr-hero"><span class="tr-v" ${(()=>{ const p = Math.round(last.v-100); return `data-count="${Math.abs(p)}" data-pre="${p>0?"+":p<0?"−":""}" data-unit="%" data-thin="1"`; })()}>${pctTxt(last.v)}</span>${wk>0 ? `<span class="tr-d ${d>0?"up":d<0?"down":""}">${d>0?"+":d<0?"−":"±"}${Math.abs(d)} pts en ${nb(wk,"semaine")}</span>` : ""}</div>
+    <div class="tr-hero"><span class="tr-v" ${(()=>{ const p = Math.round(last.v-100); return `data-count="${Math.abs(p)}" data-pre="${p>0?"+":p<0?"−":""}" data-unit="%" data-thin="1"`; })()}>${pctTxt(last.v)}</span>${wk>0 ? `<span class="tr-d ${d>0?"up":d<0?"down":""}">${d>0?"+":d<0?"−":"±"}${nb(Math.abs(d), "point")} en ${nb(wk,"semaine")}</span>` : ""}</div>
     <button class="tr-status st-${status.c}" data-a="strengthHow" aria-label="Statut : ${status.n}. Voir comment il est calculé"><span class="tr-dot"></span><span><b>${status.n}</b> · ${fmtDec(round1(L.acute))} série${round1(L.acute)>=2?"s":""} difficile${round1(L.acute)>=2?"s":""} sur 7 jours (d'habitude : ${Math.round(L.chronic)})</span></button>
     ${lineChart(pts.map(p=>({ label:fmtDate(p.wk), v:p.v-100, tip:`Semaine du ${fmtDate(p.wk)} : ${pctTxt(p.v)} (${nb(p.n,"muscle")})` })), { aria:"Progression de force par semaine", fmt:v=>pctTxt(v+100), tickFmt:v=>(v>0?"+":v<0?"−":"")+Math.abs(v)+"\u202f%" })}
     ${regions ? `<div class="tr-regs">${regions}</div>` : ""}
@@ -373,7 +373,7 @@ Object.assign(ACT, {
     deloadRefresh(); haptic(15); sfx("open");
     toast("Semaine allégée lancée : tes séances sont ajustées pour 7 jours", "leaf");
   },
-  deloadLater(){ S.meta.deloadSnooze = addDaysISO(todayISO(), DELOAD.snooze); save(); changed(); toast("Je te le reproposerai dans une semaine"); },
+  deloadLater(){ S.meta.deloadSnooze = addDaysISO(todayISO(), DELOAD.snooze); save(); changed(); toast("Rappel dans une semaine"); },
   deloadStop(){
     if(!S.deload) return;
     // arrêtée avant la fin : elle compte quand même (pas de nouveau conseil tout de suite)
@@ -410,7 +410,7 @@ Object.assign(ACT, {
 // Comparaisons concrètes, en vraies séries (« 10 × 14 kg »), classées par progression du 1RM estimé :
 // ta meilleure série des 3 dernières semaines face à celle d'il y a environ 3 mois (entre 2 et 4 mois),
 // à défaut ta toute première fois si elle date d'au moins 4 semaines. Seules les hausses de 5 % et plus.
-function setTxt(def, st){ return isTimed(def) ? `${st.reps} s` : `${st.reps}${kgType(def) ? "" : " reps"}${loadSuffix(def, st.weight)}`; }
+function setTxt(def, st){ return isTimed(def) ? `${st.reps} s` : `${st.reps}${kgType(def) ? "" : " rép."}${loadSuffix(def, st.weight)}`; }
 function bestSetOf(def, ex, date){
   let best = null;
   ex.sets.forEach(st=>{ if(!st.done || !(st.reps>0)) return; const p = sessionPerf(def, { sets:[st] }, date); if(p && (!best || p.v>best.v)) best = { v:p.v, txt:setTxt(def, st) }; });

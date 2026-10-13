@@ -24,7 +24,7 @@ function obBody(){
     ${S.equipment.owned.dumbbells ? obDbHTML() : ""}`;
   if(obStep===2) return `<div class="ob-t2">Ton objectif</div><div class="ob-s2">Il règle les fourchettes de répétitions et le volume proposé.</div>
     <div class="group ob-list" role="radiogroup" aria-label="Ton objectif">${checkRows(Object.keys(GOAL_LABELS), GOAL_LABELS, S.goals.overall, "obGoal", GOAL_HINTS)}</div>
-    <div class="te-sec">Ton niveau</div>
+    <div class="te-sec">Depuis combien de temps tu t'entraînes</div>
     <div class="cal-alarm">${Object.keys(LEVEL_LABELS).map(k=>`<button class="chip ${(S.goals.level||"intermediaire")===k?"on":""}" data-a="obLevel" data-v="${k}">${LEVEL_LABELS[k]}</button>`).join("")}</div>
     <div class="ob-note" id="obLevelHint">${LEVEL_HINTS[S.goals.level||"intermediaire"]}</div>
     <div class="te-sec">Séances par semaine</div>

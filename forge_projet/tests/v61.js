@@ -110,6 +110,45 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   if (mus.bar !== mus.tint || mus.top || mus.prio !== 'En priorité cette semaine : ischio-jambiers (1 série sur 4), biceps (2,5 séries sur 4).') fail('stimulus à l\'orange, sans doublon, phrase claire');
   await page.evaluate(() => ACT.progressTab({ v: 'overview', instant: true })); await wait(300);
 
+  // 8. lot C : toast en bas (au-dessus des onglets), en haut sur une feuille ; rangées d'action sans chevron ; unités du détail ; « 1er »
+  await page.evaluate(() => { switchTab('today'); toast('Retiré : Pompes', null, () => {}); }); await wait(500);
+  const tb = await page.evaluate(() => { const r = document.querySelector('#toast').getBoundingClientRect(), t = document.querySelector('.tabbar').getBoundingClientRect(); return { b: r.bottom, tab: t.top, top: r.top }; });
+  await page.evaluate(() => { openGoals(); toast('Test'); }); await wait(500);
+  const ts = await page.evaluate(() => Math.round(document.querySelector('#toast').getBoundingClientRect().top));
+  await page.evaluate(() => closeSheet()); await wait(400);
+  await page.evaluate(() => { switchTab('profil'); ACT.openData(); }); await wait(500);
+  const rows = await page.evaluate(() => ['backupData', 'restoreData', 'exportCSV', 'confirmReset'].map(a => { const r = document.querySelector(`[data-a="${a}"]`); return r ? !!r.querySelector('.chev') : null; }));
+  const red = await page.evaluate(() => { const t = document.querySelector('[data-a="confirmReset"] .t'), e = document.createElement('i'); e.style.color = 'var(--red)'; document.body.appendChild(e); const c = getComputedStyle(e).color; e.remove(); return getComputedStyle(t).color === c; });
+  await page.evaluate(() => closeSheet()); await wait(400);
+  const det = await page.evaluate(() => { const s = { id: 'x', date: '2026-10-01', durationSec: 600, exos: [{ exoId: 'planche', sets: [{ reps: 45, done: true }] }, { exoId: 'pompes', sets: [{ reps: 15, done: true }, { done: true }] }] };
+    openSheet(sessionDetailHTML(s)); const chips = [...document.querySelectorAll('#overlay .set-chips .chip')].map(c => c.textContent); closeSheet(); return { chips, d: fmtDate('2026-10-01', 'long') }; });
+  await wait(400);
+  log('Toast:', JSON.stringify(tb), 'on sheet top', ts, '| chevrons', JSON.stringify(rows), 'red', red, '| detail', JSON.stringify(det));
+  if (!(tb.b <= tb.tab && tb.top > 400) || ts > 120) fail('toast en bas, en haut sur une feuille');
+  if (rows.some(x => x !== false) || !red) fail('rangées d\'action sans chevron, réinitialiser en rouge');
+  if (det.chips.join('|') !== '45 s|15 rép.|–' || det.d !== 'jeudi 1er oct.') fail('unités du détail et « 1er »');
+
+  // 9. choix d'exercices : glisser vers le bas avec une sélection demande d'abord
+  await page.evaluate(() => { switchTab('today'); openPicker({ title: 'x', multi: true, onDone: ids => { window.__picked = ids; closeSheet(); } }); }); await wait(600);
+  await page.evaluate(() => [...new Set([...document.querySelectorAll('#pickerList [data-a="pickerTap"]')].map(r => r.dataset.id))].slice(0, 2).forEach(id => document.querySelector(`#pickerList [data-a="pickerTap"][data-id="${id}"]`).click())); await wait(200);
+  const sel = await page.evaluate(() => picker.selected.length);
+  await page.evaluate(() => dismissSheet()); await wait(400);
+  const pAsk = await page.evaluate(() => [...document.querySelectorAll('.action-sheet button')].map(b => b.textContent.trim()));
+  await page.click('.as-cancel'); await wait(500);
+  const pKept = await page.evaluate(() => ({ list: !!document.querySelector('#pickerList'), n: picker && picker.selected.length }));
+  log('Picker guard:', sel, JSON.stringify(pAsk), JSON.stringify(pKept));
+  if (!sel || !pAsk.some(t => /^Ajouter/.test(t)) || !pAsk.includes('Ignorer la sélection') || !pAsk.includes('Continuer à choisir') || !pKept.list || pKept.n !== sel) fail('choix d\'exercices : sélection protégée');
+  await page.evaluate(() => closeSheet()); await wait(400);
+
+  // 10. séance complète : chrono figé à la dernière série, pas de second « Terminer »
+  await page.evaluate(() => { S.draft = { startedAt: new Date(Date.now() - 20 * 60000).toISOString(), lastSetAt: Date.now() - 5 * 60000, source: 'custom', exos: [{ exoId: 'pompes', sets: [{ reps: 10, done: true }, { reps: 10, done: true }] }] }; save(); renderView('today'); }); await wait(1500);
+  const done1 = await page.evaluate(() => ({ card: !!document.querySelector('.complete-card'), end: getComputedStyle(document.querySelector('.sx-end')).visibility, clock: document.getElementById('liveClock').textContent }));
+  await wait(1200);
+  const done2 = await page.evaluate(() => document.getElementById('liveClock').textContent);
+  log('Complete:', JSON.stringify(done1), done2);
+  if (!done1.card || done1.end !== 'hidden' || done1.clock !== '15:00' || done2 !== '15:00') fail('séance complète : chrono figé, un seul bouton');
+  await page.evaluate(() => { S.draft = null; save(); renderView('today'); }); await wait(300);
+
   // 7. nouvel utilisateur : états vides au même format (symbole gris, titre, texte, une action)
   const ctx2 = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'Europe/Zurich' });
   const p2 = await ctx2.newPage(); p2.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));

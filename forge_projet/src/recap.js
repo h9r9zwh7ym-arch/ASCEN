@@ -170,7 +170,7 @@ function recapBodyHTML(){
       <button class="icon-btn" data-a="recapStep" data-d="1" aria-label="Période suivante" ${canNext?"":"disabled"}>${icon("chev")}</button></div>
     ${rwCoverHTML(kind, key)}
     <div class="te-sec rc-sec">Image à partager</div>
-    <div class="rc-img"><img id="rcImg" alt="Bilan ${esc(recapTitle(kind, key))}"></div>`;
+    <div class="rc-img"><img id="rcImg" alt="${kind==="year" ? `Bilan de ${esc(recapTitle(kind, key).toLowerCase())}` : `Bilan ${esc(deMois(recapTitle(kind, key).toLowerCase()))}`}"></div>`;
 }
 function rwCoverHTML(kind, key){
   const st = recapStats(kind, key);

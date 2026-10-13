@@ -197,7 +197,7 @@ function suggestForExo(exo, setsN, deload){
       const nw = nextWeight(exo, lastW);
       if(nw>lastW+0.001){
         weight = nw; reps = new Array(n).fill(rMin);
-        note = type==="bands" ? `Passe à l'élastique ${bandLabel(nw).toLowerCase()} : tu as dépassé la fourchette. Reprends en bas (${rMin} reps) et remonte.` : `Charge augmentée à ${fmtDec(nw)} kg : tu as dépassé la fourchette. Reprends en bas (${rMin} reps) et remonte.`;
+        note = type==="bands" ? `Passe à l'élastique ${bandLabel(nw).toLowerCase()} : tu as dépassé la fourchette. Reprends en bas (${rMin} répétitions) et remonte.` : `Charge augmentée à ${fmtDec(nw)} kg : tu as dépassé la fourchette. Reprends en bas (${rMin} répétitions) et remonte.`;
       } else {
         reps = reps.map((_,i)=>Math.min(rMax+4, lastReps(i)+1));
         note = type==="bands" ? "Tu utilises ton élastique le plus résistant : ajoute une répétition ou ralentis la descente (3 s)." : "Tu es à ta charge maximale : ajoute une répétition ou ralentis la descente (3 s).";
@@ -290,7 +290,7 @@ function resolveAutoType(){
   if(lowRecent && !upRecent) return { type:"haut", reason:"Tes jambes ont travaillé récemment : on cible le haut du corps." };
   if(upRecent && !lowRecent) return { type:"bas", reason:"Le haut du corps a travaillé récemment : on cible les jambes." };
   if(upRecent && lowRecent) return { type:"core", reason:"Tout le corps a travaillé récemment : séance plus légère de gainage." };
-  return { type:"full", reason:"Tu es bien récupéré·e : séance corps complet, en priorité les groupes les moins travaillés." };
+  return { type:"full", reason:"Ta récupération est bonne : séance corps complet, en priorité les groupes les moins travaillés." };
 }
 
 function poolForType(typeId){

@@ -1211,7 +1211,7 @@ a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est
   - **Éditeur de séance** : la barre de couleurs par région devient une ligne lisible « Séries : Poussée 5 · Tirage 3 »
     (`.te-split`, seulement quand la séance touche au moins deux régions) ; « Supprimer cette séance » et « Supprimer le programme importé » en rouge ; libellés de section
     alignés sur le texte. Programme de la semaine : plus de barres de couleur.
-  - **Champs de texte** (prénom, « Ton pourquoi », nom de séance, liste des haltères) alignés à gauche en taille
+  - **Champs de texte** (prénom, « Ton pourquoi », nom de séance) alignés à gauche en taille
     normale (`.num-field.txt`) ; les grands chiffres centrés restent pour les nombres (poids du corps, valeurs).
   - **Bugs corrigés** : au premier lancement, le matériel coché et l'objectif choisi n'avaient aucun état visible
     (`box-shadow: inset … , var(--shadow)` avec `--shadow:none` rendait la règle invalide ; même cas pour
@@ -1256,6 +1256,58 @@ a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est
   arrêtées à l'état final) placée APRÈS le vrai dans le document, pour que `qs(".sheet")` et `qs("#id")`
   trouvent le vrai ; l'empilement passe par `.nav-top` / `.nav-under`. Pendant le geste, l'élément touché
   est remplacé : ses événements tactiles ne remontent plus au document, on les écoute donc sur lui.
+
+- **Revue « vraie app »** (trois relectures : design, interactions, textes ; corrections en trois lots) :
+  - **Lot A (bloquant)** :
+    - Séance en cours lisible sur iPhone SE (375×667) et 320×568 : tailles qui suivent la hauteur
+      (`@media (max-height:700px / 600px)`), Valider toujours visible ; la photo ne chevauche plus le nom
+      (ancien décalage de `.fc-info`).
+    - Noms d'exercices sur deux lignes au lieu d'être coupés (`.row .t`, `.row .s` ; les explications
+      `.s.wrap` restent entières). Le nom anglais est séparé (`EXO_EN` → `e.aka`) : affiché sous le nom dans
+      la fiche (`.nm-aka`), toujours trouvé par la recherche et l'import.
+    - Premier lancement :
+      - matériel et objectif en listes à cocher (`.ob-list`, `checkRows`, rôle `radio` / `checkbox`) ;
+      - haltères choisis en touchant des charges (`OB_DB_KG`, `obDbW`) plus « Autre charge » (`obDbAdd`),
+        au lieu d'un texte libre où « 4,6 » était ambigu sur le clavier décimal ;
+      - les charges s'affichent avec deux décimales si besoin (`fmtW`, aussi dans Profil › Matériel).
+    - Corrections d'une séance passée et éditeur de séance : quitter avec des changements demande
+      « Ignorer les modifications ? » (`histEdit.dirty`, `heCancel`, `sheetDismissGuard`).
+    - Semaine allégée : carte raccourcie, bouton « Alléger cette semaine ».
+  - **Lot B** :
+    - États vides au format iOS (`emptyHTML` : symbole gris, titre, une ou deux lignes, « Commencer une
+      séance ») ; « Ta force » ne demande plus d'activer un réglage déjà actif (`trendOn` s'il est coupé).
+    - Feuilles de réglages : en-têtes de section discrets (15 pt gris, le titre de la feuille reste le plus
+      fort) ; Objectifs en liste à cocher, avec les mêmes mots qu'au premier lancement (`GOAL_LABELS`,
+      `GOAL_HINTS`) ; rangées avec stepper compact (`stepRow`).
+    - Accessibilité : les feuilles sont des dialogues modaux (`aria-modal`, titre annoncé, focus, reste de
+      l'app `inert` jusqu'à la fermeture : `overlayA11y`, `overlayInert`) ; les interrupteurs ont
+      `role="switch"` et `aria-checked`, tenu à jour après chaque toucher ; les boutons d'icône disent de
+      quel exercice il s'agit (« Retirer Pompes »).
+    - Suppression d'une séance : feuille d'actions, « Annuler » revient au détail (`cancelId`). Restauration
+      d'une sauvegarde : « Annuler » dans le toast remet les données d'avant.
+    - Stimulus à l'orange de la marque (le vert reste pour « fait / réussi », comme iOS) ; « Le plus
+      travaillé » retiré (doublon de la liste).
+  - **Lot C** :
+    - Séance complète : chrono figé à la dernière série (`liveElapsed`), un seul bouton d'enregistrement ;
+      « Reprendre la séance » au lieu de « Continuer ».
+    - Toasts en bas, près du pouce (au-dessus des onglets ou de la barre de repos) ; en haut pendant une
+      séance ou sur une feuille, pour ne couvrir ni « Valider » ni les boutons du bas ; fond presque opaque.
+    - Rangées d'action (sauvegarder, restaurer, exporter) sans chevron ; « Réinitialiser » en rouge sans icône.
+    - Choix d'exercices fermé d'un geste avec des exercices cochés : « Ajouter / Ignorer la sélection /
+      Continuer à choisir » (`pickerAsk`). Graphiques d'un écran poussé : ils attendent la fin du glissement.
+    - « Programme de la semaine » en lien d'action (plus de cadre en pointillés) ; compteur centré ; axes en
+      12 px ; carte du Profil et pied de « Cette semaine » sans coupure à 320 px.
+  - **Textes** : pluriels via `nb()` ; toasts sans accord fautif (« Retiré : Pompes ») ; plus de jargon
+    (JSON, prompt, IndexedDB, Forge) ; « séance enregistrée » = l'historique, les modèles = « Mes séances »
+    (« Ajouter à Mes séances ») ; « N sem. d'affilée » au lieu de « série de N sem. » (le mot « série »
+    reste aux exercices) ; « rép. » au lieu de « reps » ; « En priorité cette semaine : ischio-jambiers
+    (1 série sur 4) » ; niveaux en durée de pratique (« Moins d'un an », « 1 à 3 ans », « Plus de 3 ans »)
+    et tournures sans accord (« Gagner en force », « Force doublée », « Ta récupération est bonne ») ;
+    « 1er » dans les dates ; plages avec tiret demi-cadratin (« 8–12 »).
+  - **Pas fait** (à garder pour plus tard) : espaces insécables automatiques avant « : ; ! ? » (une passe
+    sur tout le texte rendu changerait aussi les textes que vérifient les tests) ; trophées 2D et 3D tout à
+    fait homogènes ; redessin de la carte des muscles.
+  - Test : `tests/v61.js` (et v22, v31, v36, v37, v38, v44, v47, v52, v54, v55, v57, v59, v60 adaptés).
 
 Les sections plus haut qui parlent de Geist, Barlow, `#F4F3F1` ou `#FF6B3D` décrivent l'état d'avant cette refonte.
 

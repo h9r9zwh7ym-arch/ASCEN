@@ -126,7 +126,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.fill('#pickerSearch', 'pomp'); await wait(300);
   const searched = await page.evaluate(() => !!document.querySelector('#pickerList .pick-h.hab'));
   log('Picker:', JSON.stringify(pk), JSON.stringify(both), searched);
-  if (!/Tes habituels/.test(pk.h) || !pk.rows.length || pk.rows.length > 6 || pk.rows.join() !== pk.habit.filter(id => pk.rows.includes(id)).join() || both.length < 2 || !both.every(Boolean) || searched) fail('choix d\'exercices : habituels en tête, sélection sur toutes les lignes, masqués en recherche');
+  if (!/Habituels/.test(pk.h) || !pk.rows.length || pk.rows.length > 6 || pk.rows.join() !== pk.habit.filter(id => pk.rows.includes(id)).join() || both.length < 2 || !both.every(Boolean) || searched) fail('choix d\'exercices : habituels en tête, sélection sur toutes les lignes, masqués en recherche');
   await shot('04_picker');
   await page.evaluate(() => closeSheet()); await wait(400);
 

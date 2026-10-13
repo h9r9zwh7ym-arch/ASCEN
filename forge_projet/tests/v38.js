@@ -55,7 +55,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const prog = await page.evaluate(() => [...document.querySelectorAll('.cel-prog:not(.cel-beat):not(.cel-win)')].map(e => e.textContent.trim()));
   await shot('01_celebration');
   log('Progress lines:', JSON.stringify(prog));
-  if (prog.length !== 2 || !/Développé couché haltères : 14 kg, \+4 kg depuis le/.test(prog.join('|')) || !/Pompes : 15 reps, \+3 reps/.test(prog.join('|'))) fail('lignes de progrès (charge +4 kg, pompes +3)');
+  if (prog.length !== 2 || !/Développé couché haltères : 14 kg, \+4 kg depuis le/.test(prog.join('|')) || !/Pompes : 15 rép\., \+3 rép\./.test(prog.join('|'))) fail('lignes de progrès (charge +4 kg, pompes +3)');
   if (prog.some(t => /Planche/.test(t))) fail('pas de ligne sans progrès');
   await page.evaluate(() => closeSheet()); await wait(400);
 

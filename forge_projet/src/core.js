@@ -460,10 +460,10 @@ const MOIS = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.
 const MOIS_LONG = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
 const JOURS = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
 function fmtDate(iso, opt){
-  const d = parseISO(iso);
-  if(opt==="long") return `${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}`;
-  if(opt==="short") return `${JOURS[d.getDay()].slice(0,3)}. ${d.getDate()} ${MOIS[d.getMonth()]}`;
-  return `${d.getDate()} ${MOIS[d.getMonth()]}`;
+  const d = parseISO(iso), n = d.getDate()===1 ? "1er" : d.getDate();   // « 1er octobre », comme en français écrit
+  if(opt==="long") return `${JOURS[d.getDay()]} ${n} ${MOIS[d.getMonth()]}`;
+  if(opt==="short") return `${JOURS[d.getDay()].slice(0,3)}. ${n} ${MOIS[d.getMonth()]}`;
+  return `${n} ${MOIS[d.getMonth()]}`;
 }
 function fmtRelative(iso){
   const n = daysBetween(iso, todayISO());

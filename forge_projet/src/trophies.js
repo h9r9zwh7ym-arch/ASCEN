@@ -104,7 +104,7 @@ const MEDALS = [
 
   { id:"prs", g:"bolt", c:"orange",      cat:"force", n:"Records", unit:"records personnels battus", one:"record personnel battu", t:[1,15,75,300], val:()=>S.meta.prCount||0 },
   { id:"heavy", g:"barbell", c:"indigo",    cat:"force", n:"Poids lourd", unit:"kg sur une seule série",                       t:[20,60,100,150],  val:heaviestSet, desc:"La charge la plus lourde que tu as déplacée sur une série." },
-  { id:"doubled", g:"trendUp", c:"green",  cat:"force", n:"Deux fois plus fort", unit:"ta force de départ",     t:[1.2,1.5,2,2.5], base:1, val:bestStrengthRatio, fmt:v=>v?"×"+round1(v).toLocaleString("fr-FR",{minimumFractionDigits:1}):"–", desc:"Ton meilleur 1RM estimé sur un exercice chargé, comparé à tes 3 premières séances de cet exercice (pratiqué depuis au moins 90 jours). Le diamant demande ×2,5." },
+  { id:"doubled", g:"trendUp", c:"green",  cat:"force", n:"Force doublée", unit:"ta force de départ",     t:[1.2,1.5,2,2.5], base:1, val:bestStrengthRatio, fmt:v=>v?"×"+round1(v).toLocaleString("fr-FR",{minimumFractionDigits:1}):"–", desc:"Ton meilleur 1RM estimé sur un exercice chargé, comparé à tes 3 premières séances de cet exercice (pratiqué depuis au moins 90 jours). Le diamant demande ×2,5." },
   { id:"mastery", g:"cap", c:"purple",  cat:"force", n:"Maîtrise", unit:"exercices maîtrisés", one:"exercice maîtrisé", t:[1,5,15,30],       val:masteredExosCount, desc:"Un exercice est maîtrisé quand tu l'as pratiqué dans 8 séances." },
 
   { id:"volume", g:"mountain", c:"brown",   cat:"volume", n:"Tonnage", unit:"kg soulevés au total",                         t:[1000,25000,250000,1500000], val:totalVolumeAllTime },
@@ -396,8 +396,8 @@ function sessionProgressLines(session){
     const then = best(old.exos.find(e=>e.exoId===ex.exoId), def); if(!then) return;
     const since = `depuis le ${fmtDate(old.date)}`;
     if(kgType(def) && now.w>then.w+0.01) lines.push({ g:(now.w-then.w)/Math.max(1,then.w), t:`${def.n} : ${fmtDec(now.w)} kg, +${fmtDec(now.w-then.w)} kg ${since}` });
-    else if(kgType(def) && Math.abs(now.w-then.w)<0.01 && now.r>then.r) lines.push({ g:(now.r-then.r)/Math.max(1,then.r)*.6, t:`${def.n} : ${fmtNum(now.r)} reps à ${fmtDec(now.w)} kg, +${fmtNum(now.r-then.r)} ${since}` });
-    else if(!kgType(def) && now.r>then.r){ const u = isTimed(def) ? " s" : " reps";
+    else if(kgType(def) && Math.abs(now.w-then.w)<0.01 && now.r>then.r) lines.push({ g:(now.r-then.r)/Math.max(1,then.r)*.6, t:`${def.n} : ${fmtNum(now.r)} rép. à ${fmtDec(now.w)} kg, +${fmtNum(now.r-then.r)} ${since}` });
+    else if(!kgType(def) && now.r>then.r){ const u = isTimed(def) ? " s" : " rép.";
       lines.push({ g:(now.r-then.r)/Math.max(1,then.r), t:`${def.n} : ${fmtNum(now.r)}${u}, +${fmtDec(now.r-then.r)}${u} ${since}` }); }
   });
   return lines.sort((a,b)=>b.g-a.g).slice(0,2).map(l=>l.t);
@@ -497,7 +497,7 @@ function celRecord(session){
   });
   return best;
 }
-function celSetTxt(def, st){ return isTimed(def) ? `${st.reps} s` : kgType(def) && st.weight ? `${st.reps} × ${fmtDec(st.weight)} kg` : `${st.reps} reps`; }
+function celSetTxt(def, st){ return isTimed(def) ? `${st.reps} s` : kgType(def) && st.weight ? `${st.reps} × ${fmtDec(st.weight)} kg` : `${st.reps} rép.`; }
 function celRecordHTML(session){
   const r = celRecord(session); if(!r) return "";
   return `<section class="cel-card cel-rec"><span class="cr-ic">${exoPicto(r.def)}</span>

@@ -93,9 +93,9 @@ function animateCollapse(el, open, html, quiet){
 const LAUNCH_LINES = [
   "Chaque série compte.",
   "Un cran plus haut.",
-  "Concentré. Régulier. Plus fort.",
-  "Le toi de demain te remercie.",
-  "Une rep après l'autre.",
+  "Concentration. Régularité. Progrès.",
+  "Demain, tu te diras merci.",
+  "Une répétition après l'autre.",
   "Pas de raccourci, que du progrès.",
 ];
 function showLaunch(session){

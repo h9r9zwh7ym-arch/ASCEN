@@ -3072,3 +3072,29 @@ body.live-focus #v-today{padding-bottom:0}
 #overlay .sheet-body h2.sh{font-family:inherit;font-size:var(--fs-sub);font-weight:600;color:var(--label2);letter-spacing:0;line-height:1.3;margin:24px 20px 8px}
 #overlay .sheet-body h2.sh .more{font-weight:500}
 .sheet:focus,.center-modal:focus{outline:none}
+/* séance complète : « Enregistrer la séance » de la carte suffit, pas de second « Terminer » en haut */
+.sx:has(.complete-card) .sx-end{visibility:hidden}
+/* action destructrice : texte rouge, sans chevron ni icône (comme les réglages iOS) */
+.row-danger .t{color:var(--red)}
+/* toasts en bas, près du pouce (« Annuler » s'atteint sans changer de prise), au-dessus de la barre
+   d'onglets ou de la barre de repos ; en séance et sur une feuille, en haut, pour ne couvrir ni « Valider »
+   ni les boutons du bas */
+#toast{top:auto;bottom:calc(var(--tabbar-h) + var(--sab) + 12px);transform:translateX(-50%) translateY(24px) scale(.9)}
+body:has(#restbar.show) #toast{bottom:calc(var(--tabbar-h) + var(--sab) + 84px)}
+body.live-focus #toast,body:has(#overlay.show) #toast{top:calc(10px + var(--sat));bottom:auto;transform:translateX(-50%) translateY(-24px) scale(.9)}
+#toast.show,body.live-focus #toast.show,body:has(#overlay.show) #toast.show{transform:translateX(-50%) translateY(0) scale(1)}
+/* écran poussé : les graphiques attendent la fin du glissement pour se dessiner (sinon on ne les voit pas) */
+.nav-top .pane-in :is(.trend-card .linechart,.mm-week .mm-z.on,.wv-track i){animation-play-state:paused}
+/* finitions : pastille de compteur centrée sur la ligne, chiffres d'axes lisibles (12 px), pied de la carte
+   « Cette semaine » sans coupure au milieu d'un groupe à 320 px */
+.sec-count{vertical-align:middle;line-height:1;font-variant-numeric:tabular-nums}
+.lc-tick{font-size:12px}
+.wk-foot span{white-space:nowrap}
+.wk-foot{flex-wrap:wrap;row-gap:4px}
+#toast{background:color-mix(in srgb,var(--bg2) 94%,transparent)}   /* lisible même sur une photo ou une carte */
+/* carte du Profil : le prénom (ou l'invitation à l'ajouter) passe sur deux lignes plutôt que d'être coupé */
+.profile-hero .ph-name{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow-wrap:anywhere}
+/* « Programme de la semaine » sous Mes séances : un lien d'action comme « Choisir une autre séance », plus de
+   cadre en pointillés (qui faisait brouillon) */
+.tpl-add.wp-wizard{border:0;background:none;min-height:44px;margin-top:4px;font-weight:500;font-size:var(--fs-body)}
+.tpl-add.wp-wizard:active{background:none;opacity:.6;transform:none}

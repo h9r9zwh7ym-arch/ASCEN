@@ -524,6 +524,7 @@ function closeSheet(){
 function sheetDismissGuard(){
   if(typeof tplEdit!=="undefined" && tplEdit && tplEdit.dirty && qs("#tplEdBody")){ ACT.tplEdCancel(); return true; }
   if(typeof histEdit!=="undefined" && histEdit && histEdit.dirty && qs("#heBody")){ ACT.heCancel(); return true; }
+  if(typeof picker!=="undefined" && picker && picker.multi && picker.selected.length && qs("#pickerList")){ ACT.pickerAsk(); return true; }
   return false;
 }
 function dismissSheet(){ if(sheetBack()) return; if(!sheetDismissGuard()) closeSheet(); }
