@@ -542,7 +542,8 @@ function showCelebration(session, ups, hits, won){
     const ln = qs(".cel .ct-line"); if(ln) ln.classList.add("draw");
   }));
   setTimeout(()=>confettiBurst(null, innerHeight*0.3, ups.length||moved||(hits&&hits.length) ? 150 : 90), 150);
-  setTimeout(()=>sfx(ups.length||moved||(hits&&hits.length) ? "medal" : "exo"), 200);
+  setTimeout(()=>sfx("complete"), 200);
+  if(ups.length||moved||(hits&&hits.length)) setTimeout(()=>sfx("medal"), 1900);
 }
 
 Object.assign(ACT, {

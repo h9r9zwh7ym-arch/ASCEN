@@ -253,7 +253,9 @@ function ascEta(m, a){
   const time = w<1 ? "en quelques jours" : w<8.5 ? `≈ ${nb(Math.round(w), "semaine")}` : w<78 ? `≈ ${Math.round(w/4.35)} mois` : `≈ ${fmtDec(Math.round(w/26)/2)} ans`;
   return { s, txt:`≈ ${nb(s, "séance")}`, time };
 }
-const ascEtaTxt = (m, a)=>{ const e = ascEta(m, a); return e.time ? `${e.txt} · ${e.time}` : e.txt; };
+// « ≈ 2 séances, soit 4 semaines à ton rythme » : le lien entre séances et durée est dit en clair
+const ascEtaLine = e=>!e.time ? e.txt : e.time.startsWith("≈ ") ? `${e.txt}, soit ${e.time.slice(2)} à ton rythme` : `${e.txt}, ${e.time}`;
+const ascEtaTxt = (m, a)=>ascEtaLine(ascEta(m, a));
 // date d'arrivée au sommet de l'expédition en cours (en attente de la suivante)
 function ascSummitDate(a){ const s = a.summits[a.summits.length-1]; return a.wait && s && s.key===a.key ? s.date : null; }
 
@@ -479,7 +481,7 @@ function ascStepsListHTML(a, all){
     if(past){ node = ascIc("check"); r = `<span class="st-r"><small>${d ? `le ${fmtDate(d)}` : "atteint"}</small></span>`; }
     else { const m = c[0]-alt, e = ascEta(m, a);
       if(nx){ const p0 = i ? camps[i-1][0] : D.start; node = `<i class="st-ring" style="--p:${Math.round(Math.max(0, Math.min(1, (alt-p0)/Math.max(1, c[0]-p0)))*100)}"></i>`;
-        r = `<span class="st-r"><b class="num">dans ${ascM(m)}</b><small>${esc(e.time ? `${e.txt} · ${e.time}` : e.txt)}</small></span>`; }
+        r = `<span class="st-r"><b class="num">dans ${ascM(m)}</b><small>${esc(ascEtaLine(e))}</small></span>`; }
       else if(/\b(mois|ans)\b/.test(e.time)) r = `<span class="st-r"><b class="num">${ascM(m)}</b><small>à gravir</small></span>`;
       else r = `<span class="st-r"><b>${esc(e.txt)}</b>${e.time ? `<small>${esc(e.time)}</small>` : ""}</span>`;
       if(top) node = ascIc("flag"); }
@@ -515,8 +517,8 @@ function ascNextHTML(a){
     r = fmtNum(X.top)+" m"; rs = esc(X.region);
   } else {
     const c = ni>=0 ? camps[ni] : [D.top, "Sommet", D.top], m = c[0]-alt, e = ascEta(m, a);
-    t = ni>=0 ? `${c[1]} · ${ascStory(a.key)[ni].t}` : "Sommet";
-    sub = e.time ? `${e.txt} · ${e.time}` : e.txt; r = ascM(m); rs = "à gravir";
+    t = ni>=0 ? `${c[1]} – ${ascStory(a.key)[ni].t}` : "Sommet";
+    sub = ascEtaLine(e); r = ascM(m); rs = "à gravir";
   }
   return `<section class="card asc-card asc-steps asc-next" id="ascSteps" aria-label="Prochaine étape">
     <div class="an-row"><span class="an-t">${esc(t)}<small>${esc(sub)}</small></span><span class="an-r"><b class="num">${r}</b><small>${rs}</small></span></div>

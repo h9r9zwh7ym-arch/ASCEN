@@ -165,6 +165,25 @@ function tok(t, body, gain){
   src.start(t0, Math.random()*0.5); src.stop(t0+0.03);
   tone((body||190)*v, t, 0.045, { gain:0.22*g0, to:(body||190)*0.6*v, att:0.002 });
 }
+// lame de marimba : attaque franche, fondamentale ronde, partiel à ×4 très bref (le bois), un peu de salle
+function mallet(f, t, dur, gain){
+  tone(f, t, dur, { gain, att:0.002, wet:1 });
+  tone(f*3.99, t, dur*0.16, { gain:gain*0.22, att:0.001 });
+  tone(f*9.8, t, 0.02, { gain:gain*0.05, att:0.001 });
+}
+// cuivre doux : deux dents de scie à peine désaccordées, filtre qui s'ouvre à l'attaque puis se referme
+function brass(f, t, dur, gain){
+  const t0 = AC.currentTime + t, g = AC.createGain(), lp = AC.createBiquadFilter();
+  lp.type = "lowpass"; lp.Q.value = 0.7;
+  lp.frequency.setValueAtTime(f*1.2, t0); lp.frequency.exponentialRampToValueAtTime(f*7, t0+0.06); lp.frequency.exponentialRampToValueAtTime(f*2.2, t0+dur);
+  g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(gain, t0+0.035); g.gain.exponentialRampToValueAtTime(gain*0.55, t0+dur*0.5); g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+  lp.connect(g); g.connect(sfxDest()); const wet = sfxWet(); if(wet) g.connect(wet);
+  [1, 1.0045].forEach(k=>{ const o = AC.createOscillator(); o.type = "sawtooth"; o.frequency.value = f*k; o.connect(lp); o.start(t0); o.stop(t0+dur+0.05); });
+}
+// coup sourd (grosse caisse feutrée) : sinus qui plonge
+function thump(t, gain){ tone(110, t, 0.45, { gain, to:42, att:0.003 }); tok(t, 120, 0.6); }
+// pluie d'étincelles : petites cloches aiguës au hasard, de part et d'autre
+function sparkle(t, n, gain){ const sc = [NT.E6, NT.G6, NT.A6, NT.C7]; for(let i=0;i<n;i++) tone(sc[i%sc.length]*(1+(Math.random()-.5)*0.004)*(i%3===2?2:1), t+i*0.045+Math.random()*0.02, 0.22, { gain:gain*(1-i/(n*1.4)), pan:(i%2?.5:-.5), wet:1, att:0.001 }); }
 let lastTok = 0;
 // notes (Hz)
 const NT = { C5:523.25, D5:587.33, E5:659.25, G5:783.99, A5:880, C6:1046.5, D6:1174.7, E6:1318.5, G6:1568, A6:1760, C7:2093 };
@@ -175,15 +194,26 @@ const SFX = {
   close(){ tone(430, 0, 0.08, { gain:0.12, to:240, att:0.004 }); tok(0, 170, 0.5); },
   seg(){ tok(0, 200, 0.8); },
   swipe(){ whoosh(0, 0.2, 700, 2200, 0.18); },
-  set(){ bell(NT.E6, 0, 0.35, 0.16); bell(NT.A6, 0.075, 0.5, 0.14); },
-  exo(){ [NT.C6, NT.E6, NT.G6, NT.C7].forEach((f,i)=>bell(f, i*0.07, 0.55, 0.13)); },
-  pr(){ [NT.G6, NT.C7, NT.E6, NT.G6, NT.C7].forEach((f,i)=>tone(f*(1+Math.random()*0.01), i*0.05, 0.3, { gain:0.2, type:"triangle", pan:(i%2?.4:-.4), wet:1 })); bell(NT.C6, 0, 0.9, 0.12); tone(NT.C5, 0, 0.6, { gain:0.08, type:"triangle", att:0.01, wet:1 }); },
+  // série validée : un « tic-ding » de marimba, court (on l'entend 20 fois par séance)
+  set(){ mallet(NT.G5, 0, 0.32, 0.2); mallet(NT.D6, 0.065, 0.42, 0.15); },
+  // mieux que la dernière fois : la même chose, qui monte d'une note de plus
+  beat(){ mallet(NT.G5, 0, 0.3, 0.18); mallet(NT.D6, 0.06, 0.34, 0.15); mallet(NT.G6, 0.12, 0.5, 0.13); },
+  // exercice terminé : arpège qui monte et se pose sur une basse chaude
+  exo(){ [NT.C5, NT.E5, NT.G5, NT.C6].forEach((f,i)=>mallet(f, i*0.07, 0.5, 0.17)); tone(NT.C5/2, 0.2, 0.9, { gain:0.07, type:"triangle", att:0.03, wet:1 }); bell(NT.E6, 0.3, 0.9, 0.08); },
+  // record : souffle qui monte, double coup de cuivre (da-DAAM) et étincelles
+  pr(){
+    whoosh(0, 0.32, 600, 5000, 0.08);
+    [NT.C5, NT.E5, NT.G5].forEach(f=>brass(f/2, 0.12, 0.16, 0.05));
+    [NT.C5, NT.G5, NT.C6].forEach(f=>brass(f/2, 0.3, 0.9, 0.06));
+    thump(0.3, 0.32); sparkle(0.36, 9, 0.07);
+  },
+  // fin de séance : coup sourd, accord ample qui s'ouvre (cuivres + nappe), cascade de cloches, souffle d'air
   complete(){
-    // accord de do qui s'installe (basse douce), cloches qui montent, souffle d'air au sommet
-    tone(NT.C5/2, 0, 1.8, { gain:0.08, att:0.06, wet:1 });
-    [NT.C5, NT.E5, NT.G5].forEach((f,i)=>tone(f, i*0.1, 1.5, { gain:0.11, type:"triangle", att:0.03, wet:1 }));
-    [NT.C6, NT.E6, NT.G6, NT.C7].forEach((f,i)=>bell(f, 0.32+i*0.08, 1, 0.12));
-    whoosh(0.3, 0.6, 3000, 8000, 0.05);
+    thump(0, 0.4);
+    [NT.C5/2, NT.G5/2, NT.E5, NT.G5].forEach((f,i)=>pad(f, 0.02+i*0.03, 2.8, 0.05));
+    [NT.C5, NT.E5, NT.G5].forEach(f=>brass(f/2, 0.04, 1.4, 0.045));
+    [NT.G5, NT.C6, NT.E6, NT.G6, NT.C7].forEach((f,i)=>bell(f, 0.42+i*0.1, 1.5, 0.1));
+    whoosh(0.4, 1.1, 1500, 9000, 0.05); sparkle(1, 8, 0.05);
   },
   medal(){ [NT.G5, NT.C6, NT.E6, NT.G6].forEach((f,i)=>bell(f, i*0.09, 0.9, 0.12)); tone(NT.C5, 0.27, 1.1, { gain:0.06, type:"triangle", att:0.04, wet:1 }); },
   count(){ tone(NT.A5, 0, 0.16, { gain:0.42, type:"triangle" }); tone(NT.A5*2, 0, 0.08, { gain:0.14 }); }, // net : les chiffres se suivent vite

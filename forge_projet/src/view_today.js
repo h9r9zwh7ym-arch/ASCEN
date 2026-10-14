@@ -1008,9 +1008,9 @@ function sxStepsHTML(idx, ex, def, si, st){
 }
 // +/− sans tout redessiner : seules les séries et les compteurs changent (le mouvement continue)
 // ---------- saisie en un geste ----------
-// Glisser vers le haut ou le bas sur le chiffre (répétitions ou charge) le fait défiler d'un cran tous les 34 px,
+// Glisser vers le haut ou le bas sur le chiffre (répétitions ou charge) le fait défiler d'un cran tous les 46 px,
 // avec un petit son à chaque cran ; lâcher enregistre. (Les secondes d'un exercice tenu ont leur règle.)
-const VAL_PX = 34, DUR_MIN = 15, DUR_MAX = 600;
+const VAL_PX = 46, DUR_PX = 22, DUR_MIN = 15, DUR_MAX = 600;   // px par cran : chiffre, règle (5 s)
 let valDrag = null;
 function valDragStep(def, f, v, n){
   if(f==="weight"){ let w = v||0; for(let i=0;i<Math.abs(n);i++) w = stepWeightValue(def, w, Math.sign(n)); return w; }
@@ -1054,7 +1054,7 @@ document.addEventListener("keydown", e=>{
 function fmtDur(s){ return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
 function mountDurDial(dial){
   if(dial._on) return; dial._on = true;
-  const STEP = 12, cv = qs("canvas", dial), num = qs("#durNum b"), exi = +dial.dataset.exi, si = +dial.dataset.si;
+  const STEP = DUR_PX, cv = qs("canvas", dial), num = qs("#durNum b"), exi = +dial.dataset.exi, si = +dial.dataset.si;
   const start = Math.max(DUR_MIN, Math.min(DUR_MAX, Math.round((+dial.dataset.v||30)/5)*5));
   const P0 = DUR_MIN/5*STEP, P1 = DUR_MAX/5*STEP;
   let pos = start/5*STEP, vel = 0, drag = null, raf = 0, last = start, saved = +dial.dataset.v;
@@ -1810,7 +1810,8 @@ Object.assign(ACT, {
     if(beat){ floatText(fx0, fy0, "Mieux que la dernière fois", "beat", "trendUp"); haptic(20); }
     st.done = true;
     { const fin = ex.sets.every(s=>s.done), rest = S.draft.exos.some(e=>e.sets.some(s=>!s.done));
-      sfx(!rest ? "complete" : st.pr ? "pr" : fin ? "exo" : "set"); }
+      // record > exercice terminé > mieux que la dernière fois > série (la fin de séance a son propre son)
+      sfx(st.pr ? "pr" : fin || !rest ? "exo" : beat ? "beat" : "set"); }
     haptic(st.pr ? [25, 40, 25] : 18); // la coche franche : une vibration nette (deux pour un record)
     justDone = { exi, si }; savedFresh = true;
     stripBump = exi;

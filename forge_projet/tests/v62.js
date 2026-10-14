@@ -77,7 +77,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
       weekHead: !!document.querySelector('.asc-week > .aw-hd'), weekCard: !!document.querySelector('.asc-week > .asc-card .aw-msg'), pauseInWeek: !!document.querySelector('#ascWeek [data-a="ascPause"], #ascWeek .aw-pause'),
       rows: [...document.querySelectorAll('.asc-row .t')].map(t => t.textContent).join('|'), seps: seps.length, sepH: seps[0], accordions: document.querySelectorAll('.asc-clp, .st-list').length }; });
   log('Ascent:', JSON.stringify(asc));
-  if (!/rgba\(0, 0, 0, 0\)|transparent/.test(asc.bg) || !/inset/.test(asc.ring) || !/Camp 2 · .*58 m|Camp 2 · .*m/.test(asc.next || '') || !asc.bar || !asc.weekHead || !asc.weekCard || asc.pauseInWeek
+  if (!/rgba\(0, 0, 0, 0\)|transparent/.test(asc.bg) || !/inset/.test(asc.ring) || !/Camp 2 – .*m/.test(asc.next || '') || !asc.bar || !asc.weekHead || !asc.weekCard || asc.pauseInWeek
     || asc.rows !== 'Vitesse|Étapes|Itinéraire|Carnet de route|Trophées|Pause' || asc.seps !== 5 || asc.sepH !== '0.5px' || asc.accordions) fail('Mon ascension épurée : objectif, semaine, liste');
   await shot('03_ascent');
 

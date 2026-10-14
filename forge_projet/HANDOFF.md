@@ -1451,6 +1451,10 @@ a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est
   - Ressenti d'un exercice tenu : Difficile / Moyen / Facile (avant : À fond / Encore un peu / Large marge).
   - Faux « Record » : `isNewPR` comparait au 1RM arrondi au dixième (10 × 10 kg « battait » 10 × 10 kg) ; `exoPRs` donne maintenant aussi `e1rm` exact.
   - Fin de séance, carte d'ascension : plus de « aujourd'hui · X m sur Y m », plus de ligne « Camp 2 dans … · ≈ séances » ; puces « Retour en force », badge de carte postale et piste à l'orange de l'app (plus de dégradé #FF9A66 → #FF5A2C).
+- **Sons de séance et sensibilités, version 2.2.1.**
+  - Cinq sons distincts (sfx.js) : `set` (« tic-ding » de marimba, `mallet`), `beat` (mieux que la dernière fois : une note de plus), `exo` (arpège de marimba sur une basse), `pr` (souffle montant, double coup de cuivre `brass`, coup sourd `thump`, étincelles `sparkle`), `complete` (fin de séance : coup sourd, accord ample nappe + cuivres, cascade de cloches, souffle). La dernière série joue `exo` (ou `pr`) ; l'écran de fin joue `complete`, puis `medal` 1,9 s plus tard s'il y a des trophées.
+  - Glisser sur le chiffre : 46 px par cran (`VAL_PX`) ; règle des secondes : 22 px par 5 s (`DUR_PX`).
+  - Prochain camp : « Camp 2 – Alpage » (tiret au lieu du point, qui ressemblait à un multiplicateur) ; délai « ≈ 2 séances, soit 4 semaines à ton rythme » (`ascEtaLine`).
   Le rappel du « pourquoi » reste sur l'accueil. Premier lancement : l'accueil attend la reprise de la copie de
   secours IndexedDB (stockage vidé) avant de s'ouvrir, au plus 0,6 s. La barre d'état est relue deux images après le
   premier rendu (`syncStatusBar(undefined, true)`).
