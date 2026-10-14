@@ -2,7 +2,7 @@
 // Stratégie « cache d'abord, mise à jour en arrière-plan » : la page s'ouvre depuis la
 // copie locale (aucune attente même avec un réseau lent ou absent), puis la dernière
 // version est téléchargée discrètement et servie au lancement suivant.
-const CACHE = "forge-v52"; // nom interne gardé (données et caches existants)
+const CACHE = "forge-v53"; // nom interne gardé (données et caches existants)
 // seulement l'indispensable au démarrage ; le reste (Three.js des trophées, grandes icônes)
 // est mis en cache à la première utilisation, pour ne pas occuper l'appareil inutilement
 // (les scènes de l'ascension, ascent-scenes.js, sont demandées par la page au premier lancement en ligne)
@@ -13,19 +13,13 @@ self.addEventListener("install", e => {
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
-// télécharge et met en cache ; prévient la page si le contenu a changé
+// télécharge et met en cache, sans prévenir : la nouvelle version sert au lancement suivant,
+// comme une app native. (Avant, on comparait les en-têtes etag / last-modified ; GitHub Pages les
+// renvoie différents d'un serveur à l'autre pour le même fichier, d'où un faux « Mise à jour prête »
+// à chaque lancement.)
 async function refresh(req, key) {
-  const cache = await caches.open(CACHE);
   const res = await fetch(req, { cache: "no-cache" });
-  if (!res || !res.ok) return res;
-  const old = await cache.match(key);
-  const oldTag = old && (old.headers.get("etag") || old.headers.get("last-modified") || old.headers.get("content-length"));
-  const newTag = res.headers.get("etag") || res.headers.get("last-modified") || res.headers.get("content-length");
-  await cache.put(key, res.clone());
-  if (old && oldTag && newTag && oldTag !== newTag) {
-    const clients = await self.clients.matchAll({ type: "window" });
-    clients.forEach(c => c.postMessage({ type: "forge-updated" }));
-  }
+  if (res && res.ok) await (await caches.open(CACHE)).put(key, res.clone());
   return res;
 }
 self.addEventListener("fetch", e => {

@@ -1435,6 +1435,7 @@ a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est
   Le rappel du « pourquoi » reste sur l'accueil. Premier lancement : l'accueil attend la reprise de la copie de
   secours IndexedDB (stockage vidé) avant de s'ouvrir, au plus 0,6 s. La barre d'état est relue deux images après le
   premier rendu (`syncStatusBar(undefined, true)`).
+- **Mises à jour silencieuses, version 2.1.7.** Le service worker comparait etag / last-modified pour annoncer « Mise à jour prête » ; GitHub Pages renvoie ces en-têtes différents d'un serveur à l'autre pour le même fichier, d'où le message à chaque lancement. Plus de message : la nouvelle version est téléchargée en arrière-plan et sert au lancement suivant, comme une app native.
 
 Les sections plus haut qui parlent de Geist, Barlow, `#F4F3F1` ou `#FF6B3D` décrivent l'état d'avant cette refonte.
 
