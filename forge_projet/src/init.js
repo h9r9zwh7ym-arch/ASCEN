@@ -1,5 +1,5 @@
 // ================= INITIALISATION =================
-const APP_VERSION = "2.1.4";
+const APP_VERSION = "2.1.5";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 // séance en sombre (réglage, actif par défaut) : pendant la séance, l'écran passe en sombre quel que
@@ -50,40 +50,24 @@ function syncStatusBar(dim, nudge){
 function hexRGB(h){ const m = /^#([0-9a-f]{6})$/i.exec(h||""); return m ? [0,2,4].map(i=>parseInt(m[1].slice(i,i+2),16)) : null; }
 if(window.matchMedia) try{ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ()=>syncStatusBar()); }catch(e){}
 
-// ---------- animation de lancement ----------
-// Le mot ASCEN apparaît en balayage, puis la barre du A monte de mi-hauteur à sa place :
-// on « relève la barre ». Les animations portent sur des <div>, jamais sur des éléments
-// internes aux SVG : piège Safari documenté dans Zeste.
-function splashTagline(){
-  const why = whyReminder(); if(why) return `« ${why} »`;
-  const t = plannedTemplate();
-  if(t && !sessionsToday().some(s=>s.tplId===t.id)) return `Aujourd'hui : ${t.n}`;
-  const streak = currentStreakWeeks();
-  if(streak>=2) return `${streak} semaines d'affilée — on continue`;
-  if(sessionsToday().length) return "Séance du jour déjà faite, bravo";
-  return "Un cran plus haut, à chaque séance";
-}
-function showSplash(){
+// ---------- lancement ----------
+// Comme les apps natives : le logo est dans la page elle-même (build.sh), visible dès le premier affichage,
+// le temps que le script se charge. Dès que l'app est dessinée dessous, il s'efface en 0,15 s.
+// Premier lancement : l'accueil s'ouvre, sauf si la copie de secours (stockage vidé) rend les données ;
+// on l'attend donc quand rien n'a été lu au démarrage (au plus 0,6 s).
+function hideSplash(recovered){
+  const sp = document.getElementById("splash");
+  const done = ()=>{ if(sp) sp.remove(); syncStatusBar(undefined, true); };
+  if(typeof needsOnboarding==="function" && needsOnboarding()){
+    const wait = loadedFromLS ? null : Promise.race([recovered, new Promise(ok=>setTimeout(ok, 600))]);
+    Promise.resolve(wait).catch(()=>{}).then(()=>{ if(needsOnboarding()) openOnboarding(); });
+  }
+  if(!sp) return done();
   const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const sp = document.createElement("div");
-  sp.id = "splash";
-  sp.className = reduce ? "splash reduce" : "splash";
-  sp.innerHTML = `<div class="sp-logo">
-      <div class="sp-letters">${ascenMark("", false)}</div>
-      <div class="sp-bar"><svg class="ascen-mark" viewBox="0 5 206 56" stroke-width="6.5" stroke-linecap="round" aria-hidden="true"><path class="bar" d="${ASCEN_BAR}"/></svg></div>
-    </div>
-    <div class="sp-tag">${esc(splashTagline())}</div>`;
-  document.body.appendChild(sp);
-  let gone = false;
-  const leave = ()=>{
-    if(gone) return; gone = true;
-    sp.classList.add("out");
-    if(typeof needsOnboarding==="function" && needsOnboarding()) openOnboarding();
-    setTimeout(()=>{ sp.remove(); syncStatusBar(undefined, true); }, 300);
-  };
-  sp.addEventListener("click", leave);
-  // court (≈ 0,9 s) : l'app est déjà dessinée dessous, elle apparaît dès que la barre du A est en place
-  setTimeout(leave, reduce ? 350 : 900);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    if(reduce) return done();
+    sp.classList.add("out"); setTimeout(done, 160);
+  }));
 }
 
 function init(){
@@ -91,7 +75,7 @@ function init(){
   applyTheme();
   applyPlannedSession(); // la séance prévue aujourd'hui s'affiche directement
   switchTab("today");
-  showSplash();
+  hideSplash(idbRecover()); // copie de secours IndexedDB (voir core.js)
   // médailles déjà méritées (ex. après une mise à jour) : attribuées sans célébration, au calme
   // (une quarantaine de statistiques sur tout l'historique : pas pendant le démarrage)
   (window.requestIdleCallback || (f=>setTimeout(f, 1600)))(()=>{ const v = DATA_VER; checkMedals(true); if(DATA_VER!==v && !(S.draft && S.draft.startedAt)) renderView(currentTab); }, { timeout:2500 });
@@ -111,7 +95,6 @@ function init(){
   try{ if("serviceWorker" in navigator && (location.protocol==="https:" || location.hostname==="localhost") && !/claude\.ai|claudeusercontent/.test(location.hostname)) navigator.serviceWorker.register("sw.js").catch(()=>{}); }catch(e){}
   // une nouvelle version a été téléchargée en arrière-plan : elle servira au prochain lancement
   try{ if("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", e=>{ if(e.data && e.data.type==="forge-updated") toast("Mise à jour prête : elle s'appliquera au prochain lancement"); }); }catch(e){}
-  idbRecover(); // copie de secours IndexedDB (voir core.js)
   (window.requestIdleCallback || (f=>setTimeout(f, 4000)))(()=>ascPrefetch(), { timeout:8000 });
   // la réverbération des sons, calculée au calme (le premier toucher n'a plus à le faire)
   (window.requestIdleCallback || (f=>setTimeout(f, 3000)))(()=>{ if(soundOn()) reverbData(48000); }, { timeout:6000 });

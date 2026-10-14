@@ -139,3 +139,8 @@ Classées par valeur pour l'usage à la maison :
 
 ## Livraison
 - [x] Test v66, tests adaptés, suite complète, HANDOFF, version 2.1.4, cache `forge-v50`, commit, push.
+
+---
+
+# Lancement (2.1.5)
+- [x] Plus d'animation de lancement : le logo seul, posé dans la page, le temps du chargement, puis l'app directement.

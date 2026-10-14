@@ -499,10 +499,6 @@ h2.sh button.more{font-size:var(--fs-sub);font-weight:500;color:var(--tint-ink)}
 .ph-sub{font-size:var(--fs-cap);color:var(--label2);margin-top:6px}
 
 /* ---- lancement ---- */
-.splash{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(120% 80% at 50% 45%,#2a1508 0%,#0c0705 60%,#000 100%);color:#fff;transition:opacity .3s ease,transform .3s ease}
-.splash.out{opacity:0;transform:scale(1.06);pointer-events:none}
-.sp-tag{margin-top:10px;font-size:15px;color:rgba(255,236,220,.72);animation:fadeUp .35s ease .35s both}
-.splash.reduce *{animation:none!important}
 @media (prefers-reduced-motion:reduce){
   .row.fresh,.focus-card.fly-l,.focus-card.fly-r,.tabbtn.on svg{animation:none!important}
 }
@@ -1455,16 +1451,6 @@ h2.sh{letter-spacing:0}
 .xpbar span{background:var(--tint)}
 /* lancement : aux couleurs de l'app (clair ou sombre). Un écran de lancement sombre sur une app claire donnait sa
    couleur à la barre d'état d'iOS (heure, batterie), qui la gardait ensuite jusqu'au premier défilement */
-.splash{background:var(--bg);color:var(--label)}
-.sp-logo{position:relative;width:224px;height:61px;margin-bottom:22px}
-.sp-logo svg{position:absolute;inset:0;width:100%;height:100%;stroke:var(--label)}
-.sp-logo .bar{stroke:#BC5736}
-.sp-letters{position:absolute;inset:0;animation:spWipe .42s cubic-bezier(.6,0,.2,1) .04s both}
-.sp-bar{position:absolute;inset:0;animation:spBarIn .15s ease .3s both,spBarUp .4s cubic-bezier(.3,1.5,.5,1) .42s both}
-@keyframes spWipe{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
-@keyframes spBarIn{from{opacity:0}to{opacity:1}}
-@keyframes spBarUp{from{transform:translateY(21.4%)}to{transform:none}}
-.sp-tag{color:var(--label2);letter-spacing:.01em}
 .ob-logo{width:176px;margin:18px auto 22px;color:var(--label);animation:fadeUp .6s ease both}
 .ob-logo .ascen-mark{width:176px;height:48px}
 /* lancement de séance : encre,anneaux et chiffres sobres,l'orange en accent */
@@ -3147,6 +3133,11 @@ body.live-focus #toast,body:has(#overlay.show) #toast{top:calc(10px + var(--sat)
 .asc-sub .asc-sec{padding:6px 0 20px;gap:12px}
 .asc-sub .sh{margin:14px 4px 0;padding:0}
 .asc-body .fx.asc-card{background:var(--bg2);padding:2px 16px;gap:0}
+/* lancement : le logo seul, posé dans la page (build.sh), effacé dès que l'app est dessinée (init.js) */
+.splash{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:var(--bg);transition:opacity .15s ease}
+.splash.out{opacity:0;pointer-events:none}
+.sp-mark{width:168px;height:auto;stroke:var(--label);margin-bottom:4vh}
+.sp-mark .bar{stroke:#BC5736}
 .sp-hero{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;padding:2px 4px 2px}
 .sp-hero b{font-family:var(--num);font-size:calc(34rem/17);font-weight:700;letter-spacing:-.01em;color:var(--label)}
 .sp-hero span{font-size:var(--fs-sub);color:var(--label2)}

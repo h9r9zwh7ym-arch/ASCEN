@@ -69,9 +69,9 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.evaluate(() => closeSheet()); await wait(300);
   log('Why in profile:', JSON.stringify(prof)); if (!/Être en forme/.test(prof.why) || !/« Être en forme/.test(prof.shown) || prof.html) fail('pourquoi enregistré et échappé');
   const card = await page.evaluate(() => { S.sessions.forEach((s, i) => { s.date = addDaysISO(todayISO(), -5 - i); }); S.sessions.sort((a, b) => a.date < b.date ? -1 : 1); save(); switchTab('today'); renderView('today');
-    return { card: !!document.querySelector('.why-card'), text: (document.querySelector('.why-card .why-t') || {}).textContent, tag: splashTagline() }; });
+    return { card: !!document.querySelector('.why-card'), text: (document.querySelector('.why-card .why-t') || {}).textContent }; });
   await wait(400); await shot('02_why_card');
-  log('Why reminder:', JSON.stringify(card)); if (!card.card || !/Être en forme/.test(card.text) || !/Être en forme/.test(card.tag)) fail('rappel du pourquoi après 4 jours');
+  log('Why reminder:', JSON.stringify(card)); if (!card.card || !/Être en forme/.test(card.text)) fail('rappel du pourquoi après 4 jours');
   const noCard = await page.evaluate(() => { S.sessions[S.sessions.length - 1].date = addDaysISO(todayISO(), -1); save(); renderView('today'); return !!document.querySelector('.why-card'); });
   if (noCard) fail('pas de rappel si séance récente');
   // persistance + limite de longueur

@@ -76,7 +76,6 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.evaluate(() => { persistNow(); const st = JSON.parse(localStorage.getItem('forge.v1')); st.custom = { exos: [] }; st.settings.todayTab = 'proposal'; localStorage.setItem('forge.v1', JSON.stringify(st)); });
   await page.reload();
   await wait(1100);
-  log('Splash tagline:', await page.textContent('.sp-tag'));
   await page.waitForSelector('#splash', { state: 'detached', timeout: 6000 }); await page.evaluate(() => { if (document.querySelector('.ob-body')) ACT.obSkip(); persistNow(); }).catch(() => {}); await page.waitForTimeout(350);
   await wait(300);
   log('Plan banner:', await page.$eval('.plan-banner', e => e.textContent.replace(/\s+/g, ' ').trim()).catch(() => 'NONE'));

@@ -168,7 +168,7 @@ var loadedFromLS; // var : affecté pendant load(), qui s'exécute avant cette l
 // au lancement : si la copie IndexedDB est plus récente (localStorage plein, vidé ou
 // illisible), on la reprend
 function idbRecover(){
-  idbGet().then(async rec=>{
+  return idbGet().then(async rec=>{
     if(!rec || !rec.data) return;
     // copies non compressées (avant v2.7) et compressées
     rec = Object.assign({}, rec, { data: await gunz(rec.data) });
