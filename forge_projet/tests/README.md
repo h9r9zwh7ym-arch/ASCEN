@@ -76,6 +76,7 @@ Variables utiles :
 | `v65.js` | Passe finale 2.1.3 : pile de feuilles vivante (parent gardé, caché, inerte, révélé tel quel ; geste sans copie, annulable ; feuille courte qui masque le parent), son créé au lâcher, roue abdominale (mains sur la roue, bras tendus, roule, dessinée, animée dès l'ouverture), export tableur sans formule, import sans `__proto__`, Mes exercices mis à jour sur place, phrases d'exemple retirées |
 | `v66.js` | Trophées 2.1.4 : textes courts (plus de descriptions qui répètent l'unité ni de phrases sur le diamant), paliers à venir verrouillés (seuls les paliers gagnés se revoient, action refusée sinon, cadenas), métal et émail donnés par le palier (2D et 3D), pastilles en métal, carte et fiche teintées |
 | `v67.js` | 2.1.8 : deux onglets (une écriture en attente de trophées recalculés n'empêche plus de reprendre l'autre onglet), thème choisi appliqué avant tout affichage, bulles de séance 2,2 s, durée d'un exercice tenu saisie en secondes, échauffement animé |
+| `v68.js` | 2.1.9 : saisie en un geste (glisser sur le chiffre, toucher ouvre le clavier), molette de durée des exercices tenus (15 s minimum, sans raccourcis), dernière durée reproposée, bouton du chrono à jour |
 | `monkey.js` | Test du singe (aussi dans `run.sh`) : touchers aléatoires pondérés vers les boutons peu essayés, avec changement d'onglet régulier. Toute erreur ou écran en échec est signalé. `SEED`, `N`, `ENGINE=webkit` |
 
 Les tests partent d'un état vierge. Ils passent le premier lancement avec `ACT.obSkip()` ou injectent leurs données avec `addInitScript`.

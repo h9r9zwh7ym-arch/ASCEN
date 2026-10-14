@@ -1440,6 +1440,10 @@ a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est
   - **Échauffement animé** : chaque mouvement (`WARM_ANIM`, view_today.js) est montré par l'animation d'un exercice proche, sans matériel (`warmDef`) ; 4 rigs dédiés dans data_rigs.js (`warm_bras`, `warm_omoplates`, `warm_jambe`, `warm_hanches`).
   - **Trophées** : chiffres en relief (« 100 », « 7/7 ») plus clairs, sans irisation, ombre plus marquée.
   - Maquettes à valider avant code : saisie en un geste, molette de durée du gainage, bilan de la semaine (artifact « Maquettes ASCEN 2.2 »).
+- **Saisie en un geste et molette de durée, version 2.1.9** (maquettes validées ; bilan de la semaine et bouton Partager refusés).
+  - Glisser verticalement sur le chiffre (répétitions, secondes, charge) en séance : un cran tous les 18 px (5 s pour un exercice tenu, pas du matériel pour la charge), son et vibration à chaque cran, enregistré au lâcher et appliqué aux séries suivantes non validées. Toucher sans glisser ouvre la saisie comme avant. Aucun texte d'explication. `valDrag*`, view_today.js ; `touch-action:none` sur le chiffre.
+  - Exercice tenu : toucher la durée ouvre une molette (`promptDuration`) : règle sur canevas, un trait toutes les 5 s, un chiffre toutes les 30 s, élan puis arrêt sur un cran, 15 s minimum, 10 min maximum, pas de raccourcis. Le bouton « Lancer le chrono · N s » suit la valeur (`patchFocusSteps`).
+  - La dernière durée d'un exercice tenu est reproposée telle quelle à la séance suivante (suggestForExo : plus de +5 s automatiques ; −5 s après 3 semaines sans).
   Le rappel du « pourquoi » reste sur l'accueil. Premier lancement : l'accueil attend la reprise de la copie de
   secours IndexedDB (stockage vidé) avant de s'ouvrir, au plus 0,6 s. La barre d'état est relue deux images après le
   premier rendu (`syncStatusBar(undefined, true)`).

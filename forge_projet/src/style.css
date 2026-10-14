@@ -3225,3 +3225,15 @@ button.t3d-row:active::before{opacity:1;background:rgba(255,255,255,.14)}
 /* échauffement : le mouvement en cours, animé, au-dessus de son nom */
 .sx-wanim{width:112px;height:112px;margin:2px auto 0;border-radius:50%;background:var(--bg2);color:var(--tint-ink);display:grid;place-items:center;flex:none}
 .sx-wanim .exo-anim{width:74%;height:74%}
+/* saisie en un geste : le chiffre suit le doigt verticalement (pas de défilement de la page) */
+.sx-steps [data-a="editVal"]{touch-action:none;transition:background .15s}
+.big-stepper .bs-val.dragging{background:var(--fill);transform:scale(1.06)}
+/* molette de durée */
+.dur-modal{text-align:center}
+.dur-t{font-weight:700;font-size:calc(17rem/17)}
+.dur-v{font-size:52px;font-weight:700;line-height:1.1;margin-top:6px;color:var(--tint-ink);font-variant-numeric:tabular-nums}
+.dur-dial{position:relative;height:72px;margin:10px -20px 4px;touch-action:none;cursor:grab;color:var(--label2);-webkit-mask-image:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent);mask-image:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent)}
+.dur-dial canvas{display:block;width:100%;height:100%}
+.dur-dial i{position:absolute;left:50%;bottom:0;transform:translateX(-50%);border:7px solid transparent;border-bottom:9px solid var(--tint)}
+.dur-act{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.dur-act .ghost{height:40px}

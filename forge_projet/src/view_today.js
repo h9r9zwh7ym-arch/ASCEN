@@ -1000,6 +1000,88 @@ function sxStepsHTML(idx, ex, def, si, st){
   return `<div class="sx-steps">${wRow}${rRow}${hint ? `<div class="sx-hint" aria-live="polite">${hint}</div>` : ""}</div>`;
 }
 // +/− sans tout redessiner : seules les séries et les compteurs changent (le mouvement continue)
+// ---------- saisie en un geste ----------
+// Glisser vers le haut ou le bas sur le chiffre (répétitions, secondes ou charge) le fait défiler d'un cran tous les
+// 18 px, avec un petit son à chaque cran ; lâcher enregistre. Toucher sans glisser ouvre la saisie comme avant.
+const VAL_PX = 18, DUR_MIN = 15, DUR_MAX = 600;
+let valDrag = null, valDragAt = 0;
+function valDragStep(def, f, v, n){
+  if(f==="weight"){ let w = v||0; for(let i=0;i<Math.abs(n);i++) w = stepWeightValue(def, w, Math.sign(n)); return w; }
+  return isTimed(def) ? Math.max(DUR_MIN, Math.min(DUR_MAX, (v||0) + 5*n)) : Math.max(0, Math.min(999, (v||0) + n));
+}
+document.addEventListener("pointerdown", e=>{
+  const b = e.target.closest && e.target.closest('.sx-steps [data-a="editVal"]'); if(!b || !S.draft) return;
+  const ex = S.draft.exos[+b.dataset.exi], st = ex && ex.sets[+b.dataset.si], def = ex && EXO_MAP[ex.exoId]; if(!st || !def) return;
+  valDrag = { b, ex, st, def, f:b.dataset.f, si:+b.dataset.si, exi:+b.dataset.exi, y:e.clientY, v0:b.dataset.f==="weight" ? st.weight : st.reps, n:0, moved:false, id:e.pointerId };
+});
+document.addEventListener("pointermove", e=>{
+  const D = valDrag; if(!D || e.pointerId!==D.id) return;
+  const dy = D.y - e.clientY;
+  if(!D.moved){ if(Math.abs(dy)<8) return; D.moved = true; D.b.classList.add("dragging"); try{ D.b.setPointerCapture(e.pointerId); }catch(err){} }
+  e.preventDefault();
+  const n = Math.round(dy/VAL_PX); if(n===D.n) return;
+  const v = valDragStep(D.def, D.f, D.v0, n), prev = valDragStep(D.def, D.f, D.v0, D.n); D.n = n;
+  if(v===prev) return;
+  D.v = v; const t = qs("b", D.b); if(t) t.textContent = D.f==="weight" ? fmtDec(v) : v;
+  sfx("step", v>prev); haptic(5);
+}, { passive:false });
+const valDragEnd = e=>{
+  const D = valDrag; if(!D || (e && e.pointerId!==D.id)) return; valDrag = null;
+  if(!D.moved) return;
+  valDragAt = Date.now(); D.b.classList.remove("dragging");
+  if(D.v==null || D.v===D.v0) return;
+  D.ex.sets.forEach((s,i)=>{ if(i>=D.si && !s.done && (D.f==="weight" ? s.weight : s.reps)===D.v0){ if(D.f==="weight") s.weight = D.v; else s.reps = D.v; } });
+  if(D.f==="weight") D.st.weight = D.v; else D.st.reps = D.v;
+  save(); if(!patchFocusSteps(D.exi)) refreshFocusRegion();
+};
+document.addEventListener("pointerup", valDragEnd); document.addEventListener("pointercancel", valDragEnd);
+
+// ---------- molette de durée (exercices tenus) ----------
+// Une règle qui défile sous le doigt, comme le minuteur d'iOS : un trait toutes les 5 s, un chiffre toutes les 30 s,
+// l'élan continue puis s'arrête sur un cran. 15 s minimum.
+function fmtDur(s){ return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
+function promptDuration(value, onOk){
+  const STEP = 14, start = Math.max(DUR_MIN, Math.min(DUR_MAX, Math.round((value||30)/5)*5));
+  openModal(`<div class="dur-t">Durée</div>
+    <div class="dur-v num" id="durVal">${fmtDur(start)}</div>
+    <div class="dur-dial" id="durDial" tabindex="0" role="slider" aria-label="Durée en secondes" aria-valuemin="${DUR_MIN}" aria-valuemax="${DUR_MAX}" aria-valuenow="${start}"><canvas></canvas><i></i></div>
+    <div class="dur-act"><button class="btn" data-a="durOk">Valider</button><button class="btn ghost" data-a="closesheet">Annuler</button></div>`, "dur-modal");
+  const dial = qs("#durDial"), cv = qs("canvas", dial), out = qs("#durVal");
+  const P0 = DUR_MIN/5*STEP, P1 = DUR_MAX/5*STEP;
+  let pos = start/5*STEP, vel = 0, drag = null, raf = 0, last = start;
+  const val = ()=>Math.round(pos/STEP)*5;
+  const colors = ()=>{ const cs = getComputedStyle(dial); return [cs.getPropertyValue("--tint-ink").trim() || "#E07A55", cs.color]; };
+  function draw(){
+    const w = dial.clientWidth, h = dial.clientHeight, r = window.devicePixelRatio || 1; if(!w) return;
+    if(cv.width!==Math.round(w*r)){ cv.width = Math.round(w*r); cv.height = Math.round(h*r); }
+    const g = cv.getContext("2d"); g.setTransform(r,0,0,r,0,0); g.clearRect(0,0,w,h);
+    const [on, off] = colors(), c = w/2, sec = val();
+    g.lineCap = "round"; g.textAlign = "center"; g.font = "600 13px ui-rounded,-apple-system,system-ui,sans-serif";
+    for(let s = DUR_MIN; s<=DUR_MAX; s+=5){
+      const x = c + s/5*STEP - pos; if(x<-12 || x>w+12) continue;
+      const major = s%30===0, a = s<=sec;
+      g.strokeStyle = g.fillStyle = a ? on : off; g.globalAlpha = a ? 1 : .45; g.lineWidth = major ? 3 : 2;
+      g.beginPath(); g.moveTo(x, major ? h*.36 : s%15===0 ? h*.46 : h*.52); g.lineTo(x, h*.8); g.stroke();
+      if(major) g.fillText(s<60 ? String(s) : fmtDur(s), x, h*.24);
+    }
+    g.globalAlpha = 1;
+    if(sec!==last){ last = sec; out.textContent = fmtDur(sec); dial.setAttribute("aria-valuenow", sec); sfx("step", true); haptic(4); }
+  }
+  const clamp = ()=>{ pos = Math.max(P0, Math.min(P1, pos)); };
+  const glide = ()=>{
+    if(Math.abs(vel)>.4){ pos += vel; vel *= .92; clamp(); draw(); raf = requestAnimationFrame(glide); return; }
+    const t = Math.round(pos/STEP)*STEP; pos += (t-pos)*.35; draw();
+    if(Math.abs(t-pos)>.3) raf = requestAnimationFrame(glide); else { pos = t; draw(); }
+  };
+  dial.addEventListener("pointerdown", e=>{ cancelAnimationFrame(raf); drag = { x:e.clientX, t:performance.now() }; vel = 0; try{ dial.setPointerCapture(e.pointerId); }catch(err){} });
+  dial.addEventListener("pointermove", e=>{ if(!drag) return; const dx = e.clientX-drag.x, now = performance.now(); pos -= dx; clamp(); vel = -dx/Math.max(8, now-drag.t)*16; drag = { x:e.clientX, t:now }; draw(); });
+  const up = ()=>{ if(!drag) return; drag = null; if(reducedMotion()) vel = 0; raf = requestAnimationFrame(glide); };
+  dial.addEventListener("pointerup", up); dial.addEventListener("pointercancel", up);
+  dial.addEventListener("keydown", e=>{ const k = e.key==="ArrowRight" || e.key==="ArrowUp" ? 1 : e.key==="ArrowLeft" || e.key==="ArrowDown" ? -1 : 0; if(!k) return; e.preventDefault(); pos += k*STEP; clamp(); draw(); });
+  qs("#overlay")._onDur = ()=>onOk(val());
+  requestAnimationFrame(draw);
+}
+
 function patchFocusSteps(idx){
   const card = qs("#focusRegion .sx-card[data-exi]");
   if(!card || card.dataset.exi!==String(idx) || hold || (restState && restState.exoIdx===idx) || !S.draft || !S.draft.exos[idx]) return false;
@@ -1008,6 +1090,8 @@ function patchFocusSteps(idx){
   if(!a || !b) return false;
   a.outerHTML = sxSetsHTML(idx, ex, def, si, -1);
   b.outerHTML = sxStepsHTML(idx, ex, def, si, ex.sets[si]);
+  // exercice tenu : le bouton du chrono suit la durée choisie
+  const hg = qs(".hold-go", card); if(hg) hg.innerHTML = `${icon("timer")} Lancer le chrono · ${ex.sets[si].reps||30} s`;
   setTimeout(()=>{ valRoll = {}; }, 0);
   return true;
 }
@@ -1673,8 +1757,14 @@ Object.assign(ACT, {
     valRoll = { f:"weight", d: parseInt(d.d,10)>0 ? "up" : "down" }; sfx("step", parseInt(d.d,10)>0);
     save(); if(!patchFocusSteps(+d.exi)) refreshFocusRegion();
   },
+  durOk(){ const fn = qs("#overlay")._onDur; closeSheet(); if(fn) fn(); },
   editVal(d){
+    if(valDragAt && Date.now()-valDragAt<150){ valDragAt = 0; return; }   // le clic qui suit un glisser sur le chiffre : pas de clavier
     const ex = S.draft.exos[+d.exi], st = ex.sets[+d.si], isW = d.f==="weight", timed = !isW && !!EXO_MAP[ex.exoId] && isTimed(EXO_MAP[ex.exoId]);
+    if(timed) return promptDuration(st.reps, v=>{
+      ex.sets.forEach((s,i)=>{ if(i>=+d.si && !s.done) s.reps = v; });
+      save(); if(!patchFocusSteps(+d.exi)) refreshFocusRegion();
+    });
     promptNumber({ title: isW?"Charge de la série":timed?"Durée":"Répétitions", value: isW?st.weight:st.reps, unit: isW?"kg":timed?"s":"rép.", step: isW?"0.5":"1",
       onOk: v=>{
         // bornes réalistes (comme dans l'édition de l'historique) : une faute de frappe ne doit pas

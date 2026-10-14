@@ -58,7 +58,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await A.evaluate(() => { delete S.draft.warm; save(); renderView('today'); }); await A.waitForTimeout(400);
   await A.evaluate(() => { const b = document.querySelector('[data-a="editVal"][data-f="reps"]'); if (!b) throw new Error('pas de valeur à saisir'); b.click(); }); await A.waitForTimeout(400);
   const pn = await A.evaluate(() => ({ title: (document.querySelector('#overlay .modal, #overlay') || {}).innerText }));
-  log('Saisie :', pn.title.replace(/\s+/g, ' ').slice(0, 60)); if (!/Durée/.test(pn.title) || !/\bs\b/.test(pn.title) || /reps/.test(pn.title)) fail('durée en secondes, pas en « reps »');
+  log('Saisie :', pn.title.replace(/\s+/g, ' ').slice(0, 60)); if (!/Durée/.test(pn.title) || /reps/.test(pn.title) || !await A.evaluate(() => !!document.querySelector('#durDial'))) fail('durée (molette), pas en « reps »');
   await A.screenshot({ path: `${OUT}/${wk ? 'wk_' : ''}02_duree.png` });
 
   await browser.close();

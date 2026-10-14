@@ -217,8 +217,9 @@ function suggestForExo(exo, setsN, deload){
     }
   } else {
     // poids du corps et exercices chronométrés : progression par les répétitions / les secondes
-    const step = timed ? 5 : 1, cap = timed ? rMax+30 : rMax+6;
-    const add = gap>=21 ? -step : effort===3 ? 0 : effort===1 ? step*2 : step;
+    // exercice tenu : on repropose la dernière durée telle quelle (l'app s'en souvient), sauf après une longue pause
+    const step = timed ? 5 : 1, cap = timed ? 600 : rMax+6;
+    const add = gap>=21 ? -step : timed || effort===3 ? 0 : effort===1 ? step*2 : step;
     reps = reps.map((_,i)=>Math.max(rMin, Math.min(cap, lastReps(i)+add)));
     if(gap>=21){
       note = `Reprise après ${gap} jours : un peu moins que la dernière fois, on remonte vite.`;
