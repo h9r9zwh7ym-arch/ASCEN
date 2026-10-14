@@ -1412,6 +1412,22 @@ a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est
     couleur. Manifeste : `background_color` / `theme_color` = `#F2F2F7`.
   - **Finitions** : carte « Semaine allégée » sur une ligne (« Plus tard » en lien) ; ligne d'altitude du repos plus
     courte ; « Facultatif », « Ex. … » et « Repère : … » retirés.
+- **Trophées, version 2.1.4** (plan : `PLAN.md`, partie « trophées » ; test `v66`).
+  - **Le palier donne tout le caractère** : métal + émail profond assorti, le même en 3D (`T3D_METALS[k].e`) et en 2D
+    (`MEDAL_METALS`, `MEDAL_ENAMEL`, gravure `MEDAL_ENGRAVE`) : bronze sur cognac, argent sur graphite, or sur noir,
+    platine et cristal sur bleu nuit, irisé sur violet (secrets). Plus de couleur d'émail par trophée (`m.c` n'est plus
+    lu) : la famille garde sa forme, le trophée son symbole. Émail mat sous vernis, guilloché discret ; symbole en métal
+    poli plus clair. Verrouillé : étain sombre et mat, et en grand (fiche, carte) assombri par CSS
+    (`[data-tier="0"]`) pour ne jamais ressembler à l'argent. Texte en relief (« 100 », « 7/7 ») avec ombre portée.
+  - **Paliers à venir verrouillés** : plus d'« Aperçu des paliers ». Dans la fiche, seules les lignes des paliers
+    gagnés (s'il y en a au moins deux) sont des boutons qui affichent ce palier ; les autres portent un cadenas.
+    `ACT.t3dMetal` refuse tout palier au-delà de celui gagné.
+  - **Moins de texte** : descriptions gardées seulement quand elles donnent une règle (joker de la régularité, force
+    doublée, maîtrise, corps complet, matériel, gainage) ; plus de « Nombre de … », ni de phrases sur le diamant ;
+    progression « 200 / 500 · Diamant » ; plus de « Palier », « Pas encore débloqué », « Complet », « Secret »,
+    « Découvert » ; un secret découvert affiche sa règle (`secretRule`), un secret caché son indice.
+  - **Finitions** : pastilles et étiquettes de palier en métal brossé (`--m-bronze`…), fiche et carte « Dernier trophée »
+    teintées par le palier affiché (`data-tier`, `medalTint`), date des paliers sur une ligne.
 
 Les sections plus haut qui parlent de Geist, Barlow, `#F4F3F1` ou `#FF6B3D` décrivent l'état d'avant cette refonte.
 

@@ -11,13 +11,16 @@
 // contexte hors écran qui dessine les vignettes de la grille, gardées en mémoire seulement
 // (rien n'est stocké sur l'appareil).
 
-const T3D_METALS = {        // couleur sRGB, rugosité de la couronne
-  0: { c:"#8E949D", r:.55 },
-  1: { c:"#CF8752", r:.34 },
-  2: { c:"#D5D7DB", r:.3 },
-  3: { c:"#F2C04E", r:.28 },
-  4: { c:"#F6FBFF", r:.02, diamond:true },   // cristal taillé sur fond platine (voir t3dMats)
-  s: { c:"#EDE6FF", r:.14, iris:true },   // secrets découverts
+// Le palier donne tout le caractère de la médaille : un métal et un émail profond assorti
+// (bronze sur cognac, argent sur bleu nuit, or sur noir, platine et cristal sur nuit ; irisé sur violet
+// pour les secrets). Verrouillé : étain mat, sans éclat. La famille garde sa forme, le trophée son symbole.
+const T3D_METALS = {        // couleur sRGB, rugosité de la couronne, émail
+  0: { c:"#5E646B", r:.75, e:"#3F444B" },
+  1: { c:"#C98A5C", r:.3, e:"#3A1A0E" },
+  2: { c:"#DCE0E5", r:.24, e:"#272C34" },
+  3: { c:"#F5BE52", r:.2, e:"#17120D" },
+  4: { c:"#F6FBFF", r:.02, e:"#0A1628", diamond:true },   // cristal taillé sur fond platine (voir t3dMats)
+  s: { c:"#EDE6FF", r:.14, e:"#1F1340", iris:true },   // secrets découverts
 };
 const T3D = { loading:null, ctx:null, snap:null, failed:false, cache:new Map(), queue:[], busy:false, geo:new Map(), mats:new Map(), syms:new Map(), holdUntil:0 };
 // Le travail lourd des vignettes (charger Three.js, compiler les shaders, encoder l'image) se fait au calme :
@@ -93,10 +96,9 @@ function t3dTextures(T){
 
 // ---------- matériaux ----------
 function t3dMats(T, m, tier){
-  const key = !tier ? 0 : m.secret ? "s" : tier, enamelBase = tier ? (IOS_COL[m.c] || IOS_COL.orange) : "#7A8089";
-  const ck = key+"|"+enamelBase;
+  const key = !tier ? 0 : m.secret ? "s" : tier, ck = String(key);
   if(T3D.mats.has(ck)) return T3D.mats.get(ck);
-  const X = t3dTextures(T), M = T3D_METALS[key];
+  const X = t3dTextures(T), M = T3D_METALS[key], enamel = M.e;
   let mats;
   if(M.diamond){
     // Diamant : un vrai cristal plutôt qu'un métal teinté. Transmission (on voit au travers),
@@ -110,20 +112,20 @@ function t3dMats(T, m, tier){
       key, crystal, body:crystal, frame:crystal,
       setting: new T.MeshPhysicalMaterial({ color:"#E6ECF2", metalness:1, roughness:.1, clearcoat:1, clearcoatRoughness:.03, envMapIntensity:1.6, flatShading:true }),
       polish: new T.MeshPhysicalMaterial({ color:"#F5F8FB", metalness:1, roughness:.08, clearcoat:1, clearcoatRoughness:.03, envMapIntensity:1.7 }),
-      enamelRays: new T.MeshPhysicalMaterial({ color:hexMix(enamelBase, "#0A1628", .95), metalness:.1, roughness:.35, bumpMap:X.rays, bumpScale:1.4, clearcoat:1, clearcoatRoughness:.04, envMapIntensity:.8 }),
-      enamelSun: new T.MeshPhysicalMaterial({ color:hexMix(enamelBase, "#0A1628", .95), metalness:.1, roughness:.35, bumpMap:X.sun, bumpScale:1.4, clearcoat:1, clearcoatRoughness:.04, envMapIntensity:.8 }),
+      enamelRays: new T.MeshPhysicalMaterial({ color:enamel, metalness:.1, roughness:.35, bumpMap:X.rays, bumpScale:1.4, clearcoat:1, clearcoatRoughness:.04, envMapIntensity:.8 }),
+      enamelSun: new T.MeshPhysicalMaterial({ color:enamel, metalness:.1, roughness:.35, bumpMap:X.sun, bumpScale:1.4, clearcoat:1, clearcoatRoughness:.04, envMapIntensity:.8 }),
     };
   } else {
     const special = M.iris ? { iridescence:1, iridescenceIOR:1.6, iridescenceThicknessRange:[250, 900], envMapIntensity:1.2 } : {};
     mats = {
       key,
-      body: new T.MeshPhysicalMaterial(Object.assign({ color:M.c, metalness:1, roughness:M.r, clearcoat:.3, clearcoatRoughness:.25, bumpMap:X.reed, bumpScale:.6 }, special)),
-      frame: new T.MeshPhysicalMaterial(Object.assign({ color:M.c, metalness:1, roughness:M.r+.08, clearcoat:.3, clearcoatRoughness:.3, roughnessMap:X.frost }, special)),
+      body: new T.MeshPhysicalMaterial(Object.assign({ color:M.c, metalness:1, roughness:M.r, clearcoat:tier ? .3 : 0, clearcoatRoughness:.25, bumpMap:X.reed, bumpScale:.6 }, special)),
+      frame: new T.MeshPhysicalMaterial(Object.assign({ color:M.c, metalness:1, roughness:M.r+.08, clearcoat:tier ? .3 : 0, clearcoatRoughness:.3, roughnessMap:X.frost }, special)),
       // symbole : métal poli, plus clair que la couronne, qui capte la lumière (pas un miroir sombre)
-      polish: new T.MeshPhysicalMaterial(Object.assign({ color:hexMix(M.c, "#ffffff", tier ? .25 : .1), metalness:1, roughness:tier ? .16 : .32, clearcoat:1, clearcoatRoughness:.05, envMapIntensity:1.45 }, special)),
-      // émail : couleur profonde et saturée (moins de reflets) pour que le symbole ressorte
-      enamelRays: new T.MeshPhysicalMaterial({ color:hexMix(enamelBase, "#000000", .38), metalness:0, roughness:.55, bumpMap:X.rays, bumpScale:1.4, clearcoat:.9, clearcoatRoughness:.06, envMapIntensity:.55 }),
-      enamelSun: new T.MeshPhysicalMaterial({ color:hexMix(enamelBase, "#000000", .38), metalness:0, roughness:.55, bumpMap:X.sun, bumpScale:1.4, clearcoat:.9, clearcoatRoughness:.06, envMapIntensity:.55 }),
+      polish: new T.MeshPhysicalMaterial(Object.assign({ color:hexMix(M.c, "#ffffff", tier ? .3 : 0), metalness:1, roughness:tier ? .1 : .5, clearcoat:tier ? 1 : 0, clearcoatRoughness:.05, envMapIntensity:tier ? 2 : .8 }, special)),
+      // émail grand feu : teinte profonde du palier, guilloché sous un vernis épais (verrouillé : mat)
+      enamelRays: new T.MeshPhysicalMaterial({ color:enamel, metalness:0, roughness:tier ? .58 : .8, bumpMap:X.rays, bumpScale:tier ? .7 : .5, clearcoat:tier ? 1 : 0, clearcoatRoughness:.05, envMapIntensity:tier ? .4 : .3 }),
+      enamelSun: new T.MeshPhysicalMaterial({ color:enamel, metalness:0, roughness:tier ? .58 : .8, bumpMap:X.sun, bumpScale:tier ? .7 : .5, clearcoat:tier ? 1 : 0, clearcoatRoughness:.05, envMapIntensity:tier ? .4 : .3 }),
     };
   }
   mats.shadow = new T.MeshStandardMaterial({ color:"#000000", transparent:true, opacity:.38, depthWrite:false, roughness:1, metalness:0 });
@@ -194,8 +196,11 @@ function t3dTextGlyph(T, text, mats){
   x.filter = "blur(3px)"; x.fillStyle = "#fff"; x.fillText(text, 256, 136);
   const tex = new T.CanvasTexture(c);
   const mat = mats.polish.clone(); mat.alphaMap = tex; mat.bumpMap = tex; mat.bumpScale = 3; mat.alphaTest = .45; mat.transparent = false; mat.userData.own = true;
-  const mesh = new T.Mesh(new T.PlaneGeometry(22, 11), mat);
-  const g = new T.Group(); g.add(mesh); g.userData.flat = true;
+  const plane = new T.PlaneGeometry(22, 11), mesh = new T.Mesh(plane, mat);
+  // ombre portée sous le texte : il se détache même sur un émail clair (secrets irisés)
+  const sm = new T.MeshStandardMaterial({ color:"#000000", transparent:true, opacity:.55, alphaMap:tex, depthWrite:false, roughness:1, metalness:0 }); sm.userData.own = true;
+  const shadow = new T.Mesh(plane, sm); shadow.position.set(.35, -.45, -.08);
+  const g = new T.Group(); g.add(shadow, mesh); g.userData.flat = true;
   return g;
 }
 function t3dDumbbell(T, mat){
@@ -494,9 +499,9 @@ function t3dFeatured(){
 }
 function trophy3dCardHTML(){
   const f = t3dFeatured(), m = MEDAL_MAP[f.id]; if(!m) return "";
-  return `<button class="t3d-card stagger" style="--i:0" data-a="t3dOpen" data-id="${f.id}" aria-label="${esc(m.n)} : voir le détail">
+  return `<button class="t3d-card stagger" style="--i:0" data-a="t3dOpen" data-id="${f.id}" data-tier="${medalTint(m, f.tier)}" aria-label="${esc(m.n)} : voir le détail">
     <div class="t3d-stage" id="t3dStage"><div class="t3d-fallback">${medalSVG(m, f.tier, true)}</div></div>
-    <div class="t3d-info"><span class="t3d-k">${f.d ? "Dernier trophée" : "Ton premier trophée"}</span><b>${esc(m.n)}</b><span>${f.tier ? tierLabel(m, f.tier) : "Pas encore débloqué"}</span></div>
+    <div class="t3d-info"><span class="t3d-k">${f.d ? "Dernier trophée" : "Ton premier trophée"}</span><b>${esc(m.n)}</b>${f.tier ? `<span>${tierLabel(m, f.tier)}</span>` : ""}</div>
   </button>`;
 }
 async function mountTrophy3D(root){
@@ -526,24 +531,24 @@ function t3dWatch(el){
 document.addEventListener("visibilitychange", ()=>{ if(!document.hidden){ t3dRevive(); t3dStart(); } });
 
 // ---------- fiche détaillée (tous les trophées) ----------
+// Les paliers à venir restent verrouillés : on ne peut afficher que ceux déjà gagnés (toucher la ligne).
 function t3dDetailHTML(id){
   const m = MEDAL_MAP[id], p = medalProgress(m), st = S.medals[m.id]||{ d:{} }, cur = T3D.ctx ? T3D.ctx.tier : p.t;
   if(m.secret){
     return `<div class="t3d-name">${p.t ? esc(m.n) : "Trophée secret"}</div>
-      <div class="t3d-tier">${p.t ? `Découvert le ${fmtDate(localISO(new Date(st.d[1]||Date.now())))}` : "Pas encore découvert"}</div>
-      <p class="t3d-desc">${esc(p.t ? m.desc : "Indice : "+m.hint)}</p>
+      ${p.t ? `<div class="t3d-tier">${medalDay(st, 1)}</div>` : ""}
+      <p class="t3d-desc">${esc(p.t ? secretRule(m) : "Indice : "+m.hint)}</p>
       ${p.t ? `<div class="t3d-actions"><button class="btn secondary" data-a="t3dReplay">${icon("repeat")} Revoir le déblocage</button></div>` : ""}`;
   }
-  const rows = m.t.map((th,i)=>{ const k = i+1, got = p.t>=k;
-    return `<div class="t3d-row ${got?"got":""}"><span class="pip t${k}"></span><b>${TIERS[k].n}</b><span>${fmtMedalVal(m, th)} ${esc(medalUnit(m, th))}</span><em>${got && st.d[k] ? fmtDate(localISO(new Date(st.d[k]))) : got ? ii("check") : ""}</em></div>`; }).join("");
+  const pick = p.t>1;
+  const rows = m.t.map((th,i)=>{ const k = i+1, got = p.t>=k, tag = got && pick ? "button" : "div";
+    return `<${tag} class="t3d-row ${got?"got":"locked"} ${got && pick && cur===k?"on":""}"${got && pick ? ` data-a="t3dMetal" data-v="${k}" aria-pressed="${cur===k}"` : ""}><span class="pip t${k}"></span><b>${TIERS[k].n}</b><span>${fmtMedalVal(m, th)} ${esc(medalUnit(m, th))}</span><em>${got ? medalDay(st, k) || ii("check") : ii("lock")}</em></${tag}>`; }).join("");
   return `<div class="t3d-name">${esc(m.n)}</div>
-    <div class="t3d-tier">${p.t ? `Palier ${TIERS[p.t].n.toLowerCase()}${st.d[p.t] ? " · "+fmtDate(localISO(new Date(st.d[p.t]))) : ""}` : "Pas encore débloqué"}</div>
-    <p class="t3d-desc">${esc(m.desc || ("Nombre de "+m.unit+"."))}</p>
-    ${p.next!=null ? `<div class="mc-bar big"><span style="width:${Math.round(p.pct*100)}%"></span></div>
-      <div class="t3d-prog">${fmtMedalVal(m,p.v)} / ${fmtMedalVal(m,p.next)} ${esc(medalUnit(m,p.next))} pour le palier ${TIERS[p.t+1].n.toLowerCase()}</div>` : `<div class="t3d-prog">Palier diamant atteint</div>`}
+    ${p.t ? `<div class="t3d-tier">${TIERS[p.t].n}${st.d[p.t] ? " · "+medalDay(st, p.t) : ""}</div>` : ""}
+    ${m.desc ? `<p class="t3d-desc">${esc(m.desc)}</p>` : ""}
+    ${p.next!=null ? `<div class="t3d-progw"><div class="mc-bar big"><span style="width:${Math.round(p.pct*100)}%"></span></div>
+      <div class="t3d-prog">${medalProgTxt(m, p)}</div></div>` : ""}
     <div class="t3d-rows">${rows}</div>
-    <div class="t3d-sec">Aperçu des paliers</div>
-    <div class="t3d-metals">${[1,2,3,4].map(k=>`<button class="chip ${cur===k?"on":""}" data-a="t3dMetal" data-v="${k}">${TIERS[k].n}${p.t>=k?"":` ${ii("lock")}`}</button>`).join("")}</div>
     ${p.t ? `<div class="t3d-actions"><button class="btn secondary" data-a="t3dReplay">${icon("repeat")} Revoir le déblocage</button></div>` : ""}`;
 }
 async function showMedalModal(id, fromEl){
@@ -559,7 +564,7 @@ async function showMedalModal(id, fromEl){
   ctx.detail = id;
   const full = document.createElement("div"); full.className = "t3d-full";
   full.innerHTML = `<div class="t3d-scrim" data-a="t3dClose"></div>
-    <div class="t3d-panel" role="dialog" aria-label="Détail du trophée" data-tier="${medalTier(m)}">
+    <div class="t3d-panel" role="dialog" aria-label="Détail du trophée" data-tier="${medalTint(m, medalTier(m))}">
       <button class="t3d-x" data-a="t3dClose" aria-label="Fermer">${icon("close")}</button>
       <div class="t3d-big" id="t3dBig"></div>
       <div class="t3d-body">${t3dDetailHTML(id)}</div>
@@ -618,10 +623,13 @@ Object.assign(ACT, {
   t3dOpen(d, el){ showMedalModal(d.id || t3dFeatured().id, el); },
   t3dClose(){ t3dClose(); },
   t3dReplay(){ t3dPlayUnlock(); },
+  // revoir un palier déjà gagné (jamais un palier à venir)
   t3dMetal(d, el){
-    const c = T3D.ctx; if(!c || !c.detail) return;
-    t3dSetMedal(c, c.detail, +d.v, true); t3dStart();
-    qsa('.t3d-metals .chip').forEach(b=>b.classList.toggle("on", b===el));
+    const c = T3D.ctx, k = +d.v; if(!c || !c.detail || !(k>=1 && k<=medalTier(MEDAL_MAP[c.detail]))) return;
+    if(c.tier===k) return;
+    t3dSetMedal(c, c.detail, k, true); t3dStart();
+    qsa('.t3d-row[data-a="t3dMetal"]').forEach(b=>{ b.classList.toggle("on", b===el); b.setAttribute("aria-pressed", b===el); });
+    const pn = qs(".t3d-panel"); if(pn) pn.dataset.tier = k;
     sfx("seg");
   },
 });

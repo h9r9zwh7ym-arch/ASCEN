@@ -51,10 +51,15 @@ const OUT = path.join(OUT_ROOT, 'v27'); fs.mkdirSync(OUT, { recursive: true });
   const d0 = await page.evaluate(() => T3D.ctx.drag);
   await page.mouse.move(b.x - 60, b.y); await page.mouse.down(); await page.mouse.move(b.x + 20, b.y, { steps: 6 }); await page.mouse.move(b.x + 90, b.y, { steps: 6 }); await page.mouse.up();
   const d1 = await page.evaluate(() => T3D.ctx.drag); log('Drag rotation:', d0.toFixed(2), '→', d1.toFixed(2)); if (!(d1 > d0 + 0.5)) fail('rotation au doigt');
-  // aperçu diamant : couronne facettée et scintillements
-  await page.click('[data-a="t3dMetal"][data-v="4"]'); await wait(1400); await shot('05_detail_diamond');
-  const dia = await page.evaluate(() => ({ tier: T3D.ctx.tier, sparks: T3D.ctx.sparks.length, flat: T3D.ctx.medal.userData.mats.frame.flatShading || T3D.ctx.medal.userData.mats.body.flatShading }));
-  log('Diamond preview:', JSON.stringify(dia)); if (dia.tier !== 4 || dia.sparks < 4 || !dia.flat) fail('palier diamant');
+  // paliers à venir verrouillés (2.1.4) : pas d'aperçu du diamant ; un palier gagné se revoit en touchant sa ligne
+  const lock = await page.evaluate(() => { ACT.t3dMetal({ v: 4 }, null); return { tier: T3D.ctx.tier, btn4: !!document.querySelector('[data-a="t3dMetal"][data-v="4"]') }; });
+  log('Locked diamond:', JSON.stringify(lock)); if (lock.tier !== 3 || lock.btn4) fail('diamant verrouillé');
+  await page.click('[data-a="t3dMetal"][data-v="1"]'); await wait(900);
+  if (await page.evaluate(() => T3D.ctx.tier) !== 1) fail('revoir le bronze gagné');
+  await page.click('[data-a="t3dMetal"][data-v="3"]'); await wait(900);
+  // rendu du diamant (moteur) : couronne facettée et scintillements
+  const dia = await page.evaluate(() => { const c = T3D.ctx; t3dSetMedal(c, 'prs', 4); const r = { tier: c.tier, sparks: c.sparks.length, flat: c.medal.userData.mats.frame.flatShading || c.medal.userData.mats.body.flatShading }; t3dSetMedal(c, 'prs', 3); return r; });
+  log('Diamond render:', JSON.stringify(dia)); if (dia.tier !== 4 || dia.sparks < 4 || !dia.flat) fail('palier diamant');
   await page.click('[data-a="t3dReplay"]'); await wait(500); await shot('06_replay_burst');
   const burst = await page.evaluate(() => !!T3D.ctx.burst); log('Particles during replay:', burst); if (!burst) fail('particules');
   await wait(2200);

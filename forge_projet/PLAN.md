@@ -115,3 +115,27 @@ Classées par valeur pour l'usage à la maison :
 - [x] Robustesse : stockage plein ou corrompu, minuteries en arrière-plan, données extrêmes, test au hasard prolongé.
 - [x] Polish : captures de tous les écrans (320/390/430, clair/sombre), alignements, textes, états vides.
 - [x] Tests (v65), suite complète, HANDOFF, version 2.1.3, cache, commit, push.
+
+---
+
+# Plan — trophées (2.1.4)
+
+## A. Moins de texte
+- [x] Fiche : retirer les descriptions qui répètent l'unité (« Nombre de … ») et les phrases sur le diamant ;
+  ne garder que les règles utiles (joker, ×2,5 de la force de départ, exercice maîtrisé…).
+- [x] Progression : « 200 / 500 · Diamant » au lieu de la phrase complète ; plus de « Palier diamant atteint ».
+- [x] Grille : plus de « Complet », « Secret », « Découvert » sous les vignettes ; ligne « Tous les trophées » : « 20 sur 42 ».
+
+## B. Paliers non gagnés verrouillés
+- [x] Plus d'« Aperçu des paliers » : impossible de voir l'or ou le diamant avant de les gagner.
+- [x] On peut revoir un palier déjà gagné en touchant sa ligne ; les paliers à venir montrent un cadenas.
+
+## C. Matériaux plus nobles
+- [x] Le palier donne tout le caractère : métal + émail profond assorti (bronze/cognac, argent/nuit,
+  or/noir, diamant/platine sur bleu nuit, secrets irisés/violet), plus d'arc-en-ciel de couleurs iOS.
+- [x] Verrouillé : silhouette d'étain mat, sans éclat.
+- [x] Métaux retouchés (or plus chaud, bronze moins rose), même palette en 2D (repli, petites vignettes) et
+  sur les pastilles et étiquettes de palier ; fond de la fiche teinté selon le palier.
+
+## Livraison
+- [x] Test v66, tests adaptés, suite complète, HANDOFF, version 2.1.4, cache `forge-v50`, commit, push.

@@ -299,7 +299,7 @@ function medalsPaneHTML(){
 // l'onglet garde le résumé et les 3 prochains paliers, les seuls qui demandent une action)
 function allMedalsRowHTML(){
   const all = MEDALS, won = all.filter(m=>medalTier(m)).length;
-  return `<div class="group all-medals-g"><button class="row tap" data-a="allMedals">${sfIcon("trophy","yellow")}<div class="grow"><div class="t">Tous les trophées</div><div class="s">${won} sur ${all.length} · ${nb(SECRETS.length, "secret")} à découvrir</div></div><span class="chev">${icon("chev")}</span></button></div>`;
+  return `<div class="group all-medals-g"><button class="row tap" data-a="allMedals">${sfIcon("trophy","yellow")}<div class="grow"><div class="t">Tous les trophées</div><div class="s">${won} sur ${all.length}</div></div><span class="chev">${icon("chev")}</span></button></div>`;
 }
 function allMedalsHTML(){
   return `${MEDAL_CATS.map(([cat,label])=>{

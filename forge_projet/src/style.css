@@ -420,7 +420,6 @@ h2.sh button.more{font-size:var(--fs-sub);font-weight:500;color:var(--tint-ink)}
 .mc-bar{height:5px;border-radius:3px;background:var(--fill);margin:8px 6px 0;overflow:hidden}
 .mc-bar span{display:block;height:100%;border-radius:3px;background:var(--tint)}
 .mc-bar.big{height:8px;margin:0}
-.mc-done{font-size:var(--fs-cap2);font-weight:700;color:var(--plat);margin-top:7px}
 .medal-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 16px;padding:14px 8px;border-radius:18px;background:var(--bg2)}
 .ms-cell{text-align:center}
 .ms-n{font-size:var(--fs-t2);font-weight:700;margin-top:4px}
@@ -1188,7 +1187,6 @@ h2.sh button.more::after{content:none}
 @keyframes mshine{0%{transform:translateX(0)}55%,100%{transform:translateX(210px)}}
 .m-glare{mix-blend-mode:soft-light;pointer-events:none}
 .medal-card .medal{margin-bottom:8px}
-.secret-card .mc-done{color:var(--purple,#AF52DE);font-weight:600}
 .secret-card:not(.found) .mc-name{letter-spacing:.2em;color:var(--label2)}
 .cc-trophy .medal{width:96px;height:96px}
 .cc-trophy{font-size:0;filter:none}
@@ -1400,11 +1398,6 @@ html[data-vt="fade"]::view-transition-new(root){animation-name:vtFadeIn}
 .t3d-desc{color:rgba(255,255,255,.75);font-size:var(--fs-sub);line-height:1.4;margin:10px 0 14px}
 .t3d-body .mc-bar{background:rgba(255,255,255,.14)}
 .t3d-prog{font-size:var(--fs-foot);color:rgba(255,255,255,.7);margin-top:8px}
-.t3d-sec{margin:20px 0 8px;font-size:var(--fs-cap);font-weight:700;letter-spacing:0;text-transform:none;color:rgba(255,255,255,.55)}
-.t3d-metals{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
-.t3d-metals .chip{background:rgba(255,255,255,.1);color:#fff}
-.t3d-metals .chip.on{background:#fff;color:#1a120a}
-.t3d-metals .ii{width:12px;height:12px;opacity:.7;margin-left:2px}
 .t3d-actions{margin-top:18px}
 .t3d-actions .btn.secondary{background:rgba(255,255,255,.12);color:#fff}
 @media (prefers-reduced-motion:reduce){.t3d-big{transition:none}}
@@ -3026,7 +3019,6 @@ body.live-focus #v-today{padding-bottom:0}
 .safety-box .lbl{color:var(--tint-ink)}
 .chip.pr,.set-chips .chip.pr{background:var(--tint-bg);color:var(--tint-ink)}
 .ii.star{color:var(--fav)}
-.secret-card .mc-done{color:var(--tint-ink)}
 /* Rewind : la palette de la marque (braise, encre, rouille, pierre) ; l'or reste aux trophées */
 #rewind[data-bg="ink"]{--a:#E07A55;--b:#2C2C2E;--c:#0B0B0C}
 #rewind[data-bg="rust"]{--a:#D9785A;--b:#7A2E1A;--c:#1A0905}
@@ -3194,3 +3186,52 @@ body.live-focus #toast,body:has(#overlay.show) #toast{top:calc(10px + var(--sat)
 .dl-act .btn{flex:none;width:auto}
 /* séance : au sommet (en attente de la série suivante), la phrase se lit à côté de l'icône, sur une ligne */
 .lv-asc.wait .la-next{text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* trophées (2.1.4) : le palier donne le métal ; pastilles et étiquettes en métal brossé, fiche teintée
+   par le palier affiché (lumière chaude du bronze, froide de l'argent, dorée de l'or, glacée du diamant) */
+:root{--m-bronze:linear-gradient(135deg,#F2C6A0,#B8764A 55%,#7A4424);--m-silver:linear-gradient(135deg,#FFFFFF,#C9CED5 55%,#858D97);
+  --m-gold:linear-gradient(135deg,#FFF0B8,#E3AF3E 55%,#9A6810);--m-diam:linear-gradient(135deg,#FFFFFF,#CFE6F7 40%,#E9DDFB 70%,#A9C6DE)}
+.pip.t1{background:var(--m-bronze)} .pip.t2{background:var(--m-silver)} .pip.t3{background:var(--m-gold)} .pip.t4{background:var(--m-diam);box-shadow:none}
+.pip.t1,.pip.t2,.pip.t3,.pip.t4{box-shadow:inset 0 0 0 .5px rgba(0,0,0,.18)}
+.tier-tag{padding:1px 7px;border-radius:6px;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.12)}
+.tier-tag.t1{background:var(--m-bronze);color:#fff}
+.tier-tag.t2{background:var(--m-silver);color:#2B3139}
+.tier-tag.t3{background:var(--m-gold);color:#3A2706}
+.tier-tag.t4{background:var(--m-diam)!important;color:#1B2A4A}
+.medal.t0{opacity:.6;filter:grayscale(1) drop-shadow(0 1px 1.5px rgba(0,0,0,.12))}
+.medal.secret.t0{opacity:.75}
+.medal-card{display:flex;flex-direction:column;align-items:center}
+.medal-card .mc-bar{align-self:stretch}
+.tier-row .tr-date .ii,.t3d-row em .ii{width:14px;height:14px}
+.tier-row:not(.got) .tr-date .ii{color:var(--label3)}
+.t3d-panel{--glow:rgba(255,255,255,.1);--ink:#fff;background:radial-gradient(110% 55% at 50% 0%,var(--glow),transparent 62%),linear-gradient(180deg,#1C1B1A,#000 58%)}
+.t3d-panel[data-tier="1"]{--glow:rgba(201,138,92,.3);--ink:#F2C39E}
+.t3d-panel[data-tier="2"]{--glow:rgba(214,224,236,.2);--ink:#E6EBF1}
+.t3d-panel[data-tier="3"]{--glow:rgba(245,190,82,.28);--ink:#F8D987}
+.t3d-panel[data-tier="4"]{--glow:rgba(190,225,255,.24);--ink:#D6ECFF;background:radial-gradient(110% 55% at 50% 0%,var(--glow),transparent 62%),linear-gradient(180deg,#171C23,#07090C 58%)}
+.t3d-panel[data-tier="s"]{--glow:rgba(170,140,255,.26);--ink:#DCCBFF}
+.t3d-panel{transition:transform .45s cubic-bezier(.32,.72,0,1),opacity .3s}
+.t3d-tier{color:var(--ink);font-weight:600}
+.t3d-desc{margin:8px 0 4px}
+.t3d-progw{margin-top:16px}
+.t3d-body .mc-bar span{background:var(--ink)}
+.t3d-row{width:100%;text-align:left;color:rgba(255,255,255,.4);font:inherit;font-size:var(--fs-sub)}
+.t3d-row.got{color:#fff}
+.t3d-row b{font-weight:600}
+.t3d-row.locked .pip{opacity:.3}
+.t3d-row.locked em .ii{color:rgba(255,255,255,.4)}
+button.t3d-row{position:relative;cursor:pointer}
+button.t3d-row::before{content:"";position:absolute;inset:2px -10px;border-radius:12px;background:rgba(255,255,255,.08);opacity:0;transition:opacity .2s}
+button.t3d-row.on::before{opacity:1}
+button.t3d-row:active::before{opacity:1;background:rgba(255,255,255,.14)}
+.t3d-card{--glow:rgba(255,255,255,.14);background:radial-gradient(90% 120% at 22% 40%,var(--glow),transparent 62%),linear-gradient(160deg,#22211F,#080808)}
+.t3d-card[data-tier="1"]{--glow:rgba(201,138,92,.34)}
+.t3d-card[data-tier="2"]{--glow:rgba(214,224,236,.22)}
+.t3d-card[data-tier="3"]{--glow:rgba(245,190,82,.32)}
+.t3d-card[data-tier="4"]{--glow:rgba(190,225,255,.28)}
+.t3d-card[data-tier="s"]{--glow:rgba(170,140,255,.3)}
+.t3d-info .t3d-k{color:rgba(255,255,255,.6);font-weight:600}
+/* verrouillé : la médaille reste une silhouette sombre, jamais confondue avec l'argent */
+.t3d-panel[data-tier="0"] .t3d-big,.t3d-card[data-tier="0"] .t3d-stage{filter:saturate(0) brightness(.6)}
+.t3d-row em{white-space:nowrap;flex:none}
+.t3d-row>span:not(.pip){flex:1;min-width:0}
+.t3d-row .pip{flex:none}
