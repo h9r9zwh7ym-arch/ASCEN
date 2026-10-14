@@ -221,6 +221,8 @@ function suggestForExo(exo, setsN, deload){
     const step = timed ? 5 : 1, cap = timed ? 600 : rMax+6;
     const add = gap>=21 ? -step : timed || effort===3 ? 0 : effort===1 ? step*2 : step;
     reps = reps.map((_,i)=>Math.max(rMin, Math.min(cap, lastReps(i)+add)));
+    // exercice tenu arrêté avant la fin la dernière fois : on repart du temps réellement tenu (au cran de 5 s, 15 s minimum)
+    if(timed && done.some(st=>st.goal>(st.reps||0))) reps = reps.map((_,i)=>{ const d = done[Math.min(i, done.length-1)]||{}; return d.goal>(d.reps||0) ? Math.max(15, Math.floor((d.reps||0)/5)*5) : lastReps(i); });
     if(gap>=21){
       note = `Reprise après ${gap} jours : un peu moins que la dernière fois, on remonte vite.`;
     } else if(hitTop && effort!==3){

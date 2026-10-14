@@ -75,11 +75,10 @@ const OUT = path.join(OUT_ROOT, 'v32'); fs.mkdirSync(OUT, { recursive: true });
   await page.evaluate(() => { switchTab('today'); S.custom = { exos: [{ exoId: 'dc_haltere', sets: 2 }, { exoId: 'pompes', sets: 2 }] }; ACT.startCustom(); }); await wait(4600);
   await page.evaluate(() => { const l = document.querySelector('#launch'); if (l) l.click(); }); await wait(600);
   const clamp = await page.evaluate(() => {
-    ACT.editVal({ exi: '0', si: '0', f: 'weight' }); document.getElementById('numInput').value = '25000'; ACT.numOk();
-    ACT.editVal({ exi: '0', si: '0', f: 'reps' }); document.getElementById('numInput').value = '1e7'; ACT.numOk();
-    const st = S.draft.exos[0].sets[0]; return { w: st.weight, r: st.reps };
+    // plus de saisie au clavier (2.2.0) : le glisser sur le chiffre reste borné
+    const def = EXO_MAP.dc_haltere; return { r: valDragStep(def, 'reps', 990, 500), z: valDragStep(def, 'reps', 3, -50) };
   });
-  log('Clamped entries:', JSON.stringify(clamp)); if (clamp.w !== 500 || clamp.r !== 9999) fail('bornes de saisie');
+  log('Clamped entries:', JSON.stringify(clamp)); if (clamp.r !== 999 || clamp.z !== 0) fail('bornes de saisie');
   await page.evaluate(() => { S.draft = null; save(); renderView('today'); });
   // 8. recherche d'exercice : une seule reconstruction par image, résultat final juste
   await page.evaluate(() => openPicker({ title: 'Choisir', multi: true, onDone: () => {} })); await wait(600);

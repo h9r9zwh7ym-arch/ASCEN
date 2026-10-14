@@ -84,11 +84,8 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.click('[data-a="startCustom"]'); await page.waitForSelector('#launch', { state: 'detached', timeout: 6000 });
   await wait(400);
   await shot('06_live');
-  // edit value modal
-  await page.click('[data-a="editVal"][data-f="reps"]');
-  await wait(300);
-  await page.fill('#numInput', '12');
-  await page.keyboard.press('Enter');
+  // valeur ajustée (− / + ; la saisie au clavier a été retirée en 2.2.0)
+  await page.evaluate(() => { const b = document.querySelector('.sx-steps .bs-val[data-f="reps"]'); S.draft.exos[+b.dataset.exi].sets.forEach(s => { if (!s.done) s.reps = 12; }); save(); refreshFocusRegion(); });
   await wait(300);
   log('Reps after edit:', await page.textContent('.bs-val'));
   for (let i = 0; i < 30; i++) {

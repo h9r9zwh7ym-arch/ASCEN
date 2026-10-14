@@ -1444,6 +1444,13 @@ a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est
   - Glisser verticalement sur le chiffre (répétitions, secondes, charge) en séance : un cran tous les 18 px (5 s pour un exercice tenu, pas du matériel pour la charge), son et vibration à chaque cran, enregistré au lâcher et appliqué aux séries suivantes non validées. Toucher sans glisser ouvre la saisie comme avant. Aucun texte d'explication. `valDrag*`, view_today.js ; `touch-action:none` sur le chiffre.
   - Exercice tenu : toucher la durée ouvre une molette (`promptDuration`) : règle sur canevas, un trait toutes les 5 s, un chiffre toutes les 30 s, élan puis arrêt sur un cran, 15 s minimum, 10 min maximum, pas de raccourcis. Le bouton « Lancer le chrono · N s » suit la valeur (`patchFocusSteps`).
   - La dernière durée d'un exercice tenu est reproposée telle quelle à la séance suivante (suggestForExo : plus de +5 s automatiques ; −5 s après 3 semaines sans).
+- **Retours iPhone (5), version 2.2.0.**
+  - Glisser sur le chiffre : un cran tous les 34 px (moins sensible). Plus de saisie au clavier pour les répétitions et la charge (`editVal`, `promptNumber` en séance retirés) : glisser, − / +, ou flèches au clavier.
+  - Exercice tenu : la règle des secondes (`mountDurDial`, posée par un MutationObserver sur `.sx-durrow .dur-dial`) remplace le − / + dans la carte ; le chiffre reste blanc. 15 s minimum ; la valeur posée vaut pour les séries suivantes, le bouton du chrono et les cases de séries suivent. La règle et le chiffre sont exclus du glisser de carte (changement d'exercice).
+  - Chrono : « S'arrêter » (plus « Arrêter et valider ») ; arrêté avant la fin, la série garde le temps tenu et la durée visée (`st.goal`, 4e champ du format compact). La fois suivante : « La dernière fois : 32 s sur 45 s » et la proposition repart du temps tenu (cran de 5 s, 15 s minimum).
+  - Ressenti d'un exercice tenu : Difficile / Moyen / Facile (avant : À fond / Encore un peu / Large marge).
+  - Faux « Record » : `isNewPR` comparait au 1RM arrondi au dixième (10 × 10 kg « battait » 10 × 10 kg) ; `exoPRs` donne maintenant aussi `e1rm` exact.
+  - Fin de séance, carte d'ascension : plus de « aujourd'hui · X m sur Y m », plus de ligne « Camp 2 dans … · ≈ séances » ; puces « Retour en force », badge de carte postale et piste à l'orange de l'app (plus de dégradé #FF9A66 → #FF5A2C).
   Le rappel du « pourquoi » reste sur l'accueil. Premier lancement : l'accueil attend la reprise de la copie de
   secours IndexedDB (stockage vidé) avant de s'ouvrir, au plus 0,6 s. La barre d'état est relue deux images après le
   premier rendu (`syncStatusBar(undefined, true)`).

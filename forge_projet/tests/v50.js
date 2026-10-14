@@ -192,7 +192,9 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const cel = await page.evaluate(id => { const c = document.querySelector('.cel .cel-asc'), e = ascent().log[id];
     return { asc: !!c, txt: c ? c.textContent.replace(/\s+/g, ' ') : '', gain: e && Math.round(e.gain), xp: /XP/.test(document.querySelector('.cel').textContent), trk: !!(c && c.querySelector('#celTrk')), next: !!(c && (c.querySelector('.ca-next') || e.summit)) }; }, sid);
   log('Celebration:', JSON.stringify(cel));
-  if (!cel.asc || !(cel.gain > 0) || !cel.txt.includes('+') || cel.xp || !cel.trk || !cel.next) fail('fin de séance : altitude gagnée à la place de l\'XP');
+  if (!cel.asc || !(cel.gain > 0) || !cel.txt.includes('+') || cel.xp || !cel.trk) fail('fin de séance : altitude gagnée à la place de l\'XP');
+  // 2.2.0 : carte allégée, plus de ligne « prochain camp dans … » ni « X m sur Y m »
+  if (cel.txt.includes("aujourd'hui") || (cel.next && !cel.txt.includes('Sommet'))) fail('fin de séance : carte d\'ascension allégée');
   await shot('04_celebration');
   await page.evaluate(() => closeSheet()); await wait(500);
   // une séance qui franchit un camp : la piste avance, le camp s'allume, le badge se révèle

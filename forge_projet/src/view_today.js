@@ -758,7 +758,7 @@ function holdCardHTML(idx, ex, def, si, header, animClass, setDots){
     <div class="sx-grow"></div>
     ${setDots(si)}
     <div class="hold-actions">
-      <button class="btn big validate hold-stop" data-a="holdStop">${icon("check")} ${prep?"Annuler":"Arrêter et valider"}</button>
+      <button class="btn big validate hold-stop" data-a="holdStop">${prep?"Annuler":"S'arrêter"}</button>
     </div>
   </div>`;
 }
@@ -783,7 +783,8 @@ function holdFinish(secs){
   const h = hold; clearInterval(holdTimer); hold = null;
   if(!h || !S.draft || !S.draft.exos[h.exi]) return;
   const st = S.draft.exos[h.exi].sets.find(s=>!s.done);
-  if(st) st.reps = Math.max(1, Math.round(secs));
+  // arrêté avant la fin : on garde le temps tenu et la durée visée (rappelée et adaptée la prochaine fois)
+  if(st){ st.reps = Math.max(1, Math.round(secs)); if(st.reps<h.target) st.goal = h.target; else delete st.goal; }
   ACT.validateSet({ exi:String(h.exi) });
 }
 
@@ -792,7 +793,7 @@ function effortHTML(){
   const src = restState && restState.src; if(!src || !S.draft || !S.draft.exos[src.exi]) return "";
   const st = S.draft.exos[src.exi].sets[src.si]; if(!st) return "";
   const timed = isTimed(EXO_MAP[S.draft.exos[src.exi].exoId]);
-  const opts = timed ? [[3,"À fond"],[2,"Encore un peu"],[1,"Large marge"]] : [[3,"0"],[2,"1–2"],[1,"3 ou +"]];
+  const opts = timed ? [[3,"Difficile"],[2,"Moyen"],[1,"Facile"]] : [[3,"0"],[2,"1–2"],[1,"3 ou +"]];
   return `<div class="effort" role="group" aria-label="Ressenti de la série">
     <div class="ef-q">${timed?"Comment c'était ?":"Combien de reps en réserve ?"}</div>
     <div class="ef-opts">${opts.map(([v,l])=>`<button class="${st.effort===v?"on":""}" data-a="setEffort" data-v="${v}" aria-pressed="${st.effort===v}">${l}</button>`).join("")}</div>
@@ -818,7 +819,7 @@ let beatWinKey = ""; // série déjà annoncée « mieux » : l'animation ne rej
 function beatLineHTML(ex, def, si, st){
   const ref = isStretch(def) ? null : beatRef(ex.exoId, si);
   if(!ref) return lastTimeHTML(ex.exoId, !!ex.note);
-  const u = isTimed(def) ? " s" : "", refTxt = `${ref.reps}${u}${loadSuffix(def, ref.weight)}`;
+  const u = isTimed(def) ? " s" : "", refTxt = `${ref.reps}${u}${ref.goal>ref.reps ? ` sur ${ref.goal} s` : ""}${loadSuffix(def, ref.weight)}`;
   const key = ex.exoId+":"+si, gap = daysBetween(ref.date, todayISO());
   // semaine allégée : pas de record à battre, on garde de la marge
   if(ex.deload) return `<div class="fc-beat dl">${ii("leaf")}<span>Semaine allégée : vise <b>${st.reps}${u}</b>${loadSuffix(def, st.weight)}, sans aller à fond <small>(la dernière fois : ${refTxt})</small></span></div>`;
@@ -826,6 +827,8 @@ function beatLineHTML(ex, def, si, st){
   if(gap>=21) return `<div class="fc-beat">${ii("repeat")}<span>Reprise après ${gap} jours : retrouve tes sensations <small>(la dernière fois : ${refTxt})</small></span></div>`;
   if(beatCmp(def, st, ref)>0){ const pop = beatWinKey!==key; beatWinKey = key; return `<div class="fc-beat win${pop ? " pop" : ""}">${ii("trendUp")}<span>Ça bat la dernière fois <small>(${refTxt})</small></span></div>`; }
   if(beatWinKey===key) beatWinKey = "";
+  // exercice tenu arrêté avant la fin la dernière fois : un simple rappel, pas de « à battre »
+  if(ref.goal>ref.reps) return `<div class="fc-beat">${ii("target")}<span>La dernière fois : <b>${ref.reps} s</b> sur ${ref.goal} s</span></div>`;
   const tgt = beatTarget(def, st.weight, ref);
   if(tgt==null) return `<div class="fc-beat">${ii("target")}<span>La dernière fois : <b>${refTxt}</b></span></div>`;
   const lt = loadableTypeOf(def), at = lt && st.weight ? (lt==="bands" ? ` · ${fmtLoad(def, st.weight)}` : ` à ${fmtDec(st.weight)} kg`) : "";
@@ -988,29 +991,33 @@ function sxStepsHTML(idx, ex, def, si, st){
       <button class="sx-pm" aria-label="${bands?"Élastique plus léger":"Charge plus légère"}" data-a="stepWeight" ${at} data-d="-1">${SX_PM(-1)}</button>
       <div class="sx-val"><small>${bands?"Élastique":"Charge"}</small>${bands
         ? `<span class="bs-val band-val ${roll("weight")}" aria-live="polite">${st.weight?bandLabel(st.weight):"–"}</span>`
-        : `<button class="bs-val ${roll("weight")}" aria-label="Charge : ${st.weight?fmtDec(st.weight):0} kilos. Saisir une valeur" data-a="editVal" data-f="weight" ${at}><b>${st.weight!=null?fmtDec(st.weight):"–"}</b><span>kg</span></button>`}</div>
+        : `<div class="bs-val ${roll("weight")}" role="spinbutton" tabindex="0" aria-label="Charge" aria-valuenow="${st.weight||0}" data-f="weight" ${at}><b>${st.weight!=null?fmtDec(st.weight):"–"}</b><span>kg</span></div>`}</div>
       <button class="sx-pm" aria-label="${bands?"Élastique plus fort":"Charge plus lourde"}" data-a="stepWeight" ${at} data-d="1">${SX_PM(1)}</button>
     </div>`;
-  const rRow = `<div class="big-stepper sx-row">
-      <button class="sx-pm" aria-label="${timed?"Une seconde de moins":"Une répétition de moins"}" data-a="stepReps" ${at} data-d="-1">${SX_PM(-1)}</button>
-      <div class="sx-val"><small>${timed?"Secondes":"Répétitions"}</small><button class="bs-val ${roll("reps")}" aria-label="${timed?"Durée":"Répétitions"} : ${st.reps??0}. Saisir une valeur" data-a="editVal" data-f="reps" ${at}><b>${st.reps??"–"}</b></button></div>
-      <button class="sx-pm" aria-label="${timed?"Une seconde de plus":"Une répétition de plus"}" data-a="stepReps" ${at} data-d="1">${SX_PM(1)}</button>
+  // exercice tenu : la règle des secondes remplace le − / + ; le chiffre reste en blanc, comme les autres exercices
+  const rRow = timed ? `<div class="big-stepper sx-row sx-durrow">
+      <div class="sx-val"><small>Secondes</small><div class="bs-val" aria-hidden="true" id="durNum"><b>${st.reps??"–"}</b></div>
+      <div class="dur-dial" tabindex="0" role="slider" aria-label="Durée en secondes" aria-valuemin="${DUR_MIN}" aria-valuemax="${DUR_MAX}" aria-valuenow="${st.reps||30}" data-v="${st.reps||30}" ${at}><canvas></canvas><i></i></div></div>
+    </div>` : `<div class="big-stepper sx-row">
+      <button class="sx-pm" aria-label="Une répétition de moins" data-a="stepReps" ${at} data-d="-1">${SX_PM(-1)}</button>
+      <div class="sx-val"><small>Répétitions</small><div class="bs-val ${roll("reps")}" role="spinbutton" tabindex="0" aria-label="Répétitions" aria-valuenow="${st.reps||0}" data-f="reps" ${at}><b>${st.reps??"–"}</b></div></div>
+      <button class="sx-pm" aria-label="Une répétition de plus" data-a="stepReps" ${at} data-d="1">${SX_PM(1)}</button>
     </div>`;
   const hint = S.settings.beat===false ? lastTimeHTML(ex.exoId, !!ex.note) : beatLineHTML(ex, def, si, st);
   return `<div class="sx-steps">${wRow}${rRow}${hint ? `<div class="sx-hint" aria-live="polite">${hint}</div>` : ""}</div>`;
 }
 // +/− sans tout redessiner : seules les séries et les compteurs changent (le mouvement continue)
 // ---------- saisie en un geste ----------
-// Glisser vers le haut ou le bas sur le chiffre (répétitions, secondes ou charge) le fait défiler d'un cran tous les
-// 18 px, avec un petit son à chaque cran ; lâcher enregistre. Toucher sans glisser ouvre la saisie comme avant.
-const VAL_PX = 18, DUR_MIN = 15, DUR_MAX = 600;
-let valDrag = null, valDragAt = 0;
+// Glisser vers le haut ou le bas sur le chiffre (répétitions ou charge) le fait défiler d'un cran tous les 34 px,
+// avec un petit son à chaque cran ; lâcher enregistre. (Les secondes d'un exercice tenu ont leur règle.)
+const VAL_PX = 34, DUR_MIN = 15, DUR_MAX = 600;
+let valDrag = null;
 function valDragStep(def, f, v, n){
   if(f==="weight"){ let w = v||0; for(let i=0;i<Math.abs(n);i++) w = stepWeightValue(def, w, Math.sign(n)); return w; }
-  return isTimed(def) ? Math.max(DUR_MIN, Math.min(DUR_MAX, (v||0) + 5*n)) : Math.max(0, Math.min(999, (v||0) + n));
+  return Math.max(0, Math.min(999, (v||0) + n));
 }
 document.addEventListener("pointerdown", e=>{
-  const b = e.target.closest && e.target.closest('.sx-steps [data-a="editVal"]'); if(!b || !S.draft) return;
+  const b = e.target.closest && e.target.closest('.sx-steps .bs-val[data-f]'); if(!b || !S.draft) return;
   const ex = S.draft.exos[+b.dataset.exi], st = ex && ex.sets[+b.dataset.si], def = ex && EXO_MAP[ex.exoId]; if(!st || !def) return;
   valDrag = { b, ex, st, def, f:b.dataset.f, si:+b.dataset.si, exi:+b.dataset.exi, y:e.clientY, v0:b.dataset.f==="weight" ? st.weight : st.reps, n:0, moved:false, id:e.pointerId };
 });
@@ -1028,59 +1035,71 @@ document.addEventListener("pointermove", e=>{
 const valDragEnd = e=>{
   const D = valDrag; if(!D || (e && e.pointerId!==D.id)) return; valDrag = null;
   if(!D.moved) return;
-  valDragAt = Date.now(); D.b.classList.remove("dragging");
+  D.b.classList.remove("dragging");
   if(D.v==null || D.v===D.v0) return;
   D.ex.sets.forEach((s,i)=>{ if(i>=D.si && !s.done && (D.f==="weight" ? s.weight : s.reps)===D.v0){ if(D.f==="weight") s.weight = D.v; else s.reps = D.v; } });
   if(D.f==="weight") D.st.weight = D.v; else D.st.reps = D.v;
   save(); if(!patchFocusSteps(D.exi)) refreshFocusRegion();
 };
 document.addEventListener("pointerup", valDragEnd); document.addEventListener("pointercancel", valDragEnd);
+document.addEventListener("keydown", e=>{
+  const b = e.target.closest && e.target.closest('.sx-steps .bs-val[data-f]'); if(!b || !S.draft) return;
+  const k = e.key==="ArrowUp" ? 1 : e.key==="ArrowDown" ? -1 : 0; if(!k) return; e.preventDefault();
+  ACT[b.dataset.f==="weight" ? "stepWeight" : "stepReps"]({ exi:b.dataset.exi, si:b.dataset.si, d:String(k) });
+});
 
-// ---------- molette de durée (exercices tenus) ----------
+// ---------- règle des secondes (exercices tenus) ----------
 // Une règle qui défile sous le doigt, comme le minuteur d'iOS : un trait toutes les 5 s, un chiffre toutes les 30 s,
-// l'élan continue puis s'arrête sur un cran. 15 s minimum.
+// l'élan continue puis s'arrête sur un cran. 15 s minimum. Posée à la place du − / + dans la carte de l'exercice.
 function fmtDur(s){ return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
-function promptDuration(value, onOk){
-  const STEP = 14, start = Math.max(DUR_MIN, Math.min(DUR_MAX, Math.round((value||30)/5)*5));
-  openModal(`<div class="dur-t">Durée</div>
-    <div class="dur-v num" id="durVal">${fmtDur(start)}</div>
-    <div class="dur-dial" id="durDial" tabindex="0" role="slider" aria-label="Durée en secondes" aria-valuemin="${DUR_MIN}" aria-valuemax="${DUR_MAX}" aria-valuenow="${start}"><canvas></canvas><i></i></div>
-    <div class="dur-act"><button class="btn" data-a="durOk">Valider</button><button class="btn ghost" data-a="closesheet">Annuler</button></div>`, "dur-modal");
-  const dial = qs("#durDial"), cv = qs("canvas", dial), out = qs("#durVal");
+function mountDurDial(dial){
+  if(dial._on) return; dial._on = true;
+  const STEP = 12, cv = qs("canvas", dial), num = qs("#durNum b"), exi = +dial.dataset.exi, si = +dial.dataset.si;
+  const start = Math.max(DUR_MIN, Math.min(DUR_MAX, Math.round((+dial.dataset.v||30)/5)*5));
   const P0 = DUR_MIN/5*STEP, P1 = DUR_MAX/5*STEP;
-  let pos = start/5*STEP, vel = 0, drag = null, raf = 0, last = start;
+  let pos = start/5*STEP, vel = 0, drag = null, raf = 0, last = start, saved = +dial.dataset.v;
   const val = ()=>Math.round(pos/STEP)*5;
-  const colors = ()=>{ const cs = getComputedStyle(dial); return [cs.getPropertyValue("--tint-ink").trim() || "#E07A55", cs.color]; };
   function draw(){
-    const w = dial.clientWidth, h = dial.clientHeight, r = window.devicePixelRatio || 1; if(!w) return;
+    const w = dial.clientWidth, h = dial.clientHeight, r = window.devicePixelRatio || 1; if(!w || !dial.isConnected) return;
     if(cv.width!==Math.round(w*r)){ cv.width = Math.round(w*r); cv.height = Math.round(h*r); }
-    const g = cv.getContext("2d"); g.setTransform(r,0,0,r,0,0); g.clearRect(0,0,w,h);
-    const [on, off] = colors(), c = w/2, sec = val();
-    g.lineCap = "round"; g.textAlign = "center"; g.font = "600 13px ui-rounded,-apple-system,system-ui,sans-serif";
+    const g = cv.getContext("2d"), cs = getComputedStyle(dial), on = cs.getPropertyValue("--tint").trim() || "#BC5736", off = cs.color;
+    g.setTransform(r,0,0,r,0,0); g.clearRect(0,0,w,h);
+    const c = w/2, sec = val();
+    g.lineCap = "round"; g.textAlign = "center"; g.font = "600 12px ui-rounded,-apple-system,system-ui,sans-serif";
     for(let s = DUR_MIN; s<=DUR_MAX; s+=5){
       const x = c + s/5*STEP - pos; if(x<-12 || x>w+12) continue;
       const major = s%30===0, a = s<=sec;
-      g.strokeStyle = g.fillStyle = a ? on : off; g.globalAlpha = a ? 1 : .45; g.lineWidth = major ? 3 : 2;
-      g.beginPath(); g.moveTo(x, major ? h*.36 : s%15===0 ? h*.46 : h*.52); g.lineTo(x, h*.8); g.stroke();
-      if(major) g.fillText(s<60 ? String(s) : fmtDur(s), x, h*.24);
+      g.strokeStyle = g.fillStyle = a ? on : off; g.globalAlpha = a ? 1 : .4; g.lineWidth = major ? 2.6 : 1.8;
+      g.beginPath(); g.moveTo(x, major ? h*.4 : s%15===0 ? h*.5 : h*.56); g.lineTo(x, h*.84); g.stroke();
+      if(major) g.fillText(s<60 ? String(s) : fmtDur(s), x, h*.26);
     }
     g.globalAlpha = 1;
-    if(sec!==last){ last = sec; out.textContent = fmtDur(sec); dial.setAttribute("aria-valuenow", sec); sfx("step", true); haptic(4); }
+    if(sec!==last){ last = sec; if(num) num.textContent = sec; dial.setAttribute("aria-valuenow", sec); sfx("step", true); haptic(4); }
   }
   const clamp = ()=>{ pos = Math.max(P0, Math.min(P1, pos)); };
+  // valeur posée : elle vaut pour cette série et les suivantes non validées, et le chrono la reprend
+  const commit = ()=>{
+    const v = val(); if(v===saved || !S.draft || !S.draft.exos[exi]) return; saved = v;
+    const ex = S.draft.exos[exi]; ex.sets.forEach((s,i)=>{ if(i>=si && !s.done) s.reps = v; });
+    save();
+    const hg = qs(".hold-go"); if(hg) hg.innerHTML = `${icon("timer")} Lancer le chrono · ${v} s`;
+    const sx = qs(".sx-sets"); if(sx){ const def = EXO_MAP[ex.exoId]; sx.outerHTML = sxSetsHTML(exi, ex, def, si, -1); }
+  };
   const glide = ()=>{
-    if(Math.abs(vel)>.4){ pos += vel; vel *= .92; clamp(); draw(); raf = requestAnimationFrame(glide); return; }
+    if(Math.abs(vel)>.4){ pos += vel; vel *= .9; clamp(); draw(); raf = requestAnimationFrame(glide); return; }
     const t = Math.round(pos/STEP)*STEP; pos += (t-pos)*.35; draw();
-    if(Math.abs(t-pos)>.3) raf = requestAnimationFrame(glide); else { pos = t; draw(); }
+    if(Math.abs(t-pos)>.3) raf = requestAnimationFrame(glide); else { pos = t; draw(); commit(); }
   };
   dial.addEventListener("pointerdown", e=>{ cancelAnimationFrame(raf); drag = { x:e.clientX, t:performance.now() }; vel = 0; try{ dial.setPointerCapture(e.pointerId); }catch(err){} });
   dial.addEventListener("pointermove", e=>{ if(!drag) return; const dx = e.clientX-drag.x, now = performance.now(); pos -= dx; clamp(); vel = -dx/Math.max(8, now-drag.t)*16; drag = { x:e.clientX, t:now }; draw(); });
   const up = ()=>{ if(!drag) return; drag = null; if(reducedMotion()) vel = 0; raf = requestAnimationFrame(glide); };
   dial.addEventListener("pointerup", up); dial.addEventListener("pointercancel", up);
-  dial.addEventListener("keydown", e=>{ const k = e.key==="ArrowRight" || e.key==="ArrowUp" ? 1 : e.key==="ArrowLeft" || e.key==="ArrowDown" ? -1 : 0; if(!k) return; e.preventDefault(); pos += k*STEP; clamp(); draw(); });
-  qs("#overlay")._onDur = ()=>onOk(val());
+  dial.addEventListener("keydown", e=>{ const k = e.key==="ArrowRight" || e.key==="ArrowUp" ? 1 : e.key==="ArrowLeft" || e.key==="ArrowDown" ? -1 : 0; if(!k) return; e.preventDefault(); pos += k*STEP; clamp(); draw(); commit(); });
   requestAnimationFrame(draw);
 }
+// la règle se pose dès que la carte de l'exercice tenu est dessinée
+new MutationObserver(()=>{ const d = document.querySelector(".sx-durrow .dur-dial:not(._m)"); if(d){ d.classList.add("_m"); mountDurDial(d); } })
+  .observe(document.getElementById("app") || document.body, { childList:true, subtree:true });
 
 function patchFocusSteps(idx){
   const card = qs("#focusRegion .sx-card[data-exi]");
@@ -1254,6 +1273,8 @@ let swipe = null;
 let suppressClicksUntil = 0;
 document.addEventListener("pointerdown", e=>{
   const card = e.target.closest && e.target.closest(".focus-card:not(.sx-warm)");
+  // la règle des secondes et le chiffre glissable ont leur propre geste
+  if(card && e.target.closest(".dur-dial, .bs-val[data-f]")) return;
   if(!card || !S.draft || !S.draft.startedAt || (e.pointerType==="mouse" && e.button!==0)) return;
   swipe = { card, x:e.clientX, y:e.clientY, dx:0, active:false, id:e.pointerId, t:performance.now() };
 });
@@ -1757,25 +1778,7 @@ Object.assign(ACT, {
     valRoll = { f:"weight", d: parseInt(d.d,10)>0 ? "up" : "down" }; sfx("step", parseInt(d.d,10)>0);
     save(); if(!patchFocusSteps(+d.exi)) refreshFocusRegion();
   },
-  durOk(){ const fn = qs("#overlay")._onDur; closeSheet(); if(fn) fn(); },
-  editVal(d){
-    if(valDragAt && Date.now()-valDragAt<150){ valDragAt = 0; return; }   // le clic qui suit un glisser sur le chiffre : pas de clavier
-    const ex = S.draft.exos[+d.exi], st = ex.sets[+d.si], isW = d.f==="weight", timed = !isW && !!EXO_MAP[ex.exoId] && isTimed(EXO_MAP[ex.exoId]);
-    if(timed) return promptDuration(st.reps, v=>{
-      ex.sets.forEach((s,i)=>{ if(i>=+d.si && !s.done) s.reps = v; });
-      save(); if(!patchFocusSteps(+d.exi)) refreshFocusRegion();
-    });
-    promptNumber({ title: isW?"Charge de la série":timed?"Durée":"Répétitions", value: isW?st.weight:st.reps, unit: isW?"kg":timed?"s":"rép.", step: isW?"0.5":"1",
-      onOk: v=>{
-        // bornes réalistes (comme dans l'édition de l'historique) : une faute de frappe ne doit pas
-        // gonfler le tonnage, les records et les trophées ; élastiques = niveaux 1 à 5
-        const def = EXO_MAP[ex.exoId], bands = def && loadableTypeOf(def)==="bands";
-        v = isW ? Math.min(bands ? 5 : 500, v) : Math.min(9999, v);
-        // la nouvelle valeur s'applique aussi aux séries suivantes non validées
-        ex.sets.forEach((s,i)=>{ if(i>=+d.si && !s.done){ if(isW) s.weight = round1(v); else s.reps = Math.round(v); } });
-        save(); if(!patchFocusSteps(+d.exi)) refreshFocusRegion();
-      }});
-  },
+
   validateSet(d){
     const exi = +d.exi;
     const ex = S.draft && S.draft.exos[exi], def = ex && EXO_MAP[ex.exoId];

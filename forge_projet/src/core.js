@@ -51,6 +51,8 @@ function packSession(s){
   o.x = (s.exos||[]).map(ex=>{
     const sets = ex.sets.filter(st=>st.done).map(st=>{
       const f = (st.pr?1:0) | ((st.effort||0)<<1);
+      // goal : exercice tenu arrêté avant la fin (durée visée)
+      if(st.goal) return [st.reps||0, st.weight==null?null:st.weight, f, st.goal];
       return f ? [st.reps||0, st.weight==null?null:st.weight, f] : st.weight!=null ? [st.reps||0, st.weight] : [st.reps||0];
     });
     return ex.targetReps ? [ex.exoId, sets, ex.targetReps] : [ex.exoId, sets];
@@ -67,7 +69,7 @@ function unpackSession(o){
   if(o.u) s.durationSec = o.u;
   if(o.b) s.beats = o.b;
   s.exos = (o.x||[]).map(([exoId, sets, targetReps])=>{
-    const ex = { exoId, sets: sets.map(([reps, weight, f])=>{ const st = { reps:+reps||0, done:true }; if(weight!=null && isFinite(weight)) st.weight = +weight; if(f&1) st.pr = true; if(f>>1) st.effort = f>>1; return st; }) };
+    const ex = { exoId, sets: sets.map(([reps, weight, f, g])=>{ const st = { reps:+reps||0, done:true }; if(weight!=null && isFinite(weight)) st.weight = +weight; if(f&1) st.pr = true; if(f>>1) st.effort = f>>1; if(g>0) st.goal = +g; return st; }) };
     if(targetReps) ex.targetReps = targetReps;
     return ex;
   });
@@ -372,6 +374,7 @@ function compactSession(s){
       if(st.weight!=null && st.weight!=="" && isFinite(st.weight)) o.weight = +st.weight;
       if(st.pr) o.pr = true;
       if(st.effort) o.effort = st.effort; // ressenti (répétitions en réserve) pour la progression
+      if(+st.goal>0 && +st.goal>(+st.reps||0)) o.goal = Math.min(9999, Math.round(+st.goal)); // tenu moins longtemps que visé
       return o;
     })
   })).filter(ex=>ex.sets.length);
@@ -540,7 +543,7 @@ function beatRef(exoId, si){
   const last = lastPerformance(exoId); if(!last) return null;
   const d = last.exo.sets.filter(s=>s.done && (s.reps||0)>0); if(!d.length) return null;
   const p = d[Math.min(si, d.length-1)];
-  return { reps:p.reps||0, weight:p.weight||0, date:last.session.date };
+  return { reps:p.reps||0, weight:p.weight||0, date:last.session.date, goal:p.goal||0 };
 }
 // 1 : mieux que la référence, 0 : égal, -1 : en dessous. Charge en kg différente : 1RM estimé (Epley) ;
 // élastique plus dur à répétitions égales ou plus = mieux.
@@ -666,12 +669,13 @@ function exoPRs_raw(exoId){
     });
     if(vol>maxVolumeSession) maxVolumeSession=vol;
   });
-  return { maxWeight, maxVolumeSession, best1rm:round1(best1rm), count };
+  // best1rm arrondi pour l'affichage ; e1rm exact pour comparer (sinon 10 × 10 kg « battait » 10 × 10 kg : 13,33 > 13,3)
+  return { maxWeight, maxVolumeSession, best1rm:round1(best1rm), e1rm:best1rm, count };
 }
 function isNewPR(exoId, weight, reps){
   const pr = exoPRs(exoId);
   if(!pr.count) return false; // la toute première fois n'est pas un « record battu »
-  return weight>pr.maxWeight || estimated1RM(weight,reps)>pr.best1rm+0.01;
+  return weight>pr.maxWeight || estimated1RM(weight,reps)>pr.e1rm+0.01;
 }
 
 // Records recalculés après la modification d'une séance passée : même règle qu'en direct

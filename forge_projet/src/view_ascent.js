@@ -935,11 +935,9 @@ function ascCelHTML(sessionId){
     pc = `<div class="ca-badge ca-pc" id="celBadge"><div class="ca-pc-k"><span>${ascIc(e.summit ? "flag" : "tent")}${kick}</span>${mine ? `<b>${ascIc("card")}${mine>1 ? `${mine} nouvelles cartes` : "Nouvelle carte"}</b>` : ""}</div>${ascPostcardHTML(k, e.summit ? -1 : camps.indexOf(last), { date:e.date, big:true })}</div>`;
   }
   else if(e.started) badge = ["peak", "Nouvelle expédition", D.n, `${fmtNum(D.top)} m · ${D.region}`];
-  // ce qui vient ensuite : le prochain camp, ou le sommet s'il n'en reste plus
-  const nc = e.summit ? null : hi || [D.top, "Sommet", D.top], rest = nc ? nc[0]-e.to : 0;
   return `<button class="cel-asc" data-a="ascFromCel" aria-label="Mon ascension : ${esc(D.n)}, +${fmtNum(e.gain)} mètres">
     <div class="ca-hd"><span class="ca-t">Mon ascension</span><span class="ca-mt">${esc(D.n)}${icon("chev")}</span></div>
-    <div class="ca-gain"><b class="num" data-count="${Math.round(e.gain)}" data-unit="m" data-thin="1" data-pre="+">+${ascM(e.gain)}</b><span>aujourd'hui · <span class="num">${fmtNum(e.to)} m</span> sur ${fmtNum(D.top)} m</span></div>
+    <div class="ca-gain"><b class="num" data-count="${Math.round(e.gain)}" data-unit="m" data-thin="1" data-pre="+">+${ascM(e.gain)}</b></div>
     ${e.bonus>.05 || e.back>.05 ? `<div class="ca-chips">${e.back>.05 ? `<div class="ca-bonus back">${ii("repeat")}<span>Retour en force : <b class="num">+${ascM(e.back)}</b></span></div>` : ""}${e.bonus>.05 ? `<div class="ca-bonus">${ii("bolt")}<span>Records et séries battues : <b class="num">+${ascM(e.bonus*e.mul*e.force*e.lapF)}</b></span></div>` : ""}</div>` : ""}
     <div class="ca-trk" id="celTrk" data-from="${x(e.from)}" data-to="${x(e.to)}" aria-hidden="true">
       <div class="ca-line"><i class="ca-fill" style="width:${x(e.from)}%"></i>
@@ -948,7 +946,6 @@ function ascCelHTML(sessionId){
       <div class="ca-ends"><span>${esc(lo ? lo[1] : D.from || "Départ")}<b class="num">${fmtNum(lo ? lo[2] : D.fromAlt || D.start)} m</b></span><span>${esc(hi ? hi[1] : "Sommet")}<b class="num">${fmtNum(hi ? hi[2] : D.top)} m</b></span></div>
     </div>
     ${pc}${badge ? `<div class="ca-badge" id="celBadge"><span class="cb-ic"><i class="cb-rays"></i>${ascIc(badge[0])}</span><span class="cb-t"><small>${esc(badge[1])}</small><b>${esc(badge[2])}</b><span>${esc(badge[3])}</span></span></div>` : ""}
-    ${nc ? `<div class="ca-next">${ascIc(!hi ? "flag" : ASC_GENERIC(k, nc[1]) ? "tent" : "hut")}<span><b>${esc(nc[1])}</b> dans <b class="num">${ascM(rest)}</b>${ascSessionsFor(rest, a)<=1 ? " : ta prochaine séance t'y amène." : ` · ${esc(ascEtaTxt(rest, a))}`}</span></div>` : ""}
   </button>`;
 }
 // lancée quand la piste est visible (la fenêtre de fin de séance peut défiler)

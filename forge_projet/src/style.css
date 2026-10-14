@@ -2215,7 +2215,7 @@ html,body{overscroll-behavior:none}
 /* fin de séance : piste zoomée sur le tronçon de la séance, badge du camp atteint */
 .cel-asc .ca-trk{margin:6px 0 2px}
 .cel-asc .ca-line{position:relative;height:8px;margin:30px 13px 0;border-radius:4px;background:var(--fill)}
-.cel-asc .ca-fill{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:linear-gradient(90deg,var(--ember2),var(--tint))}
+.cel-asc .ca-fill{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--tint)}
 .cel-asc .ca-tick{position:absolute;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:var(--bg2);box-shadow:inset 0 0 0 2.5px var(--label3);transition:background .2s,box-shadow .2s}
 .cel-asc .ca-tick span{position:absolute;left:50%;bottom:17px;white-space:nowrap;font-size:calc(12rem/17);font-weight:700;color:var(--tint-ink);opacity:0;transform:translate(-50%,6px) scale(.7);transition:opacity .25s,transform .45s cubic-bezier(.32,1.6,.4,1)}
 .cel-asc .ca-tick.hit{background:var(--tint);box-shadow:0 0 0 4px var(--tint-bg);animation:caHit .55s cubic-bezier(.32,1.6,.4,1)}
@@ -2337,11 +2337,11 @@ html,body{overscroll-behavior:none}
 .cel-asc .ca-bonus .ii{width:14px;height:14px}
 .cel-asc .ca-bonus b{font-family:var(--num);font-weight:700}
 /* retour en force (×2 après une semaine sans séance) */
-.lv-asc .la-boost{flex:none;font-family:var(--num);font-weight:800;font-size:var(--fs-cap);color:#fff;background:linear-gradient(135deg,#FF9A66,#FF5A2C);padding:1px 7px;border-radius:999px;animation:laBoost 1.6s ease-in-out infinite}
+.lv-asc .la-boost{flex:none;font-family:var(--num);font-weight:800;font-size:var(--fs-cap);color:#fff;background:var(--tint);padding:1px 7px;border-radius:999px;animation:laBoost 1.6s ease-in-out infinite}
 @keyframes laBoost{50%{box-shadow:0 0 0 4px rgba(188,87,54,.18)}}
 .cel-asc .ca-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .cel-asc .ca-chips .ca-bonus{margin-top:0}
-.cel-asc .ca-bonus.back{background:linear-gradient(135deg,#FF9A66,#FF5A2C);color:#fff}
+.cel-asc .ca-bonus.back{background:var(--tint);color:#fff}
 @media (prefers-reduced-motion:reduce){.lv-asc .la-boost{animation:none!important}}
 /* carnet de route : cartes postales (couleurs d'une carte imprimée, papier un peu moins vif la nuit) */
 :root{--pc-paper:#FBF8F2;--pc-ink:#2A2622;--pc-ink2:#6E655C}
@@ -2393,7 +2393,7 @@ button.pc:active{transform:scale(.96)}
 .ca-pc-k{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px 10px;margin:0 2px 11px}
 .ca-pc-k > span{display:flex;align-items:center;gap:7px;font-size:calc(11.5rem/17);font-weight:800;letter-spacing:0;text-transform:none;color:#FFB48F}
 .ca-pc-k .asc-ic{flex:none;width:15px;height:15px}
-.ca-pc-k b{display:inline-flex;align-items:center;gap:5px;padding:3px 9px 3px 7px;border-radius:999px;background:linear-gradient(135deg,#FF9A66,#FF5A2C);color:#fff;font-size:calc(12.5rem/17);font-weight:700;white-space:nowrap}
+.ca-pc-k b{display:inline-flex;align-items:center;gap:5px;padding:3px 9px 3px 7px;border-radius:999px;background:var(--tint);color:#fff;font-size:calc(12.5rem/17);font-weight:700;white-space:nowrap}
 .ca-pc .pc{margin:0 auto;transform:rotate(-1.5deg) translateY(10px) scale(.92);opacity:0}
 .ca-pc.on .pc{animation:pcDeal .8s cubic-bezier(.32,1.4,.4,1) .12s forwards}
 @keyframes pcDeal{0%{opacity:0;transform:rotate(-7deg) translateY(16px) scale(.86)}60%{opacity:1}100%{opacity:1;transform:rotate(-1.5deg)}}
@@ -3226,14 +3226,14 @@ button.t3d-row:active::before{opacity:1;background:rgba(255,255,255,.14)}
 .sx-wanim{width:112px;height:112px;margin:2px auto 0;border-radius:50%;background:var(--bg2);color:var(--tint-ink);display:grid;place-items:center;flex:none}
 .sx-wanim .exo-anim{width:74%;height:74%}
 /* saisie en un geste : le chiffre suit le doigt verticalement (pas de défilement de la page) */
-.sx-steps [data-a="editVal"]{touch-action:none;transition:background .15s}
+.sx-steps .bs-val[data-f]{touch-action:none;cursor:ns-resize;transition:background .15s}
 .big-stepper .bs-val.dragging{background:var(--fill);transform:scale(1.06)}
-/* molette de durée */
-.dur-modal{text-align:center}
-.dur-t{font-weight:700;font-size:calc(17rem/17)}
-.dur-v{font-size:52px;font-weight:700;line-height:1.1;margin-top:6px;color:var(--tint-ink);font-variant-numeric:tabular-nums}
-.dur-dial{position:relative;height:72px;margin:10px -20px 4px;touch-action:none;cursor:grab;color:var(--label2);-webkit-mask-image:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent);mask-image:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent)}
+/* exercice tenu : la règle des secondes à la place du − / +, le chiffre reste blanc */
+.sx-durrow .sx-val{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center}
+.sx-durrow .bs-val{pointer-events:none}
+.dur-dial{position:relative;align-self:stretch;height:58px;margin:4px -8px 0;touch-action:none;cursor:grab;color:var(--label2);-webkit-mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent);mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent)}
 .dur-dial canvas{display:block;width:100%;height:100%}
-.dur-dial i{position:absolute;left:50%;bottom:0;transform:translateX(-50%);border:7px solid transparent;border-bottom:9px solid var(--tint)}
-.dur-act{display:flex;flex-direction:column;gap:8px;margin-top:12px}
-.dur-act .ghost{height:40px}
+.dur-dial i{position:absolute;left:50%;bottom:0;transform:translateX(-50%);border:6px solid transparent;border-bottom:8px solid var(--tint)}
+.dur-dial:focus-visible{outline:2px solid var(--tint);outline-offset:2px;border-radius:10px}
+.sx .big-stepper.sx-row.sx-durrow{height:auto;padding:10px 0 6px}
+.sx-durrow .bs-val b{line-height:1}
