@@ -15,7 +15,8 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     if (localStorage.getItem('forge.v1')) return;
     localStorage.setItem('forge.v1', JSON.stringify({ meta: { onboarded: true, savedAt: 1 }, sessions: [{ id: 'a', date: '2026-09-20', exos: [{ exoId: 'pompes', sets: [{ reps: 10, done: true }] }] }] })); });
   const open = async () => { const p = await ctx.newPage(); p.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
-    await p.goto(APP); await p.waitForSelector('#splash', { state: 'detached', timeout: 8000 }); await p.waitForTimeout(700); return p; };
+    // l'app attribue les trophées déjà mérités au calme après le lancement (≤ 2,5 s) : on attend qu'elle soit posée
+    await p.goto(APP); await p.waitForSelector('#splash', { state: 'detached', timeout: 8000 }); await p.waitForTimeout(2800); return p; };
   const A = await open(), B = await open();
   // 1. A lance un défi et enregistre : B le voit, sans rien écrire lui-même
   await A.evaluate(() => { ACT.startChallenge({ id: 'pompes100' }); persistNow(); }); await B.waitForTimeout(600);
