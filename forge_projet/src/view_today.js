@@ -367,12 +367,16 @@ function wkClimb(el){
     setTimeout(()=>alt.classList.remove("climb"), 1700);
   };
   // la carte doit être réellement vue : onglet Aujourd'hui, rien par-dessus (fin de séance), app au premier plan
+  const seen = ()=>currentTab==="today" && !document.hidden && !qs("#overlay.open") && !(S.draft && S.draft.startedAt);
   const wait = ()=>{
     if(!bar.isConnected) return;
     if(Date.now()-t0>300000){ wkSeen = now; bar.style.width = bar.dataset.to+"%"; alt.textContent = fmtNum(+alt.dataset.climb)+" m"; return; }
-    if(currentTab!=="today" || document.hidden || qs("#overlay.open") || (S.draft && S.draft.startedAt)){ setTimeout(wait, 400); return; }
-    if(!window.IntersectionObserver){ setTimeout(go, 350); return; }
-    const io = new IntersectionObserver(es=>{ if(es.some(x=>x.isIntersecting)){ io.disconnect(); setTimeout(go, 350); } }, { threshold:.6 });
+    if(!seen()){ setTimeout(wait, 400); return; }
+    // revérifié au moment de partir : la fin de séance peut s'ouvrir pendant le court délai (l'animation se
+    // jouait alors cachée dessous)
+    const later = ()=>setTimeout(()=>{ if(seen()) go(); else wait(); }, 350);
+    if(!window.IntersectionObserver){ later(); return; }
+    const io = new IntersectionObserver(es=>{ if(es.some(x=>x.isIntersecting)){ io.disconnect(); later(); } }, { threshold:.6 });
     io.observe(bar.parentElement);
   };
   if(reducedMotion()) go(); else wait();   // rien ne bouge : inutile d'attendre que la carte soit vue
