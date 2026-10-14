@@ -113,8 +113,9 @@ const OUT = path.join(OUT_ROOT, 'v31'); fs.mkdirSync(OUT, { recursive: true });
     return { toast: document.getElementById('toast').textContent, played: played.length, over: !restState }; });
   log('Late rest end:', JSON.stringify(rest)); if (!/Repos terminé/.test(rest.toast) || rest.played || !rest.over) fail('fin de repos en retard silencieuse');
   // 11. son : contexte suspendu en arrière-plan, neuf au premier geste après une longue absence
+  // (2.1.3 : créé ou recréé au lâcher du doigt — clic, touchend —, plus au contact : un geste ne commence pas par ce calcul)
   const audio = await page.evaluate(async () => {
-    if (!AC) { document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); }
+    if (!AC) { document.dispatchEvent(new MouseEvent('click', { bubbles: true })); }
     if (!AC) return { skipped: true };
     const before = AC;
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
@@ -124,10 +125,12 @@ const OUT = path.join(OUT_ROOT, 'v31'); fs.mkdirSync(OUT, { recursive: true });
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
     document.dispatchEvent(new Event('visibilitychange'));
     document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
-    return { hiddenState, silent, fresh: AC !== before };
+    const notOnTouch = AC === before;   // pas de reconstruction au contact
+    document.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    return { hiddenState, silent, notOnTouch, fresh: AC !== before };
   });
   log('Audio across background:', JSON.stringify(audio));
-  if (!audio.skipped && (audio.hiddenState === 'running' || !audio.silent || !audio.fresh)) fail('audio repris proprement');
+  if (!audio.skipped && (audio.hiddenState === 'running' || !audio.silent || !audio.notOnTouch || !audio.fresh)) fail('audio repris proprement');
   await page.evaluate(() => { S.draft = null; stopRestTimer(); save(); renderView('today'); }); await wait(300);
   // 12. retour le lendemain : la séance prévue du jour s'affiche, l'écran est redessiné
   const day = await page.evaluate(() => {
