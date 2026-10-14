@@ -192,13 +192,15 @@ function t3dTextGlyph(T, text, mats){
   // texte court (« 100 », « 7/7 ») : plaque découpée par le texte, en relief par carte de bosses
   const c = document.createElement("canvas"); c.width = 512; c.height = 256;
   const x = c.getContext("2d"); x.fillStyle = "#000"; x.fillRect(0,0,512,256);
-  x.font = `800 ${text.length>2 ? 150 : 190}px -apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif`; x.textAlign = "center"; x.textBaseline = "middle";
+  x.font = `900 ${text.length>2 ? 158 : 196}px -apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif`; x.textAlign = "center"; x.textBaseline = "middle";
   x.filter = "blur(3px)"; x.fillStyle = "#fff"; x.fillText(text, 256, 136);
   const tex = new T.CanvasTexture(c);
+  // chiffres plus clairs que le symbole et sans irisation : lisibles même sur l'émail violet des secrets
   const mat = mats.polish.clone(); mat.alphaMap = tex; mat.bumpMap = tex; mat.bumpScale = 3; mat.alphaTest = .45; mat.transparent = false; mat.userData.own = true;
+  mat.color.lerp(new T.Color("#ffffff"), .45); mat.iridescence = 0; mat.envMapIntensity = 2.2;
   const plane = new T.PlaneGeometry(22, 11), mesh = new T.Mesh(plane, mat);
   // ombre portée sous le texte : il se détache même sur un émail clair (secrets irisés)
-  const sm = new T.MeshStandardMaterial({ color:"#000000", transparent:true, opacity:.55, alphaMap:tex, depthWrite:false, roughness:1, metalness:0 }); sm.userData.own = true;
+  const sm = new T.MeshStandardMaterial({ color:"#000000", transparent:true, opacity:.7, alphaMap:tex, depthWrite:false, roughness:1, metalness:0 }); sm.userData.own = true;
   const shadow = new T.Mesh(plane, sm); shadow.position.set(.35, -.45, -.08);
   const g = new T.Group(); g.add(shadow, mesh); g.userData.flat = true;
   return g;

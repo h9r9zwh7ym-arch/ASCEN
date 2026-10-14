@@ -46,7 +46,7 @@ function floatText(x, y, txt, cls, ic){
   if(ic) f.innerHTML = ii(ic)+esc(txt); else f.textContent = txt;
   f.style.left = x+"px"; f.style.top = y+"px";
   document.body.appendChild(f);
-  setTimeout(()=>f.remove(), 1200);
+  setTimeout(()=>f.remove(), 2300);
 }
 
 // ---------- hauteur animée ----------

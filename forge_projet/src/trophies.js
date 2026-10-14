@@ -172,7 +172,7 @@ function checkMedals(silent){
     }
   });
   // save() invalide tous les calculs mis en cache : seulement si un palier a changé
-  if(moved) save();
+  if(moved) save({ derived:true });
   return ups;
 }
 function tierCounts(){

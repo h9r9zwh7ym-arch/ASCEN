@@ -1432,6 +1432,14 @@ a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est
     teintées par le palier affiché (`data-tier`, `medalTint`), date des paliers sur une ligne.
 - **Plus d'écran de lancement, version 2.1.6.** L'animation (2.1.3), puis le logo seul (2.1.5) donnaient
   l'impression d'un clignotement : l'app s'affiche maintenant directement (`startApp`, init.js), comme une app native.
+- **Retours iPhone (4), version 2.1.8.**
+  - **Deux onglets** : `save({ derived:true })` (paliers de trophées attribués au calme, `checkMedals`) marque l'écriture en attente comme recalculée (`persistDerived`) ; si un autre onglet enregistre entre-temps, on prend sa version et on recalcule les trophées dessus. Une vraie modification en attente garde la priorité.
+  - **Thème au premier affichage** : `applyTheme` retient le thème choisi dans `forge.v1.theme` ; un script de 1 ligne dans `<head>` (build.sh) le pose avant le rendu.
+  - **Bulles de séance** (« Record ! », « +11,5 m »…) : 2,2 s au lieu de 1,1 s, montée plus courte, fondu final.
+  - **Durée d'un exercice tenu** : la saisie au clavier s'intitule « Durée » avec l'unité « s » (avant : « Répétitions » / « reps »).
+  - **Échauffement animé** : chaque mouvement (`WARM_ANIM`, view_today.js) est montré par l'animation d'un exercice proche, sans matériel (`warmDef`) ; 4 rigs dédiés dans data_rigs.js (`warm_bras`, `warm_omoplates`, `warm_jambe`, `warm_hanches`).
+  - **Trophées** : chiffres en relief (« 100 », « 7/7 ») plus clairs, sans irisation, ombre plus marquée.
+  - Maquettes à valider avant code : saisie en un geste, molette de durée du gainage, bilan de la semaine (artifact « Maquettes ASCEN 2.2 »).
   Le rappel du « pourquoi » reste sur l'accueil. Premier lancement : l'accueil attend la reprise de la copie de
   secours IndexedDB (stockage vidé) avant de s'ouvrir, au plus 0,6 s. La barre d'état est relue deux images après le
   premier rendu (`syncStatusBar(undefined, true)`).

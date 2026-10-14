@@ -353,6 +353,9 @@ function memo(key, fn){
   return r;
 }
 let persistTimer = null, persistBlocked = false, persistFailed = false;
+// vrai quand l'écriture en attente ne contient que des valeurs recalculées (paliers de trophées
+// attribués au calme) : un autre onglet qui enregistre entre-temps n'est alors pas ignoré
+let persistDerived = false;
 // Une séance terminée n'a plus besoin des champs de travail (notes, cibles de séries,
 // ressenti vide, séries non faites) : on les retire pour garder le stockage léger.
 function compactSession(s){
@@ -375,16 +378,21 @@ function compactSession(s){
   if(Array.isArray(s.stretches) && s.stretches.length) out.stretches = s.stretches.filter(x=>x && x.exoId).map(x=>({ exoId:x.exoId, sec:Math.max(0, Math.round(x.sec||0)) }));
   return out;
 }
-function save(){
+function save(opt){
   DATA_VER++;
   if(typeof prerenderStaleViews==="function") prerenderStaleViews();
   if(persistBlocked) return;
+  persistDerived = opt && opt.derived ? (persistDerived || !persistTimer) : false;
   clearTimeout(persistTimer);
   persistTimer = setTimeout(persistNow, 400);
 }
 function persistNow(urgent){
-  clearTimeout(persistTimer); persistTimer = null;
+  const derived = persistDerived;
+  clearTimeout(persistTimer); persistTimer = null; persistDerived = false;
   if(persistBlocked) return;
+  // seules des valeurs recalculées partent : si un autre onglet a enregistré entre-temps (son message a pu
+  // ne pas encore arriver), on prend sa version au lieu de l'écraser, puis on recalcule dessus
+  if(derived && adoptNewerStored()) return;
   const savedAt = Date.now(), str = serializeState(savedAt);
   S.meta.savedAt = savedAt;
   idbMirror(str, savedAt, urgent===true);
@@ -396,6 +404,17 @@ function persistNow(urgent){
   }
 }
 // sortie de l'app : écriture immédiate, copie de secours comprise
+function adoptNewerStored(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY); if(!raw) return false;
+    const st = normalizeState(JSON.parse(raw));
+    if(!(st.meta.savedAt > (S.meta.savedAt||0))) return false;
+    S = st; DATA_VER++;
+    if(typeof onExternalState==="function") onExternalState();
+    if(typeof checkMedals==="function") setTimeout(()=>checkMedals(true), 0);
+    return true;
+  }catch(e){ return false; }
+}
 function flushPersist(){ if(persistTimer) persistNow(true); else if(idbPending) idbMirror(idbPending.str, idbPending.savedAt, true); }
 window.addEventListener("pagehide", flushPersist);
 // l'app ouverte dans un autre onglet a enregistré : on reprend sa version (la plus récente) au
@@ -405,10 +424,13 @@ window.addEventListener("storage", e=>{
   if(e.key!==STORAGE_KEY || persistBlocked) return;
   // données effacées ailleurs : plus d'écriture ici, rechargement une fois la copie de secours effacée aussi
   if(e.newValue==null){ persistBlocked = true; setTimeout(()=>location.reload(), 900); return; }
-  if(persistTimer) return;
+  if(persistTimer && !persistDerived) return;
   let st; try{ st = normalizeState(JSON.parse(e.newValue)); }catch(err){ return; }
   if(S.meta.savedAt && !(st.meta.savedAt > S.meta.savedAt)) return;
+  // seules des valeurs recalculées attendaient : on prend la version de l'autre onglet et on les recalcule dessus
+  const redo = !!persistTimer; clearTimeout(persistTimer); persistTimer = null; persistDerived = false;
   S = st; DATA_VER++;
+  if(redo && typeof checkMedals==="function") setTimeout(()=>checkMedals(true), 0);
   if(typeof onExternalState==="function") onExternalState();
 });
 document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="hidden") flushPersist(); });

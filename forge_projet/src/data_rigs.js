@@ -191,6 +191,12 @@ const RIGS = {
   // ---------------- cardio ----------------
   jumping_jacks:   { dur:1, A:FRONT({ P:[12,12.5], pin:{ F:[11,G], F2:[13,G] }, E:100, W:95, E2:80, W2:85 }),
                      B:FRONT({ P:[12,13.1], pin:{ F:[8.8,G], F2:[15.2,G] }, E:-140, W:-118, E2:-40, W2:-62 }) },
+  // échauffement (view_today.js, WARM_MOVES) : balancement de jambe et cercles de hanches
+  warm_bras:       { dur:1.6, A:stand(12, { E:92, W:90, E2:92, W2:90 }), B:stand(12, { E:-84, W:-86, E2:-84, W2:-86 }) },
+  warm_omoplates:  { dur:1.4, A:stand(12, { E:-8, W:-6 }), B:stand(12, { E:184, W:-10 }) },
+  warm_jambe:      { dur:1.5, A:{ P:[12,12.4], t:-90, K:38, F:52, E:100, W:92, E2:70, W2:84, pin:{ F2:[12,G] } },
+                     B:{ P:[12,12.4], t:-88, K:122, F:128, E:70, W:84, E2:100, W2:92, pin:{ F2:[12,G] } } },
+  warm_hanches:    { dur:1.6, A:FRONT({ P:[11.2,12.5], t:-84, h:-88, E:128, W:40, E2:52, W2:140 }), B:FRONT({ P:[12.8,12.5], t:-96, h:-92, E:128, W:40, E2:52, W2:140 }) },
   montees_genoux:  { dur:.9, A:{ P:[12,12.4], t:-90, K:-12, F:90, E:60, W:-40, E2:125, W2:100, pin:{ F2:[12,G] } },
                      B:{ P:[12,12.4], t:-90, K2:-12, F2:90, E:125, W:100, E2:60, W2:-40, pin:{ F:[12,G] } } },
   corde_a_sauter:  { dur:.7, env:"M5.6 20.6Q12 23.4 18.4 20.6", A:FRONT({ P:[12,12.4], pin:{ F:[11.4,G], F2:[12.6,G] }, E:112, W:40, E2:68, W2:140 }),

@@ -923,6 +923,20 @@ function renderFocusCard(idx, ex, def){
 // ---------- échauffement (réglage « Échauffement ») ----------
 // Avant le premier exercice : 4 mouvements de 30 s sans matériel, choisis d'après les régions que la séance
 // travaille (une séance de bras n'échauffe que le haut du corps). Chrono guidé ; « Passer » à tout moment.
+// chaque mouvement d'échauffement est montré par l'animation d'un exercice proche, sans matériel
+// ([rig de data_rigs.js, exercice de référence pour la posture et la durée])
+const WARM_ANIM = {
+  "Cercles de bras":["warm_bras", "elevations_frontales"], "Pompes contre un mur":["pompes_mur"], "Ouvertures de bras":["elevations_laterales"],
+  "Rotations des épaules":["shrugs_halteres"], "Serrer les omoplates":["warm_omoplates", "face_pull_elastique"], "Rotations des poignets":["etir_avantbras"],
+  "Squats au poids du corps":["squat_pdc"], "Balancements de jambe":["warm_jambe", "montees_genoux"], "Cercles de hanches":["warm_hanches", "shrugs_halteres"],
+  "Montées sur pointes":["mollets_pdc"], "Rotations du buste":["woodchopper_haltere"], "Chat-vache":["etir_chat_vache"], "Montées de genoux":["montees_genoux"],
+};
+const WARM_DEFS = {};
+function warmDef(name){
+  if(WARM_DEFS[name]) return WARM_DEFS[name];
+  const w = WARM_ANIM[name], base = w && EXO_MAP[w[1] || w[0]];
+  return (WARM_DEFS[name] = base ? Object.assign({}, base, { id:w[0], equip:["bodyweight"], _load:null, _sxa:undefined }) : null);
+}
 const WARM_MOVES = {
   push: [["Cercles de bras", 30], ["Pompes contre un mur", 30], ["Ouvertures de bras", 30]],
   pull: [["Rotations des épaules", 30], ["Serrer les omoplates", 30], ["Rotations des poignets", 30]],
@@ -945,6 +959,7 @@ function warmRemain(W){ const m = W.moves[W.i]; return W.end ? Math.max(0, Math.
 function warmCardHTML(draft){
   const W = draft.warm, cur = W.moves[W.i], total = W.moves.reduce((t, m)=>t+m[1], 0);
   return `<div class="focus-card sx-card sx-warm">
+    ${warmDef(cur[0]) ? `<div class="sx-wanim">${exoAnimSVG(warmDef(cur[0]))}</div>` : ""}
     <div class="sx-wh"><small>Échauffement</small><b>${esc(cur[0])}</b></div>
     ${ringSVG(warmRemain(W), cur[1], `${W.i+1} sur ${W.moves.length}`)}
     <ol class="sx-wl">${W.moves.map((m, i)=>`<li class="${i<W.i ? "done" : i===W.i ? "cur" : ""}"><span>${esc(m[0])}</span><b class="num">${m[1]} s</b></li>`).join("")}</ol>
@@ -1659,8 +1674,8 @@ Object.assign(ACT, {
     save(); if(!patchFocusSteps(+d.exi)) refreshFocusRegion();
   },
   editVal(d){
-    const ex = S.draft.exos[+d.exi], st = ex.sets[+d.si], isW = d.f==="weight";
-    promptNumber({ title: isW?"Charge de la série":"Répétitions", value: isW?st.weight:st.reps, unit: isW?"kg":"reps", step: isW?"0.5":"1",
+    const ex = S.draft.exos[+d.exi], st = ex.sets[+d.si], isW = d.f==="weight", timed = !isW && !!EXO_MAP[ex.exoId] && isTimed(EXO_MAP[ex.exoId]);
+    promptNumber({ title: isW?"Charge de la série":timed?"Durée":"Répétitions", value: isW?st.weight:st.reps, unit: isW?"kg":timed?"s":"rép.", step: isW?"0.5":"1",
       onOk: v=>{
         // bornes réalistes (comme dans l'édition de l'historique) : une faute de frappe ne doit pas
         // gonfler le tonnage, les records et les trophées ; élastiques = niveaux 1 à 5
