@@ -18,20 +18,10 @@ const APP = 'file://' + path.resolve(process.argv[2]);
       equipment: { owned: { dumbbells: true, bench: true, ab_roller: true } }, sessions: ss })); };
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, timezoneId: 'Europe/Zurich', hasTouch: true, isMobile: wk });
   const page = await ctx.newPage(); page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
-  // lancement (2.1.5) : plus d'animation ; le logo est dans la page dès le premier dessin et s'efface dès que l'app est prête
-  await page.addInitScript(() => { const mo = new MutationObserver(() => { const sp = document.getElementById('splash');
-    if (sp && sp.classList.contains('out') && !window.__spOut) window.__spOut = performance.now(); });
-    document.addEventListener('DOMContentLoaded', () => { const sp = document.getElementById('splash'); window.__spStatic = !!(sp && sp.querySelector('svg.sp-mark')); window.__spDcl = performance.now();
-      window.__spAnim = sp ? [sp, ...sp.querySelectorAll('*')].some(e => getComputedStyle(e).animationName !== 'none') || !!sp.querySelector('.sp-tag') : true;
-      mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] }); }); });
-  // l'écran de lancement a la couleur de l'app : la barre d'état d'iOS ne prend plus une autre couleur au lancement
-  await page.addInitScript(() => { document.addEventListener('DOMContentLoaded', () => { const mo = new MutationObserver(() => { const sp = document.getElementById('splash');
-    if (sp && !window.__spBg) { window.__spBg = getComputedStyle(sp).backgroundColor; window.__appBg = getComputedStyle(document.body).backgroundColor; } }); mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] }); }); });
   await page.addInitScript(seed); await page.goto(APP); await page.waitForSelector('#splash', { state: 'detached', timeout: 15000 }); await page.waitForTimeout(900);
-  const spl = await page.evaluate(() => ({ st: window.__spStatic, anim: window.__spAnim, ms: Math.round(window.__spOut - window.__spDcl) }));
-  log('Lancement : logo statique', spl.st, '· animé', spl.anim, '· effacé', spl.ms, 'ms après le chargement');
-  if (!spl.st || spl.anim || !(spl.ms >= 0 && spl.ms < 1000)) fail('lancement : logo seul, effacé dès que l\'app est prête');
-  const bgs = await page.evaluate(() => [window.__spBg, window.__appBg, document.getElementById('sbar') && getComputedStyle(document.getElementById('sbar')).backgroundColor]);
+  // lancement (2.1.6) : aucun écran de lancement, l'app s'affiche directement
+  if (await page.evaluate(() => !!document.getElementById('splash') || /id="splash"/.test(document.documentElement.outerHTML))) fail('pas d\'écran de lancement');
+  const bgs = await page.evaluate(() => [getComputedStyle(document.body).backgroundColor, getComputedStyle(document.body).backgroundColor, document.getElementById('sbar') && getComputedStyle(document.getElementById('sbar')).backgroundColor]);
   log('Lancement : fond', bgs.join(' / '));
   if (!bgs[0] || bgs[0] !== bgs[1] || bgs[2] !== bgs[1]) fail('écran de lancement et barre d\'état aux couleurs de l\'app');
   const wait = ms => page.waitForTimeout(ms), shot = n => page.screenshot({ path: `${OUT}/${wk ? 'wk_' : ''}${n}.png` });

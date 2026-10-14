@@ -1,5 +1,5 @@
 // ================= INITIALISATION =================
-const APP_VERSION = "2.1.5";
+const APP_VERSION = "2.1.6";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 // séance en sombre (réglage, actif par défaut) : pendant la séance, l'écran passe en sombre quel que
@@ -51,23 +51,15 @@ function hexRGB(h){ const m = /^#([0-9a-f]{6})$/i.exec(h||""); return m ? [0,2,4
 if(window.matchMedia) try{ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ()=>syncStatusBar()); }catch(e){}
 
 // ---------- lancement ----------
-// Comme les apps natives : le logo est dans la page elle-même (build.sh), visible dès le premier affichage,
-// le temps que le script se charge. Dès que l'app est dessinée dessous, il s'efface en 0,15 s.
-// Premier lancement : l'accueil s'ouvre, sauf si la copie de secours (stockage vidé) rend les données ;
-// on l'attend donc quand rien n'a été lu au démarrage (au plus 0,6 s).
-function hideSplash(recovered){
-  const sp = document.getElementById("splash");
-  const done = ()=>{ if(sp) sp.remove(); syncStatusBar(undefined, true); };
+// Pas d'écran de lancement : l'app s'affiche directement. Premier lancement : l'accueil s'ouvre, sauf si la
+// copie de secours (stockage vidé) rend les données ; on l'attend donc quand rien n'a été lu (au plus 0,6 s).
+function startApp(recovered){
   if(typeof needsOnboarding==="function" && needsOnboarding()){
     const wait = loadedFromLS ? null : Promise.race([recovered, new Promise(ok=>setTimeout(ok, 600))]);
     Promise.resolve(wait).catch(()=>{}).then(()=>{ if(needsOnboarding()) openOnboarding(); });
   }
-  if(!sp) return done();
-  const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    if(reduce) return done();
-    sp.classList.add("out"); setTimeout(done, 160);
-  }));
+  // iOS relit la couleur de la barre d'état au premier changement en haut de la page
+  requestAnimationFrame(()=>requestAnimationFrame(()=>syncStatusBar(undefined, true)));
 }
 
 function init(){
@@ -75,7 +67,7 @@ function init(){
   applyTheme();
   applyPlannedSession(); // la séance prévue aujourd'hui s'affiche directement
   switchTab("today");
-  hideSplash(idbRecover()); // copie de secours IndexedDB (voir core.js)
+  startApp(idbRecover()); // copie de secours IndexedDB (voir core.js)
   // médailles déjà méritées (ex. après une mise à jour) : attribuées sans célébration, au calme
   // (une quarantaine de statistiques sur tout l'historique : pas pendant le démarrage)
   (window.requestIdleCallback || (f=>setTimeout(f, 1600)))(()=>{ const v = DATA_VER; checkMedals(true); if(DATA_VER!==v && !(S.draft && S.draft.startedAt)) renderView(currentTab); }, { timeout:2500 });

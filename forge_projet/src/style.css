@@ -3133,11 +3133,6 @@ body.live-focus #toast,body:has(#overlay.show) #toast{top:calc(10px + var(--sat)
 .asc-sub .asc-sec{padding:6px 0 20px;gap:12px}
 .asc-sub .sh{margin:14px 4px 0;padding:0}
 .asc-body .fx.asc-card{background:var(--bg2);padding:2px 16px;gap:0}
-/* lancement : le logo seul, posé dans la page (build.sh), effacé dès que l'app est dessinée (init.js) */
-.splash{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:var(--bg);transition:opacity .15s ease}
-.splash.out{opacity:0;pointer-events:none}
-.sp-mark{width:168px;height:auto;stroke:var(--label);margin-bottom:4vh}
-.sp-mark .bar{stroke:#BC5736}
 .sp-hero{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;padding:2px 4px 2px}
 .sp-hero b{font-family:var(--num);font-size:calc(34rem/17);font-weight:700;letter-spacing:-.01em;color:var(--label)}
 .sp-hero span{font-size:var(--fs-sub);color:var(--label2)}

@@ -1428,11 +1428,11 @@ a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est
     « Découvert » ; un secret découvert affiche sa règle (`secretRule`), un secret caché son indice.
   - **Finitions** : pastilles et étiquettes de palier en métal brossé (`--m-bronze`…), fiche et carte « Dernier trophée »
     teintées par le palier affiché (`data-tier`, `medalTint`), date des paliers sur une ligne.
-- **Lancement sans animation, version 2.1.5.** Comme une app native : le logo ASCEN (mot au trait, barre orange) est
-  écrit dans la page par `build.sh` (`#splash`, juste après `<body>`), donc visible dès le premier dessin, avant le
-  chargement du script, aux couleurs de l'app (clair/sombre). `hideSplash()` (init.js) l'efface en 0,15 s deux images
-  après le premier rendu de l'app (aussitôt avec « réduire les animations »). Plus de balayage, de barre qui monte ni de
-  phrase d'accroche (`splashTagline` supprimée ; le rappel du « pourquoi » reste sur l'accueil).
+- **Plus d'écran de lancement, version 2.1.6.** L'animation (2.1.3), puis le logo seul (2.1.5) donnaient
+  l'impression d'un clignotement : l'app s'affiche maintenant directement (`startApp`, init.js), comme une app native.
+  Le rappel du « pourquoi » reste sur l'accueil. Premier lancement : l'accueil attend la reprise de la copie de
+  secours IndexedDB (stockage vidé) avant de s'ouvrir, au plus 0,6 s. La barre d'état est relue deux images après le
+  premier rendu (`syncStatusBar(undefined, true)`).
 
 Les sections plus haut qui parlent de Geist, Barlow, `#F4F3F1` ou `#FF6B3D` décrivent l'état d'avant cette refonte.
 
