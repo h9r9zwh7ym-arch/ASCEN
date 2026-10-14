@@ -12,7 +12,7 @@ function applyTheme(soft){
   else if(want) de.setAttribute("data-theme", want); else de.removeAttribute("data-theme");
   // thème choisi, relu par la page avant tout affichage (build.sh) : pas d'instant aux couleurs de l'iPhone
   try{ const c = S.settings.theme==="light" || S.settings.theme==="dark" ? S.settings.theme : "";
-    if(localStorage.getItem(STORAGE_KEY+".theme")!==c) localStorage.setItem(STORAGE_KEY+".theme", c); }catch(e){}
+    const k = STORAGE_KEY+".theme"; if(!c) localStorage.removeItem(k); else if(localStorage.getItem(k)!==c) localStorage.setItem(k, c); }catch(e){}
   syncStatusBar();
 }
 // Barre d'état (heure, batterie). Depuis iOS 26, Safari ignore theme-color : il colore la barre
