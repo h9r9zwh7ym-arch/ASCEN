@@ -22,10 +22,16 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.addInitScript(() => { const mo = new MutationObserver(() => { const sp = document.getElementById('splash');
     if (sp && !window.__spIn) window.__spIn = performance.now(); if (sp && sp.classList.contains('out') && !window.__spOut) window.__spOut = performance.now(); });
     document.addEventListener('DOMContentLoaded', () => mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] })); });
+  // l'écran de lancement a la couleur de l'app : la barre d'état d'iOS ne prend plus une autre couleur au lancement
+  await page.addInitScript(() => { document.addEventListener('DOMContentLoaded', () => { const mo = new MutationObserver(() => { const sp = document.getElementById('splash');
+    if (sp && !window.__spBg) { window.__spBg = getComputedStyle(sp).backgroundColor; window.__appBg = getComputedStyle(document.body).backgroundColor; } }); mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] }); }); });
   await page.addInitScript(seed); await page.goto(APP); await page.waitForSelector('#splash', { state: 'detached', timeout: 15000 }); await page.waitForTimeout(900);
   const spl = await page.evaluate(() => Math.round(window.__spOut - window.__spIn));
   log('Lancement : l\'app prend la main après', spl, 'ms');
   if (!(spl > 500 && spl < 1100)) fail('animation de lancement courte (≈ 0,9 s)');
+  const bgs = await page.evaluate(() => [window.__spBg, window.__appBg, document.getElementById('sbar') && getComputedStyle(document.getElementById('sbar')).backgroundColor]);
+  log('Lancement : fond', bgs.join(' / '));
+  if (!bgs[0] || bgs[0] !== bgs[1] || bgs[2] !== bgs[1]) fail('écran de lancement et barre d\'état aux couleurs de l\'app');
   const wait = ms => page.waitForTimeout(ms), shot = n => page.screenshot({ path: `${OUT}/${wk ? 'wk_' : ''}${n}.png` });
   const tap = sel => page.evaluate(sel => { const el = document.querySelector(sel); if (!el) throw new Error('absent : ' + sel); el.click(); }, sel);
   const sheets = () => page.evaluate(() => [...document.querySelectorAll('#overlay .sheet')].map(s => (s.classList.contains('sheet-kept') ? 'K' : s.classList.contains('nav-leaving') ? 'L' : s.classList.contains('nav-ghost') ? 'G' : 'A') + ':' + ((s.querySelector('.sheet-hd .t') || {}).textContent || '')).join('|'));

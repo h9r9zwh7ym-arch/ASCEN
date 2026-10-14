@@ -21,7 +21,7 @@ function applyTheme(soft){
 // assombri comme la page quand une feuille est ouverte. theme-color reste écrit pour les iOS
 // plus anciens et Android.
 let statusDim = false;
-function syncStatusBar(dim){
+function syncStatusBar(dim, nudge){
   if(dim!==undefined) statusDim = dim;
   try{
     const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
@@ -38,7 +38,10 @@ function syncStatusBar(dim){
     const k = statusDim ? .6 : 1, hex = "#"+rgb.map(x=>Math.round(x*k).toString(16).padStart(2,"0")).join("");
     let bar = document.getElementById("sbar");
     if(!bar){ bar = document.createElement("div"); bar.id = "sbar"; bar.setAttribute("aria-hidden","true"); document.body.appendChild(bar); }
-    if(bar.style.backgroundColor!==hex) bar.style.backgroundColor = hex;
+    // nudge : iOS ne relit la couleur que quand le bandeau change ; on la change d'un cran puis on la remet,
+    // pour qu'il la reprenne (fin de l'écran de lancement, retour dans l'app)
+    if(nudge){ bar.style.backgroundColor = "#"+rgb.map(x=>Math.max(0, Math.round(x*k)-1).toString(16).padStart(2,"0")).join(""); requestAnimationFrame(()=>requestAnimationFrame(()=>{ bar.style.backgroundColor = hex; })); }
+    else if(bar.style.backgroundColor!==hex) bar.style.backgroundColor = hex;
     let m = document.querySelector('meta[name="theme-color"]:not([media])');
     if(!m){ document.querySelectorAll('meta[name="theme-color"]').forEach(x=>x.remove()); m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
     if(m.content!==hex) m.content = hex;
@@ -76,7 +79,7 @@ function showSplash(){
     if(gone) return; gone = true;
     sp.classList.add("out");
     if(typeof needsOnboarding==="function" && needsOnboarding()) openOnboarding();
-    setTimeout(()=>{ sp.remove(); syncStatusBar(); }, 300);
+    setTimeout(()=>{ sp.remove(); syncStatusBar(undefined, true); }, 300);
   };
   sp.addEventListener("click", leave);
   // court (≈ 0,9 s) : l'app est déjà dessinée dessous, elle apparaît dès que la barre du A est en place
@@ -181,6 +184,7 @@ function appSuspend(){
 function appResume(){
   if(!appAway) return;
   appAway = false;
+  syncStatusBar(undefined, true);   // au retour dans l'app, iOS reprend la couleur de la barre d'état
   const day = todayISO();
   if(day===appDay) return;
   appDay = day;

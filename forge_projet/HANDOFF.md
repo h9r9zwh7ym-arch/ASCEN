@@ -1405,6 +1405,11 @@ a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est
   - **Robustesse** : écouteurs sûrs quand la cible d'un événement n'est pas un élément ; test au hasard 4 × 500 actions.
   - **Lancement accéléré** : même animation (balayage du mot, barre du A qui monte), resserrée à ≈ 0,9 s, fondu de
     sortie 0,3 s (avant : 1,5 s + 0,45 s) ; la phrase du dessous apparaît dès 0,35 s ; toucher l'écran la passe.
+  - **Barre d'état au lancement** : iOS 26 colore la barre d'état d'après ce qui est collé en haut de la page et ne la
+    relit qu'à un changement. L'écran de lancement sombre la rendait noire sur une app claire jusqu'au premier
+    défilement. Il est maintenant aux couleurs de l'app (`--bg`, `--label`) ; à sa disparition et au retour dans l'app,
+    `syncStatusBar(undefined, true)` change le bandeau `#sbar` d'un cran puis le remet, ce qui force iOS à relire la
+    couleur. Manifeste : `background_color` / `theme_color` = `#F2F2F7`.
   - **Finitions** : carte « Semaine allégée » sur une ligne (« Plus tard » en lien) ; ligne d'altitude du repos plus
     courte ; « Facultatif », « Ex. … » et « Repère : … » retirés.
 
