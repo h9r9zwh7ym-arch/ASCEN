@@ -867,7 +867,7 @@ function liveAscHTML(draft){
   const L = ascLive(draft); if(!L) return "";
   // point de départ des « +X m » : l'état au premier affichage de cette séance (ou après un rechargement)
   if(!liveAscPrev || liveAscPrev.id!==draft.id) liveAscPrev = { id:draft.id, gain:L.e ? L.e.gain : 0, alt:L.alt, camps:L.e ? L.e.camps.slice() : [], summit:!!(L.e && L.e.summit), key:L.k, pct:L.pct };
-  if(L.waiting) return `<div class="lv-asc wait" id="liveAsc">${ascIc("peak")}<span class="la-next">Au sommet ${esc(ascDu(L.k))} · ${L.nextReq} sem. d'affilée ouvrent ${esc(ascLe(L.next))}</span></div>`;
+  if(L.waiting) return `<div class="lv-asc wait" id="liveAsc">${ascIc("peak")}<span class="la-next">${L.nextReq} sem. d'affilée ouvrent ${esc(ascLe(L.next))}</span></div>`;
   const e = L.e, gain = e ? e.gain : 0;
   let next;
   if(L.wait) next = `<b>Sommet ${esc(ascDu(L.k))} atteint !</b>`;

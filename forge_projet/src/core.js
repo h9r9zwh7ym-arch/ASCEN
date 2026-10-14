@@ -416,6 +416,9 @@ document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState=
 // ---------- utilitaires ----------
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
 function clone(x){ return JSON.parse(JSON.stringify(x)); }
+// fichier venu de l'extérieur (sauvegarde, programme d'IA) : les clés « __proto__ », « constructor » et
+// « prototype » sont écartées à la lecture (elles pourraient modifier le prototype des objets fusionnés)
+function parseUntrusted(text){ return JSON.parse(text, (k, v)=>k==="__proto__" || k==="constructor" || k==="prototype" ? undefined : v); }
 function round1(x){ return Math.round(x*10)/10; }
 
 // Dates au format AAAA-MM-JJ en heure LOCALE : toISOString() convertit en UTC et

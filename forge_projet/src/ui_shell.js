@@ -369,7 +369,7 @@ function hideTip(){
   if(tipOn){ tipOn.classList.remove("tip-on"); tipOn = null; }
 }
 document.addEventListener("click", e=>{
-  const t = e.target.closest("[data-tip]");
+  const t = e.target.closest ? e.target.closest("[data-tip]") : null;
   // pas de bascule : le focus (qui précède le clic) a déjà pu afficher la bulle
   if(t) showTip(t); else hideTip();
 });
@@ -716,7 +716,7 @@ function sortTick(){
 document.addEventListener("pointerdown", e=>{
   if(sortDrag || e.button>0) return;
   const row = e.target.closest && e.target.closest("[data-sort] > .row"); if(!row) return;
-  if(e.target.closest("input, select, textarea, .mini-step, .icon-btn, .chip")) return;
+  if(!e.target.closest || e.target.closest("input, select, textarea, .mini-step, .icon-btn, .chip")) return;
   const list = row.parentElement, rows = [...list.children].filter(r=>r.classList.contains("row"));
   if(rows.length<2) return;
   const st = sortDrag = { list, row, rows, x0:e.clientX, y0:e.clientY, y:e.clientY, on:false };
@@ -972,7 +972,7 @@ window.addEventListener("unhandledrejection", e=>{ const r = e && e.reason; if(r
 document.addEventListener("click", e=>{
   // un glissement de carte ne doit pas déclencher le bouton sous le doigt
   if(typeof suppressClicksUntil!=="undefined" && Date.now()<suppressClicksUntil){ e.preventDefault(); return; }
-  const el = e.target.closest("[data-a]");
+  const el = e.target.closest ? e.target.closest("[data-a]") : null;
   if(!el) return;
   runAction(el.dataset.a, el, e);
   // interrupteurs : l'état lu par VoiceOver suit l'état affiché
@@ -991,7 +991,7 @@ document.addEventListener("keydown", e=>{
   }
 });
 document.addEventListener("change", e=>{
-  const el = e.target.closest("[data-c]");
+  const el = e.target.closest ? e.target.closest("[data-c]") : null;
   if(!el) return;
   runAction(el.dataset.c, el, e);
 });

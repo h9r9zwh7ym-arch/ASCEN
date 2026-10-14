@@ -59,7 +59,7 @@ function challengesHTML(){
   // délai dépassé depuis la dernière séance (ou réussite après une correction d'historique)
   if(activeChallenges().length){ const k = activeChallenges().length; checkChallenges(); if(activeChallenges().length!==k) save(); }
   const act = activeChallenges(), n = challengesDone();
-  const add = act.length<CHAL_MAX ? `<button class="row tap tg-add" style="width:100%" data-a="openChallenges">${sfIcon("flag","orange")}<div class="grow"><div class="t">${act.length ? "Lancer un autre défi" : "Relever un défi"}</div>${act.length ? "" : `<div class="s">Ex. 100 pompes en 7 jours, tout le corps en une semaine</div>`}</div><span class="chev">${icon("chev")}</span></button>` : "";
+  const add = act.length<CHAL_MAX ? `<button class="row tap tg-add" style="width:100%" data-a="openChallenges">${sfIcon("flag","orange")}<div class="grow"><div class="t">${act.length ? "Lancer un autre défi" : "Relever un défi"}</div></div><span class="chev">${icon("chev")}</span></button>` : "";
   return `<h2 class="sh">Défis${n ? `<span class="sh-actions"><span class="ch-count">${n} relevé${n>1?"s":""}</span></span>` : ""}</h2>
     <div class="group ch-group stagger" style="--i:1">${act.map(challengeRowHTML).join("")}${add}</div>`;
 }

@@ -1380,6 +1380,31 @@ a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est
     omoplates ; jambes → squats, hanches, chevilles), chrono guidé (« Lancer · 2 min »), « Passer l'échauffement »
     toujours visible. État dans `S.draft.warm`, retiré à l'enregistrement.
   - **Chrono de séance** (en haut à gauche) : 17 → 20 px.
+- **Passe finale, version 2.1.3** (plan : `PLAN.md`, partie « passe finale »).
+  - **Retour par glissement sans saccade : une vraie pile iOS.** Pousser un sous-écran garde l'écran d'avant DANS la
+    page, sous le sous-écran (`.sheet-kept` : z-index −1, inerte, `aria-hidden`, animations en pause par l'API ; masqué
+    `.kept-off` si le sous-écran est plus court). Le retour (bouton, glissement depuis le bord, glisser vers le bas)
+    le révèle tel quel : pas de reconstruction, pas de copie (le sous-écran glisse lui-même, `nav-leaving`), défilement
+    et état intacts. Reconstruction seulement si des données ont changé (`DATA_VER`) et que l'écran n'a pas de
+    `refresh` (Mon ascension en a un : `ascRefreshSheet`). Écrans avec canvas (trophées 3D) : reconstruits comme avant.
+    `sheetActive()` donne l'écran actif ; `sheetStackPop()` retire une entrée et son écran gardé. Mesuré (CPU ×4) :
+    plus aucune tâche longue pendant le geste (avant : 140 ms au premier mouvement).
+  - **Son créé au lâcher du doigt** (touchend, clic), plus au contact : un geste ne commence plus par ~150 ms (×4) de
+    création audio ; la réverbération est calculée au calme après le démarrage et gardée (`reverbData`).
+  - **Roue abdominale** : les mains restent sur la poignée (axe à 1,15 du sol), bras tendus (résolus à chaque image),
+    la roue est dessinée et tourne de la distance parcourue ; à genoux le bassin pivote autour du genou posé
+    (`arc` dans data_rigs.js), debout autour des pieds. **Dips** : jambes fléchies, pieds derrière.
+  - **Animations SVG relancées à l'affichage** (`smilKick`) : Chromium figeait le premier cycle d'une animation insérée
+    pendant que la feuille était masquée (Safari n'a pas ce défaut).
+  - **Performance** : longues listes en `content-visibility:auto` (choix d'exercices 4× plus rapide à ouvrir, Mes
+    exercices 2,5×) ; ★ et « Exclure » dans Mes exercices mettent à jour la ligne et la section Favoris au lieu de tout
+    reconstruire (`exoPrefSync`) ; 3D : `checkShaderErrors = false` (pas d'attente synchrone de compilation).
+  - **Sécurité** : export tableur protégé contre l'injection de formule (cellule commençant par = + - @) ;
+    `parseUntrusted` écarte `__proto__` / `constructor` / `prototype` des fichiers importés (sauvegarde, programme
+    d'IA) ; test d'injection HTML sur tous les textes saisis ou importés (aucune exécution).
+  - **Robustesse** : écouteurs sûrs quand la cible d'un événement n'est pas un élément ; test au hasard 4 × 500 actions.
+  - **Finitions** : carte « Semaine allégée » sur une ligne (« Plus tard » en lien) ; ligne d'altitude du repos plus
+    courte ; « Facultatif », « Ex. … » et « Repère : … » retirés.
 
 Les sections plus haut qui parlent de Geist, Barlow, `#F4F3F1` ou `#FF6B3D` décrivent l'état d'avant cette refonte.
 

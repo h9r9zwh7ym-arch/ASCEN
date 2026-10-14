@@ -98,20 +98,20 @@ Classées par valeur pour l'usage à la maison :
 # Plan — passe finale (2.1.3)
 
 ## A. Retour par glissement sans saccade
-- [ ] Mesurer image par image (CPU ralenti ×4, comme un iPhone) : durée du premier `touchmove`, images perdues.
-- [ ] Garder en mémoire l'écran parent quand on pousse un sous-écran (comme la pile de navigation d'iOS) :
+- [x] Mesurer image par image (CPU ralenti ×4, comme un iPhone) : durée du premier `touchmove`, images perdues.
+- [x] Garder en mémoire l'écran parent quand on pousse un sous-écran (comme la pile de navigation d'iOS) :
   au retour, il est remis tel quel, sans être reconstruit ni cloné (scène, défilement, état intacts).
   Reconstruction seulement si des données ont changé entre-temps.
-- [ ] Calques du geste sur le compositeur (`will-change`, pas d'ombre recalculée), aucune mise en page pendant le geste.
+- [x] Calques du geste sur le compositeur (`will-change`, pas d'ombre recalculée), aucune mise en page pendant le geste.
 
 ## B. Pictogrammes et animations
-- [ ] Planche de toutes les animations (images clés) pour repérer les mouvements faux ou raides.
-- [ ] Roue abdominale : vrai déroulé (genoux au sol, roue qui part loin devant, retour), puis les autres défauts repérés.
+- [x] Planche de toutes les animations (images clés) pour repérer les mouvements faux ou raides.
+- [x] Roue abdominale : vrai déroulé (genoux au sol, roue qui part loin devant, retour), puis les autres défauts repérés.
 
 ## C. Passe finale
-- [ ] Performance : démarrage, rendu de chaque onglet, longues tâches, mémoire, poids du fichier, CSS mort.
-- [ ] Sécurité : échappement de tout texte saisi ou importé, import de sauvegarde et de programme IA (taille, forme,
+- [x] Performance : démarrage, rendu de chaque onglet, longues tâches, mémoire, poids du fichier, CSS mort.
+- [x] Sécurité : échappement de tout texte saisi ou importé, import de sauvegarde et de programme IA (taille, forme,
   `__proto__`), CSP, service worker.
-- [ ] Robustesse : stockage plein ou corrompu, minuteries en arrière-plan, données extrêmes, test au hasard prolongé.
-- [ ] Polish : captures de tous les écrans (320/390/430, clair/sombre), alignements, textes, états vides.
-- [ ] Tests (v65), suite complète, HANDOFF, version 2.1.3, cache, commit, push.
+- [x] Robustesse : stockage plein ou corrompu, minuteries en arrière-plan, données extrêmes, test au hasard prolongé.
+- [x] Polish : captures de tous les écrans (320/390/430, clair/sombre), alignements, textes, états vides.
+- [x] Tests (v65), suite complète, HANDOFF, version 2.1.3, cache, commit, push.

@@ -156,8 +156,8 @@ function muscleSumHTML(){
   if(lag) show.push(lag);
   if(show.length<4) worked.forEach(r=>{ if(show.length<4 && !show.includes(r)) show.push(r); });
   const bars = show.map(r=>`<span class="ms-row${r.sets<STIM.min ? " low" : ""}"><span class="ms-top"><span class="ms-n">${esc(r.n)}</span><span class="ms-v">${fmtDec(r.sets)} série${r.sets>=2?"s":""}</span></span><span class="ms-bar"><i style="width:${Math.min(100, r.sets/STIM.high*100).toFixed(1)}%"></i></span></span>`).join("");
-  const hint = lag ? `${esc(lag.n)} : moins de ${STIM.min} séries cette semaine${appPicksOn() ? ", la prochaine séance proposée en tiendra compte" : ""}. Repère : ${STIM.high} séries par muscle et par semaine.`
-    : worked.length ? `Repère : ${STIM.min} séries par muscle et par semaine pour progresser, ${STIM.high} et plus pour un gain maximal.` : "";
+  // une seule phrase utile : le muscle en retard (le repère chiffré est dans la fiche Muscles)
+  const hint = lag ? `${esc(lag.n)} : moins de ${STIM.min} séries cette semaine${appPicksOn() ? ", la prochaine séance proposée en tiendra compte" : ""}.` : "";
   return `<section class="ms-sec stagger" style="--i:2"><h2 class="sh">Muscles · 7 derniers jours</h2>
     <button class="ms-card" data-a="progressTab" data-v="muscles" aria-label="Muscles des 7 derniers jours : voir le détail">${bars || `<span class="ms-empty">Aucune série ces 7 derniers jours.</span>`}</button>
     ${hint ? `<p class="ms-hint">${hint}</p>` : ""}</section>`;
@@ -381,7 +381,7 @@ function targetRowHTML(t){
 }
 function targetsHTML(){
   const active = S.targets.filter(t=>!t.doneAt), done = S.targets.filter(t=>t.doneAt).slice(-3).reverse();
-  const add = active.length<TARGET_MAX ? `<button class="row tap tg-add" style="width:100%" data-a="newTarget">${sfIcon("target","red")}<div class="grow"><div class="t">${S.targets.length ? "Ajouter un objectif" : "Te fixer un objectif"}</div>${S.targets.length ? "" : `<div class="s">Ex. 10 tractions, 24 kg au développé, 90 s de gainage</div>`}</div><span class="chev">${icon("chev")}</span></button>` : "";
+  const add = active.length<TARGET_MAX ? `<button class="row tap tg-add" style="width:100%" data-a="newTarget">${sfIcon("target","red")}<div class="grow"><div class="t">${S.targets.length ? "Ajouter un objectif" : "Te fixer un objectif"}</div></div><span class="chev">${icon("chev")}</span></button>` : "";
   return `<h2 class="sh">Mes objectifs</h2><div class="group tg-group stagger" style="--i:1">${active.map(targetRowHTML).join("")}${add}${done.map(targetRowHTML).join("")}</div>`;
 }
 let targetDraft = null;

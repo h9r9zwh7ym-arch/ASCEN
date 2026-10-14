@@ -250,7 +250,9 @@ async function shareOrDownload(payload, name, type, title){
 // Historique en tableur (v4.0) : une ligne par série, séparateur « ; » et virgule décimale
 // (Numbers et Excel en français l'ouvrent directement), UTF-8 avec BOM pour les accents.
 function historyCSV(){
-  const q = v=>{ const s = String(v==null?"":v); return /[";\n\r]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; };
+  // texte saisi (nom de séance, note) : une cellule qui commence par = + - @ serait lue comme une formule par
+  // Excel ou Numbers (injection de formule) ; une apostrophe devant la neutralise
+  const q = v=>{ let s = String(v==null?"":v); if(/^[=+\-@\t\r]/.test(s)) s = "'"+s; return /[";\n\r]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; };
   const dec = v=>v==null||v==="" ? "" : String(v).replace(".", ",");
   const lines = [["date","séance","exercice","série","répétitions","secondes","charge (kg)","élastique","record","note"].join(";")];
   S.sessions.forEach(s=>s.exos.forEach(ex=>{
@@ -292,7 +294,7 @@ function restoreData(){
     const f = inp.files && inp.files[0]; inp.remove(); if(!f) return;
     let data;
     // une sauvegarde de plusieurs années pèse moins de 2 Mo : au-delà de 50 Mo, ce n'en est pas une
-    try{ if(f.size>5e7) throw 0; const o = JSON.parse(await f.text()); data = o && o.data ? o.data : o; }catch(e){ data = null; }
+    try{ if(f.size>5e7) throw 0; const o = parseUntrusted(await f.text()); data = o && o.data ? o.data : o; }catch(e){ data = null; }
     if(!data || typeof data!=="object" || !(Array.isArray(data.sessions) || Array.isArray(data.zs))){ openModal(`<div style="font-weight:700;color:var(--red)">Fichier non reconnu</div><div class="hr-note" style="margin-top:8px">Choisis un fichier de sauvegarde créé par ASCEN (ascen-sauvegarde-….json).</div><button class="btn secondary" style="margin-top:14px" data-a="closesheet">OK</button>`); return; }
     const n = (Array.isArray(data.sessions) && data.sessions.length ? data.sessions : data.zs || []).length, t = Array.isArray(data.templates) ? data.templates.length : 0;
     confirmSheet({ title:"Restaurer cette sauvegarde ?", html:`${nb(n, "séance")} dans l'historique${t ? ` et ${t} dans Mes séances` : ""}. Les données actuelles de cet appareil seront remplacées ; tu pourras annuler juste après.`, ok:"Restaurer", danger:true, onOk:()=>{
@@ -410,9 +412,17 @@ function missingEquipLabel(e){
   return e.equip.filter(id=>!id.split("|").some(x=>ownsEquip(S.equipment, x)))
     .map(id=>id.split("|").map(x=>EQUIP_MAP[x] ? EQUIP_MAP[x].n : x).join(" ou ")).join(", ");
 }
-function exoPrefsBodyHTML(){
+function exoPrefSort(){
   const muscleOrder = {}; MUSCLES.forEach((m,i)=>muscleOrder[m.id]=i);
-  const sortFn = (a,b)=>muscleOrder[a.muscles[0]]-muscleOrder[b.muscles[0]] || a.n.localeCompare(b.n,"fr");
+  return (a,b)=>muscleOrder[a.muscles[0]]-muscleOrder[b.muscles[0]] || a.n.localeCompare(b.n,"fr");
+}
+// la section Favoris seule (redessinée quand un favori change, sans toucher au reste de la liste)
+function exoFavsHTML(){
+  const favs = S.prefs.included.map(id=>EXO_MAP[id]).filter(Boolean).sort(exoPrefSort());
+  return favs.length ? `<h2 class="sh"><span class="sh-ico">${sfIcon("star","yellow","sm")}Favoris</span><span class="more" style="color:var(--label2)">${favs.length}</span></h2><div class="group">${favs.map(e=>exoPrefRow(e)).join("")}</div>` : "";
+}
+function exoPrefsBodyHTML(){
+  const sortFn = exoPrefSort();
   const unavail = [];
   const cats = EXO_CATS.map(c=>{
     const all = EXOS.filter(e=>exoCategory(e)===c.id).sort(sortFn);
@@ -423,11 +433,21 @@ function exoPrefsBodyHTML(){
   }).join("");
   const more = unavail.length ? `<details class="pref-more"><summary class="sh"><span>Sans ton matériel</span><span class="more">${unavail.length} ${icon("chev")}</span></summary>
       <div class="group">${unavail.sort(sortFn).map(e=>exoPrefRow(e, missingEquipLabel(e))).join("")}</div></details>` : "";
-  const favs = S.prefs.included.map(id=>EXO_MAP[id]).filter(Boolean).sort(sortFn);
-  return (favs.length ? `<h2 class="sh"><span class="sh-ico">${sfIcon("star","yellow","sm")}Favoris</span><span class="more" style="color:var(--label2)">${favs.length}</span></h2><div class="group">${favs.map(e=>exoPrefRow(e)).join("")}</div>` : "") + cats + more;
+  return `<div id="epFavs">${exoFavsHTML()}</div>` + cats + more;
+}
+// un toucher sur ★ ou « Exclure » : seules les lignes de cet exercice et la section Favoris changent
+function exoPrefSync(id){
+  const b = qs(".ep-body"); if(!b){ refreshExoPrefs(); return; }
+  const excl = isExcluded(id), incl = isIncluded(id), name = (EXO_MAP[id]||{}).n || "";
+  qsa(`[data-a="toggleExcluded"][data-id="${id}"]`, b).forEach(c=>{ c.classList.toggle("excl", excl); c.setAttribute("aria-pressed", excl); });
+  qsa(`[data-a="toggleIncluded"][data-id="${id}"]`, b).forEach(c=>{ c.classList.toggle("on", incl); c.setAttribute("aria-pressed", incl); c.setAttribute("aria-label", `${incl?"Retirer des favoris":"Ajouter aux favoris"} : ${name}`); });
+  // la liste ne saute pas : si les Favoris (au-dessus) changent de hauteur, le défilement compense
+  const f = qs("#epFavs", b); if(!f) return;
+  const h0 = f.offsetHeight; f.innerHTML = exoFavsHTML();
+  const dh = f.offsetHeight - h0; if(dh && b.scrollTop > f.offsetTop + 10) b.scrollTop += dh;
 }
 function openExoPrefs(){
-  openSheet(`<div class="sheet-hd"><span class="t">Mes exercices</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body">${exoPrefsBodyHTML()}</div>`);
+  openSheet(`<div class="sheet-hd"><span class="t">Mes exercices</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body ep-body">${exoPrefsBodyHTML()}</div>`);
 }
 function refreshExoPrefs(){
   const b = qs(".sheet-body"); if(!b) return;
@@ -582,9 +602,9 @@ Object.assign(ACT, {
   toggleExcluded(d){
     const i = S.prefs.excluded.indexOf(d.id);
     if(i>=0) S.prefs.excluded.splice(i,1); else { S.prefs.excluded.push(d.id); S.prefs.included = S.prefs.included.filter(x=>x!==d.id); }
-    save(); refreshExoPrefs();
+    save(); exoPrefSync(d.id);
   },
-  toggleIncluded(d){ toggleFavorite(d.id); refreshExoPrefs(); },
+  toggleIncluded(d){ toggleFavorite(d.id); exoPrefSync(d.id); },
 
   copyPrompt(){
     const text = buildExportPrompt();
@@ -646,7 +666,7 @@ VIEWS.profil = renderProfil;
 function bodyLast(){ return S.body[S.body.length-1]; }
 function bodyRowText(){
   const l = bodyLast();
-  return l ? `${fmtDec(l.kg)} kg · ${fmtRelative(l.d)}` : "Facultatif · suivre la tendance";
+  return l ? `${fmtDec(l.kg)} kg · ${fmtRelative(l.d)}` : "";
 }
 function bodyTrend(){
   // moyenne des pesées des 14 derniers jours comparée à celle des 14 jours précédant il y a 30 jours
@@ -659,7 +679,7 @@ function bodyBodyHTML(){
   const pts = S.body.filter(e=>e.d>addDaysISO(todayISO(),-365)).map(e=>{ const d = parseISO(e.d); return { label:`${d.getDate()} ${MOIS[d.getMonth()]}`, v:e.kg, tip:`${fmtDate(e.d)} : ${fmtDec(e.kg)} kg` }; });
   const tr = bodyTrend();
   const recent = S.body.slice(-6).reverse();
-  return `<p class="body" style="margin-bottom:14px">Facultatif. Une pesée par semaine, le matin à jeun, suffit : le poids varie naturellement d'un à deux kilos d'un jour à l'autre, seule la tendance compte.</p>
+  return `<p class="body" style="margin-bottom:14px">Une pesée par semaine, le matin à jeun, suffit : seule la tendance compte.</p>
     <div class="body-add"><div class="num-field"><input id="bodyIn" type="text" inputmode="decimal" maxlength="6" enterkeyhint="done" placeholder="${l?fmtDec(l.kg):"Ex. 72,5"}" aria-label="Poids en kg"><span>kg</span></div>
     <button class="btn" data-a="bodyAdd">Ajouter</button></div>
     ${pts.length ? `<div class="chart-card" style="margin-top:14px">

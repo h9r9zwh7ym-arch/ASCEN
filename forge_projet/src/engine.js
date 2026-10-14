@@ -570,7 +570,7 @@ Le champ "poids" est facultatif (ASCEN peut le calculer automatiquement). Propos
 
 function importProgramJSON(text){
   let data;
-  try{ data = JSON.parse(text); }catch(e){ return { ok:false, error:"Ce fichier n'est pas un programme lisible. Redemande-le à l'IA au format indiqué." }; }
+  try{ data = parseUntrusted(text); }catch(e){ return { ok:false, error:"Ce fichier n'est pas un programme lisible. Redemande-le à l'IA au format indiqué." }; }
   const sessions = cleanImportedProgram(data && typeof data==="object" ? (Array.isArray(data) ? data : data.sessions) : null);
   if(!sessions.length){
     return { ok:false, error:"Ce fichier n'est pas un programme lisible. Redemande-le à l'IA au format indiqué." };

@@ -303,6 +303,9 @@ function t3dScene(T, renderer){
 function t3dRenderer(T, canvas, keep){
   const r = new T.WebGLRenderer({ canvas, antialias:true, alpha:true, powerPreference:"low-power", preserveDrawingBuffer:!!keep });
   r.outputColorSpace = T.SRGBColorSpace; r.toneMapping = T.ACESFilmicToneMapping; r.toneMappingExposure = 1.05;
+  // pas de lecture des journaux de compilation des shaders : elle force la carte graphique à finir de compiler
+  // tout de suite (longue pause à l'ouverture des trophées) ; les shaders d'ASCEN sont fixes et testés
+  r.debug.checkShaderErrors = false;
   // iOS reprend souvent la mémoire graphique quand l'app passe en arrière-plan : le contexte est
   // « perdu » et le canevas resterait vide au retour. On le note ; t3dRevive() reconstruit.
   canvas.addEventListener("webglcontextlost", e=>{ e.preventDefault(); canvas._lost = true; });

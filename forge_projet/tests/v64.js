@@ -74,7 +74,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await tap('.sheet-hd [data-a="sheetBack"]'); await wait(800);
   const ab3 = await page.evaluate(() => document.querySelector('.sheet-hd .t').textContent);
   log('À propos:', JSON.stringify(ab), JSON.stringify(ab2), ab3);
-  if (ab.v !== '2.1.2' || ab.hd !== 'ASCEN Version 2.1.2' || ab.secs !== 'Application|Mon ascension|Mentions' || ab2.t !== 'Avertissement santé' || !ab2.back || ab3 !== 'À propos') fail('À propos en listes titrées, version 2.1.2');
+  if (!/^2\.\d+\.\d+$/.test(ab.v) || ab.hd !== 'ASCEN Version ' + ab.v || ab.secs !== 'Application|Mon ascension|Mentions' || ab2.t !== 'Avertissement santé' || !ab2.back || ab3 !== 'À propos') fail('À propos en listes titrées, version 2.1.2');
   await page.evaluate(() => closeSheet()); await wait(400);
 
   // 4. retour depuis un sous-écran de l'ascension : l'écran d'avant revient à sa position (bouton, puis glissement)

@@ -3182,3 +3182,14 @@ body.live-focus #toast,body:has(#overlay.show) #toast{top:calc(10px + var(--sat)
 .sx-wl li.cur{color:var(--label);font-weight:600}
 .sx-wl li.done{color:var(--label3);text-decoration:line-through}
 .sx-wl li b{font-weight:500;font-variant-numeric:tabular-nums}
+
+/* longues listes (choix d'exercices, Mes exercices) : les groupes hors de l'écran ne sont ni mis en page ni
+   dessinés avant d'en approcher (ouverture plus rapide) ; leur taille mesurée est gardée ensuite */
+#pickerList>.group,.ep-body>.group,.ep-body .pref-more>.group{content-visibility:auto;contain-intrinsic-size:auto 520px}
+
+/* carte « Semaine allégée » : l'action principale en bouton, « Plus tard » en simple lien à côté (une ligne) */
+.dl-act{flex-wrap:nowrap}
+.dl-act .btn.tertiary{background:none;padding:0 6px;color:var(--label2);font-weight:600;width:auto;flex:none}
+.dl-act .btn{flex:none;width:auto}
+/* séance : au sommet (en attente de la série suivante), la phrase se lit à côté de l'icône, sur une ligne */
+.lv-asc.wait .la-next{text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

@@ -790,7 +790,7 @@ function effortHTML(){
   const timed = isTimed(EXO_MAP[S.draft.exos[src.exi].exoId]);
   const opts = timed ? [[3,"À fond"],[2,"Encore un peu"],[1,"Large marge"]] : [[3,"0"],[2,"1–2"],[1,"3 ou +"]];
   return `<div class="effort" role="group" aria-label="Ressenti de la série">
-    <div class="ef-q">${timed?"Comment c'était ?":"Combien de reps en réserve ?"} <span>Facultatif</span></div>
+    <div class="ef-q">${timed?"Comment c'était ?":"Combien de reps en réserve ?"}</div>
     <div class="ef-opts">${opts.map(([v,l])=>`<button class="${st.effort===v?"on":""}" data-a="setEffort" data-v="${v}" aria-pressed="${st.effort===v}">${l}</button>`).join("")}</div>
   </div>`;
 }

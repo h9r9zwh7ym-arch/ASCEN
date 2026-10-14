@@ -292,7 +292,7 @@ function rwRewindDate(root){
 function bindRewindGestures(el){
   let down = null, holdT = 0;
   el.addEventListener("pointerdown", e=>{
-    if(e.target.closest("button,a")) return;
+    if((e.target.closest && e.target.closest("button,a"))) return;
     down = { x:e.clientX, y:e.clientY, t:performance.now() };
     holdT = setTimeout(()=>{ if(rw){ rw.paused = true; el.classList.add("paused"); rwDuck(true); } }, 220);
   });
