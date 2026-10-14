@@ -1403,6 +1403,8 @@ a été validée avant d'écrire du code : style Apple, clair, lisible. Elle est
     `parseUntrusted` écarte `__proto__` / `constructor` / `prototype` des fichiers importés (sauvegarde, programme
     d'IA) ; test d'injection HTML sur tous les textes saisis ou importés (aucune exécution).
   - **Robustesse** : écouteurs sûrs quand la cible d'un événement n'est pas un élément ; test au hasard 4 × 500 actions.
+  - **Lancement accéléré** : même animation (balayage du mot, barre du A qui monte), resserrée à ≈ 0,9 s, fondu de
+    sortie 0,3 s (avant : 1,5 s + 0,45 s) ; la phrase du dessous apparaît dès 0,35 s ; toucher l'écran la passe.
   - **Finitions** : carte « Semaine allégée » sur une ligne (« Plus tard » en lien) ; ligne d'altitude du repos plus
     courte ; « Facultatif », « Ex. … » et « Repère : … » retirés.
 

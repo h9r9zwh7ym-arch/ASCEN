@@ -3,7 +3,7 @@ const OUT_ROOT = process.env.OUT_DIR || require('path').join(__dirname, 'out'); 
 // Passe finale (2.1.3) : pile de feuilles « vivante » (l'écran d'avant reste dans la page sous le sous-écran, révélé tel
 // quel au retour, sans copie pendant le geste) ; son créé au lâcher, pas au contact ; roue abdominale qui roule (mains
 // sur la poignée, bras tendus) ; animations relancées à l'affichage ; export tableur sans formules ; fichiers importés
-// sans « __proto__ » ; Mes exercices mis à jour sur place ; phrases d'exemple retirées.
+// sans « __proto__ » ; Mes exercices mis à jour sur place ; phrases d'exemple retirées ; lancement en ≈ 0,9 s.
 const __pw = require('playwright'); const path = require('path'); const fs = require('fs');
 const OUT = path.join(OUT_ROOT, 'v65'); fs.mkdirSync(OUT, { recursive: true });
 const APP = 'file://' + path.resolve(process.argv[2]);
@@ -18,7 +18,14 @@ const APP = 'file://' + path.resolve(process.argv[2]);
       equipment: { owned: { dumbbells: true, bench: true, ab_roller: true } }, sessions: ss })); };
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, timezoneId: 'Europe/Zurich', hasTouch: true, isMobile: wk });
   const page = await ctx.newPage(); page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
+  // lancement : l'animation laisse la place à l'app en moins d'une seconde (avant : ≈ 2 s)
+  await page.addInitScript(() => { const mo = new MutationObserver(() => { const sp = document.getElementById('splash');
+    if (sp && !window.__spIn) window.__spIn = performance.now(); if (sp && sp.classList.contains('out') && !window.__spOut) window.__spOut = performance.now(); });
+    document.addEventListener('DOMContentLoaded', () => mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] })); });
   await page.addInitScript(seed); await page.goto(APP); await page.waitForSelector('#splash', { state: 'detached', timeout: 15000 }); await page.waitForTimeout(900);
+  const spl = await page.evaluate(() => Math.round(window.__spOut - window.__spIn));
+  log('Lancement : l\'app prend la main après', spl, 'ms');
+  if (!(spl > 500 && spl < 1100)) fail('animation de lancement courte (≈ 0,9 s)');
   const wait = ms => page.waitForTimeout(ms), shot = n => page.screenshot({ path: `${OUT}/${wk ? 'wk_' : ''}${n}.png` });
   const tap = sel => page.evaluate(sel => { const el = document.querySelector(sel); if (!el) throw new Error('absent : ' + sel); el.click(); }, sel);
   const sheets = () => page.evaluate(() => [...document.querySelectorAll('#overlay .sheet')].map(s => (s.classList.contains('sheet-kept') ? 'K' : s.classList.contains('nav-leaving') ? 'L' : s.classList.contains('nav-ghost') ? 'G' : 'A') + ':' + ((s.querySelector('.sheet-hd .t') || {}).textContent || '')).join('|'));

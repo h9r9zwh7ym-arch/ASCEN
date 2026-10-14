@@ -76,10 +76,11 @@ function showSplash(){
     if(gone) return; gone = true;
     sp.classList.add("out");
     if(typeof needsOnboarding==="function" && needsOnboarding()) openOnboarding();
-    setTimeout(()=>{ sp.remove(); syncStatusBar(); }, 450);
+    setTimeout(()=>{ sp.remove(); syncStatusBar(); }, 300);
   };
   sp.addEventListener("click", leave);
-  setTimeout(leave, reduce ? 600 : 1500);
+  // court (≈ 0,9 s) : l'app est déjà dessinée dessous, elle apparaît dès que la barre du A est en place
+  setTimeout(leave, reduce ? 350 : 900);
 }
 
 function init(){
