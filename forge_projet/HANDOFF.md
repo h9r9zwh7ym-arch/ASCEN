@@ -2,6 +2,8 @@
 
 Tu reprends **ASCEN** (nom affiché depuis la v2.8 ; « Forge » avant), une app web de suivi de musculation pour iPhone, développée pour **Yannick Wahler** (« YaYa ») selon la même méthode que son autre app, **Zeste** (bar à cocktails). Lis ce document avant de toucher au code.
 
+> Les outils ponctuels de mesure et de captures cités dans l'historique ci-dessous (`profile.js`, `tab_perf.js`, `ui_perf.js`, `tour.js`, `montage.js`, `ux_audit.js`, `ui_audit.js`, `anim_sheet.js`, `t3d_perf.js`, `brand.js`) ont été retirés du dépôt en 2.1.6 ; ils restent récupérables dans l'historique git (commit `e733a4f`). La suite de tests (`tests/run.sh`) est complète sans eux.
+
 ## 1. Le propriétaire et ses exigences
 
 - Yannick parle **français** : réponds et écris l'interface en français.

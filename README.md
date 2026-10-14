@@ -1,30 +1,30 @@
 # ASCEN
 
-App de musculation à domicile pour iPhone (PWA) : séances proposées selon ton matériel, suivi des séries, progression, trophées et défis. Tout reste sur l'appareil : pas de compte, pas de serveur.
+Suivi de musculation à domicile pour iPhone, en application web installable (PWA).
+Séances proposées selon le matériel disponible, suivi des séries, progression, trophées.
+Les données restent sur l'appareil : pas de compte, pas de serveur.
 
-## Utiliser l'app
+## Installation
 
-Ouvrir `index.html` dans Safari (idéalement servi en https, par exemple GitHub Pages), puis **Partager → Sur l'écran d'accueil**. Une fois installée, l'app fonctionne hors ligne.
+Ouvrir la page dans Safari, puis **Partager → Sur l'écran d'accueil**. Fonctionne ensuite hors ligne.
 
-## Organisation du dépôt
-
-| Chemin | Rôle |
-|---|---|
-| `index.html` | L'app complète en un seul fichier (générée, ne pas modifier à la main) |
-| `sw.js`, `manifest.webmanifest`, icônes | Installation et fonctionnement hors ligne |
-| `three-forge.js` | Sous-ensemble de Three.js, chargé seulement pour les trophées 3D |
-| `forge_projet/src/` | Code source (JS, CSS, polices) |
-| `forge_projet/build.sh` | Assemble `index.html` à partir des sources |
-| `forge_projet/tests/` | Tests navigateur (Playwright, Chromium et WebKit) |
-| `forge_projet/vendor/` | Outils de construction (esbuild, Three.js) |
-| `forge_projet/HANDOFF.md` | Documentation technique détaillée et historique des versions |
-
-## Construire et tester
+## Développement
 
 ```sh
 cd forge_projet
-(cd vendor && npm install)   # une fois : esbuild pour la minification
-sh build.sh                  # génère ../index.html (et dist/ pour les tests)
-(cd tests && npm install)    # une fois : Playwright
-sh tests/run.sh              # toute la batterie de tests
+(cd vendor && npm install)   # esbuild, une fois
+sh build.sh                  # génère ../index.html
+(cd tests && npm install)    # Playwright, une fois
+sh tests/run.sh              # suite complète (Chromium et WebKit)
 ```
+
+| Chemin | Contenu |
+|---|---|
+| `index.html` | L'app en un seul fichier, générée par `build.sh` |
+| `sw.js`, `manifest.webmanifest`, icônes | Installation et hors ligne |
+| `three-forge.js`, `ascent-scenes.js` | Chargés à la demande (trophées 3D, montagnes) |
+| `forge_projet/src/` | Sources JS et CSS |
+| `forge_projet/tests/` | Tests navigateur |
+| `forge_projet/tools/ascent/` | Génération des montagnes (Python) |
+| `forge_projet/HANDOFF.md` | Documentation technique et historique |
+| `forge_projet/PLAN.md` | Pistes ouvertes |
