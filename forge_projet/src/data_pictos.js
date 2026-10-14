@@ -79,6 +79,8 @@ function loadKind(def){ if(NO_LOAD.has(def.id)) return null; const t = typeof lo
 // main (W, W2) ou milieu des deux mains (M)
 const handAt = (f, k)=> k==="M" ? [(f.W[0]+f.W2[0])/2, (f.W[1]+f.W2[1])/2] : f[k];
 const loadHands = (def, two)=> ONE_LOAD.has(def.id) ? ["M"] : two ? ["W","W2"] : ["W"];
+// roue abdominale : jante, et deux rayons qui tournent quand elle roule (rayon 1,15 : WR dans data_rigs.js)
+const WHEEL_R = 1.15, WHEEL_SPOKES = "M0 0V-1.05M0 0L.91 .52M0 0L-.91 .52";
 const DB_SHAPE = "M-1.45 -1.25V1.25M1.45 -1.25V1.25M-1.45 0H1.45", KB_SHAPE = "M-.95 .85C-.95 -.75 .95 -.75 .95 .85";
 // angle de l'haltère : perpendiculaire à l'avant-bras (prise marteau : dans son axe)
 function dbAngle(f, w, e, grip){ if(w==="M"){ w = "W"; e = "E"; } const a = Math.atan2(f[w][1]-f[e][1], f[w][0]-f[e][0])/RAD; return grip==="v" ? a : a+90; }
@@ -127,6 +129,7 @@ function exoPicto(def){
     if(typeof RIGS==="undefined" || !RIGS[def.id]) throw 0;
     const rig = animRig(def), rd = RIGS[def.id], f = rd.icon==="A" ? rig.A : rd.icon==="mid" ? rig.frames[rig.frames.length>>1] : rig.B;
     const ld = loadStatic(def, rig, f, Math.hypot(f.W[0]-f.W2[0], f.W[1]-f.W2[1])>.6, 2.3);
+    if(rig.wheel) ld.front += `<circle class="pkf" cx="${f.W[0].toFixed(2)}" cy="${f.W[1].toFixed(2)}" r="${WHEEL_R+.9}"/><circle cx="${f.W[0].toFixed(2)}" cy="${f.W[1].toFixed(2)}" r="${WHEEL_R}" fill="currentColor"/>`;
     svg = `<svg class="picto" viewBox="0 0 24 24" aria-hidden="true"><path d="${rig.env||FLOOR}" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity=".38"/>${ld.back}<path d="${animPath(f)}" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${f.H[0].toFixed(2)}" cy="${f.H[1].toFixed(2)}" r="2.3" fill="currentColor"/>${ld.front}</svg>`;
   }catch(e){ svg = pictoSVG(pictoKey(def)); }
   PICTO_CACHE.set(def.id, svg);
@@ -434,18 +437,28 @@ function rigFromData(def, rd){
   const angles = o=>{ const g = { t:bAng(o.P, o.N, -Math.PI/2) }; g.h = bAng(o.N, o.H, g.t);
     LIMBS.forEach(([r,m,e])=>{ const root = rootOf(o, r, m.endsWith("2")); g[m] = bAng(root, o[m], Math.PI/2); g[e] = bAng(o[m], o[e], g[m]); }); return g; };
   const gA = angles(A), gB = angles(B), both = LIMBS.filter(([,,e])=>A.pin[e] && B.pin[e]);
+  // arc : le bassin tourne autour d'un point fixe (genou posé, pieds) au lieu d'aller en ligne droite : le membre
+  // en appui garde sa longueur sans se plier au milieu du mouvement
+  const arc = rd.arc, polar = q=>[Math.atan2(q[1]-arc[1], q[0]-arc[0]), Math.hypot(q[0]-arc[0], q[1]-arc[1])];
+  const pA = arc && polar(A.P), pB = arc && polar(B.P);
+  const hipAt = t=>{ if(!arc) return lerpP(A.P, B.P, t); const a = lerpA(pA[0], pB[0], t), r = pA[1]+(pB[1]-pA[1])*t; return [arc[0]+Math.cos(a)*r, arc[1]+Math.sin(a)*r]; };
   const frame = t=>{
     const g = {}; Object.keys(gA).forEach(k=>g[k] = lerpA(gA[k], gB[k], t));
     const add = (q,a,l)=>[q[0]+Math.cos(a)*l, q[1]+Math.sin(a)*l];
-    const f = { P:lerpP(A.P, B.P, t) }; f.N = add(f.P, g.t, BONE_L.trunk); f.H = add(f.N, g.h, A.nk+(B.nk-A.nk)*t);
+    const f = { P:hipAt(t) }; f.N = add(f.P, g.t, BONE_L.trunk); f.H = add(f.N, g.h, A.nk+(B.nk-A.nk)*t);
     if(front) frontRoots(f, g.t);
     LIMBS.forEach(([r,m,e,l1,l2])=>{ const root = rootOf(f, r, m.endsWith("2")); f[m] = add(root, g[m], BONE_L[l1]); f[e] = add(f[m], g[e], BONE_L[l2]); });
     both.forEach(([r,m,e,l1,l2])=>{ const s = ik2(rootOf(f, r, m.endsWith("2")), lerpP(A.pin[e], B.pin[e], t), BONE_L[l1], BONE_L[l2], f[m]); f[m] = s[0]; f[e] = s[1]; });
+    // roue abdominale : bras tendus jusqu'à la poignée, la roue posée au sol devant les épaules
+    if(rd.wheel){
+      const L = BONE_L.uarm+BONE_L.farm-.06, y = A.pin.W[1], dy = y-f.N[1], dx = Math.sqrt(Math.max(0, L*L-dy*dy)), face = rd.A.face||1;
+      const s = ik2(f.N, [f.N[0]+face*dx, y], BONE_L.uarm, BONE_L.farm, f.E); f.E = f.E2 = s[0]; f.W = f.W2 = s[1];
+    }
     return f;
   };
   const ease = x=>x*x*(3-2*x), frames = [];
   for(let i=0;i<=ANIM_FRAMES;i++) frames.push(frame(ease(i/ANIM_FRAMES)));
-  return { env:rd.env || FLOOR, dur:rd.dur || base.dur, grip:rd.grip || base.grip, frames, A:frames[0], B:frames[ANIM_FRAMES], anchor:"P", contacts:both.map(c=>c[2]), two:true };
+  return { env:rd.env || FLOOR, dur:rd.dur || base.dur, grip:rd.grip || base.grip, frames, A:frames[0], B:frames[ANIM_FRAMES], anchor:"P", contacts:both.map(c=>c[2]), two:true, wheel:!!rd.wheel };
 }
 function animRig(def){
   if(ANIM_CACHE.has(def.id)) return ANIM_CACHE.get(def.id);
@@ -501,6 +514,11 @@ function exoAnimSVG(def){
         const ang = unwrap(seq.map(f=>dbAngle(f, k, e, rig.grip)));
         return follow(k, `<g transform="rotate(${ang[0].toFixed(1)})">${reduce ? "" : `<animateTransform attributeName="transform" type="rotate" values="${ang.map(a=>a.toFixed(1)).join(";")}" keyTimes="${kt}" dur="${dur}" repeatCount="indefinite"/>`}<path class="ea-db" d="${DB_SHAPE}"/></g>`);
       }).join("");
+  // la roue suit les mains et tourne de la distance parcourue (elle roule, elle ne glisse pas)
+  const wheel = !rig.wheel ? "" : (()=>{
+    const rot = seq.map(f=>(f.W[0]-F[0].W[0])/WHEEL_R/RAD);
+    return follow("W", `<circle class="ea-wheel" r="${WHEEL_R}"/><g>${reduce ? "" : `<animateTransform attributeName="transform" type="rotate" values="${rot.map(a=>a.toFixed(1)).join(";")}" keyTimes="${kt}" dur="${dur}" repeatCount="indefinite"/>`}<path class="ea-spokes" d="${WHEEL_SPOKES}"/></g><circle class="ea-load" r=".38"/>`);
+  })();
   const floor = /21h21/.test(rig.env||FLOOR);
   const shadow = floor ? `<ellipse class="ea-shadow" cx="${r2(F[0].P[0])}" cy="21.2" rx="3.6" ry=".6">${anim("cx", f=>r2(f.P[0]))}</ellipse>` : "";
   const B = F[n], ghost = `<g class="ea-ghost"><path d="${animPath(B)}"/><circle cx="${r2(B.H[0])}" cy="${r2(B.H[1])}" r="2.15"/></g>`;
@@ -509,6 +527,7 @@ function exoAnimSVG(def){
     ${ghost}
     <path class="ea-body" d="${animPath(F[0])}">${anim("d", animPath)}</path>
     ${focus}
+    ${wheel}
     ${dot("H", 2.15, "ea-head")}
     ${load}
   </svg>`;

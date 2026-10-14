@@ -13,16 +13,26 @@ function sfxWet(){ return SFX_BUS_WET || SFX_WET; }
 // Réverbération douce, comme une pièce calme : réponse synthétisée (souffle stéréo qui s'éteint
 // en ~1,4 s et s'assombrit en s'éteignant). Seuls les sons musicaux (cloches, accords) y sont
 // envoyés, en petite quantité ; les « toc » de l'interface restent secs et précis.
-function buildReverb(){
-  const sr = AC.sampleRate, len = Math.floor(sr*1.4), ir = AC.createBuffer(2, len, sr);
+// La réponse est calculée une seule fois (au calme, après le démarrage) et gardée : recréer le contexte audio
+// (retour d'arrière-plan) ne la recalcule pas, et le premier toucher ne paie pas ce calcul.
+let IR_DATA = null;
+function reverbData(sr){
+  if(IR_DATA && IR_DATA.sr===sr) return IR_DATA.ch;
+  const len = Math.floor(sr*1.4), ch = [];
   for(let c=0;c<2;c++){
-    const d = ir.getChannelData(c); let lp = 0;
+    const d = new Float32Array(len); let lp = 0;
     for(let i=0;i<len;i++){
       const t = i/sr, k = 0.55 - 0.45*Math.min(1, t/1.1); // filtre qui se ferme : la queue s'assombrit
       lp += k*((Math.random()*2-1) - lp);
       d[i] = lp*Math.pow(1-i/len, 2.2)*(t<0.012 ? t/0.012 : 1);
     }
+    ch.push(d);
   }
+  IR_DATA = { sr, ch }; return ch;
+}
+function buildReverb(){
+  const sr = AC.sampleRate, ch = reverbData(sr), ir = AC.createBuffer(2, ch[0].length, sr);
+  ch.forEach((d, c)=>ir.copyToChannel(d, c));
   const conv = AC.createConvolver(); conv.buffer = ir;
   const send = AC.createGain(); send.gain.value = 0.32;
   send.connect(conv); return { send, conv };
@@ -55,7 +65,10 @@ function playSilent(){ try{ const b = AC.createBuffer(1,1,22050), src = AC.creat
 // autre appli qui joue du son) et iOS le laisse parfois bloqué en « interrupted » :
 // à chaque geste on le relance, et s'il ne repart pas on en crée un neuf.
 let reviveTimer = null, audioStale = false, audioHiddenAt = 0;
-["pointerdown","touchend","keydown"].forEach(ev=>document.addEventListener(ev, ()=>{
+// Le contexte se crée au lâcher du doigt (touchend, clic), pas au premier contact : un geste (glisser pour
+// revenir, faire défiler) ne commence jamais par ce calcul. Au contact, on ne fait que relancer un contexte existant.
+document.addEventListener("pointerdown", ()=>{ if(soundOn() && AC && !audioStale) wakeAudio(); }, { passive:true, capture:true });
+["touchend","click","keydown"].forEach(ev=>document.addEventListener(ev, ()=>{
   if(!soundOn()) return;
   // après une longue absence, iOS peut rendre un contexte « en marche » mais muet :
   // on repart d'un contexte neuf au premier geste (coût négligeable)

@@ -92,3 +92,26 @@ Classées par valeur pour l'usage à la maison :
 
 - [x] Test v64 (points 1 à 6), tests existants adaptés, suite complète + audits + monkey.
 - [x] HANDOFF.md, cache `forge-v48`, build, commit, push sur `claude/new-session-wotw1c`.
+
+---
+
+# Plan — passe finale (2.1.3)
+
+## A. Retour par glissement sans saccade
+- [ ] Mesurer image par image (CPU ralenti ×4, comme un iPhone) : durée du premier `touchmove`, images perdues.
+- [ ] Garder en mémoire l'écran parent quand on pousse un sous-écran (comme la pile de navigation d'iOS) :
+  au retour, il est remis tel quel, sans être reconstruit ni cloné (scène, défilement, état intacts).
+  Reconstruction seulement si des données ont changé entre-temps.
+- [ ] Calques du geste sur le compositeur (`will-change`, pas d'ombre recalculée), aucune mise en page pendant le geste.
+
+## B. Pictogrammes et animations
+- [ ] Planche de toutes les animations (images clés) pour repérer les mouvements faux ou raides.
+- [ ] Roue abdominale : vrai déroulé (genoux au sol, roue qui part loin devant, retour), puis les autres défauts repérés.
+
+## C. Passe finale
+- [ ] Performance : démarrage, rendu de chaque onglet, longues tâches, mémoire, poids du fichier, CSS mort.
+- [ ] Sécurité : échappement de tout texte saisi ou importé, import de sauvegarde et de programme IA (taille, forme,
+  `__proto__`), CSP, service worker.
+- [ ] Robustesse : stockage plein ou corrompu, minuteries en arrière-plan, données extrêmes, test au hasard prolongé.
+- [ ] Polish : captures de tous les écrans (320/390/430, clair/sombre), alignements, textes, états vides.
+- [ ] Tests (v65), suite complète, HANDOFF, version 2.1.3, cache, commit, push.

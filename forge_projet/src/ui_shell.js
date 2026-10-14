@@ -403,7 +403,7 @@ let overlayGen = 0;
 let ovReturnFocus = null;
 function overlayInert(on){ ["#app",".tabbar","#restbar"].forEach(s=>{ const e = qs(s); if(e) e.inert = on; }); }
 function overlayA11y(ov, wasOpen){
-  const dlg = ov.querySelector(".sheet,.center-modal"); if(!dlg) return;
+  const dlg = ov.querySelector(".sheet:not(.sheet-kept):not(.nav-ghost),.center-modal"); if(!dlg) return;
   dlg.setAttribute("aria-modal", "true"); dlg.tabIndex = -1;
   const t = dlg.querySelector(".sheet-hd .t, .ob-t2");
   if(t){ t.id = "ovTitle"; dlg.setAttribute("aria-labelledby", "ovTitle"); }
@@ -411,13 +411,23 @@ function overlayA11y(ov, wasOpen){
   overlayInert(true);
   try{ dlg.focus({ preventScroll:true }); }catch(e){}
 }
-function showOverlay(inner, kind){
+function showOverlay(inner, kind, keep){
   const ov = qs("#overlay");
   const gen = ++overlayGen;
   const wasOpen = ov.classList.contains("open");
   hideTip();
   // feuille ouverte depuis une autre (ou retour) : la nouvelle glisse par-dessus l'ancienne, comme une page
   const dir = navSheetDir; navSheetDir = null;
+  // sous-écran poussé : l'écran d'avant reste dans la page, caché dessous (voir sheetKeep)
+  if(keep && keep.isConnected && kind==="sheet"){
+    const tpl = document.createElement("template"); tpl.innerHTML = inner.trim();
+    const cur = tpl.content.firstElementChild;
+    keep.before(cur); keep.inert = true; keep.setAttribute("aria-hidden", "true");
+    ov.dataset.kind = kind; overlayA11y(ov, true); smilKick(cur);
+    if(dir && !navQuiet && !reducedMotion() && cur.animate){ if(navRun) navRun(); navSlideLive(cur, keep, "push", ()=>sheetHideKept(keep, cur)); }
+    else sheetHideKept(keep, cur);
+    return;
+  }
   const prev = dir && !navQuiet && kind==="sheet" && ov.dataset.kind==="sheet" && ov.classList.contains("show") ? ov.querySelector(".sheet") : null;
   const snap = prev && !reducedMotion() ? navSnap(prev) : null;
   if(snap && navRun) navRun();
@@ -436,6 +446,12 @@ function showOverlay(inner, kind){
   // contenu en courte cascade à l'ouverture (pas quand la feuille se redessine ensuite)
   const sh = ov.querySelector(".sheet"); if(sh && !reducedMotion() && !navQuiet){ sh.classList.add("sh-in"); setTimeout(()=>sh.classList.remove("sh-in"), 800); }
   requestAnimationFrame(()=>requestAnimationFrame(()=>{ if(gen===overlayGen) ov.classList.add("show"); }));
+  smilKick(ov);
+}
+// Chromium ne fait pas avancer le premier cycle d'une animation SVG (SMIL) insérée pendant que la feuille était
+// encore masquée : on la relance une fois affichée (Safari n'a pas ce défaut ; sans effet pour lui)
+function smilKick(root){
+  setTimeout(()=>{ if(root) root.querySelectorAll("svg.exo-anim").forEach(s=>{ try{ if(s.setCurrentTime) s.setCurrentTime(0); }catch(e){} }); }, 60);
 }
 // ---------- pile de feuilles ----------
 // Une feuille ouverte DEPUIS une autre (fiche d'un exercice depuis la liste, liste depuis
@@ -443,7 +459,7 @@ function showOverlay(inner, kind){
 // reviennent à la feuille précédente au lieu de tout fermer (et de perdre l'édition en cours).
 // opts.restore : comment redessiner CETTE feuille si on y revient ; opts.child : empiler la
 // feuille courante ; opts.onBack : quoi faire au lieu de fermer (ex. liste → éditeur).
-let sheetStack = [], sheetRestore = null, sheetOnBack = null, sheetRestoring = false;
+let sheetStack = [], sheetRestore = null, sheetOnBack = null, sheetRestoring = false, sheetRefresh = null;
 function sheetShown(){ const ov = qs("#overlay"); return ov.classList.contains("show") && ov.dataset.kind==="sheet"; }
 function sheetCanGoBack(){ return sheetStack.length>0 || !!sheetOnBack; }
 // une feuille ouverte depuis une autre : « Retour » à gauche à la place de la croix (même geste que la croix,
@@ -454,11 +470,68 @@ function sheetBackHead(){
   hd.classList.add("te-hd");
   hd.innerHTML = `<button class="te-cancel" data-a="sheetBack">${icon("chev")}<span>Retour</span></button><span class="t">${esc(title)}</span><span class="te-spacer"></span>`;
 }
+// Comme la pile de navigation d'iOS, l'écran d'avant est GARDÉ quand on pousse un sous-écran (`_el` sur sa
+// fonction de restauration) : au retour il est remis tel quel, sans être reconstruit (pas de scène qui se
+// redessine ni de calcul au milieu du geste : c'était la saccade du retour par glissement). Il n'est
+// reconstruit que si des données ont changé entre-temps (`DATA_VER`), ou s'il porte un canvas (3D).
+function sheetActive(){ return qs("#overlay .sheet:not(.nav-ghost):not(.sheet-kept):not(.nav-leaving)"); }
+function sheetKeep(r, el){
+  const cur = el || sheetActive(), bd = cur && cur.querySelector(".sheet-body");
+  r._st = bd ? bd.scrollTop : 0;
+  // un écran avec un canvas (trophées 3D) se reconstruit : son rendu ne doit pas tourner caché
+  r._el = cur && !cur.querySelector("canvas") ? cur : null; r._ver = DATA_VER; r._back = sheetOnBack; r._refresh = sheetRefresh;
+  return r._el;
+}
+// retirer une entrée sans y revenir : son écran gardé quitte la page
+function sheetStackPop(){
+  const r = sheetStack.pop();
+  if(r && r._el && r._el.isConnected && r._el.classList.contains("sheet-kept")) r._el.remove();
+  if(r) r._el = null;
+  return r;
+}
+function sheetStackClear(){ sheetStack.forEach(f=>{ if(f) f._el = null; }); sheetStack = []; }
+// l'écran gardé : sous le sous-écran (déjà peint, prêt pour le retour), animations en pause ; s'il dépasse
+// du sous-écran (feuille plus haute), il est masqué
+function sheetHideKept(keep, cur){
+  keep.classList.add("sheet-kept");
+  keep.classList.toggle("kept-off", cur.offsetTop > keep.offsetTop + 1);
+  // animations en boucle mises en pause par l'API (pas de règle CSS sur tout le sous-arbre : rien à recalculer au retour)
+  try{ keep._paused = keep.getAnimations({ subtree:true }).filter(a=>a.playState==="running"); keep._paused.forEach(a=>a.pause()); }catch(e){ keep._paused = null; }
+}
+function sheetWakeKept(el){
+  el.classList.remove("sheet-kept", "kept-off"); el.inert = false; el.removeAttribute("aria-hidden");
+  if(el._paused){ el._paused.forEach(a=>{ try{ a.play(); }catch(e){} }); el._paused = null; }
+}
+let sheetGestureLeave = false;
+// le sous-écran qui part glisse lui-même (aucune copie) ; pendant le geste (navQuiet), c'est le geste qui
+// l'anime et le retire (navDragEnd), ou le remet en place s'il est annulé
+function sheetReveal(r, el){
+  const ov = qs("#overlay"), cur = sheetActive();
+  ++overlayGen; navSheetDir = null; hideTip();
+  sheetRestore = r; sheetOnBack = r._back || null; sheetRefresh = r._refresh || null;
+  sheetWakeKept(el);
+  if(cur){
+    cur.classList.add("nav-leaving");
+    if(sheetGestureLeave){}   // le glissement depuis le bord s'en charge (il l'anime, puis le retire ou le remet)
+    else if(navQuiet) cur.remove();
+    else if(!reducedMotion() && cur.animate){ if(navRun) navRun(); navSlideLive(cur, el, "pop", ()=>cur.remove()); }
+    else cur.remove();
+  }
+  // le focus attend la fin du mouvement (il forcerait un calcul de style au premier instant du geste)
+  setTimeout(()=>{ if(sheetActive()===el) overlayA11y(ov, true); }, navQuiet ? NAV_MS : 0);
+}
 function sheetBack(){
   if(sheetStack.length){
-    const r = sheetStack.pop(), st = r._st;
+    const r = sheetStack.pop(), st = r._st, el = r._el;
+    // gardé et à jour (ou capable de se mettre à jour seul) : révélé tel quel ; sinon reconstruit
+    const kept = el && el.isConnected && (r._ver===DATA_VER || r._refresh);
+    r._el = null;
     sheetRestoring = true;
-    try{ r(); } catch(e){ sheetStack = []; closeSheet(); } finally{ sheetRestoring = false; }
+    try{
+      if(kept){ if(r._ver!==DATA_VER) try{ r._refresh(el); }catch(e){} sheetReveal(r, el); }
+      else r();
+    } catch(e){ sheetStackClear(); closeSheet(); } finally{ sheetRestoring = false; }
+    if(kept) return true;
     // l'écran d'avant revient là où on l'avait laissé (sinon il repart du haut : un saut au retour)
     const bd = st && qs("#overlay .sheet:not(.nav-ghost) .sheet-body"); if(bd) bd.scrollTop = st;
     return true;
@@ -467,22 +540,19 @@ function sheetBack(){
   return false;
 }
 function openSheet(html, opts){
-  opts = opts||{};
+  opts = opts||{}; let keep = null;
   if(!sheetRestoring){
-    if(!sheetShown()) sheetStack = [];
-    else if(opts.child && sheetRestore){
-      const bd = qs("#overlay .sheet:not(.nav-ghost) .sheet-body");
-      sheetRestore._st = bd ? bd.scrollTop : 0; sheetStack.push(sheetRestore);
-    }
+    if(!sheetShown()) sheetStackClear();
+    else if(opts.child && sheetRestore){ keep = sheetKeep(sheetRestore); sheetStack.push(sheetRestore); }
   }
   navSheetDir = sheetRestoring ? "pop" : opts.child && sheetStack.length ? "push" : null;
   sheetRestore = opts.restore || null;
-  sheetOnBack = opts.onBack || null;
-  showOverlay(`<div class="sheet ${opts.tall?"tall":""}" role="dialog">${opts.noGrab?"":'<div class="sheet-grab"></div>'}${html}${opts.footer?`<div class="sheet-ft">${opts.footer}</div>`:""}</div>`, "sheet");
+  sheetOnBack = opts.onBack || null; sheetRefresh = opts.refresh || null;
+  showOverlay(`<div class="sheet ${opts.tall?"tall":""}" role="dialog">${opts.noGrab?"":'<div class="sheet-grab"></div>'}${html}${opts.footer?`<div class="sheet-ft">${opts.footer}</div>`:""}</div>`, "sheet", keep);
 }
 function openModal(html, cls){
   // une confirmation remplace la feuille : « Annuler » ferme tout, comme avant
-  sheetStack = []; sheetRestore = null; sheetOnBack = null;
+  sheetStackClear(); sheetRestore = null; sheetOnBack = null; sheetRefresh = null;
   showOverlay(`<div class="center-modal${cls ? " "+cls : ""}" role="dialog">${html}</div>`, "modal");
 }
 // feuille d'actions iOS (en bas de l'écran) : un message, des actions, et « Continuer » à part
@@ -511,7 +581,7 @@ function closeSheet(){
   if(!ov.classList.contains("open")) return;
   ov.classList.remove("show");
   if(typeof syncStatusBar==="function") syncStatusBar(false);
-  sheetStack = []; sheetRestore = null; sheetOnBack = null;
+  sheetStackClear(); sheetRestore = null; sheetOnBack = null;
   overlayInert(false);
   const rf = ovReturnFocus; ovReturnFocus = null;
   // le focus revient au bouton qui a ouvert la feuille (jamais à un champ : le clavier ressortirait)
@@ -727,6 +797,11 @@ function navSlide(snap, cur, dir, sheet){
   const L = dir==="push" ? navLayers(cur, snap.g, dim) : navLayers(snap.g, cur, dim);
   navTween(L, dir==="push" ? 1 : 0, dir==="push" ? 0 : 1, NAV_MS, ()=>navClean(L, snap.g));
 }
+// même glissement entre deux écrans réels (sans copie) : before() s'exécute avant le nettoyage
+function navSlideLive(top, under, dir, before){
+  const L = navLayers(top, under, null);
+  navTween(L, dir==="push" ? 1 : 0, dir==="push" ? 0 : 1, NAV_MS, ()=>{ if(before) before(); navClean(L, null); });
+}
 // un conteneur (onglet) qui change d'écran : render() y dessine le nouvel écran
 function navGo(el, render, dir){
   if(navRun) navRun();
@@ -761,7 +836,10 @@ function navMove(e){
     if(Math.abs(dy)>8 && Math.abs(dy)>Math.abs(dx)){ navDrag = null; navUnlisten(d); return; }   // défilement vertical
     if(dx<6) return;
     if(navRun) navRun();
-    const snap = navSnap(d.h), under = d.b.go();
+    // fournisseur « vivant » : l'écran touché glisse lui-même (pas de copie à créer au premier mouvement)
+    const live = d.b.live && d.b.live();
+    const snap = live ? { g:d.h, live:true, st:d.h.scrollTop, bst:(d.h.querySelector(".sheet-body")||{}).scrollTop||0, place(){} } : navSnap(d.h);
+    const under = d.b.go();
     if(!under){ navDrag = null; navUnlisten(d); return; }
     snap.place(under);
     d.snap = snap; d.L = navLayers(snap.g, under, navDim(under, d.b.sheet)); d.on = true; hideTip();
@@ -786,7 +864,8 @@ function navDragEnd(e, cancel){
     navClean(d.L, null);
     if(!done){
       const el = d.b.back();   // l'écran poussé revient, à la même position de défilement
-      if(el){ el.scrollTop = d.snap.st; const bd = el.querySelector(".sheet-body"); if(bd) bd.scrollTop = d.snap.bst; }
+      if(el && !d.snap.live){ el.scrollTop = d.snap.st; const bd = el.querySelector(".sheet-body"); if(bd) bd.scrollTop = d.snap.bst; }
+      if(d.snap.live && el===d.snap.g) return;   // c'est l'écran lui-même : il reste
     }
     d.snap.g.remove();
   });
@@ -794,9 +873,26 @@ function navDragEnd(e, cancel){
 document.addEventListener("ascen:suspend", ()=>navDragEnd(null, true));
 // feuilles ouvertes depuis une autre : même geste pour revenir à la précédente
 NAV_BACKS.push({ sheet:true,
-  host(){ return sheetShown() && sheetStack.length && sheetRestore && !qs(".t3d-full") ? qs("#overlay .sheet") : null; },
-  go(){ this.again = sheetRestore; navQuiet = true; try{ sheetBack(); } finally{ navQuiet = false; } return qs("#overlay .sheet"); },
-  back(){ if(!this.again) return null; navQuiet = true; try{ this.again(); } finally{ navQuiet = false; } return qs("#overlay .sheet"); },
+  host(){ return sheetShown() && sheetStack.length && sheetRestore && !qs(".t3d-full") ? sheetActive() : null; },
+  // le sous-écran est gardé lui aussi : si le geste est annulé, il revient tel quel (rien n'est reconstruit)
+  // l'écran d'avant est gardé (sheetKeep) : le sous-écran glisse lui-même, sans copie, et revient s'il est annulé
+  live(){ const r = sheetStack[sheetStack.length-1]; return !!(r && r._el && r._el.isConnected && (r._ver===DATA_VER || r._refresh)); },
+  go(){ this.again = sheetRestore; this.againBack = sheetOnBack; this.againRefresh = sheetRefresh; this.child = sheetActive();
+    navQuiet = true; sheetGestureLeave = true; try{ sheetBack(); } finally{ navQuiet = false; sheetGestureLeave = false; } return sheetActive(); },
+  back(){
+    if(!this.again) return null;
+    const child = this.child; this.child = null;
+    const parent = sheetRestore, pel = sheetActive();
+    if(child && child.isConnected && parent && pel){
+      sheetKeep(parent, pel); sheetStack.push(parent);
+      child.classList.remove("nav-leaving");
+      pel.inert = true; pel.setAttribute("aria-hidden", "true"); sheetHideKept(pel, child);
+      sheetRestore = this.again; sheetOnBack = this.againBack || null; sheetRefresh = this.againRefresh || null;
+      overlayA11y(qs("#overlay"), true);
+      return child;
+    }
+    navQuiet = true; try{ this.again(); } finally{ navQuiet = false; } return sheetActive();
+  },
 });
 function confirmSheet({title,html,ok,onOk,danger}){
   openModal(`<div style="font-weight:700;font-size:calc(17rem/17);margin-bottom:6px">${esc(title)}</div>

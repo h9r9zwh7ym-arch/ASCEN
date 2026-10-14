@@ -588,6 +588,10 @@ function pickRowHTML(e){
     ${picker.multi?`<button class="pick-check" aria-label="Sélectionner" data-a="pickerTap" data-id="${e.id}">${on?icon("check"):""}</button>`:""}
   </div>`;
 }
+// un exercice peut figurer deux fois (favoris ou habituels, et sa catégorie) : toutes ses lignes suivent
+function pickerSyncRows(id, on){
+  qsa(`.pick-row[data-id="${id}"]`).forEach(row=>{ row.classList.toggle("on", on); const c = qs(".pick-check",row); if(c) c.innerHTML = on ? icon("check") : ""; });
+}
 function refreshPickerFooter(){
   const b = qs("#pickerDone"); if(!b) return;
   const n = picker.selected.length;
@@ -1440,8 +1444,7 @@ Object.assign(ACT, {
     if(!picker.multi){ picker.onDone([d.id]); return; }
     const i = picker.selected.indexOf(d.id);
     if(i>=0) picker.selected.splice(i,1); else picker.selected.push(d.id);
-    // un exercice peut figurer deux fois (favoris ou habituels, et sa catégorie) : toutes ses lignes suivent
-    qsa(`.pick-row[data-id="${d.id}"]`).forEach(row=>{ row.classList.toggle("on", i<0); const c = qs(".pick-check",row); if(c) c.innerHTML = i<0 ? icon("check") : ""; });
+    pickerSyncRows(d.id, i<0);
     haptic(6);
     refreshPickerFooter();
   },
@@ -1774,8 +1777,9 @@ Object.assign(ACT, {
       if(!picker.multi){ picker.onDone([id]); return; }
       const i = picker.selected.indexOf(id);
       if(i>=0) picker.selected.splice(i,1); else picker.selected.push(id);
-      // retour à la liste, sélection visible et bouton « Ajouter n » à jour
-      while(sheetStack.length && !sheetStack[sheetStack.length-1].isPicker) sheetStack.pop();
+      // retour à la liste (gardée telle quelle sous la fiche) : sélection visible et bouton « Ajouter n » à jour
+      pickerSyncRows(id, i<0); refreshPickerFooter();
+      while(sheetStack.length && !sheetStack[sheetStack.length-1].isPicker) sheetStackPop();
       sheetBack();
       toast(i>=0 ? "Retiré de la sélection" : "Ajouté à la sélection", "check");
       return;

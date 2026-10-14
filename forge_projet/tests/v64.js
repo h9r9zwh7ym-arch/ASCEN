@@ -89,7 +89,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     const cdp = await ctx.newCDPSession(page);
     const t = (type, x) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y: 400 }] });
     await t('touchStart', 5); let x = 5;
-    for (let i = 0; i < 14; i++) { x += 18; await t('touchMove', x); await wait(30); if (i === 6) mid = await page.evaluate(() => (document.querySelector('#overlay .sheet:not(.nav-ghost) .sheet-body') || {}).scrollTop); }
+    for (let i = 0; i < 14; i++) { x += 18; await t('touchMove', x); await wait(30); if (i === 6) mid = await page.evaluate(() => (document.querySelector('#overlay .sheet:not(.nav-ghost):not(.nav-leaving):not(.sheet-kept) .sheet-body') || {}).scrollTop); }
     await t('touchEnd'); await wait(900);
     st2 = await page.evaluate(() => ({ st: document.querySelector('#overlay .sheet-body').scrollTop, main: !!document.querySelector('#overlay #ascScene'), ghosts: document.querySelectorAll('.nav-ghost').length }));
   }

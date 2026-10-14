@@ -109,6 +109,8 @@ function init(){
   try{ if("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", e=>{ if(e.data && e.data.type==="forge-updated") toast("Mise à jour prête : elle s'appliquera au prochain lancement"); }); }catch(e){}
   idbRecover(); // copie de secours IndexedDB (voir core.js)
   (window.requestIdleCallback || (f=>setTimeout(f, 4000)))(()=>ascPrefetch(), { timeout:8000 });
+  // la réverbération des sons, calculée au calme (le premier toucher n'a plus à le faire)
+  (window.requestIdleCallback || (f=>setTimeout(f, 3000)))(()=>{ if(soundOn()) reverbData(48000); }, { timeout:6000 });
   // ascension : une semaine sans séance a fait redescendre d'un camp ; dit une fois, après le lancement
   setTimeout(()=>{ try{ if(!LOAD_SKIPPED && !(S.draft && S.draft.startedAt)) ascDescentNotice(); }catch(e){ reportError("ascent", e); } }, 2100);
   if(LOAD_SKIPPED) setTimeout(()=>toast(`${LOAD_SKIPPED} séance${LOAD_SKIPPED>1?"s":""} illisible${LOAD_SKIPPED>1?"s":""} mise${LOAD_SKIPPED>1?"s":""} de côté, le reste de l'historique est intact`), 1800);

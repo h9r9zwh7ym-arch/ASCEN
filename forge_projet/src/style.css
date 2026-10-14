@@ -1240,6 +1240,8 @@ html[data-vt="fade"]::view-transition-new(root){animation-name:vtFadeIn}
 .exo-anim .ea-plate{fill:none;stroke:var(--label);stroke-width:1.05;opacity:.85}
 .exo-anim .ea-handle{fill:none;stroke:var(--label);stroke-width:.85;opacity:.85}
 .exo-anim .ea-db{fill:none;stroke:var(--label);stroke-width:1.15;stroke-linecap:round;opacity:.85}
+.exo-anim .ea-wheel{fill:var(--bg2,#fff);stroke:var(--label);stroke-width:.75;opacity:.9}
+.exo-anim .ea-spokes{fill:none;stroke:var(--label);stroke-width:.32;stroke-linecap:round;opacity:.75}
 .exo-anim .ea-band{fill:none;stroke:var(--rc,var(--tint));stroke-width:.7;stroke-linecap:round;opacity:.55;stroke-dasharray:.1 1.1}
 .exo-anim .ea-ghost{fill:none;stroke:var(--label);stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;opacity:.09}
 .exo-anim .ea-ghost circle{fill:var(--label);stroke:none}
@@ -1339,7 +1341,7 @@ html[data-vt="fade"]::view-transition-new(root){animation-name:vtFadeIn}
 /* exercice favori */
 .rw-stage{width:190px;height:190px;border-radius:48px;background:rgba(255,255,255,.14);display:grid;place-items:center;margin:6px 0 4px;--rc:#fff}
 .rw-stage .exo-anim{width:160px;height:160px}
-.rw-stage .exo-anim .ea-body{stroke:#fff}.rw-stage .exo-anim .ea-head{fill:#fff}.rw-stage .exo-anim .ea-env{stroke:rgba(255,255,255,.45)}.rw-stage .exo-anim .ea-load{fill:#1b1b1b}.rw-stage .exo-anim .ea-plate,.rw-stage .exo-anim .ea-handle,.rw-stage .exo-anim .ea-db{stroke:#1b1b1b}.rw-stage .exo-anim .ea-ghost{stroke:#fff}.rw-stage .exo-anim .ea-ghost circle,.rw-stage .exo-anim .ea-shadow{fill:#fff}.rw-stage .exo-anim .ea-band{stroke:#fff}
+.rw-stage .exo-anim .ea-body{stroke:#fff}.rw-stage .exo-anim .ea-head{fill:#fff}.rw-stage .exo-anim .ea-env{stroke:rgba(255,255,255,.45)}.rw-stage .exo-anim .ea-load{fill:#1b1b1b}.rw-stage .exo-anim .ea-plate,.rw-stage .exo-anim .ea-handle,.rw-stage .exo-anim .ea-db,.rw-stage .exo-anim .ea-wheel,.rw-stage .exo-anim .ea-spokes{stroke:#1b1b1b}.rw-stage .exo-anim .ea-ghost{stroke:#fff}.rw-stage .exo-anim .ea-ghost circle,.rw-stage .exo-anim .ea-shadow{fill:#fff}.rw-stage .exo-anim .ea-band{stroke:#fff}
 .rw-list{width:100%;max-width:340px;margin-top:18px;display:flex;flex-direction:column;gap:8px}
 .rw-list div{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:16px;background:rgba(255,255,255,.14);font-weight:600;text-align:left;animation:rwUp .5s calc(.9s + var(--k)*.12s) both}
 .rw-list b{width:22px;opacity:.7}
@@ -3053,6 +3055,10 @@ body.live-focus #v-today{padding-bottom:0}
 /* ===== Navigation poussée, façon iOS (navGo / navSlide, ui_shell.js) =====
    L'écran poussé entre par la droite avec une ombre sur son bord gauche ; celui de dessous recule d'un
    tiers sous un voile. Les copies figées ont leurs animations arrêtées à l'état final. */
+/* pile de feuilles : l'écran d'avant reste dans la page, sous le sous-écran (déjà peint pour le retour) */
+.sheet.sheet-kept{z-index:-1;transition:none!important;pointer-events:none}
+.sheet.sheet-kept.kept-off{visibility:hidden}
+.sheet-kept.kept-off>*{content-visibility:hidden}
 .nav-ghost{pointer-events:none}
 .nav-ghost,.nav-ghost *{animation-delay:-60s!important;transition:none!important}
 .nav-top,.nav-under{transition:none!important;will-change:transform}

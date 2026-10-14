@@ -12,6 +12,7 @@
 // Sol : y = 20.8 (pieds et mains posés). Viewbox 24 × 24.
 const G = 20.8;
 const RAD = Math.PI/180;
+const WR = 1.15, WH = G - WR;   // roue abdominale : rayon, hauteur de l'axe (les mains)
 // debout, pieds joints sous le bassin
 const stand = (x, o)=>Object.assign({ P:[x==null?12:x, 12.4], t:-90, E:74, W:96, pin:{ F:[x==null?12:x, G] } }, o||{});
 // corps gainé en ligne droite des pieds (ou genoux) aux épaules, épaules à la hauteur Ny
@@ -91,8 +92,9 @@ const RIGS = {
   burpees:         { dur:1.8, A:stand(12, { E:-100, W:-92 }), B:Object.assign({}, PUSH_A) },
 
   // ---------------- dips ----------------
-  dips_barres:     { env:ENV.dip, A:{ P:[12,12.1], t:-92, h:-92, K:100, F:165, E:92, pin:{ W:[13.6,12.4] } },
-                     B:{ P:[11.9,15.2], t:-80, h:-78, K:100, F:165, E:-140, pin:{ W:[13.6,12.4] } } },
+  // jambes fléchies, pieds derrière (comme aux barres), le corps descend en se penchant un peu vers l'avant
+  dips_barres:     { env:ENV.dip, A:{ P:[12,12.1], t:-92, h:-92, K:82, F:140, E:92, pin:{ W:[13.6,12.4] } },
+                     B:{ P:[11.9,15.2], t:-78, h:-76, K:70, F:165, E:-140, pin:{ W:[13.6,12.4] } } },
   releve_genoux_barres:{ env:ENV.dip, A:{ P:[12,12.1], t:-90, K:88, F:92, E:92, pin:{ W:[13.6,12.4] } }, B:{ P:[12,12.1], t:-94, K:-8, F:88, E:92, pin:{ W:[13.6,12.4] } } },
   l_sit:           { env:ENV.dip, dur:3.6, A:{ P:[12,12.1], t:-90, K:88, F:92, E:92, pin:{ W:[13.6,12.4] } }, B:{ P:[12,12.0], t:-94, K:-2, F:0, E:92, pin:{ W:[13.6,12.4] } } },
   dips_banc:       { env:ENV.lowBench, A:{ P:[12.8,16.1], t:-92, h:-100, face:-1, K:-150, E:60, pin:{ F:[6,G], W:[14.5,16.5] } },
@@ -161,10 +163,14 @@ const RIGS = {
   bird_dog:        { A:quad({ pin:{ W:[7,G], F:[16.6,20.4] } }), B:quad({ K:2, F:0, K2:90, F2:0, E:184, W:182, pin:{ W2:[7,G] } }) },
   marche_ours:     { dur:1.6, A:quad({ P:[12.4,15.2], t:-178, K:115, pin:{ W:[7.2,G], F:[16.4,G], F2:[16.4,G] } }),
                      B:quad({ P:[11.4,15.2], t:-178, K:115, K2:115, pin:{ W:[5.6,G], W2:[7.2,G], F:[16.4,G], F2:[14.2,G] } }) },
-  roue_abdo_genoux:{ dur:3, A:{ P:[14.0,16.4], t:-148, h:-160, face:-1, K:60, E:95, pin:{ F:[19.4,20.4], W:[8.6,19.4] } },
-                     B:{ P:[12.4,17.6], t:-172, h:-178, face:-1, K:60, E:185, W:180, pin:{ F:[19.4,20.4] } } },
-  roue_abdo_debout:{ dur:3.2, A:{ P:[15.4,13.4], t:132, h:170, face:-1, K:-20, E:95, pin:{ F:[19.4,G], W:[10.4,19.4] } },
-                     B:{ P:[11.6,18.6], t:-174, h:-178, face:-1, K:-20, E:182, W:180, pin:{ F:[19.4,G] } } },
+  // roue abdominale : les mains restent sur la poignée de la roue (axe à 1,15 du sol), qui roule devant ; à genoux, le
+  // genou reste posé (cuisse qui pivote autour), debout, le corps reste droit des pieds aux épaules
+  roue_abdo_genoux:{ dur:3.2, wheel:true, icon:"mid", arc:[17.4,20.1],
+                     A:{ P:[16.53,15.99], t:-154.6, h:-150, face:-1, K:78, E:90, pin:{ F:[21.55,20.4], W:[11.47,WH] } },
+                     B:{ P:[13.45,18.66], t:-176, h:-180, face:-1, K:20, E:167, pin:{ F:[21.55,20.4], W:[1.96,WH] } } },
+  roue_abdo_debout:{ dur:3.4, wheel:true, icon:"mid", arc:[21.2,G],
+                     A:{ P:[18.33,12.91], t:145, h:150, face:-1, K:70, F:70, E:126, W:126, pin:{ F:[21.2,G], W:[8.89,WH] } },
+                     B:{ P:[12.94,19.3], t:-169.7, h:-176, face:-1, K:10.3, F:10.3, E:167, W:167, pin:{ F:[21.2,G], W:[1.58,WH] } } },
   fallout_sangles: { env:FL+"M6.8 1.5l-1.2 7", dur:3, A:{ P:[14.3,12.5], t:-100, h:-100, face:-1, E:175, W:178, pin:{ F:[15.8,G] } },
                      B:{ P:[11.6,13.6], t:-120, h:-125, face:-1, E:-160, W:-162, pin:{ F:[15.8,G] } } },
   etir_enfant:     { dur:5, A:{ P:[13.8,15.9], t:-95, h:-100, face:-1, K:150, E:-120, W:-122, pin:{ F:[16.4,20.4] } },

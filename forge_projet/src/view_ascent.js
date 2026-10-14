@@ -693,7 +693,7 @@ function ascSceneToast(icn, html, ms){
 function openAscent(){
   const a = ascent(), intro = !!(S.ascent && !S.ascent.intro && a.summitCount);
   openSheet(`<div class="sheet-hd"><span class="t">Mon ascension</span><span class="hd-acts"><button class="tr-how" data-a="ascHow" aria-label="Comment fonctionne l'ascension">i</button><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></span></div>
-    <div class="sheet-body asc-body">${ascBodyHTML(a)}</div>`, { tall:true, restore:openAscent });
+    <div class="sheet-body asc-body">${ascBodyHTML(a)}</div>`, { tall:true, restore:openAscent, refresh:ascRefreshSheet });
   if(intro){ S.ascent.intro = 1; save(); }
   ascMountScene(a, intro);
 }
