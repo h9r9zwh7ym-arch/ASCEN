@@ -45,7 +45,7 @@ function trophiesCardHTML(){
     </button>`;
 }
 // ---------- réglages regroupés (loi de Hick : peu de choix sur l'écran, le détail à un toucher) ----------
-const MOTIV = [["beat","target","orange","Chiffre à battre en séance","Ta série de la dernière fois et ce qu'il faut pour la dépasser"],
+const MOTIV = [["beat","target","orange","Comparer à la dernière fois","Ta série de la dernière fois, en séance"],
   ["nextGoal","flag","red","Prochain cap sur l'accueil","Le but le plus proche : record à battre, trophée, muscle à reprendre"],
   ["trend","trendUp","green","Progression de force","Ta courbe depuis tes débuts, ton statut et les alertes de pause"],
   ["thenNow","chart","blue","Avant et maintenant","Tes séries d'avant face à celles de maintenant"]];

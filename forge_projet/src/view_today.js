@@ -829,10 +829,8 @@ function beatLineHTML(ex, def, si, st){
   if(beatWinKey===key) beatWinKey = "";
   // exercice tenu arrêté avant la fin la dernière fois : un simple rappel, pas de « à battre »
   if(ref.goal>ref.reps) return `<div class="fc-beat">${ii("target")}<span>La dernière fois : <b>${ref.reps} s</b> sur ${ref.goal} s</span></div>`;
-  const tgt = beatTarget(def, st.weight, ref);
-  if(tgt==null) return `<div class="fc-beat">${ii("target")}<span>La dernière fois : <b>${refTxt}</b></span></div>`;
-  const lt = loadableTypeOf(def), at = lt && st.weight ? (lt==="bands" ? ` · ${fmtLoad(def, st.weight)}` : ` à ${fmtDec(st.weight)} kg`) : "";
-  return `<div class="fc-beat">${ii("target")}<span>À battre : <b>${tgt}${isTimed(def) ? " s" : " rép."}</b>${at}</span></div>`;
+  // simple rappel de la même série la dernière fois (un « à battre » se lisait comme un record, qui reste géré par isNewPR)
+  return `<div class="fc-beat">${ii("target")}<span>La dernière fois : <b>${refTxt}</b></span></div>`;
 }
 const SX_PM = d=>`<svg viewBox="0 0 18 18" aria-hidden="true"><path d="${d>0?"M9 3v12M3 9h12":"M3 9h12"}" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>`;
 const SX_CHECK = `<svg class="sx-ck" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.3l2.3 2.3 4.7-5" pathLength="1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
