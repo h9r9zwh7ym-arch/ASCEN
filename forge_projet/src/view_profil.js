@@ -649,7 +649,7 @@ Object.assign(ACT, {
     applyStretchSetting(); changed(); renderView("today");
     toast(S.settings.stretching ? "Étirements ajoutés en fin de séance proposée" : "Plus d'étirements dans les séances proposées", "check");
   },
-  toggleUiSound(d, el){ S.settings.uiSound = S.settings.uiSound===false; save(); el.classList.toggle("on", S.settings.uiSound); if(S.settings.uiSound) setTimeout(()=>sfx("tick"), 80); },
+  toggleUiSound(d, el){ S.settings.uiSound = S.settings.uiSound===false; save(); el.classList.toggle("on", S.settings.uiSound); if(S.settings.uiSound) sfx("toggle", true); },
   toggleLiveDark(d, el){
     if(S.settings.theme==="dark") return;
     S.settings.liveDark = S.settings.liveDark===false; save(); applyTheme();

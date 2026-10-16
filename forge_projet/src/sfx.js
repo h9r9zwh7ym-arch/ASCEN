@@ -180,6 +180,38 @@ function brass(f, t, dur, gain){
   lp.connect(g); g.connect(sfxDest()); const wet = sfxWet(); if(wet) g.connect(wet);
   [1, 1.0045].forEach(k=>{ const o = AC.createOscillator(); o.type = "sawtooth"; o.frequency.value = f*k; o.connect(lp); o.start(t0); o.stop(t0+dur+0.05); });
 }
+// cor de fanfare : trois voix (dents de scie + carrée une octave dessous), attaque qui « monte » vers la note
+// comme un vrai cuivre, filtre qui s'ouvre franchement puis se referme, vibrato qui arrive sur la tenue
+function horn(f, t, dur, gain, pan){
+  const t0 = AC.currentTime + t, g = AC.createGain(), lp = AC.createBiquadFilter();
+  lp.type = "lowpass"; lp.Q.value = 1.1;
+  lp.frequency.setValueAtTime(f*1.5, t0); lp.frequency.exponentialRampToValueAtTime(f*9, t0+0.08); lp.frequency.exponentialRampToValueAtTime(f*3.2, t0+Math.min(dur, 0.6)); lp.frequency.exponentialRampToValueAtTime(f*1.6, t0+dur);
+  g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(gain, t0+0.045); g.gain.exponentialRampToValueAtTime(gain*0.7, t0+0.2);
+  g.gain.setValueAtTime(gain*0.7, t0+dur*0.55); g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+  let out = g;
+  if(pan && AC.createStereoPanner){ const p = AC.createStereoPanner(); p.pan.value = pan; g.connect(p); out = p; }
+  lp.connect(g); out.connect(sfxDest()); const wet = sfxWet(); if(wet) out.connect(wet);
+  const lfo = AC.createOscillator(), lg = AC.createGain(); lfo.frequency.value = 5.2;
+  lg.gain.setValueAtTime(0, t0); lg.gain.setValueAtTime(0, t0+0.28); lg.gain.linearRampToValueAtTime(f*0.005, t0+0.7);
+  lfo.connect(lg); lfo.start(t0); lfo.stop(t0+dur+0.05);
+  [[1,"sawtooth",1],[1.0038,"sawtooth",0.8],[0.5,"square",0.35]].forEach(([k,type,a])=>{
+    const o = AC.createOscillator(), og = AC.createGain(); o.type = type;
+    o.frequency.setValueAtTime(f*k*0.97, t0); o.frequency.exponentialRampToValueAtTime(f*k, t0+0.05);
+    lg.connect(o.frequency); og.gain.value = a; o.connect(og); og.connect(lp); o.start(t0); o.stop(t0+dur+0.05);
+  });
+}
+// timbale : sinus grave qui plonge à peine + peau (souffle grave filtré)
+function timpani(f, t, gain){ tone(f, t, 1.1, { gain, to:f*0.94, att:0.004, wet:1 }); tone(f*1.5, t, 0.5, { gain:gain*0.25, att:0.004 }); whoosh(t, 0.12, 300, 160, gain*0.4); }
+// « pop » doux : bulle ronde (sinus qui retombe), contact feutré, reflet aigu très léger
+function pop(t, f, gain){
+  const g0 = gain==null ? 1 : gain, v = 1 + (Math.random()-0.5)*0.05;
+  tone(f*v, t, 0.07, { gain:0.16*g0, to:f*0.62*v, att:0.0015 });
+  tone(f*2.01*v, t, 0.035, { gain:0.035*g0, to:f*1.4*v, att:0.001 });
+  if(!NOISE){ NOISE = AC.createBuffer(1, AC.sampleRate*1, AC.sampleRate); const d = NOISE.getChannelData(0); for(let i=0;i<d.length;i++) d[i] = Math.random()*2-1; }
+  const t0 = AC.currentTime + t, src = AC.createBufferSource(), lp = AC.createBiquadFilter(), g = AC.createGain();
+  src.buffer = NOISE; lp.type = "lowpass"; lp.frequency.value = 1800; g.gain.setValueAtTime(0.05*g0, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0+0.01);
+  src.connect(lp); lp.connect(g); g.connect(sfxDest()); src.start(t0, Math.random()*0.5); src.stop(t0+0.02);
+}
 // coup sourd (grosse caisse feutrée) : sinus qui plonge
 function thump(t, gain){ tone(110, t, 0.45, { gain, to:42, att:0.003 }); tok(t, 120, 0.6); }
 // pluie d'étincelles : petites cloches aiguës au hasard, de part et d'autre
@@ -208,12 +240,17 @@ const SFX = {
     thump(0.3, 0.32); sparkle(0.36, 9, 0.07);
   },
   // fin de séance : coup sourd, accord ample qui s'ouvre (cuivres + nappe), cascade de cloches, souffle d'air
+  // fin de séance : fanfare de cors « ta-ta-DAAAM » (sol, sol, puis accord de do ample), timbale,
+  // nappe chaude dessous, et une pluie de cloches qui s'ouvre sur la tenue
   complete(){
-    thump(0, 0.4);
-    [NT.C5/2, NT.G5/2, NT.E5, NT.G5].forEach((f,i)=>pad(f, 0.02+i*0.03, 2.8, 0.05));
-    [NT.C5, NT.E5, NT.G5].forEach(f=>brass(f/2, 0.04, 1.4, 0.045));
-    [NT.G5, NT.C6, NT.E6, NT.G6, NT.C7].forEach((f,i)=>bell(f, 0.42+i*0.1, 1.5, 0.1));
-    whoosh(0.4, 1.1, 1500, 9000, 0.05); sparkle(1, 8, 0.05);
+    const G4 = NT.G5/2, C4 = NT.C5/2, E4 = NT.E5/2;
+    horn(G4, 0, 0.16, 0.05, -0.15); horn(NT.D5, 0, 0.16, 0.03, 0.15);
+    horn(G4, 0.17, 0.16, 0.05, -0.15); horn(NT.D5, 0.17, 0.16, 0.03, 0.15);
+    timpani(C4/2, 0.36, 0.42);
+    [[C4,-0.3],[E4,0.25],[G4,-0.1],[NT.C5,0.3],[NT.E5,-0.2]].forEach(([f,p],i)=>horn(f, 0.36+i*0.012, 2.1, i<3 ? 0.045 : 0.035, p));
+    [C4/2, C4, NT.G5/2, NT.D5].forEach((f,i)=>pad(f, 0.38+i*0.02, 3, 0.04));
+    [NT.G5, NT.C6, NT.E6, NT.G6, NT.C7].forEach((f,i)=>bell(f, 0.62+i*0.09, 1.6, 0.075));
+    whoosh(0.5, 1.2, 1200, 8000, 0.035); sparkle(1.05, 8, 0.04);
   },
   medal(){ [NT.G5, NT.C6, NT.E6, NT.G6].forEach((f,i)=>bell(f, i*0.09, 0.9, 0.12)); tone(NT.C5, 0.27, 1.1, { gain:0.06, type:"triangle", att:0.04, wet:1 }); },
   count(){ tone(NT.A5, 0, 0.16, { gain:0.42, type:"triangle" }); tone(NT.A5*2, 0, 0.08, { gain:0.14 }); }, // net : les chiffres se suivent vite
@@ -224,7 +261,8 @@ const SFX = {
   // étoile des favoris : deux notes claires qui montent (retirer : le « close » habituel)
   fav(){ bell(NT.E6, 0, 0.45, 0.09); bell(NT.A6, 0.06, 0.6, 0.08); },
   // interrupteur : le « toc » monte quand on active, descend quand on coupe
-  toggle(on){ tok(0, on ? 250 : 165, 0.85); if(on) tone(NT.E6, 0.01, 0.07, { gain:0.04, att:0.002 }); },
+  // interrupteur : « pop » rond qui monte quand on active (avec un reflet de marimba), plus grave quand on coupe
+  toggle(on){ if(on){ pop(0, 520, 0.9); mallet(NT.G6, 0.035, 0.16, 0.03); } else pop(0, 340, 0.75); },
 };
 const UI_SOUNDS = new Set(["tick","step","open","close","seg","swipe","remove","toggle"]);
 function sfx(name, arg){
