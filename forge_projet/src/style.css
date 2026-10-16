@@ -3237,7 +3237,7 @@ button.t3d-row:active::before{opacity:1;background:rgba(255,255,255,.14)}
 .dur-dial:focus-visible{outline:2px solid var(--tint);outline-offset:2px;border-radius:10px}
 .sx .big-stepper.sx-row.sx-durrow{height:auto;padding:10px 0 6px}
 .sx-durrow .bs-val b{line-height:1}
-/* test haptique (temporaire) */
-.ht-sw{appearance:none;-webkit-appearance:none;width:51px;height:31px;border-radius:16px;background:var(--fill);position:relative;vertical-align:middle;transition:background .2s}
-.ht-sw::after{content:"";position:absolute;left:2px;top:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.2);transition:transform .2s}
-.ht-sw:checked{background:var(--tint)}.ht-sw:checked::after{transform:translateX(20px)}
+/* boutons haptiques : un <label> qui porte un interrupteur natif invisible ; le toucher du doigt le bascule
+   et iOS donne un vrai « tic » (fx.js, hxBtn) */
+label.btn{cursor:pointer;-webkit-user-select:none;user-select:none}
+.hx{position:absolute;left:-9999px;opacity:0;pointer-events:none;width:1px;height:1px}

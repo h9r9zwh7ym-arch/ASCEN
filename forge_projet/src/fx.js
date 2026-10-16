@@ -4,22 +4,17 @@
 // l'intérieur des SVG : piège Safari documenté dans Zeste).
 
 function reducedMotion(){ return !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches); }
-// Retour haptique. Safari sur iPhone n'a pas navigator.vibrate ; depuis iOS 18, basculer un
-// interrupteur natif (<input type="checkbox" switch>) par son libellé donne un vrai « tic »
-// (seulement pendant un geste de l'utilisateur, sinon rien). Libellé invisible, hors du flux.
-let hapticEl = null;
+// Retour haptique. Safari sur iPhone ignore navigator.vibrate, et iOS bloque la bascule d'un interrupteur
+// déclenchée par JavaScript (.click()) : seuls les boutons que le doigt touche vibrent, via hxBtn (un <label>
+// qui porte un <input type="checkbox" switch> invisible). Les événements automatiques (record, trophée,
+// fin du repos) ne vibrent donc pas.
+const USE_LEGACY_VIBRATE = false;   // navigator.vibrate : ignoré sur iPhone ; gardé désactivé (Android)
 function haptic(ms){
-  if(navigator.vibrate){ try{ navigator.vibrate(ms); }catch(e){} return; }
-  if(!/iP(hone|ad|od)/.test(navigator.userAgent) && !(navigator.maxTouchPoints>1 && /Macintosh/.test(navigator.userAgent))) return;
-  try{
-    if(!hapticEl){
-      hapticEl = document.createElement("label"); hapticEl.setAttribute("aria-hidden", "true");
-      hapticEl.style.cssText = "position:fixed;left:-20px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none";
-      const i = document.createElement("input"); i.type = "checkbox"; i.setAttribute("switch", ""); i.tabIndex = -1;
-      hapticEl.appendChild(i); document.body.appendChild(hapticEl);
-    }
-    hapticEl.click();
-  }catch(e){}
+  if(USE_LEGACY_VIBRATE && navigator.vibrate){ try{ navigator.vibrate(ms); }catch(e){} }
+}
+// bouton dont le toucher fait vibrer l'iPhone : même apparence et même action (data-a) qu'un <button>
+function hxBtn(cls, attrs, html){
+  return `<label class="${cls}" role="button" tabindex="0" ${attrs}>${html}<input type="checkbox" switch class="hx" tabindex="-1" aria-hidden="true"></label>`;
 }
 
 // ---------- onde au toucher ----------

@@ -972,6 +972,8 @@ window.addEventListener("unhandledrejection", e=>{ const r = e && e.reason; if(r
 document.addEventListener("click", e=>{
   // un glissement de carte ne doit pas déclencher le bouton sous le doigt
   if(typeof suppressClicksUntil!=="undefined" && Date.now()<suppressClicksUntil){ e.preventDefault(); return; }
+  // bouton haptique : le libellé a déjà lancé l'action, le clic qu'il transmet à son interrupteur est ignoré
+  if(e.target.classList && e.target.classList.contains("hx")) return;
   const el = e.target.closest ? e.target.closest("[data-a]") : null;
   if(!el) return;
   runAction(el.dataset.a, el, e);
@@ -979,6 +981,7 @@ document.addEventListener("click", e=>{
   if(el.classList.contains("switch") && el.isConnected){ el.setAttribute("aria-checked", el.classList.contains("on")); el.removeAttribute("aria-pressed"); }
 });
 document.addEventListener("keydown", e=>{
+  if((e.key==="Enter" || e.key===" ") && e.target && e.target.tagName==="LABEL" && e.target.getAttribute("role")==="button" && e.target.dataset.a){ e.preventDefault(); runAction(e.target.dataset.a, e.target, e); return; }
   if(e.key==="Enter" && e.target && e.target.id==="numInput"){ e.preventDefault(); ACT.numOk(); }
   // champs sans bouton propre : Entrée ferme le clavier ; recherche : idem (la liste est déjà filtrée)
   if(e.key==="Enter" && e.target && /^(tplEdName|obName|obWhy|pickerSearch)$/.test(e.target.id||"")){ e.preventDefault(); e.target.blur(); }

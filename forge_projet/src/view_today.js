@@ -612,7 +612,7 @@ function renderTodayLive(draft){
     <button class="sx-end nb-done" data-a="finishSession">Terminer</button></div>`;
   if(!draft.exos.length){
     return `<div class="content live sx">${top}${emptyHTML("toolbox", "Plus d'exercice", "Tous les exercices ont été retirés. Ajoute-en un pour continuer.")}
-    <div class="btnrow"><button class="btn" data-a="addExoOpen">${icon("plus")} Ajouter un exercice</button></div></div>`;
+    <div class="btnrow">${hxBtn("btn", 'data-a="addExoOpen"', `${icon("plus")} Ajouter un exercice`)}</div></div>`;
   }
   return `<div class="content live sx">${top}
     <div class="live-head" id="liveHead">${liveHeadHTML(draft)}</div>
@@ -737,7 +737,7 @@ function sessionCompleteHTML(draft){
       ${prs?`<div><b>${prs}</b><small>record${prs>1?"s":""}</small></div>`:""}
     </div>
     <button class="btn big" data-a="finishSession">${icon("check")} Enregistrer la séance</button>
-    <button class="btn ghost sm" style="margin-top:6px" data-a="addExoOpen">${icon("plus")} Ajouter un exercice</button>
+    ${hxBtn("btn ghost sm", 'style="margin-top:6px" data-a="addExoOpen"', `${icon("plus")} Ajouter un exercice`)}
   </div>`;
 }
 
@@ -758,7 +758,7 @@ function holdCardHTML(idx, ex, def, si, header, animClass, setDots){
     <div class="sx-grow"></div>
     ${setDots(si)}
     <div class="hold-actions">
-      <button class="btn big validate hold-stop" data-a="holdStop">${prep?"Annuler":"S'arrêter"}</button>
+      ${hxBtn("btn big validate hold-stop", 'data-a="holdStop"', prep?"Annuler":"S'arrêter")}
     </div>
   </div>`;
 }
@@ -891,7 +891,7 @@ function renderFocusCard(idx, ex, def){
       ${effortHTML()}
       <div class="sx-grow"></div>
       ${upcoming}
-      <button class="btn big sx-skip skip" data-a="restSkip">Passer le repos</button>
+      ${hxBtn("btn big sx-skip skip", 'data-a="restSkip"', "Passer le repos")}
     </div>`;
   }
 
@@ -918,9 +918,9 @@ function renderFocusCard(idx, ex, def){
     ${sxStepsHTML(idx, ex, def, si, st)}
     ${upNextHTML(idx)}
     ${isTimed(def)
-      ? `<button class="btn big validate hold-go ${rr?"ready":""}" data-a="holdStart" data-exi="${idx}" data-si="${si}">${icon("timer")} Lancer le chrono · ${st.reps||30} s</button>
-         <button class="btn ghost sm hold-skip" data-a="validateSet" data-exi="${idx}">Valider sans chrono</button>`
-      : `<button class="btn big validate ${rr?"ready":""}" data-a="validateSet" data-exi="${idx}">Valider la série</button>`}
+      ? `${hxBtn(`btn big validate hold-go ${rr?"ready":""}`, `data-a="holdStart" data-exi="${idx}" data-si="${si}"`, `${icon("timer")} Lancer le chrono · ${st.reps||30} s`)}
+         ${hxBtn("btn ghost sm hold-skip", `data-a="validateSet" data-exi="${idx}"`, "Valider sans chrono")}`
+      : hxBtn(`btn big validate ${rr?"ready":""}`, `data-a="validateSet" data-exi="${idx}"`, "Valider la série")}
   </div>`;
 }
 // ---------- échauffement (réglage « Échauffement ») ----------
@@ -1082,7 +1082,7 @@ function mountDurDial(dial){
     const v = val(); if(v===saved || !S.draft || !S.draft.exos[exi]) return; saved = v;
     const ex = S.draft.exos[exi]; ex.sets.forEach((s,i)=>{ if(i>=si && !s.done) s.reps = v; });
     save();
-    const hg = qs(".hold-go"); if(hg) hg.innerHTML = `${icon("timer")} Lancer le chrono · ${v} s`;
+    const hg = qs(".hold-go"); if(hg) hg.innerHTML = `${icon("timer")} Lancer le chrono · ${v} s<input type="checkbox" switch class="hx" tabindex="-1" aria-hidden="true">`;
     const sx = qs(".sx-sets"); if(sx){ const def = EXO_MAP[ex.exoId]; sx.outerHTML = sxSetsHTML(exi, ex, def, si, -1); }
   };
   const glide = ()=>{
@@ -1110,7 +1110,7 @@ function patchFocusSteps(idx){
   a.outerHTML = sxSetsHTML(idx, ex, def, si, -1);
   b.outerHTML = sxStepsHTML(idx, ex, def, si, ex.sets[si]);
   // exercice tenu : le bouton du chrono suit la durée choisie
-  const hg = qs(".hold-go", card); if(hg) hg.innerHTML = `${icon("timer")} Lancer le chrono · ${ex.sets[si].reps||30} s`;
+  const hg = qs(".hold-go", card); if(hg) hg.innerHTML = `${icon("timer")} Lancer le chrono · ${ex.sets[si].reps||30} s<input type="checkbox" switch class="hx" tabindex="-1" aria-hidden="true">`;
   setTimeout(()=>{ valRoll = {}; }, 0);
   return true;
 }
