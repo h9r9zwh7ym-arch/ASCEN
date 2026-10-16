@@ -106,7 +106,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   log('Profil:', JSON.stringify(Object.assign({}, prof, { txt: undefined }))); await shot('05_profil');
   if (!/^\d+ séances depuis [a-zéû]+/.test(prof.sub) || prof.xp || prof.txt.includes(ascName)) fail('identité sans ascension');
   if (!/^\d+ gagnés? sur \d+$/.test(prof.tr) || prof.th < 1 || prof.th > 4) fail('carte Trophées');
-  if (prof.rows.join('|') !== "Objectifs|Réglages des séances|Matériel|Mes exercices|Poids du corps|Sons|Clics de l'interface|Apparence|Motivation|Données et sauvegarde|À propos") fail('réglages du Profil : ' + prof.rows.join('|'));
+  if (prof.rows.join('|') !== "Objectifs|Réglages des séances|Matériel|Mes exercices|Poids du corps|Sons|Clics de l'interface|Retour haptique|Apparence|Motivation|Données et sauvegarde|À propos") fail('réglages du Profil : ' + prof.rows.join('|'));
   await page.click('.pt-card'); await wait(1200);
   const tro = await page.evaluate(() => ({ t: document.querySelector('#overlay .sheet-hd .t').textContent, sum: !!document.querySelector('.trophies-body .medal-summary'), t3d: !!document.querySelector('.trophies-body .t3d-card') }));
   await shot('06_trophies');

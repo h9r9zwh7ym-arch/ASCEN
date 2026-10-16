@@ -13,8 +13,11 @@ function haptic(ms){
   if(USE_LEGACY_VIBRATE && navigator.vibrate){ try{ navigator.vibrate(ms); }catch(e){} }
 }
 // bouton dont le toucher fait vibrer l'iPhone : même apparence et même action (data-a) qu'un <button>
+function hapticOn(){ return !(typeof S!=="undefined" && S.settings && S.settings.haptic===false); }
+const HX_INPUT = `<input type="checkbox" switch class="hx" tabindex="-1" aria-hidden="true">`;
+// réglage « Retour haptique » désactivé : bouton normal, l'action part directement sur le clic
 function hxBtn(cls, attrs, html){
-  return `<label class="${cls}" role="button" tabindex="0" ${attrs}>${html}<input type="checkbox" switch class="hx" tabindex="-1" aria-hidden="true"></label>`;
+  return hapticOn() ? `<label class="${cls}" role="button" tabindex="0" ${attrs}>${html}${HX_INPUT}</label>` : `<button class="${cls}" ${attrs}>${html}</button>`;
 }
 
 // ---------- onde au toucher ----------

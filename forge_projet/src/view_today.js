@@ -758,7 +758,7 @@ function holdCardHTML(idx, ex, def, si, header, animClass, setDots){
     <div class="sx-grow"></div>
     ${setDots(si)}
     <div class="hold-actions">
-      ${hxBtn("btn big validate hold-stop", 'data-a="holdStop"', prep?"Annuler":"S'arrêter")}
+      ${prep ? `<button class="btn big validate hold-stop" data-a="holdStop">Annuler</button>` : hxBtn("btn big validate hold-stop", 'data-a="holdStop"', "S'arrêter")}
     </div>
   </div>`;
 }
@@ -891,7 +891,7 @@ function renderFocusCard(idx, ex, def){
       ${effortHTML()}
       <div class="sx-grow"></div>
       ${upcoming}
-      ${hxBtn("btn big sx-skip skip", 'data-a="restSkip"', "Passer le repos")}
+      <button class="btn big sx-skip skip" data-a="restSkip">Passer le repos</button>
     </div>`;
   }
 
@@ -1082,7 +1082,7 @@ function mountDurDial(dial){
     const v = val(); if(v===saved || !S.draft || !S.draft.exos[exi]) return; saved = v;
     const ex = S.draft.exos[exi]; ex.sets.forEach((s,i)=>{ if(i>=si && !s.done) s.reps = v; });
     save();
-    const hg = qs(".hold-go"); if(hg) hg.innerHTML = `${icon("timer")} Lancer le chrono · ${v} s<input type="checkbox" switch class="hx" tabindex="-1" aria-hidden="true">`;
+    const hg = qs(".hold-go"); if(hg) hg.innerHTML = `${icon("timer")} Lancer le chrono · ${v} s${hg.tagName==="LABEL"?HX_INPUT:""}`;
     const sx = qs(".sx-sets"); if(sx){ const def = EXO_MAP[ex.exoId]; sx.outerHTML = sxSetsHTML(exi, ex, def, si, -1); }
   };
   const glide = ()=>{
@@ -1110,7 +1110,7 @@ function patchFocusSteps(idx){
   a.outerHTML = sxSetsHTML(idx, ex, def, si, -1);
   b.outerHTML = sxStepsHTML(idx, ex, def, si, ex.sets[si]);
   // exercice tenu : le bouton du chrono suit la durée choisie
-  const hg = qs(".hold-go", card); if(hg) hg.innerHTML = `${icon("timer")} Lancer le chrono · ${ex.sets[si].reps||30} s<input type="checkbox" switch class="hx" tabindex="-1" aria-hidden="true">`;
+  const hg = qs(".hold-go", card); if(hg) hg.innerHTML = `${icon("timer")} Lancer le chrono · ${ex.sets[si].reps||30} s${hg.tagName==="LABEL"?HX_INPUT:""}`;
   setTimeout(()=>{ valRoll = {}; }, 0);
   return true;
 }

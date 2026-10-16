@@ -140,7 +140,7 @@ function qsa(sel,root){ return Array.from((root||document).querySelectorAll(sel)
 function buildShell(){
   qs("#app").innerHTML = TABS.map(t=>`<div class="view" id="v-${t.id}"></div>`).join("");
   if(!qs("#charttip")){ const t = document.createElement("div"); t.id = "charttip"; t.setAttribute("role","tooltip"); document.body.appendChild(t); }
-  qs(".tabbar").innerHTML = TABS.filter(t=>t.bar!==false).map(t=>hxBtn("tabbtn", `data-a="tab" data-id="${t.id}"`, `${icon(t.icon)}<span class="tl">${t.n}</span>`)).join("");
+  renderTabbar();
   // défilement : barre de navigation translucide et grand titre qui se replie façon iOS
   // (une seule écriture par image, uniquement des propriétés composées par le GPU)
   qsa(".view").forEach(v=>{
@@ -181,6 +181,10 @@ function withTransition(kind, fn){
 // que si les données ont changé, et les animations d'entrée (cartes en cascade, compteurs) ne se
 // jouent qu'à la première visite. Avant : capture de toute la page (View Transitions) + cascade
 // rejouée à chaque visite, ce qui donnait l'impression d'un rechargement.
+function renderTabbar(){
+  qs(".tabbar").innerHTML = TABS.filter(t=>t.bar!==false).map(t=>hxBtn("tabbtn", `data-a="tab" data-id="${t.id}"`, `${icon(t.icon)}<span class="tl">${t.n}</span>`)).join("");
+  qsa(".tabbtn").forEach(b=>{ const on = b.dataset.id===tabOf(currentTab); b.classList.toggle("on", on); if(on) b.setAttribute("aria-current", "page"); });
+}
 function switchTab(id){ switchTabNow(id); }
 function switchTabNow(id){
   const from = TAB_ORDER.indexOf(currentTab), to = TAB_ORDER.indexOf(id);

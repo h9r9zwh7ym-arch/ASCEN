@@ -194,6 +194,11 @@ function renderProfil(){
         <div class="grow"><div class="t">Clics de l'interface</div></div>
         <button class="switch ${S.settings.uiSound!==false?"on":""}" role="switch" aria-checked="${!!(S.settings.uiSound!==false)}" aria-label="Clics de l'interface" data-a="toggleUiSound"></button>
       </div>
+      <div class="row">
+        ${sfIcon("tap","gray")}
+        <div class="grow"><div class="t">Retour haptique</div></div>
+        <button class="switch ${S.settings.haptic!==false?"on":""}" role="switch" aria-checked="${S.settings.haptic!==false}" aria-label="Retour haptique" data-a="toggleHaptic"></button>
+      </div>
       <button class="row tap" style="width:100%" data-a="openAppearance">
         ${sfIcon("contrast","gray")}
         <div class="grow"><div class="t">Apparence</div></div><span class="val">${themeLabel()}</span>
@@ -617,6 +622,9 @@ Object.assign(ACT, {
     confirmSheet({ title:"Supprimer le programme importé ?", ok:"Supprimer", danger:true, onOk:()=>{ S.importedProgram=[]; save(); closeSheet(); changed(); } });
   },
 
+  toggleHaptic(d, el){
+    S.settings.haptic = S.settings.haptic===false; el.classList.toggle("on", S.settings.haptic); el.setAttribute("aria-checked", S.settings.haptic); save(); renderTabbar();
+  },
   toggleSound(d, el){
     S.settings.sound = S.settings.sound===false; save(); el.classList.toggle("on", S.settings.sound);
     const sub = qs(".sub-setting"); if(sub) sub.classList.toggle("off", !S.settings.sound);
