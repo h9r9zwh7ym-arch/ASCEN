@@ -3241,3 +3241,4 @@ button.t3d-row:active::before{opacity:1;background:rgba(255,255,255,.14)}
    et iOS donne un vrai « tic » (fx.js, hxBtn) */
 label.btn{cursor:pointer;-webkit-user-select:none;user-select:none}
 .hx{position:absolute;left:-9999px;opacity:0;pointer-events:none;width:1px;height:1px}
+label.switch{display:block;cursor:pointer}

@@ -182,7 +182,7 @@ function withTransition(kind, fn){
 // jouent qu'à la première visite. Avant : capture de toute la page (View Transitions) + cascade
 // rejouée à chaque visite, ce qui donnait l'impression d'un rechargement.
 function renderTabbar(){
-  qs(".tabbar").innerHTML = TABS.filter(t=>t.bar!==false).map(t=>hxBtn("tabbtn", `data-a="tab" data-id="${t.id}"`, `${icon(t.icon)}<span class="tl">${t.n}</span>`)).join("");
+  qs(".tabbar").innerHTML = TABS.filter(t=>t.bar!==false).map(t=>`<button class="tabbtn" data-a="tab" data-id="${t.id}">${icon(t.icon)}<span class="tl">${t.n}</span></button>`).join("");
   qsa(".tabbtn").forEach(b=>{ const on = b.dataset.id===tabOf(currentTab); b.classList.toggle("on", on); if(on) b.setAttribute("aria-current", "page"); });
 }
 function switchTab(id){ switchTabNow(id); }
@@ -985,7 +985,7 @@ document.addEventListener("click", e=>{
   if(el.classList.contains("switch") && el.isConnected){ el.setAttribute("aria-checked", el.classList.contains("on")); el.removeAttribute("aria-pressed"); }
 });
 document.addEventListener("keydown", e=>{
-  if((e.key==="Enter" || e.key===" ") && e.target && e.target.tagName==="LABEL" && e.target.getAttribute("role")==="button" && e.target.dataset.a){ e.preventDefault(); runAction(e.target.dataset.a, e.target, e); return; }
+  if((e.key==="Enter" || e.key===" ") && e.target && e.target.tagName==="LABEL" && /^(button|switch)$/.test(e.target.getAttribute("role")) && e.target.dataset.a){ e.preventDefault(); runAction(e.target.dataset.a, e.target, e); return; }
   if(e.key==="Enter" && e.target && e.target.id==="numInput"){ e.preventDefault(); ACT.numOk(); }
   // champs sans bouton propre : Entrée ferme le clavier ; recherche : idem (la liste est déjà filtrée)
   if(e.key==="Enter" && e.target && /^(tplEdName|obName|obWhy|pickerSearch)$/.test(e.target.id||"")){ e.preventDefault(); e.target.blur(); }

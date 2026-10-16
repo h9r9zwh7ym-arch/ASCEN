@@ -197,7 +197,7 @@ function renderProfil(){
       <div class="row">
         ${sfIcon("tap","gray")}
         <div class="grow"><div class="t">Retour haptique</div></div>
-        <button class="switch ${S.settings.haptic!==false?"on":""}" role="switch" aria-checked="${S.settings.haptic!==false}" aria-label="Retour haptique" data-a="toggleHaptic"></button>
+        ${hapticSwitch()}
       </div>
       <button class="row tap" style="width:100%" data-a="openAppearance">
         ${sfIcon("contrast","gray")}
@@ -623,7 +623,8 @@ Object.assign(ACT, {
   },
 
   toggleHaptic(d, el){
-    S.settings.haptic = S.settings.haptic===false; el.classList.toggle("on", S.settings.haptic); el.setAttribute("aria-checked", S.settings.haptic); save(); renderTabbar();
+    S.settings.haptic = S.settings.haptic===false; el.classList.toggle("on", S.settings.haptic); el.setAttribute("aria-checked", S.settings.haptic); save();
+    setTimeout(()=>{ if(el.isConnected) el.outerHTML = hapticSwitch(); }, 0); // après le toucher : le switch natif a déjà vibré
   },
   toggleSound(d, el){
     S.settings.sound = S.settings.sound===false; save(); el.classList.toggle("on", S.settings.sound);
