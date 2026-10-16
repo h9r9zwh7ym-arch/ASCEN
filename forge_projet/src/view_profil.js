@@ -214,6 +214,11 @@ function renderProfil(){
         <div class="grow"><div class="t">À propos</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>
+      <div class="ht-test" style="padding:12px 16px;display:flex;flex-direction:column;gap:14px"><div class="t" style="font-weight:600">Test haptique</div>
+        <div class="ht">A. <input type="checkbox" switch onchange="var b=this.closest('.ht').querySelector('b');b.textContent=+b.textContent+1"><div>Bascules : <b>0</b></div></div>
+        <div class="ht">B. <input type="checkbox" switch class="ht-sw" onchange="var b=this.closest('.ht').querySelector('b');b.textContent=+b.textContent+1"><div>Bascules : <b>0</b></div></div>
+        <div class="ht"><label style="display:flex;align-items:center;justify-content:center;height:56px;border-radius:16px;background:var(--tint);color:#fff;font-weight:600;position:relative;overflow:hidden">Valider la série<input type="checkbox" switch onchange="var b=this.closest('.ht').querySelector('b');b.textContent=+b.textContent+1" style="position:absolute;left:-9999px;opacity:0"></label><div>Bascules : <b>0</b></div></div>
+      </div>
     </div>
     <div style="height:40px"></div>
   </div>`;
