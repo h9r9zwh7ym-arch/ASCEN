@@ -832,7 +832,7 @@ function beatLineHTML(ex, def, si, st){
   const tgt = beatTarget(def, st.weight, ref);
   if(tgt==null) return `<div class="fc-beat">${ii("target")}<span>La dernière fois : <b>${refTxt}</b></span></div>`;
   const lt = loadableTypeOf(def), at = lt && st.weight ? (lt==="bands" ? ` · ${fmtLoad(def, st.weight)}` : ` à ${fmtDec(st.weight)} kg`) : "";
-  return `<div class="fc-beat">${ii("target")}<span>À battre : <b>${tgt}${isTimed(def) ? " s" : " rép."}</b>${at} <small>(la dernière fois : ${refTxt})</small></span></div>`;
+  return `<div class="fc-beat">${ii("target")}<span>À battre : <b>${tgt}${isTimed(def) ? " s" : " rép."}</b>${at}</span></div>`;
 }
 const SX_PM = d=>`<svg viewBox="0 0 18 18" aria-hidden="true"><path d="${d>0?"M9 3v12M3 9h12":"M3 9h12"}" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>`;
 const SX_CHECK = `<svg class="sx-ck" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.3l2.3 2.3 4.7-5" pathLength="1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -856,7 +856,7 @@ function sxSetsHTML(idx, ex, def, si, jd){
   return `<div class="sx-sets${cols>=5?" many":""}" style="--n:${cols}">${ex.sets.map((s,i)=>{
     const lbl = `Série ${i+1}`;
     if(s.done) return `<button class="sx-set done${s.pr?" pr":""}${i===jd?" just":""}" data-a="editDoneSets" data-exi="${idx}" aria-label="${lbl} faite : ${sxSetSpeech(def, s)}${s.pr?", record":""}. Corriger"><small>${s.pr?ii("bolt"):SX_CHECK}${lbl}</small><b>${sxSetVal(def, s)}</b></button>`;
-    if(i===si) return `<div class="sx-set cur" aria-current="step"><small>${lbl}</small><b>${sxSetVal(def, s)}</b></div>`;
+    if(i===si) return `<div class="sx-set cur" aria-current="step"><small>${lbl}</small><b aria-hidden="true">&nbsp;</b></div>`;
     return `<div class="sx-set"><small>${lbl}</small><b class="dim">—</b></div>`;
   }).join("")}</div>`;
 }

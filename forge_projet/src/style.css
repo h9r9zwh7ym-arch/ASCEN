@@ -3242,3 +3242,11 @@ button.t3d-row:active::before{opacity:1;background:rgba(255,255,255,.14)}
 label.btn{cursor:pointer;-webkit-user-select:none;user-select:none}
 .hx{position:absolute;left:-9999px;opacity:0;pointer-events:none;width:1px;height:1px}
 label.switch{display:block;cursor:pointer}
+/* écrans hauts (au-dessus du palier 760 px) : animation plus grande, animation + nom centrés entre la ligne
+   d'altitude et les cases de séries (marges auto), 16 px au moins au-dessus */
+@media (min-height:761px){
+  .content.sx{--pic:clamp(96px,calc(100vh - var(--sat) - var(--sab) - 652px),200px)} /* hauteur utile, encoche déduite */
+  .sx .focus-card:not(.resting) > .sx-ex{margin-top:auto;padding-top:16px}
+  .sx .focus-card:not(.resting) > .sx-ex ~ .sx-grow{flex:0 0 0;min-height:0;margin-top:auto}
+}
+@media (min-height:761px){.sx .focus-card:not(.resting) > .sx-ex .sx-menu{top:calc(16px + var(--pic)/2 - 22px)}}

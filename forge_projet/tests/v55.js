@@ -53,7 +53,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     const st = S.draft.exos[0].sets[0]; return { same: pic === document.querySelector('.sx-pic svg'), reps: st.reps - r0, now: String(st.reps), w: st.weight,
       shown: document.querySelector('[data-f="reps"] b').textContent, cell: document.querySelector('.sx-set.cur b').textContent }; });
   log('Steppers:', JSON.stringify(pm));
-  if (!pm.same || pm.reps !== 1 || pm.shown !== pm.now || !pm.cell.startsWith(pm.now + ' × ')) fail('+/− sans re-rendu, case à jour');
+  if (!pm.same || pm.reps !== 1 || pm.shown !== pm.now || pm.cell.trim() !== '') fail('+/− sans re-rendu, case en cours sans valeur (le gros chiffre la donne)');
 
   // « ••• » et le mouvement s'ouvrent au toucher (le mouvement ne couvre pas le bouton)
   await page.click('.sx-menu'); await wait(450); const menu = await page.evaluate(() => !!document.querySelector('#overlay .menu-list'));

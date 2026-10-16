@@ -1,5 +1,5 @@
 // ================= INITIALISATION =================
-const APP_VERSION = "2.2.7";
+const APP_VERSION = "2.2.8";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 // séance en sombre (réglage, actif par défaut) : pendant la séance, l'écran passe en sombre quel que
@@ -8,12 +8,16 @@ function liveDarkOn(){ return S.settings.liveDark!==false && document.body.class
 function applyTheme(soft){
   const t = liveDarkOn() ? "dark" : S.settings.theme, want = t==="light" || t==="dark" ? t : null;
   const de = document.documentElement;
+  let flip = false;
   if(de.getAttribute("data-theme")===want){ if(soft) return; }
-  else if(want) de.setAttribute("data-theme", want); else de.removeAttribute("data-theme");
+  else { flip = true; if(want) de.setAttribute("data-theme", want); else de.removeAttribute("data-theme"); }
   // thème choisi, relu par la page avant tout affichage (build.sh) : pas d'instant aux couleurs de l'iPhone
   try{ const c = S.settings.theme==="light" || S.settings.theme==="dark" ? S.settings.theme : "";
     const k = STORAGE_KEY+".theme"; if(!c) localStorage.removeItem(k); else if(localStorage.getItem(k)!==c) localStorage.setItem(k, c); }catch(e){}
   syncStatusBar();
+  // thème changé (séance en sombre forcé, ou retour au thème normal) : le bandeau passe en fondu (0,2 s) et iOS
+  // garde la couleur lue au départ ; on la lui fait relire une fois le fondu fini
+  if(flip) setTimeout(()=>syncStatusBar(undefined, true), 260);
 }
 // Barre d'état (heure, batterie). Depuis iOS 26, Safari ignore theme-color : il colore la barre
 // d'après l'élément fixe et opaque collé au bord haut de l'écran, à défaut d'après le fond de la
