@@ -192,7 +192,7 @@ function horn(f, t, dur, gain, pan){
   if(pan && AC.createStereoPanner){ const p = AC.createStereoPanner(); p.pan.value = pan; g.connect(p); out = p; }
   lp.connect(g); out.connect(sfxDest()); const wet = sfxWet(); if(wet) out.connect(wet);
   const lfo = AC.createOscillator(), lg = AC.createGain(); lfo.frequency.value = 5.2;
-  lg.gain.setValueAtTime(0, t0); lg.gain.setValueAtTime(0, t0+0.28); lg.gain.linearRampToValueAtTime(f*0.005, t0+0.7);
+  lg.gain.setValueAtTime(0, t0); lg.gain.setValueAtTime(0, t0+0.25); lg.gain.linearRampToValueAtTime(f*0.004, t0+0.5);
   lfo.connect(lg); lfo.start(t0); lfo.stop(t0+dur+0.05);
   [[1,"sawtooth",1],[1.0038,"sawtooth",0.8],[0.5,"square",0.35]].forEach(([k,type,a])=>{
     const o = AC.createOscillator(), og = AC.createGain(); o.type = type;
@@ -202,16 +202,8 @@ function horn(f, t, dur, gain, pan){
 }
 // timbale : sinus grave qui plonge à peine + peau (souffle grave filtré)
 function timpani(f, t, gain){ tone(f, t, 1.1, { gain, to:f*0.94, att:0.004, wet:1 }); tone(f*1.5, t, 0.5, { gain:gain*0.25, att:0.004 }); whoosh(t, 0.12, 300, 160, gain*0.4); }
-// « pop » doux : bulle ronde (sinus qui retombe), contact feutré, reflet aigu très léger
-function pop(t, f, gain){
-  const g0 = gain==null ? 1 : gain, v = 1 + (Math.random()-0.5)*0.05;
-  tone(f*v, t, 0.07, { gain:0.16*g0, to:f*0.62*v, att:0.0015 });
-  tone(f*2.01*v, t, 0.035, { gain:0.035*g0, to:f*1.4*v, att:0.001 });
-  if(!NOISE){ NOISE = AC.createBuffer(1, AC.sampleRate*1, AC.sampleRate); const d = NOISE.getChannelData(0); for(let i=0;i<d.length;i++) d[i] = Math.random()*2-1; }
-  const t0 = AC.currentTime + t, src = AC.createBufferSource(), lp = AC.createBiquadFilter(), g = AC.createGain();
-  src.buffer = NOISE; lp.type = "lowpass"; lp.frequency.value = 1800; g.gain.setValueAtTime(0.05*g0, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0+0.01);
-  src.connect(lp); lp.connect(g); g.connect(sfxDest()); src.start(t0, Math.random()*0.5); src.stop(t0+0.02);
-}
+// « pop » de la même famille que l'ouverture/fermeture des menus : petit glissé de sinus + « toc » feutré
+function pop(t, from, to, dur, gain, body){ tone(from, t, dur, { gain, to, att:0.003 }); tok(t, body, 0.45); }
 // coup sourd (grosse caisse feutrée) : sinus qui plonge
 function thump(t, gain){ tone(110, t, 0.45, { gain, to:42, att:0.003 }); tok(t, 120, 0.6); }
 // pluie d'étincelles : petites cloches aiguës au hasard, de part et d'autre
@@ -220,11 +212,11 @@ let lastTok = 0;
 // notes (Hz)
 const NT = { C5:523.25, D5:587.33, E5:659.25, G5:783.99, A5:880, C6:1046.5, D6:1174.7, E6:1318.5, G6:1568, A6:1760, C7:2093 };
 const SFX = {
-  tick(){ tok(0, 200, 0.8); },
-  step(up){ tok(0, up ? 230 : 175, 0.9); },
+  tick(){ pop(0, 360, 300, 0.05, 0.08, 200); },
+  step(up){ pop(0, up ? 320 : 400, up ? 400 : 320, 0.05, 0.07, up ? 230 : 175); },
   open(){ tone(260, 0, 0.09, { gain:0.14, to:470, att:0.004 }); tok(0, 210, 0.5); },
   close(){ tone(430, 0, 0.08, { gain:0.12, to:240, att:0.004 }); tok(0, 170, 0.5); },
-  seg(){ tok(0, 200, 0.8); },
+  seg(){ pop(0, 300, 430, 0.07, 0.1, 205); },
   swipe(){ whoosh(0, 0.2, 700, 2200, 0.18); },
   // série validée : un « tic-ding » de marimba, court (on l'entend 20 fois par séance)
   set(){ mallet(NT.G5, 0, 0.32, 0.2); mallet(NT.D6, 0.065, 0.42, 0.15); },
@@ -247,8 +239,8 @@ const SFX = {
     horn(G4, 0, 0.16, 0.05, -0.15); horn(NT.D5, 0, 0.16, 0.03, 0.15);
     horn(G4, 0.17, 0.16, 0.05, -0.15); horn(NT.D5, 0.17, 0.16, 0.03, 0.15);
     timpani(C4/2, 0.36, 0.42);
-    [[C4,-0.3],[E4,0.25],[G4,-0.1],[NT.C5,0.3],[NT.E5,-0.2]].forEach(([f,p],i)=>horn(f, 0.36+i*0.012, 2.1, i<3 ? 0.045 : 0.035, p));
-    [C4/2, C4, NT.G5/2, NT.D5].forEach((f,i)=>pad(f, 0.38+i*0.02, 3, 0.04));
+    [[C4,-0.3],[E4,0.25],[G4,-0.1],[NT.C5,0.3],[NT.E5,-0.2]].forEach(([f,p],i)=>horn(f, 0.36+i*0.012, 1.25, i<3 ? 0.045 : 0.035, p));
+    [C4/2, C4, NT.G5/2, NT.D5].forEach((f,i)=>pad(f, 0.38+i*0.02, 2.2, 0.04));
     [NT.G5, NT.C6, NT.E6, NT.G6, NT.C7].forEach((f,i)=>bell(f, 0.62+i*0.09, 1.6, 0.075));
     whoosh(0.5, 1.2, 1200, 8000, 0.035); sparkle(1.05, 8, 0.04);
   },
@@ -262,7 +254,7 @@ const SFX = {
   fav(){ bell(NT.E6, 0, 0.45, 0.09); bell(NT.A6, 0.06, 0.6, 0.08); },
   // interrupteur : le « toc » monte quand on active, descend quand on coupe
   // interrupteur : « pop » rond qui monte quand on active (avec un reflet de marimba), plus grave quand on coupe
-  toggle(on){ if(on){ pop(0, 520, 0.9); mallet(NT.G6, 0.035, 0.16, 0.03); } else pop(0, 340, 0.75); },
+  toggle(on){ if(on){ pop(0, 300, 520, 0.08, 0.12, 220); mallet(NT.G6, 0.04, 0.16, 0.025); } else pop(0, 450, 260, 0.08, 0.11, 170); },
 };
 const UI_SOUNDS = new Set(["tick","step","open","close","seg","swipe","remove","toggle"]);
 function sfx(name, arg){
