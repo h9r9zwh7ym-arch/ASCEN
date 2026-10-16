@@ -140,7 +140,7 @@ function qsa(sel,root){ return Array.from((root||document).querySelectorAll(sel)
 function buildShell(){
   qs("#app").innerHTML = TABS.map(t=>`<div class="view" id="v-${t.id}"></div>`).join("");
   if(!qs("#charttip")){ const t = document.createElement("div"); t.id = "charttip"; t.setAttribute("role","tooltip"); document.body.appendChild(t); }
-  qs(".tabbar").innerHTML = TABS.filter(t=>t.bar!==false).map(t=>`<button class="tabbtn" data-a="tab" data-id="${t.id}">${icon(t.icon)}<span class="tl">${t.n}</span></button>`).join("");
+  qs(".tabbar").innerHTML = TABS.filter(t=>t.bar!==false).map(t=>hxBtn("tabbtn", `data-a="tab" data-id="${t.id}"`, `${icon(t.icon)}<span class="tl">${t.n}</span>`)).join("");
   // défilement : barre de navigation translucide et grand titre qui se replie façon iOS
   // (une seule écriture par image, uniquement des propriétés composées par le GPU)
   qsa(".view").forEach(v=>{
