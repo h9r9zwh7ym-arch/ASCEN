@@ -60,12 +60,15 @@ function moClear(){ const l = document.getElementById("mo"); if(l) l.querySelect
 // forme liquide : centre, taille, rayon ; s'étire dans le sens de sa vitesse
 function moBlobRender(b){
   const x = b.get("x"), y = b.get("y"), w = Math.max(0, b.get("w")), h = Math.max(0, b.get("h")), vx = b.s.x.vel, vy = b.s.y.vel, st = b.stretch ?? 1;
-  const sx = 1 + st*moClamp(Math.abs(vx)/7000 - Math.abs(vy)/14000, -.2, .3), sy = 1 + st*moClamp(Math.abs(vy)/7000 - Math.abs(vx)/14000, -.2, .3);
+  const sx = 1 + st*moClamp(Math.abs(vx)/9000 - Math.abs(vy)/18000, -.12, .18), sy = 1 + st*moClamp(Math.abs(vy)/9000 - Math.abs(vx)/18000, -.12, .18);
+  if(b.round){ const d = Math.max(0, b.get("w")); b.s.h.v = b.s.w.v; b.s.h.t = b.s.w.t; b.s.h.vel = b.s.w.vel; }
   const e = b.el.style; e.left = (x-w/2)+"px"; e.top = (y-h/2)+"px"; e.width = w+"px"; e.height = h+"px";
   e.borderRadius = Math.max(0, Math.min(b.get("r"), w/2, h/2))+"px"; e.transform = `scale(${sx.toFixed(3)},${sy.toFixed(3)})`;
   if(b.colors) e.background = moMix(b.colors[0], b.colors[1], moClamp(b.get("p"), 0, 1));
   if(b.s.o) e.opacity = moClamp(b.get("o"), 0, 1);
 }
+// forme ronde : une seule taille (w = h toujours), jamais étirée
+function moDisc(R, color, extra){ const b = moBlob(R, color, extra); b.stretch = 0; b.round = true; return b; }
 function moBlob(R, color, extra){
   const d = document.createElement("div"); d.className = "mo-blob"; d.style.background = color; moLayer().querySelector(".mo-goo").appendChild(d);
   return new MoBody(d, { x:R.x, y:R.y, w:R.w, h:R.h, r:R.r ?? 12, p:0, ...(extra||{}) }, moBlobRender);
@@ -86,6 +89,9 @@ function moSnap(el, opts={}){
   wrap.className = "mo-snap " + (opts.cls||"");
   Object.assign(wrap.style, { left:r.left+"px", top:r.top+"px", width:r.width+"px", height:r.height+"px" });
   const cs = getComputedStyle(document.documentElement); MO_TOKENS.forEach(t=>wrap.style.setProperty(t, cs.getPropertyValue(t)));
+  // tailles de la séance (--pic, --row…) et police : sans elles, la photo ronde devient un ovale et tout se décale
+  const ce = getComputedStyle(el); ["--pic","--row","--val","--ring","--gutter"].forEach(t=>{ const v = ce.getPropertyValue(t); if(v) wrap.style.setProperty(t, v); });
+  wrap.style.font = ce.font; wrap.style.color = ce.color;
   wrap.style.background = opts.bg || "";
   // copie inerte : ni identifiants, ni actions (rien ne doit pouvoir la viser à la place du vrai écran)
   const c = el.cloneNode(true); c.removeAttribute("id"); c.querySelectorAll("[id]").forEach(x=>x.removeAttribute("id"));
@@ -181,21 +187,24 @@ async function moDrip(mo, tile, T, rx, green, card){
   const ring = qs(".ring-wrap", mo.region);
   rx.to({ o:1 }, { response:.35 });
   moXform(mo.snap).to({ o:0 }, { response:.3 });
+  // la case (forme liquide) s'efface avec la copie : la goutte qui en sort la remplace
+  const tb = MO.tileBlob; MO.tileBlob = null;
+  if(tb){ if(!tb.s.o) tb.s.o = { v:1, t:1, vel:0, ...moParams(.3, 1) }; tb.push("h", 120); setTimeout(()=>tb.to({ o:0 }, { response:.25 }), 160); }
   if(!ring) return;
   const R = moRect(ring), size = Math.min(R.w, R.h);
-  const disc = moBlob({ x:T.x, y:T.y+8, w:T.w*.5, h:T.h*.5, r:16 }, green, { o:1 }); disc.colors = [green, card];
-  disc.to({ y:T.y+52, w:30, h:64, r:15 }, { response:.34, damping:.9 });
-  if(MO.tileBlob) MO.tileBlob.push("h", 120);
-  // le vrai anneau suit la goutte
-  const rf = moXform(ring, { x:T.x-R.x, y:T.y+52-R.y, s:.12, o:0 });
-  await moWait(150);
-  disc.push("y", 500).to({ y:R.y }, { response:.46, damping:.5 }).to({ x:R.x }, { response:.5 }).to({ w:size*.92, h:size*.92, r:size }, { per:{ w:{ response:.5, damping:.42 }, h:{ response:.42, damping:.4 } } }).to({ p:1 }, { response:.5 });
-  rf.push("y", 500).to({ x:0, y:0 }, { per:{ x:{ response:.5 }, y:{ response:.48, damping:.5 } } }).to({ s:1 }, { response:.5, damping:.42 }).to({ o:1 }, { response:.3 });
-  if(MO.tileBlob) MO.tileBlob.push("h", -180);
-  await moWait(520);
-  disc.to({ o:0 }, { response:.3 });
+  // la goutte : elle s'étire hors de la case (pont liquide), se détache et tombe en restant ronde
+  const drop = moBlob({ x:T.x, y:T.y+6, w:26, h:26, r:13 }, green, { o:1 }); drop.colors = [green, moVar("--tint") || "#BC5736"];
+  drop.to({ y:T.y+40, h:40 }, { response:.3, damping:.9 });
+  // le vrai anneau attend au centre, minuscule et caché
+  const rf = moXform(ring, { s:.2, o:0 });
+  await moWait(160);
+  drop.push("y", 600).to({ x:R.x, y:R.y }, { per:{ x:{ response:.5, damping:.9 }, y:{ response:.42, damping:.82 } } }).to({ w:34, h:34, r:17, p:1 }, { response:.4, damping:.9 });
+  await moWait(330);
+  // impact : la goutte est absorbée et l'anneau éclot d'elle avec un rebond
+  drop.to({ w:0, h:0, o:0 }, { response:.22, damping:.9 });
+  rf.to({ o:1 }, { response:.12 }).to({ s:1 }, { response:.42, damping:.5 });
   await Promise.race([rf.done(), moWait(900)]);
-  await moWait(120);
+  await moWait(80);
 }
 // 2 · les trois cases se rejoignent en une goutte qui file dans son segment de la barre ; l'exercice suivant arrive
 async function moToSegment(mo, tiles, tile, rx, k, green, tint){
@@ -217,6 +226,8 @@ async function moToSegment(mo, tiles, tile, rx, k, green, tint){
   const S = moRect(seg);
   mid.push("y", -1400).push("x", -420).to({ x:S.x, y:S.y }, { per:{ x:{ response:.54, damping:.8 }, y:{ response:.44, damping:.82 } } }).to({ w:44, h:44, r:22 }, { response:.3, damping:.72 }).to({ p:1 }, { response:.4 });
   moXform(mo.snap).to({ o:0 }, { response:.35 });
+  // l'exercice suivant entre déjà pendant que la goutte monte (pas de trou noir entre les deux)
+  rx.s.o.v = rx.s.o.t = 1; rx.s.x.v = innerWidth*.8; rx.push("x", -900).to({ x:0 }, { response:.5, damping:.7 });
   await moWait(250);
   mid.to({ w:S.w*.85, h:10, r:5 }, { response:.24, damping:.8 });
   await moWait(110);
@@ -226,8 +237,6 @@ async function moToSegment(mo, tiles, tile, rx, k, green, tint){
   [segs[k.exi-1], segs[k.exi+1]].forEach((n, i)=>{ if(n) moXform(n).push("y", i ? 140 : -140).to({ y:0 }, { response:.36, damping:.35 }); });
   mid.to({ w:S.w*.5, h:4, r:2 }, { response:.2, damping:.9 });
   setTimeout(()=>{ mid.stop(); mid.el.remove(); }, 160);
-  // l'exercice suivant entre avec son élan (il dépasse un peu et revient)
-  rx.s.o.v = rx.s.o.t = 1; rx.s.x.v = innerWidth*.8; rx.push("x", -900).to({ x:0 }, { response:.5, damping:.7 });
   await Promise.race([rx.done(), moWait(1000)]);
   segs.forEach(moReset);
 }
