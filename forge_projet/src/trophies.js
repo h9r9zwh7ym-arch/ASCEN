@@ -451,13 +451,17 @@ function sessionWins(session){
 // (records de force, zones atteintes, séries battues…) restent à un toucher.
 function celLinesHTML(session){
   const wins = sessionWins(session), L = [];
-  wins.filter(w=>!w.soft).forEach(w=>L.push(`<div class="cel-prog cel-win">${ii(w.ic)}<span>${esc(w.t)}</span></div>`));
-  if(session.beats) L.push(`<div class="cel-prog cel-beat">${ii("trendUp")}<span>${session.beats>1 ? `${session.beats} séries mieux que la dernière fois` : "1 série mieux que la dernière fois"}</span></div>`);
-  sessionProgressLines(session).forEach(t=>L.push(`<div class="cel-prog">${ii("chart")}<span>${esc(t)}</span></div>`));
-  wins.filter(w=>w.soft).forEach(w=>L.push(`<div class="cel-prog cel-win soft">${ii(w.ic)}<span>${esc(w.t)}</span></div>`));
+  // une ligne = un titre court (l'exercice ou le fait) + le détail dessous, plus petit
+  const row = (ic, t, cls)=>{ const i = t.indexOf(" : "), h = i>0 ? t.slice(0, i) : t, d = i>0 ? t.slice(i+3) : "";
+    return `<div class="cp-row ${cls||""}" data-t="${esc(t)}"><span class="cp-ic">${ii(ic)}</span><span class="cp-txt"><span class="cp-t">${esc(h)}</span>${d ? `<span class="cp-s">${esc(d.charAt(0).toUpperCase()+d.slice(1))}</span>` : ""}</span></div>`; };
+  wins.filter(w=>!w.soft).forEach(w=>L.push(row(w.ic, w.t, w.ic==="bolt" ? "win rec" : "win")));
+  if(session.beats) L.push(row("trendUp", session.beats>1 ? `${session.beats} séries mieux que la dernière fois` : "1 série mieux que la dernière fois", "beat"));
+  sessionProgressLines(session).forEach(t=>L.push(row("chart", t, "prog")));
+  wins.filter(w=>w.soft).forEach(w=>L.push(row(w.ic, w.t, "soft")));
   if(!L.length) return "";
-  return `<div class="cel-rest" hidden>${L.map((h,i)=>h.replace('class="cel-prog', `style="--i:${i}" class="cel-prog`)).join("")}</div>
-    <button class="cel-more" data-a="celMore">${L.length>1 ? `Voir les ${L.length} progrès de la séance` : "Voir le progrès de la séance"}</button>`;
+  // les deux premiers sont visibles, le reste à un toucher (dans la même carte)
+  const more = L.length - 2;
+  return `<section class="cel-progs"><h3 class="cel-sh">Progrès de la séance</h3><div class="cp-card">${L.slice(0,2).join("")}${more>0 ? `<div class="cel-rest" hidden>${L.slice(2).join("")}</div><button class="cp-more" data-a="celMore">Voir ${more>1 ? `les ${more} autres` : "l'autre"}</button>` : ""}</div></section>`;
 }
 // séances comparables : même séance enregistrée, sinon même nom, sinon toutes ; tonnage (ou répétitions sans charge)
 function celSeries(session){
@@ -517,7 +521,7 @@ function showCelebration(session, ups, hits, won){
   // l'ascension remplace l'XP : altitude gagnée, camps franchis, sommet
   const asc = typeof ascent==="function" ? ascent().log[session.id] : null, summit = asc && asc.summit, moved = !!(asc && (asc.camps.length || asc.summit || asc.started));
   const name = (S.settings.name||"").trim().split(" ")[0];
-  const medalsHTML = ups.length ? `<div class="cel-medals">${ups.map((u,i)=>`<div class="cel-medal" style="--i:${i}">${medalHTML(u.m,u.tier)}<div class="cm-t">${esc(u.m.n)}</div><div class="cm-tier">${tierLabel(u.m, u.tier)}</div></div>`).join("")}</div>` : "";
+  const medalsHTML = ups.length ? `<section class="cel-progs"><h3 class="cel-sh">${ups.length>1 ? "Trophées débloqués" : "Trophée débloqué"}</h3><div class="cel-medals">${ups.map((u,i)=>`<div class="cel-medal" style="--i:${i}">${medalHTML(u.m,u.tier)}<div class="cm-t">${esc(u.m.n)}</div><div class="cm-tier">${tierLabel(u.m, u.tier)}</div></div>`).join("")}</div></section>` : "";
   openModal(`<div class="cel">
     <div class="cel-hd"><div class="cel-k">Séance terminée</div><h1 class="cel-title">Bien joué${name ? `, ${esc(name)}` : " !"}</h1>
       <div class="cel-sub">${esc(sessionTitle(session))} · ${fmtDuration(session.durationSec||0)} · ${nb(sets, "série")}</div></div>

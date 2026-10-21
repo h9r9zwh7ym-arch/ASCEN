@@ -546,6 +546,8 @@ function sheetBack(){
 }
 function openSheet(html, opts){
   opts = opts||{}; let keep = null;
+  // un sous-écran garde au moins la hauteur de l'écran d'où il part : pas de feuille qui rétrécit en plein glissement
+  const from = opts.child && !sheetRestoring && sheetShown() ? sheetActive() : null, fromH = from ? from.offsetHeight : 0;
   if(!sheetRestoring){
     if(!sheetShown()) sheetStackClear();
     else if(opts.child && sheetRestore){ keep = sheetKeep(sheetRestore); sheetStack.push(sheetRestore); }
@@ -554,6 +556,7 @@ function openSheet(html, opts){
   sheetRestore = opts.restore || null;
   sheetOnBack = opts.onBack || null; sheetRefresh = opts.refresh || null;
   showOverlay(`<div class="sheet ${opts.tall?"tall":""}" role="dialog">${opts.noGrab?"":'<div class="sheet-grab"></div>'}${html}${opts.footer?`<div class="sheet-ft">${opts.footer}</div>`:""}</div>`, "sheet", keep);
+  if(fromH){ const sh = sheetActive(); if(sh && sh!==from) sh.style.minHeight = Math.min(fromH, innerHeight)+"px"; }
 }
 function openModal(html, cls){
   // une confirmation remplace la feuille : « Annuler » ferme tout, comme avant
@@ -852,7 +855,7 @@ function navMove(e){
   if(e.cancelable) e.preventDefault();
   e.stopPropagation();
   d.p = Math.max(0, Math.min(1, dx/d.L.w)); navPose(d.L, d.p);
-  d.pts.push([dx, e.timeStamp]); if(d.pts.length>5) d.pts.shift();
+  d.pts.push([dx, e.timeStamp]); if(d.pts.length>12) d.pts.shift();
 }
 function navEndEv(e){ navDragEnd(e); }
 function navCancelEv(e){ navDragEnd(e, true); }
@@ -861,8 +864,12 @@ function navDragEnd(e, cancel){
   navUnlisten(d);
   if(!d.on) return;
   if(e) e.stopPropagation();
-  const a = d.pts[0], b = d.pts[d.pts.length-1], v = a && b && b[1]>a[1] ? (b[0]-a[0])/(b[1]-a[1]) : 0;   // px/ms
-  const done = cancel!==true && (v>.35 || (d.p>.35 && v>-.2));
+  // vitesse sur les 100 dernières ms ; le petit recul du doigt qui se soulève (iOS en envoie souvent un) ne
+  // compte pas : sans ça, un retour bien engagé repartait en arrière au lâcher
+  const last = d.pts[d.pts.length-1], win = d.pts.filter(q=>last && last[1]-q[1]<=100), a = win[0] || d.pts[0], b = last;
+  let v = a && b && b[1]>a[1] ? (b[0]-a[0])/(b[1]-a[1]) : 0;   // px/ms
+  const peak = Math.max(...win.map(q=>q[0]), 0); if(b && peak - b[0] < 14 && v<0) v = 0;
+  const done = cancel!==true && (v>.3 || (d.p>.3 && v>-.45) || d.p>.6);
   const ms = Math.max(180, Math.round(NAV_MS*(done ? 1-d.p : d.p)));
   if(done) haptic(8);
   navTween(d.L, d.p, done ? 1 : 0, ms, ()=>{

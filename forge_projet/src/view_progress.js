@@ -156,11 +156,8 @@ function muscleSumHTML(){
   if(lag) show.push(lag);
   if(show.length<4) worked.forEach(r=>{ if(show.length<4 && !show.includes(r)) show.push(r); });
   const bars = show.map(r=>`<span class="ms-row${r.sets<STIM.min ? " low" : ""}"><span class="ms-top"><span class="ms-n">${esc(r.n)}</span><span class="ms-v">${fmtDec(r.sets)} série${r.sets>=2?"s":""}</span></span><span class="ms-bar"><i style="width:${Math.min(100, r.sets/STIM.high*100).toFixed(1)}%"></i></span></span>`).join("");
-  // une seule phrase utile : le muscle en retard (le repère chiffré est dans la fiche Muscles)
-  const hint = lag ? `${esc(lag.n)} : moins de ${STIM.min} séries cette semaine${appPicksOn() ? ", la prochaine séance proposée en tiendra compte" : ""}.` : "";
   return `<section class="ms-sec stagger" style="--i:2"><h2 class="sh">Muscles · 7 derniers jours</h2>
-    <button class="ms-card" data-a="progressTab" data-v="muscles" aria-label="Muscles des 7 derniers jours : voir le détail">${bars || `<span class="ms-empty">Aucune série ces 7 derniers jours.</span>`}</button>
-    ${hint ? `<p class="ms-hint">${hint}</p>` : ""}</section>`;
+    <button class="ms-card" data-a="progressTab" data-v="muscles" aria-label="Muscles des 7 derniers jours : voir le détail">${bars || `<span class="ms-empty">Aucune série ces 7 derniers jours.</span>`}</button></section>`;
 }
 // « Derniers records » : les 3 plus récents (la liste complète est dans chaque exercice)
 function recordsSumHTML(){

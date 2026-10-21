@@ -136,9 +136,9 @@ const APP = 'file://' + path.resolve(process.argv[2]);
       exos: ['dc_haltere', 'pompes', 'planche', 'squat_gobelet', 'curl_biceps'].map(id => ({ exoId: id, sets: [0, 1, 2].map(() => ({ reps: id === 'planche' ? 95 : 15, weight: /haltere|gobelet|curl/.test(id) ? 18 : undefined, done: true })) })) };
     s.beats = 6; S.sessions.push(s); save(); DATA_VER++; showCelebration(s, [], [], []); });
   await wait(1500);
-  const cel = await page.evaluate(() => ({ vis: [...document.querySelectorAll('.cel .cel-prog')].filter(e => !e.closest('[hidden]')).length, hid: document.querySelectorAll('.cel .cel-rest .cel-prog').length, more: (document.querySelector('.cel .cel-more') || {}).textContent || '' }));
-  if (cel.more) { await page.click('.cel .cel-more'); await wait(600); }
-  const cel2 = await page.evaluate(() => ({ vis: [...document.querySelectorAll('.cel .cel-prog')].filter(e => !e.closest('[hidden]')).length, more: !!document.querySelector('.cel .cel-more') }));
+  const cel = await page.evaluate(() => ({ vis: [...document.querySelectorAll('.cel .cp-row')].filter(e => !e.closest('[hidden]')).length, hid: document.querySelectorAll('.cel .cel-rest .cp-row').length, more: (document.querySelector('.cel .cp-more') || {}).textContent || '' }));
+  if (cel.more) { await page.click('.cel .cp-more'); await wait(600); }
+  const cel2 = await page.evaluate(() => ({ vis: [...document.querySelectorAll('.cel .cp-row')].filter(e => !e.closest('[hidden]')).length, more: !!document.querySelector('.cel .cp-more') }));
   log('Celebration:', JSON.stringify(cel), JSON.stringify(cel2));
   if (cel.vis > 3 || (cel.hid && (!/Voir/.test(cel.more) || cel2.vis !== cel.vis + cel.hid || cel2.more))) fail('fin de séance : trois temps forts, le reste à un toucher');
   if (!cel.hid) log('(scénario : pas plus de 3 temps forts, rien de replié)');

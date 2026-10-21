@@ -84,10 +84,10 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     return { page: !!c, full: c ? Math.round(c.getBoundingClientRect().height) : 0, title: (document.querySelector('.cel-title') || {}).textContent, sub: (document.querySelector('.cel-sub') || {}).textContent,
       ton: (document.querySelector('.cel-ton .ct-hd h2') || {}).textContent, scope: (document.querySelector('.cel-ton .ct-hd span') || {}).textContent, chip: (document.querySelector('.ct-chip') || {}).textContent,
       line: !!document.querySelector('.ct-svg .ct-line.draw'), rec: (document.querySelector('.cel-rec .cr-txt b') || {}).textContent, recS: (document.querySelector('.cel-rec .cr-txt > span') || {}).textContent,
-      asc: !!document.querySelector('.cel .cel-asc .ca-t'), list: document.querySelectorAll('.cel .cel-prog').length, hidden: !!document.querySelector('.cel .cel-rest[hidden]'), btn: (document.querySelector('.cel-ft .btn') || {}).textContent }; });
+      asc: !!document.querySelector('.cel .cel-asc .ca-t'), list: document.querySelectorAll('.cel .cp-row').length, hidden: !!document.querySelector('.cel .cel-rest[hidden]'), btn: (document.querySelector('.cel-ft .btn') || {}).textContent }; });
   log('End:', JSON.stringify(cel)); await shot('05_end');
   if (!cel.page || cel.full < 800 || cel.title !== 'Bien joué, Yannick' || !/^Haut du corps · \d+ min · 5 séries$/.test(cel.sub || '') || cel.ton !== 'Tonnage' || !/dernières « Haut du corps »/.test(cel.scope || '') || !/%/.test(cel.chip || '') || !cel.line) fail('fin de séance : en-tête et Tonnage');
-  if (cel.rec !== 'Développé couché haltères' || !/12 × 18 kg · avant/.test(cel.recS || '') || !cel.asc || (cel.list && !cel.hidden) || !/Terminé|Voir le sommet/.test(cel.btn || '')) fail('fin de séance : record, ascension, le reste replié, Terminé');
+  if (cel.rec !== 'Développé couché haltères' || !/12 × 18 kg · avant/.test(cel.recS || '') || !cel.asc || (cel.list > 2 && !cel.hidden) || !/Terminé|Voir le sommet/.test(cel.btn || '')) fail('fin de séance : record, ascension, le reste replié, Terminé');
   await page.evaluate(() => closeSheet()); await wait(500);
   await fin(false); await wait(1500);
   const nr = await page.evaluate(() => !!document.querySelector('.cel-rec'));

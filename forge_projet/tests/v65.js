@@ -65,13 +65,13 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     if (cancel.probe !== 'child' || cancel.list !== 'AK') fail('geste annulé : le sous-écran reste, le parent gardé dessous');
     if (done.probe !== 'main' || done.n !== 1) fail('geste mené au bout : retour au même écran, sous-écran retiré');
   }
-  // une feuille plus courte que l'écran d'avant : celui-ci est masqué (il dépasserait au-dessus)
+  // un sous-écran au contenu court garde la hauteur de l'écran d'avant (pas de feuille qui rétrécit en glissant)
   await page.evaluate(() => closeSheet()); await wait(500);
   await page.evaluate(() => ACT.openAbout()); await wait(600);
   await tap('.about-body [data-a="aboutPage"][data-k="health"]'); await wait(900);
-  const off = await page.evaluate(() => { const k = document.querySelector('#overlay .sheet-kept'); return !!k && k.classList.contains('kept-off') && getComputedStyle(k).visibility === 'hidden'; });
+  const off = await page.evaluate(() => { const k = document.querySelector('#overlay .sheet-kept'), c = sheetActive(); return !!k && !!c && c.offsetHeight >= k.offsetHeight - 1; });
   await page.evaluate(() => closeSheet()); await wait(500);
-  if (!off) fail('feuille courte : l\'écran d\'avant est masqué');
+  if (!off) fail('sous-écran court : même hauteur que l\'écran d\'avant');
 
   // 4. roue abdominale : mains sur la poignée (à hauteur de l'axe), bras tendus, la roue roule, elle est dessinée
   const wheel = await page.evaluate(() => {
