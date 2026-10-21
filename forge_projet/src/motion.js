@@ -297,27 +297,126 @@ function moCelebrate(page){
   py.done().then(()=>moWait(900)).then(()=>{ moReset(page); [ton, asc].forEach(e=>{ if(e) e.style.transform = ""; }); end(); });
 }
 
-// ---------- 4 · commencer : la carte du jour s'ouvre en plein écran, la séance apparaît dedans ----------
+// ---------- 4 · commencer : « Commencer » fond, éclate, l'orange inonde l'écran puis se retire sur la séance ----------
+// ressort → easing linear() pour les animations CSS (même physique que MoBody)
+const MO_EASE = {};
+function moEase(response, damping){
+  const key = response+"|"+damping; if(MO_EASE[key]) return MO_EASE[key];
+  const w0 = 2*Math.PI/response, z = Math.min(damping, .999), wd = w0*Math.sqrt(1-z*z);
+  const x = t=>1 - Math.exp(-z*w0*t)*(Math.cos(wd*t) + z*w0/wd*Math.sin(wd*t));
+  let T = 0; for(let t=0; t<4; t+=.004){ if(Math.abs(1-x(t))>.0015) T = t; } T += .02;
+  const pts = []; for(let i=0;i<=56;i++) pts.push(+x(T*i/56).toFixed(4));
+  const ok = typeof CSS!=="undefined" && CSS.supports && CSS.supports("animation-timing-function", "linear(0, 1)");
+  return MO_EASE[key] = { duration:Math.round(T*1000), easing: ok ? `linear(${pts.join(",")})` : "cubic-bezier(.2,.9,.25,1.12)" };
+}
+// À appeler AVANT de lancer la séance : le bouton touché et une copie figée de l'accueil
 function moStartCapture(){
   if(!moOn()) return null;
-  const hero = qs("#v-today .hero"), view = qs("#v-today"); if(!hero || !view || !hero.offsetParent) return null;
+  const view = qs("#v-today");
+  const btn = view && qsa('[data-a="startCustom"],[data-a="startSession"],[data-a="startTemplate"]', view).find(b=>b.offsetParent && b.getBoundingClientRect().height>20);
+  if(!btn) return null;
   if(MO.busy) MO.busy();
-  return { R:moRect(hero), bg:getComputedStyle(hero).backgroundColor, snap:moSnap(view, { front:true, bg:moVar("--bg") }) };
+  const cs = getComputedStyle(btn);
+  const cap = { G:moRect(btn), label:btn.textContent.trim(), font:cs.font, radius:parseFloat(cs.borderRadius)||13, snap:moSnap(view, { bg:moVar("--bg") }) };
+  // dans la copie, le bouton laisse place à sa forme liquide
+  const k = qsa("button", cap.snap).find(b=>{ const r = b.getBoundingClientRect(); return Math.abs(r.left-cap.G.l)<2 && Math.abs(r.top-cap.G.t)<2; });
+  if(k) k.style.visibility = "hidden";
+  return cap;
 }
 function moStart(cap){
   if(!cap) return false;
-  const { R, snap } = cap;
-  const end = moBegin();
-  const goo = moLayer().querySelector(".mo-goo"); goo.style.zIndex = 4; goo.style.filter = "none";   // une seule forme : pas de fusion, rendu plus léger
-  const dark = moVar("--bg") || "#000000";
-  const m = moBlob({ x:R.x, y:R.y, w:R.w, h:R.h, r:22 }, cap.bg, { o:1 }); m.colors = [cap.bg, dark]; m.stretch = 0;
-  moXform(snap).to({ s:.92 }, { response:.5, damping:.9 });
-  m.to({ x:innerWidth/2, y:innerHeight/2 }, { response:.48, damping:.84 }).to({ w:innerWidth+2, h:innerHeight+2, r:44 }, { response:.5, damping:.8 });
-  // l'écran couvert : la carte passe au noir de la séance, puis s'efface sur la vraie séance
-  setTimeout(()=>{ snap.style.display = "none"; m.to({ p:1, r:0 }, { response:.26 }); }, 330);
-  setTimeout(()=>m.to({ o:0 }, { response:.22 }), 560);
-  m.done().then(()=>{ goo.style.zIndex = ""; goo.style.filter = ""; end(); });
-  setTimeout(()=>{ goo.style.zIndex = ""; goo.style.filter = ""; end(); }, 2200);
+  if(!S.draft){ cap.snap.remove(); return false; }
+  const { G, snap } = cap, W = innerWidth, H = innerHeight, tint = moVar("--tint") || "#BC5736";
+  const fx = moLayer().querySelector(".mo-fx");
+  let raf = 0;
+  const vbtn = ()=>qs("#focusRegion .validate");
+  const name = ()=>qs("#v-today .sx-clock small");
+  const end = moBegin(()=>{
+    cancelAnimationFrame(raf); document.removeEventListener("pointerdown", end, true);
+    const b = vbtn(); if(b) b.style.visibility = ""; const n = name(); if(n) n.style.opacity = "";
+  });
+  // un toucher pendant l'animation la termine : la séance, déjà prête dessous, répond normalement
+  setTimeout(()=>document.addEventListener("pointerdown", end, true), 0);
+  const el = (cls, css, html)=>{ const d = document.createElement("div"); d.className = cls; if(css) Object.assign(d.style, css); if(html!=null) d.textContent = html; fx.appendChild(d); return d; };
+  // 1 · le mot s'efface, le bouton s'écrase puis fond en goutte ; ses deux bouts traînent derrière
+  const lab = el("mo-lab", { left:G.l+"px", top:G.t+"px", width:G.w+"px", height:G.h+"px", font:cap.font }, cap.label);
+  lab.animate([{ opacity:1, filter:"blur(0)", transform:"scale(1)" }, { opacity:0, filter:"blur(4px)", transform:"scale(.85)" }], { duration:220, delay:60, fill:"forwards" });
+  const core = moBlob({ x:G.x, y:G.y, w:G.w, h:G.h, r:cap.radius }, tint, { o:1 }); core.stretch = 0;
+  const ends = [-1, 1].map(s=>moDisc({ x:G.x + s*(G.w/2-G.h/2), y:G.y, w:G.h, h:G.h }, tint));
+  core.to({ w:G.w*1.06, h:G.h*.78, r:cap.radius+3 }, { response:.14, damping:1 });
+  if(typeof haptic==="function" && typeof hapticOn==="function" && hapticOn()) haptic(10);
+  setTimeout(()=>{
+    core.to({ w:50, h:50, r:25 }, { response:.5, damping:.55 });
+    ends.forEach(e=>e.to({ x:G.x, w:G.h*.6 }, { response:.6, damping:.7 }));
+  }, 110);
+  // 2 · il éclate : l'orange inonde l'écran depuis le bouton, des gouttes giclent ; le nom de la séance arrive
+  const R = Math.hypot(Math.max(G.x, W-G.x), Math.max(G.y, H-G.y)) + 30;
+  const flood = el("mo-flood", { background:tint });
+  flood.style.clipPath = `circle(0px at ${G.x}px ${G.y}px)`;
+  const title = el("mo-ltitle", null, liveName(S.draft));
+  const n = S.draft.exos.length, sub = el("mo-lsub", { top:(H*.40+40)+"px" }, `${n} exercice${n>1?"s":""} · ≈ ${estimateMinutes(S.draft)} min`);
+  const tw = title.offsetWidth, th = title.offsetHeight, size = parseFloat(getComputedStyle(title).fontSize);
+  const T0 = { x:Math.max(16, W/2 - tw/2), y:H*.40 - th/2 - 8 };
+  title.style.opacity = 0; sub.style.opacity = 0;
+  setTimeout(()=>{
+    flood.animate([{ clipPath:`circle(24px at ${G.x}px ${G.y}px)` }, { clipPath:`circle(${R}px at ${G.x}px ${G.y}px)` }], { ...moEase(.62,.92), fill:"forwards" });
+    for(let i=0;i<9;i++){ const a = -Math.PI/2 + (i-4)*.38 + (Math.random()-.5)*.2, dist = 80 + Math.random()*110, sz = 10 + Math.random()*14;
+      const d = moDisc({ x:G.x, y:G.y, w:sz, h:sz }, tint, { o:1 });
+      d.to({ x:G.x + Math.cos(a)*dist, y:G.y + Math.sin(a)*dist }, { response:.5, damping:.9 });
+      setTimeout(()=>d.to({ o:0 }, { response:.2 }), 300); }
+    core.to({ w:120, h:120 }, { response:.3, damping:1 }); setTimeout(()=>core.to({ o:0 }, { response:.15 }), 180);
+    ends.forEach(e=>{ e.stop(); e.el.remove(); });
+    title.animate([{ opacity:0, transform:`translate(${T0.x}px,${T0.y+18}px)` }, { opacity:1, transform:`translate(${T0.x}px,${T0.y}px)` }], { ...moEase(.5,.8), delay:120, fill:"forwards" });
+    sub.animate([{ opacity:0 }, { opacity:1 }], { duration:300, delay:260, fill:"forwards" });
+    if(typeof sfx==="function") sfx("open");
+  }, 200);
+  // 3 · le niveau baisse en ondulant et dévoile la séance ; la dernière flaque devient « Valider la série »
+  setTimeout(()=>{
+    if(MO.busy!==end) return;
+    snap.remove(); flood.remove();
+    const b = vbtn(), V = b && b.offsetParent ? moRect(b) : { x:W/2, y:H-70, w:W-32, h:56, l:16, t:H-98 };
+    if(b) b.style.visibility = "hidden";
+    const nm = name(), N = nm ? moRect(nm) : null; if(nm) nm.style.opacity = 0;
+    const bottom = V.t - 6, ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg"), path = document.createElementNS(ns, "path");
+    svg.setAttribute("class", "mo-wave"); svg.setAttribute("width", W); svg.setAttribute("height", H); svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    Object.assign(svg.style, { width:W+"px", height:H+"px", maxWidth:"none" }); path.setAttribute("fill", tint);
+    svg.appendChild(path); fx.insertBefore(svg, title);
+    sub.animate([{ opacity:1 }, { opacity:0 }], { duration:160, fill:"forwards" });
+    let flew = false; const t0 = performance.now(), dur = 760;
+    // le nom se range à sa place, en haut de la séance, quand l'eau passe sous lui
+    const fly = ()=>{ flew = true;
+      const k = N ? parseFloat(getComputedStyle(nm).fontSize)/size : .3, to = N ? `translate(${N.l}px,${N.t - (th*k - N.h)/2}px) scale(${k})` : `translate(${T0.x}px,${T0.y-40}px) scale(.5)`;
+      const a = title.animate([{ transform:`translate(${T0.x}px,${T0.y}px) scale(1)`, color:"#fff" }, { transform:to, color:moVar("--label2") || "#9A9AA2" }], { ...moEase(.55,.88), fill:"forwards" });
+      a.finished.then(()=>{ if(nm) nm.style.opacity = ""; title.remove(); }).catch(()=>{});
+    };
+    const step = now=>{
+      const p = Math.min(1, (now-t0)/dur), t = now-t0, e = p<.5 ? 2*p*p : 1-Math.pow(-2*p+2, 2)/2;
+      const lvl = -20 + (bottom+20)*e, A = 16*(1-p) + 1.5*Math.sin(t/90)*(1-p);
+      let d = `M0 ${H} L0 ${lvl.toFixed(1)}`;
+      for(let x=0; x<=W+10; x+=12) d += ` L${x} ${(lvl + A*Math.sin(x/38 + t/110) + A*.4*Math.sin(x/17 - t/80)).toFixed(1)}`;
+      path.setAttribute("d", d + ` L${W} ${H} Z`);
+      if(!flew && lvl > T0.y + th) fly();
+      if(p<1){ raf = requestAnimationFrame(step); return; }
+      if(!flew) fly();
+      svg.remove();
+      const pool = el("mo-pool", { background:tint, left:"0px", top:bottom+"px", width:W+"px", height:(H-bottom)+"px", borderRadius:"0px" });
+      const br = b ? getComputedStyle(b).borderRadius : "16px";
+      const pe = moEase(.5,.7);
+      pool.animate([{ left:"0px", top:bottom+"px", width:W+"px", height:(H-bottom)+"px", borderRadius:"0px" },
+                    { left:V.l+"px", top:V.t+"px", width:V.w+"px", height:V.h+"px", borderRadius:br }], { ...pe, fill:"forwards" });
+      // la flaque est en place (le ressort ne fait plus que trembler) : le vrai bouton prend le relais, son mot apparaît
+      setTimeout(()=>{
+        if(MO.busy!==end) return;
+        pool.remove();
+        if(b){ b.style.visibility = "";
+          b.animate([{ scale:"1 1" }, { scale:"1.03 .9" }, { scale:"1 1" }], { duration:420, easing:"cubic-bezier(.3,1.4,.5,1)" });
+          b.animate([{ opacity:.4, filter:"blur(2px)" }, { opacity:1, filter:"blur(0)" }], { duration:260 }); }
+        setTimeout(end, 120);
+      }, Math.min(520, pe.duration*.55));
+    };
+    raf = requestAnimationFrame(step);
+  }, 1020);
   return true;
 }
 

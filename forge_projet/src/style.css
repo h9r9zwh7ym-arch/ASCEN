@@ -3291,3 +3291,10 @@ body.live-focus #restbar.island{bottom:auto}
 .cel-page .cel-rest[hidden]{display:none}
 .cp-more{display:block;position:relative;width:100%;min-height:44px;padding:0 16px 0 56px;text-align:left;color:var(--tint-ink);font-size:var(--fs-sub);font-weight:600;background:none}
 .cp-more::before{content:"";position:absolute;left:56px;right:0;top:0;height:1px;background:var(--sep);transform:scaleY(.5);transform-origin:0 0}
+/* lancement : « Commencer » liquide, inondation puis vague qui se retire */
+#mo .mo-fx>.mo-lab{position:fixed;display:grid;place-items:center;color:#fff;pointer-events:none}
+#mo .mo-fx>.mo-flood{position:fixed;inset:0}
+#mo .mo-fx>.mo-wave{position:fixed;left:0;top:0}
+#mo .mo-fx>.mo-pool{position:fixed}
+#mo .mo-fx>.mo-ltitle{position:fixed;left:0;top:0;font-size:60px;font-weight:800;letter-spacing:-.025em;line-height:1.1;color:#fff;white-space:nowrap;max-width:calc(100vw - 32px);overflow:hidden;text-overflow:ellipsis;transform-origin:0 0}
+#mo .mo-fx>.mo-lsub{position:fixed;left:0;right:0;text-align:center;color:rgba(255,255,255,.8);font-size:var(--fs-sub);font-weight:500}
