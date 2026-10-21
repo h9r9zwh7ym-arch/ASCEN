@@ -3268,3 +3268,4 @@ body.live-focus #restbar.island{bottom:auto}
 #restbar.island .ri-ring{display:grid;place-items:center}
 #restbar.island .ri-ring svg{width:24px;height:24px;transform:rotate(-90deg);display:block}
 #restbar.island .rt-time{font-size:15px;font-weight:600;min-width:0;color:#fff}
+.mo-snap,.mo-snap *{animation:none!important;transition:none!important}

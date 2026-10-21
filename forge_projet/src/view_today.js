@@ -1819,14 +1819,15 @@ Object.assign(ACT, {
     haptic(st.pr ? [25, 40, 25] : 18); // la coche franche : une vibration nette (deux pour un record)
     justDone = { exi, si }; savedFresh = true;
     stripBump = exi;
-    if(!st.pr && !beat && !exoFinished0(ex)) floatText(fx0, fy0, `Série ${si+1}`, "", "check");
+    // la scène de validation (motion.js) montre déjà la série qui part dans sa case : pas de bulle en plus
+    if(!mo && !st.pr && !beat && !exoFinished0(ex)) floatText(fx0, fy0, `Série ${si+1}`, "", "check");
     const exoFinished = !ex.sets.some(s=>!s.done);
     const ni = nextUndone(exi);
     if(ni>=0) startRestTimer(S.draft.express ? Math.min(45, restFor(def)) : restFor(def), def.n, exoFinished ? ni : exi, exoFinished, { exi, si });
     else stopRestTimer();
     if(exoFinished){
-      if(!st.pr) confettiBurst(bx, by, 36);
-      if(ni>=0){ const nm = qs(".focus-card .fc-name"), r = nm && nm.getBoundingClientRect(); floatText(r ? r.left+r.width/2 : bx, r ? r.top+r.height/2 : by, "Exercice terminé !", "big", "flame"); }
+      if(!st.pr && !mo) confettiBurst(bx, by, 36);
+      if(ni>=0 && !mo){ const nm = qs(".focus-card .fc-name"), r = nm && nm.getBoundingClientRect(); floatText(r ? r.left+r.width/2 : bx, r ? r.top+r.height/2 : by, "Exercice terminé !", "big", "flame"); }
       if(ni>=0){ liveFocusIdx = ni; focusAnimDir = mo ? null : ni>exi ? "r" : "l"; }
     }
     save();

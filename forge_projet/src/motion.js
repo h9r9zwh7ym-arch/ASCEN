@@ -95,6 +95,7 @@ function moSnap(el, opts={}){
   wrap.style.background = opts.bg || "";
   // copie inerte : ni identifiants, ni actions (rien ne doit pouvoir la viser à la place du vrai écran)
   const c = el.cloneNode(true); c.removeAttribute("id"); c.querySelectorAll("[id]").forEach(x=>x.removeAttribute("id"));
+  c.classList.remove("enter");   // une copie figée ne rejoue pas les animations d'entrée de l'écran
   c.querySelectorAll("[data-a],[data-c]").forEach(x=>{ x.removeAttribute("data-a"); x.removeAttribute("data-c"); });
   wrap.inert = true;
   c.style.cssText += ";margin:0;width:100%;height:100%;opacity:1;transform:none;pointer-events:none";
@@ -185,8 +186,9 @@ function moShock(R){
 // 1 · le repos coule de la case comme une goutte, tombe, s'écrase et gonfle en anneau (le vrai anneau)
 async function moDrip(mo, tile, T, rx, green, card){
   const ring = qs(".ring-wrap", mo.region);
-  rx.to({ o:1 }, { response:.35 });
-  moXform(mo.snap).to({ o:0 }, { response:.3 });
+  // fondu enchaîné court : l'ancienne carte part vite, le repos arrive juste après (pas de superposition)
+  moXform(mo.snap).to({ o:0, s:.98 }, { response:.18 });
+  rx.s.s.v = .97; setTimeout(()=>rx.to({ o:1, s:1 }, { per:{ o:{ response:.25 }, s:{ response:.4, damping:.8 } } }), 90);
   // la case (forme liquide) s'efface avec la copie : la goutte qui en sort la remplace
   const tb = MO.tileBlob; MO.tileBlob = null;
   if(tb){ if(!tb.s.o) tb.s.o = { v:1, t:1, vel:0, ...moParams(.3, 1) }; tb.push("h", 120); setTimeout(()=>tb.to({ o:0 }, { response:.25 }), 160); }
@@ -246,8 +248,9 @@ function moCelebrate(page){
   const ctx = MO.endCtx; MO.endCtx = null;
   if(!ctx || !page || !moOn()){ if(ctx) ctx.end(); return; }
   const { mo, T, end } = ctx;
+  if(MO.tileBlob){ MO.tileBlob.stop(); MO.tileBlob.el.remove(); MO.tileBlob = null; }
   // la séance (copie figée) recule pendant que la page monte avec son élan
-  moXform(mo.snap).to({ s:.92, o:.4 }, { response:.5, damping:.9 });
+  // la séance (copie) reste en place derrière la page qui monte : pas d'accueil qui dépasse autour
   const H = innerHeight, py = moXform(page, { y:H });
   py.push("y", -1400).to({ y:0 }, { response:.52, damping:.74 });
   const at = sel=>{ const e = qs(sel, page); if(!e) return null; const r = moRect(e); return { el:e, x:r.x, y:r.y - H, w:r.w, h:r.h }; };
@@ -264,13 +267,13 @@ function moCelebrate(page){
     fb.done().then(()=>{ gainT.el.style.visibility = ""; f.remove(); });
   }
   // la dernière série tombe sur la courbe du tonnage : c'est le point d'aujourd'hui
-  if(dotT){
+  if(dotT && dotT.w > 2 && dotT.el.getBoundingClientRect().width > 2){
     const green = "#163A20", tint = moVar("--tint");
     dotT.el.style.visibility = "hidden";
     const d = moBlob({ x:T.x, y:T.y, w:T.w, h:T.h, r:12 }, green); d.colors = [green, tint];
-    if(MO.tileBlob){ MO.tileBlob.stop(); MO.tileBlob.el.remove(); MO.tileBlob = null; }
-    d.push("y", -1100).to({ x:dotT.x, y:dotT.y }, { per:{ x:{ response:.56, damping:.8 }, y:{ response:.5, damping:.74 } } }).to({ w:dotT.w, h:dotT.h, r:dotT.w, p:1 }, { response:.42, damping:.72 });
-    d.done().then(()=>{ dotT.el.style.visibility = ""; d.el.remove(); });
+      d.push("y", -1100).to({ x:dotT.x, y:dotT.y }, { per:{ x:{ response:.56, damping:.8 }, y:{ response:.5, damping:.74 } } }).to({ w:dotT.w, h:dotT.h, r:dotT.w, p:1 }, { response:.42, damping:.72 });
+    const fin = ()=>{ dotT.el.style.visibility = ""; d.stop(); d.el.remove(); };
+    d.done().then(fin); setTimeout(fin, 1600);
   }
   // chaque carte encaisse l'arrivée de sa valeur
   const land = el=>{ if(!el) return; el.style.transformOrigin = "50% 100%"; const b = new MoBody(el, { s:1 }, x=>{ const s = x.get("s"); el.style.transform = `scale(${(1 + (1-s)*.3).toFixed(4)},${s.toFixed(4)})`; }); b.push("s", -2).to({ s:1 }, { response:.36, damping:.34 }); return b; };
@@ -291,11 +294,13 @@ function moStart(cap){
   const end = moBegin();
   const goo = moLayer().querySelector(".mo-goo"); goo.style.zIndex = 4;
   const dark = moVar("--bg") || "#000000";
-  const m = moBlob({ x:R.x, y:R.y, w:R.w, h:R.h, r:22 }, cap.bg, { o:1 }); m.colors = [cap.bg, dark]; m.stretch = .4;
-  moXform(snap).to({ s:.9, o:0 }, { per:{ s:{ response:.5, damping:.9 }, o:{ response:.45 } } });
-  m.to({ x:innerWidth/2, y:innerHeight/2 }, { response:.5, damping:.8 }).to({ w:innerWidth+16, h:innerHeight+16, r:40 }, { response:.52, damping:.72 }).to({ p:1 }, { response:.42 });
-  setTimeout(()=>{ goo.style.filter = "none"; }, 380);
-  setTimeout(()=>m.to({ o:0 }, { response:.35 }), 520);
+  const m = moBlob({ x:R.x, y:R.y, w:R.w, h:R.h, r:22 }, cap.bg, { o:1 }); m.colors = [cap.bg, dark]; m.stretch = 0;
+  goo.style.filter = "none";   // une seule forme : pas de fusion, rendu plus léger
+  moXform(snap).to({ s:.92 }, { response:.5, damping:.9 });
+  m.to({ x:innerWidth/2, y:innerHeight/2 }, { response:.48, damping:.84 }).to({ w:innerWidth+2, h:innerHeight+2, r:44 }, { response:.5, damping:.8 });
+  // l'écran couvert : la carte passe au noir de la séance, puis s'efface sur la vraie séance
+  setTimeout(()=>{ snap.style.display = "none"; m.to({ p:1, r:0 }, { response:.26 }); }, 330);
+  setTimeout(()=>m.to({ o:0 }, { response:.22 }), 560);
   m.done().then(()=>{ goo.style.zIndex = ""; goo.style.filter = ""; end(); });
   setTimeout(()=>{ goo.style.zIndex = ""; goo.style.filter = ""; end(); }, 2200);
   return true;
@@ -305,27 +310,27 @@ function moStart(cap){
 function moCloseCelebration(){
   const page = qs(".cel-page"), dot = qs("#v-today .wk-day.today");
   if(!moOn() || !page || !dot){ closeSheet(); return; }
-  const end = moBegin(()=>{ moReset(page); moReset(dot); });
-  const P = moRect(page), D = moRect(dot);
-  const kids = [...page.children]; kids.forEach(k=>moXform(k).to({ o:0 }, { response:.2 }));
-  page.style.transformOrigin = "50% 50%"; page.style.overflow = "hidden";
-  const tint = moVar("--tint"), bg = getComputedStyle(page).backgroundColor;
-  const b = new MoBody(page, { x:0, y:0, sx:1, sy:1, p:0, r:0 }, x=>{
-    page.style.transform = `translate(${x.get("x").toFixed(1)}px,${x.get("y").toFixed(1)}px) scale(${Math.max(.01, x.get("sx")).toFixed(4)},${Math.max(.01, x.get("sy")).toFixed(4)})`;
-    page.style.background = moMix(bg, tint, moClamp(x.get("p"), 0, 1)); page.style.borderRadius = x.get("r").toFixed(1)+"px"; });
-  // elle se contracte, puis tombe en arc vers le jour en s'arrondissant
-  b.to({ sx:.6, sy:.4, r:60 }, { response:.34, damping:.82 });
-  setTimeout(()=>{ b.push("x", 600).to({ x:D.x-P.x, y:D.y-P.y }, { per:{ x:{ response:.58, damping:.8 }, y:{ response:.46, damping:.84 } } })
-    .to({ sx:D.w/P.w, sy:D.h/P.h, r:Math.max(P.w, P.h)/2, p:1 }, { response:.44, damping:.82 }); }, 170);
-  setTimeout(()=>{ const ov = qs("#overlay"); if(ov) ov.classList.add("mo-noscrim"); }, 60);
+  const P = moRect(page), D = moRect(dot), tint = moVar("--tint"), bg = getComputedStyle(page).backgroundColor;
+  const end = moBegin(()=>{ moReset(dot); });
+  // la page devient une forme de sa couleur, à sa place exacte ; la vraie page part tout de suite
+  const goo = moLayer().querySelector(".mo-goo"); goo.style.filter = "none";
+  const b = moBlob({ x:P.x, y:P.y, w:P.w, h:P.h, r:0 }, bg); b.colors = [bg, tint]; b.stretch = 0;
+  const ov = qs("#overlay"); if(ov) ov.classList.add("mo-noscrim");
+  closeSheet();
+  setTimeout(()=>{ if(ov) ov.classList.remove("mo-noscrim"); }, 500);
+  // elle se contracte en carte, puis tombe en arc vers le jour en s'arrondissant jusqu'au rond
+  b.to({ w:P.w*.62, h:P.h*.42, r:32 }, { response:.34, damping:.84 });
   setTimeout(()=>{
-    // impact : le jour avale la séance et rebondit
-    closeSheet(); const ov = qs("#overlay"); if(ov) setTimeout(()=>ov.classList.remove("mo-noscrim"), 400);
-    page.style.opacity = "0";
+    b.push("x", 700).to({ x:D.x, y:D.y }, { per:{ x:{ response:.56, damping:.82 }, y:{ response:.46, damping:.86 } } })
+     .to({ w:D.w, h:D.w, r:D.w/2, p:1 }, { response:.42, damping:.86 });
+  }, 170);
+  setTimeout(()=>{
+    // impact : le jour avale la forme et rebondit
+    b.to({ w:0, h:0, r:0 }, { response:.18, damping:.9 });
     moXform(dot).push("s", 7).to({ s:1 }, { response:.36, damping:.32 });
     if(typeof sfx==="function") sfx("set");
-    setTimeout(end, 900);
-  }, 760);
+    setTimeout(()=>{ goo.style.filter = ""; end(); }, 900);
+  }, 780);
 }
 
 // ---------- 3 · le repos devient une île (Dynamic Island) ----------
