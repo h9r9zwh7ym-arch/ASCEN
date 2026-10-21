@@ -127,8 +127,8 @@ function heroKind(mode, draft){
   if(S.custom.exos.length) return "custom";
   return plannedTemplate() ? "planned" : "compose";
 }
-function heroHTML(mode, draft){
-  const kind = heroKind(mode, draft);
+function heroHTML(mode, draft, force){
+  const kind = force || heroKind(mode, draft);
   if(kind==="done") return doneCardHTML();
   if(kind==="compose"){
     const pend = S.custom.pendingDays && S.custom.pendingDays.length;
@@ -455,6 +455,10 @@ function customPaneHTML(){
   const tail = "";
   const done = sessionsToday().length;
   if(c.length && !done && !customEdit) return "";
+  // séance du jour déjà faite : la suivante prend la même carte compacte (3 exercices, « Voir les N »,
+  // « Modifier ») au lieu d'une longue liste toujours éditable
+  const card = c.length && done ? heroHTML("custom", null, "custom") : "";
+  if(card && !customEdit) return card;
   if(!c.length){
     // la carte « Compose ta séance » est la carte principale ; ici seulement si une autre l'occupe
     if(!done && !plannedTemplate()) return tail;
@@ -479,11 +483,11 @@ function customPaneHTML(){
   }).join("");
   freshIds = new Set();
   // la carte principale montre déjà nom, durée et « C'est parti » : ici, seulement la liste à éditer
-  const inHero = !done;
+  const inHero = !done || !!card;
   const sets = c.reduce((t,e)=>t+e.sets,0);
   const preview = { exos: c.map(e=>({ exoId:e.exoId, sets:new Array(e.sets).fill(0) })) };
   // dans la carte du jour, la liste continue la carte (même bloc) : pas de titre entre les deux
-  return `${inHero ? "" : `<h2 class="sh"><span class="sh-t">${esc(S.custom.name||"Ma séance")}</span><span class="sh-actions"><button class="more danger" data-a="customClear">Vider</button></span></h2>
+  return `${card}${inHero ? "" : `<h2 class="sh"><span class="sh-t">${esc(S.custom.name||"Ma séance")}</span><span class="sh-actions"><button class="more danger" data-a="customClear">Vider</button></span></h2>
     <div class="sh-sub">${nb(c.length, "exercice")} · ${nb(sets, "série")} · ≈ ${estimateMinutes(preview)} min</div>`}
     <div class="group builder" data-sort="custom">${rows}</div>
     <div class="btnrow">

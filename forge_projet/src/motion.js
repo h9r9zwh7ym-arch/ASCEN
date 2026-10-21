@@ -15,6 +15,7 @@ function moTick(now){
     try{ b.step(dt); b.render(); }catch(e){ MO.sims.delete(b); continue; }
     if(b.settled()){ MO.sims.delete(b); const r = b._res; b._res = []; r.forEach(f=>f()); }
   }
+  moGooFit();
   MO.raf = MO.sims.size ? requestAnimationFrame(moTick) : 0;
 }
 function moKick(b){ MO.sims.add(b); if(!MO.raf){ MO.last = performance.now(); MO.raf = requestAnimationFrame(moTick); } }
@@ -56,22 +57,35 @@ function moLayer(){
   }
   return l;
 }
-function moClear(){ const l = document.getElementById("mo"); if(l) l.querySelectorAll(".mo-goo,.mo-fx").forEach(x=>x.innerHTML = ""); const b = document.getElementById("moBack"); if(b) b.innerHTML = ""; }
+function moClear(){ const l = document.getElementById("mo"); if(l) l.querySelectorAll(".mo-goo,.mo-fx").forEach(x=>{ x.innerHTML = ""; if(x.classList.contains("mo-goo")) x.removeAttribute("style"); }); const b = document.getElementById("moBack"); if(b) b.innerHTML = ""; }
 // forme liquide : centre, taille, rayon ; s'étire dans le sens de sa vitesse
 function moBlobRender(b){
   const x = b.get("x"), y = b.get("y"), w = Math.max(0, b.get("w")), h = Math.max(0, b.get("h")), vx = b.s.x.vel, vy = b.s.y.vel, st = b.stretch ?? 1;
   const sx = 1 + st*moClamp(Math.abs(vx)/9000 - Math.abs(vy)/18000, -.12, .18), sy = 1 + st*moClamp(Math.abs(vy)/9000 - Math.abs(vx)/18000, -.12, .18);
   if(b.round){ const d = Math.max(0, b.get("w")); b.s.h.v = b.s.w.v; b.s.h.t = b.s.w.t; b.s.h.vel = b.s.w.vel; }
-  const e = b.el.style; e.left = (x-w/2)+"px"; e.top = (y-h/2)+"px"; e.width = w+"px"; e.height = h+"px";
+  const e = b.el.style; b.el._g = { l:x-w/2, t:y-h/2, w, h }; e.width = w+"px"; e.height = h+"px";
   e.borderRadius = Math.max(0, Math.min(b.get("r"), w/2, h/2))+"px"; e.transform = `scale(${sx.toFixed(3)},${sy.toFixed(3)})`;
   if(b.colors) e.background = moMix(b.colors[0], b.colors[1], moClamp(b.get("p"), 0, 1));
   if(b.s.o) e.opacity = moClamp(b.get("o"), 0, 1);
+}
+// le filtre de fusion coûte selon la surface filtrée : le calque se réduit au cadre des formes (+ marge
+// pour le flou et l'étirement) au lieu de couvrir tout l'écran ; les formes y sont placées en relatif
+function moGooFit(){
+  const g = document.querySelector("#mo .mo-goo"); if(!g || !g.firstChild) return;
+  if(g.style.filter==="none"){ if(g.style.width) Object.assign(g.style, { left:"", top:"", width:"", height:"", right:"", bottom:"" }); for(const k of g.children){ const q = k._g; if(q){ k.style.left = q.l+"px"; k.style.top = q.t+"px"; } } return; }
+  let L = 1e9, T = 1e9, R = -1e9, B = -1e9;
+  for(const k of g.children){ const q = k._g; if(!q || k.style.opacity==="0") continue; const m = 28 + Math.max(q.w, q.h)*.1;
+    L = Math.min(L, q.l-m); T = Math.min(T, q.t-m); R = Math.max(R, q.l+q.w+m); B = Math.max(B, q.t+q.h+m); }
+  if(L > R){ g.style.width = "0px"; return; }
+  L = Math.floor(L); T = Math.floor(T);
+  Object.assign(g.style, { left:L+"px", top:T+"px", width:Math.ceil(R-L)+"px", height:Math.ceil(B-T)+"px", right:"auto", bottom:"auto" });
+  for(const k of g.children){ const q = k._g; if(q){ k.style.left = (q.l-L)+"px"; k.style.top = (q.t-T)+"px"; } }
 }
 // forme ronde : une seule taille (w = h toujours), jamais étirée
 function moDisc(R, color, extra){ const b = moBlob(R, color, extra); b.stretch = 0; b.round = true; return b; }
 function moBlob(R, color, extra){
   const d = document.createElement("div"); d.className = "mo-blob"; d.style.background = color; moLayer().querySelector(".mo-goo").appendChild(d);
-  return new MoBody(d, { x:R.x, y:R.y, w:R.w, h:R.h, r:R.r ?? 12, p:0, ...(extra||{}) }, moBlobRender);
+  const b = new MoBody(d, { x:R.x, y:R.y, w:R.w, h:R.h, r:R.r ?? 12, p:0, ...(extra||{}) }, moBlobRender); moGooFit(); return b;
 }
 // transformation d'un élément réel (translation, échelle, opacité) autour de sa place naturelle
 function moXform(el, init){
@@ -227,9 +241,11 @@ async function moToSegment(mo, tiles, tile, rx, k, green, tint){
   if(!seg){ moXform(mo.snap).to({ o:0 }, { response:.3 }); rx.to({ o:1 }, { response:.3 }); await moWait(300); return; }
   const S = moRect(seg);
   mid.push("y", -1400).push("x", -420).to({ x:S.x, y:S.y }, { per:{ x:{ response:.54, damping:.8 }, y:{ response:.44, damping:.82 } } }).to({ w:44, h:44, r:22 }, { response:.3, damping:.72 }).to({ p:1 }, { response:.4 });
-  moXform(mo.snap).to({ o:0 }, { response:.35 });
-  // l'exercice suivant entre déjà pendant que la goutte monte (pas de trou noir entre les deux)
-  rx.s.o.v = rx.s.o.t = 1; rx.s.x.v = innerWidth*.8; rx.push("x", -900).to({ x:0 }, { response:.5, damping:.7 });
+  moXform(mo.snap).to({ o:0, s:.98 }, { response:.16 });
+  // l'exercice suivant entre déjà pendant que la goutte monte (pas de trou noir), juste après le départ de
+  // l'ancien : un court glissement + fondu, sans que les deux écrans se superposent
+  rx.s.x.v = rx.s.x.t = 64; rx.s.o.v = rx.s.o.t = 0;
+  setTimeout(()=>rx.to({ x:0, o:1 }, { per:{ x:{ response:.42, damping:.82 }, o:{ response:.22 } } }), 110);
   await moWait(250);
   mid.to({ w:S.w*.85, h:10, r:5 }, { response:.24, damping:.8 });
   await moWait(110);
@@ -292,10 +308,9 @@ function moStart(cap){
   if(!cap) return false;
   const { R, snap } = cap;
   const end = moBegin();
-  const goo = moLayer().querySelector(".mo-goo"); goo.style.zIndex = 4;
+  const goo = moLayer().querySelector(".mo-goo"); goo.style.zIndex = 4; goo.style.filter = "none";   // une seule forme : pas de fusion, rendu plus léger
   const dark = moVar("--bg") || "#000000";
   const m = moBlob({ x:R.x, y:R.y, w:R.w, h:R.h, r:22 }, cap.bg, { o:1 }); m.colors = [cap.bg, dark]; m.stretch = 0;
-  goo.style.filter = "none";   // une seule forme : pas de fusion, rendu plus léger
   moXform(snap).to({ s:.92 }, { response:.5, damping:.9 });
   m.to({ x:innerWidth/2, y:innerHeight/2 }, { response:.48, damping:.84 }).to({ w:innerWidth+2, h:innerHeight+2, r:44 }, { response:.5, damping:.8 });
   // l'écran couvert : la carte passe au noir de la séance, puis s'efface sur la vraie séance
