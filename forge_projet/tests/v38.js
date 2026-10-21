@@ -38,7 +38,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.evaluate(() => { S.sessions = []; renderView('today'); });
   const pill = await page.evaluate(() => { const mk = w => ({ id: 'p' + w, date: addDaysISO(weekKey(todayISO()), -7 * w + 1), exos: [{ exoId: 'pompes', sets: [{ reps: 10, done: true }] }] });
     S.sessions = [mk(3), mk(2), mk(0)]; save(); renderView('today'); return document.querySelector('.wk-foot').textContent.replace(/\s+/g, ' ').trim(); });
-  log('Week card:', pill); if (!/joker utilisé/.test(pill)) fail('carte de la semaine : « joker utilisé »');
+  log('Week card:', pill); if (/joker|d'affilée/.test(pill)) fail('carte de la semaine : plus de série ni de joker affichés');
 
   // 2. progrès concrets en fin de séance
   await page.evaluate(() => {

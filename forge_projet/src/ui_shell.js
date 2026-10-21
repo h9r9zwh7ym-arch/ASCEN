@@ -830,7 +830,7 @@ document.addEventListener("touchstart", e=>{
   const t = e.touches[0]; if(t.clientX>NAV_EDGE) return;
   for(const b of NAV_BACKS){ const h = b.host(); if(!h) continue;
     const tg = e.target;
-    navDrag = { b, h, tg, x0:t.clientX, y0:t.clientY, on:false, pts:[], p:0 };
+    navDrag = { b, h, tg, x0:t.clientX, y0:t.clientY, on:false, pts:[], p:0, t0:e.timeStamp };
     tg.addEventListener("touchmove", navMove, { passive:false });
     tg.addEventListener("touchend", navEndEv); tg.addEventListener("touchcancel", navCancelEv);
     return;
@@ -858,7 +858,7 @@ function navMove(e){
   d.pts.push([dx, e.timeStamp]); if(d.pts.length>12) d.pts.shift();
 }
 function navEndEv(e){ navDragEnd(e); }
-function navCancelEv(e){ navDragEnd(e, true); }
+function navCancelEv(e){ navDragEnd(e); }
 function navDragEnd(e, cancel){
   const d = navDrag; navDrag = null; if(!d) return;
   navUnlisten(d);
@@ -868,6 +868,8 @@ function navDragEnd(e, cancel){
   // compte pas : sans ça, un retour bien engagé repartait en arrière au lâcher
   const last = d.pts[d.pts.length-1], win = d.pts.filter(q=>last && last[1]-q[1]<=100), a = win[0] || d.pts[0], b = last;
   let v = a && b && b[1]>a[1] ? (b[0]-a[0])/(b[1]-a[1]) : 0;   // px/ms
+  // glissé court et vif : un ou deux points seulement, la vitesse se lit depuis le premier contact
+  if(win.length<2 && b && b[1]>d.t0) v = Math.max(v, b[0]/(b[1]-d.t0));
   const peak = Math.max(...win.map(q=>q[0]), 0); if(b && peak - b[0] < 14 && v<0) v = 0;
   const done = cancel!==true && (v>.3 || (d.p>.3 && v>-.45) || d.p>.6);
   const ms = Math.max(180, Math.round(NAV_MS*(done ? 1-d.p : d.p)));

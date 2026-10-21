@@ -77,7 +77,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   log('Float after validate:', ft); if (!/Mieux que la dernière fois|Record/.test(ft)) fail('annonce à la validation');
   // fin de séance : le nombre de séries meilleures apparaît dans la fête
   await page.evaluate(() => { S.draft.exos.forEach(ex => ex.sets.forEach(s => { s.done = true; })); stopRestTimer(); finalizeSession(); }); await wait(900);
-  const cel = await page.evaluate(() => (document.querySelector('.cel-beat') || {}).textContent || '');
+  const cel = await page.evaluate(() => (document.querySelector('.cel .cp-row.beat') || {}).textContent || '');
   log('Celebration:', cel); if (!/mieux que la dernière fois/.test(cel)) fail('bilan « mieux que la dernière fois »');
   await shot('04_celebration');
   for (let k = 0; k < 3; k++) { await page.evaluate(() => { if (document.querySelector('#overlay.open')) closeSheet(); }); await wait(450); }

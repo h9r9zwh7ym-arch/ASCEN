@@ -60,7 +60,7 @@ function sessionPerf(def, ex, date){
 }
 // historique utile, calculé une fois par version des données
 function strengthData(){
-  return memo("strengthData", ()=>{
+  return memoHist("strengthData", ()=>{
     const exos = {}, muscleDays = {};
     for(const s of S.sessions) for(const ex of s.exos){
       const def = EXO_MAP[ex.exoId]; if(!def || isStretch(def)) continue;
@@ -112,7 +112,7 @@ function detrainFactor(days){
   return Math.max(1-DETRAIN.maxLoss, 1 - rate*(days-DETRAIN.grace)/7);
 }
 // état du modèle à une date : indice, muscles (rapport, jours sans travail, perte estimée)
-function strengthAt(iso){ return memo("strengthAt"+iso+(S.goals.senior?1:0), ()=>strengthAt_raw(iso)); }
+function strengthAt(iso){ return memoHist("strengthAt"+iso+(S.goals.senior?1:0), ()=>strengthAt_raw(iso)); }
 function strengthAt_raw(iso){
   const { exos, muscleDays } = strengthData(), byMuscle = {};
   Object.keys(exos).forEach(id=>{

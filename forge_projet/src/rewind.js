@@ -156,7 +156,7 @@ function rwSound(fn){
 // fond musical : un accord tenu par diapo, qui avance comme une petite histoire (do, la mineur,
 // fa, sol…) ; très bas dans le mélange, il lie les sons des animations entre eux
 const RW_PADS = [[130.81,164.81,196], [110,130.81,164.81], [87.31,110,130.81], [98,123.47,146.83]];
-function rwPad(i, dur){ RW_PADS[i%RW_PADS.length].forEach((f,k)=>pad(f*2, 0.05+k*0.04, dur, 0.018)); }
+function rwPad(i, dur){ RW_PADS[i%RW_PADS.length].forEach((f,k)=>pad(f*2, 0.05+k*0.04, dur, 0.007)); }
 // pincement doux (triangle court) et « tic » de compteur
 function rwPluck(f, t, g){ tone(f, t, 0.32, { gain:g||0.07, type:"triangle", att:0.004, wet:1 }); tone(f*2, t, 0.12, { gain:(g||0.07)*0.3 }); }
 function rwThud(t, g){ tone(150, t, 0.16, { gain:g||0.22, to:70, att:0.003 }); tok(t, 120, 0.6); }

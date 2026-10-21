@@ -98,7 +98,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.evaluate(() => { switchTab('today'); S.templates = []; S.custom = { exos: [{ exoId: 'dc_haltere', sets: 3 }] }; save(); ACT.startCustom(); }); await wait(4400);
   await page.evaluate(() => { const l = document.querySelector('#launch'); if (l) l.click(); }); await wait(400);
   await page.evaluate(() => { S.draft.exos.forEach(ex => ex.sets.forEach(s => { s.weight = 16; s.reps = 10; s.done = true; })); stopRestTimer(); finalizeSession(); }); await wait(1600);
-  const cel = await page.evaluate(() => [...document.querySelectorAll('.cel .cel-win')].map(e => e.textContent));
+  const cel = await page.evaluate(() => [...document.querySelectorAll('.cel .cp-row.win')].map(e => e.dataset.t));
   log('Celebration:', JSON.stringify(cel)); if (!cel.some(t => /force estimée record/.test(t))) fail('lignes de progrès à la fin de la séance');
   await shot('03_celebration');
 

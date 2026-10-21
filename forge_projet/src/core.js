@@ -80,7 +80,17 @@ function unpackSession(o){
 // réencode que les nouvelles ou celles qu'on vient de modifier. Tout code qui modifie une
 // séance déjà enregistrée doit appeler sessionTouched(s) (ou sessionTouched() pour toutes).
 let PACK_CACHE = new WeakMap();
-function sessionTouched(s){ if(s){ PACK_CACHE.delete(s); SUM_CACHE.delete(s); } else { PACK_CACHE = new WeakMap(); SUM_CACHE = new WeakMap(); } }
+function sessionTouched(s){ HIST_VER++; if(s){ PACK_CACHE.delete(s); SUM_CACHE.delete(s); } else { PACK_CACHE = new WeakMap(); SUM_CACHE = new WeakMap(); } }
+// version de l'historique (séances enregistrées + pesées) : les calculs qui n'en dépendent que (force…) restent
+// en cache pendant une séance, où chaque série validée relance une sauvegarde sans toucher à l'historique
+let HIST_VER = 0;
+function histSig(){ const a = S.sessions, l = a[a.length-1], b = S.body; return HIST_VER+":"+a.length+":"+(l ? l.id+l.date : "")+":"+(b ? b.length+":"+(b.length ? b[b.length-1].kg : "") : ""); }
+const HMEMO = new Map();
+function memoHist(key, fn){
+  const h = histSig(), hit = HMEMO.get(key);
+  if(hit && hit.h===h && hit.ref===S.sessions && hit.bref===S.body) return hit.r;
+  const r = fn(); HMEMO.set(key, { h, ref:S.sessions, bref:S.body, r }); return r;
+}
 function packedJSON(s){
   let j = PACK_CACHE.get(s);
   if(j===undefined){ j = JSON.stringify(packSession(s)); PACK_CACHE.set(s, j); }

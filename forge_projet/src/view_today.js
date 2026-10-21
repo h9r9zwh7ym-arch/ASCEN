@@ -342,7 +342,7 @@ function weekCardHTML(){
       </button>
       <div class="wk-week">
         <div class="wk-days">${days}</div>
-        <div class="wk-foot"><span class="wk-cnt"><b>${done}</b> sur ${goal} séances</span>${risk ? `<span class="wk-risk">${ii("flame")}${streak} sem. d'affilée en jeu</span>` : streak>0 ? `<span>${nb(streak, "semaine")} d'affilée${si.recent ? " · joker utilisé" : ""}</span>` : ""}</div>
+        <div class="wk-foot"><span class="wk-cnt"><b>${done}</b> sur ${goal} séances</span></div>
       </div>
     </div>
   </section>`;
@@ -1279,7 +1279,7 @@ document.addEventListener("pointerdown", e=>{
   // la règle des secondes et le chiffre glissable ont leur propre geste
   if(card && e.target.closest(".dur-dial, .bs-val[data-f]")) return;
   if(!card || !S.draft || !S.draft.startedAt || (e.pointerType==="mouse" && e.button!==0)) return;
-  swipe = { card, x:e.clientX, y:e.clientY, dx:0, active:false, id:e.pointerId, t:performance.now() };
+  swipe = { card, x:e.clientX, y:e.clientY, dx:0, active:false, id:e.pointerId, t:performance.now(), pts:[] };
 });
 document.addEventListener("pointermove", e=>{
   if(!swipe || e.pointerId!==swipe.id) return;
@@ -1291,6 +1291,7 @@ document.addEventListener("pointermove", e=>{
   const n = S.draft.exos.length;
   const edge = n<2;
   swipe.dx = edge ? dx*0.25 : dx;
+  swipe.pts.push([dx, performance.now()]); if(swipe.pts.length>8) swipe.pts.shift();
   swipe.card.style.transform = `translateX(${swipe.dx}px) rotate(${swipe.dx/45}deg)`;
 });
 function endSwipe(e){
@@ -1298,10 +1299,14 @@ function endSwipe(e){
   const s = swipe; swipe = null;
   if(!s.active) return;
   suppressClicksUntil = Date.now()+350;
-  // geste interrompu (pointercancel, app mise en arrière-plan) : la carte revient, sans changer d'exercice
-  const cancel = e.type!=="pointerup";
-  const v = s.dx/Math.max(1, performance.now()-s.t), n = S.draft.exos.length;
-  const go = cancel || n<2 ? 0 : (s.dx<-70 || v<-0.6) ? 1 : (s.dx>70 || v>0.6) ? -1 : 0;
+  // app mise en arrière-plan : la carte revient. Un pointercancel, lui, arrive souvent sur iPhone pendant un
+  // glissé vif (le système croit à un défilement) : le geste compte comme un lâcher, sinon la carte repartait
+  const cancel = e.type==="ascen:suspend";
+  // vitesse sur les 100 dernières ms (un glissé court et vif n'a que quelques points), sinon depuis le début
+  const now = performance.now(), win = s.pts.filter(q=>now-q[1]<=100), a = win[0], b = s.pts[s.pts.length-1];
+  const vRec = a && b && b[1]>a[1] ? (b[0]-a[0])/(b[1]-a[1]) : 0, vAll = s.dx/Math.max(1, now-s.t);
+  const v = Math.abs(vRec) > Math.abs(vAll) ? vRec : vAll, n = S.draft.exos.length;
+  const go = cancel || n<2 ? 0 : (s.dx<-60 || (v<-0.4 && s.dx<-16)) ? 1 : (s.dx>60 || (v>0.4 && s.dx>16)) ? -1 : 0;
   s.card.classList.remove("dragging");
   if(go){
     s.card.classList.add(go>0?"fly-l":"fly-r");
