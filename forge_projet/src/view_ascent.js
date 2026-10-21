@@ -21,7 +21,15 @@ function ascClassColor(pal, mode, k){
   const f = ASC_HAZE[mode][b], l = ASC_LIGHT[mode][q], t = q===0 ? ASC_SHADE[mode] : [1,1,1];
   return `rgb(${base.map((v,i)=>Math.round(Math.max(0, Math.min(255, v*l*t[i]*(1-f) + P.haze[i]*f)))).join(",")})`;
 }
-function ascDark(){ const t = document.documentElement.dataset.theme; return t==="dark" || (t!=="light" && !!(window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches)); }
+// le ciel suit l'heure réelle, pas le thème : nuit entre le coucher et le lever du soleil (durée du jour et midi
+// solaire approximés pour la Suisse, 46,5° N, heure d'été comprise), crépuscule compté comme du jour
+function ascDark(){
+  const d = new Date(), y = d.getFullYear(), doy = Math.floor((d - new Date(y, 0, 0))/864e5);
+  const L = 12.15 + 3.65*Math.sin(2*Math.PI*(doy-80)/365);
+  const dst = d.getTimezoneOffset() < Math.max(new Date(y, 0, 1).getTimezoneOffset(), new Date(y, 6, 1).getTimezoneOffset()) ? 1 : 0;
+  const noon = 12.25 + dst, h = d.getHours() + d.getMinutes()/60;
+  return h < noon - L/2 - .3 || h > noon + L/2 + .4;
+}
 const ascP1 = n=>n.toFixed(1);
 function ascRng(seed){ let a = seed>>>0; return ()=>{ a = a+0x6D2B79F5|0; let t = Math.imul(a^a>>>15, 1|a); t = t+Math.imul(t^t>>>7, 61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 const ASC_IC = {
@@ -1042,5 +1050,17 @@ Object.assign(ACT, {
   },
 });
 // le thème change : la scène passe du jour à la nuit
-try{ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ()=>{ const h = qs("#ascScene"); if(h && ascG){ ascBubbleHide(); const a = ascent(); const G = ascBuildScene(h, a.key); if(G){ ascG = G; G.set(a.alt, a.wait); } } }); }catch(e){}
+// le jour se lève ou tombe pendant qu'on est ailleurs (ou l'app reste ouverte) : l'aperçu de l'accueil et
+// l'écran « Mon ascension » passent au bon ciel au retour, et toutes les 5 min
+function ascSkyRefresh(){
+  try{
+    const host = qs("#v-today .wk-scene");
+    if(host && typeof ascent==="function"){ const a = ascent(), id = ascStripId(a.key);
+      if(host.dataset.strip!==id){ const t = document.createElement("div"); t.innerHTML = ascStripHTML(a); if(t.firstElementChild) host.replaceWith(t.firstElementChild); } }
+    const h = qs("#ascScene");
+    if(h && ascG && ascG.night!==ascDark()){ ascBubbleHide(); const a = ascent(); const G = ascBuildScene(h, a.key); if(G){ ascG = G; G.set(a.alt, a.wait); } }
+  }catch(e){}
+}
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) ascSkyRefresh(); });
+setInterval(()=>{ if(!document.hidden) ascSkyRefresh(); }, 5*60*1000);
 document.addEventListener("keydown", e=>{ if(e.key==="Escape" && qs("#ascSummit")) ACT.ascSummitClose(); });

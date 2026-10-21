@@ -1,5 +1,5 @@
 // ================= INITIALISATION =================
-const APP_VERSION = "2.3.6";
+const APP_VERSION = "2.3.7";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 // séance en sombre (réglage, actif par défaut) : pendant la séance, l'écran passe en sombre quel que
@@ -69,11 +69,34 @@ function startApp(recovered){
   requestAnimationFrame(()=>requestAnimationFrame(()=>syncStatusBar(undefined, true)));
 }
 
+// iOS ferme parfois l'app en arrière-plan pour libérer de la mémoire (après la musique, l'appareil photo…) :
+// au retour elle redémarre. On rouvre alors le même onglet, à la même position, si on l'a quittée il y a
+// moins de 30 min ; sinon (ou pendant une séance) l'app s'ouvre sur Aujourd'hui, comme d'habitude.
+const RESUME_KEY = STORAGE_KEY+".resume", RESUME_MS = 30*60*1000;
+function saveResume(){
+  try{ const v = qs("#v-"+currentTab);
+    localStorage.setItem(RESUME_KEY, JSON.stringify({ tab:currentTab, st:v ? Math.round(v.scrollTop) : 0, pt:typeof progressTab!=="undefined" ? progressTab : null, at:Date.now() })); }catch(e){}
+}
+let resumeState = null;
+function resumeTab(){
+  try{
+    const r = JSON.parse(localStorage.getItem(RESUME_KEY)||"null");
+    if(!r || !(Date.now()-r.at < RESUME_MS) || (S.draft && S.draft.startedAt) || (typeof needsOnboarding==="function" && needsOnboarding())) return null;
+    resumeState = r;
+    if(r.pt && typeof progressTab!=="undefined" && typeof r.pt==="string") progressTab = r.pt;
+    return r.tab && qs("#v-"+r.tab) ? r.tab : null;
+  }catch(e){ return null; }
+}
+function resumeScroll(){
+  const r = resumeState; resumeState = null; if(!r || !r.st) return;
+  const v = qs("#v-"+currentTab); if(v) requestAnimationFrame(()=>{ v.scrollTop = r.st; });
+}
 function init(){
   buildShell();
   applyTheme();
   applyPlannedSession(); // la séance prévue aujourd'hui s'affiche directement
-  switchTab("today");
+  switchTab(resumeTab() || "today");
+  resumeScroll();
   startApp(idbRecover()); // copie de secours IndexedDB (voir core.js)
   // médailles déjà méritées (ex. après une mise à jour) : attribuées sans célébration, au calme
   // (une quarantaine de statistiques sur tout l'historique : pas pendant le démarrage)
@@ -173,8 +196,10 @@ function appResume(){
   // l'onglet affiché se redessine (les autres le seront en y allant : voir switchTab)
   if(!(live && currentTab==="today")) renderView(currentTab);
 }
-document.addEventListener("visibilitychange", ()=>{ if(document.hidden) appSuspend(); else appResume(); });
-window.addEventListener("pagehide", appSuspend);
+let appUnloading = false;
+document.addEventListener("visibilitychange", ()=>{ if(document.hidden){ if(!appUnloading) saveResume(); appSuspend(); } else appResume(); });
+// vrai rechargement ou fermeture (pas une mise en arrière-plan) : on repartira de l'accueil
+window.addEventListener("pagehide", e=>{ if(!e.persisted){ appUnloading = true; try{ localStorage.removeItem(RESUME_KEY); }catch(err){} } appSuspend(); });
 window.addEventListener("blur", appSuspend);
 window.addEventListener("pageshow", e=>{ if(e.persisted){ appAway = true; appResume(); } });
 window.addEventListener("focus", appResume);

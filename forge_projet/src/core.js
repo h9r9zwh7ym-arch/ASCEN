@@ -80,11 +80,11 @@ function unpackSession(o){
 // réencode que les nouvelles ou celles qu'on vient de modifier. Tout code qui modifie une
 // séance déjà enregistrée doit appeler sessionTouched(s) (ou sessionTouched() pour toutes).
 let PACK_CACHE = new WeakMap();
-function sessionTouched(s){ HIST_VER++; if(s){ PACK_CACHE.delete(s); SUM_CACHE.delete(s); } else { PACK_CACHE = new WeakMap(); SUM_CACHE = new WeakMap(); } }
+function sessionTouched(s){ HIST_VER++; if(S && S.meta) S.meta.histV = (S.meta.histV||0)+1; if(s){ PACK_CACHE.delete(s); SUM_CACHE.delete(s); } else { PACK_CACHE = new WeakMap(); SUM_CACHE = new WeakMap(); } }
 // version de l'historique (séances enregistrées + pesées) : les calculs qui n'en dépendent que (force…) restent
 // en cache pendant une séance, où chaque série validée relance une sauvegarde sans toucher à l'historique
 let HIST_VER = 0;
-function histSig(){ const a = S.sessions, l = a[a.length-1], b = S.body; return HIST_VER+":"+a.length+":"+(l ? l.id+l.date : "")+":"+(b ? b.length+":"+(b.length ? b[b.length-1].kg : "") : ""); }
+function histSig(){ const a = S.sessions, l = a[a.length-1], b = S.body; return HIST_VER+":"+(S.goals && S.goals.senior ? 1 : 0)+":"+a.length+":"+(l ? l.id+l.date : "")+":"+(b ? b.length+":"+(b.length ? b[b.length-1].kg : "") : ""); }
 const HMEMO = new Map();
 function memoHist(key, fn){
   const h = histSig(), hit = HMEMO.get(key);
@@ -409,7 +409,7 @@ function persistNow(urgent){
   const savedAt = Date.now(), str = serializeState(savedAt);
   S.meta.savedAt = savedAt;
   idbMirror(str, savedAt, urgent===true);
-  try{ localStorage.setItem(STORAGE_KEY, str); persistFailed = false; }
+  try{ localStorage.setItem(STORAGE_KEY, str); persistFailed = false; try{ localStorage.setItem(STORAGE_KEY+".at", String(savedAt)); }catch(e){} }
   catch(e){
     // localStorage plein ou refusé : la copie IndexedDB prend le relais, on prévient une fois
     if(!persistFailed && typeof toast==="function") toast("Stockage principal plein : tes données sont gardées dans la copie de secours. Pense à faire une sauvegarde.");
@@ -419,6 +419,9 @@ function persistNow(urgent){
 // sortie de l'app : écriture immédiate, copie de secours comprise
 function adoptNewerStored(){
   try{
+    // la date de la dernière écriture est gardée à part : pas besoin de relire tout l'historique pour la comparer
+    const at = +localStorage.getItem(STORAGE_KEY+".at");
+    if(at && !(at > (S.meta.savedAt||0))) return false;
     const raw = localStorage.getItem(STORAGE_KEY); if(!raw) return false;
     const st = normalizeState(JSON.parse(raw));
     if(!(st.meta.savedAt > (S.meta.savedAt||0))) return false;

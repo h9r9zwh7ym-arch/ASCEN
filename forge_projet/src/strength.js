@@ -140,7 +140,7 @@ function strengthAt_raw(iso){
 }
 // une valeur par semaine (fin de semaine, ou aujourd'hui pour la semaine en cours)
 function strengthSeries(weeks){
-  return memo("strengthSeries"+weeks+todayISO(), ()=>{
+  return memoHist("strengthSeries"+weeks+todayISO(), ()=>{
     const out = [], today = todayISO(), end0 = addDaysISO(weekKey(today), 6);
     for(let k=weeks-1;k>=0;k--){
       const end = addDaysISO(end0, -7*k), at = end>today ? today : end, st = strengthAt(at);
@@ -152,7 +152,7 @@ function strengthSeries(weeks){
 // ---------- charge d'entraînement et statut ----------
 // séries « difficiles » du jour : une série faite compte 1, une série avec 3 reps ou plus en réserve 0,5
 function dailyHardSets(){
-  return memo("hardSets", ()=>{ const d = {};
+  return memoHist("hardSets", ()=>{ const d = {};
     for(const s of S.sessions){ let n = 0;
       for(const ex of s.exos){ const def = EXO_MAP[ex.exoId]; if(!def || isStretch(def)) continue;
         for(const st of ex.sets) if(st.done) n += st.effort===1 ? .5 : 1; }
@@ -162,7 +162,7 @@ function dailyHardSets(){
 // moyennes à pondération exponentielle (Williams 2017), λ = 2/(N+1), en séries par semaine
 function trainingLoad(iso){
   iso = iso || todayISO();
-  return memo("load"+iso, ()=>{
+  return memoHist("load"+iso, ()=>{
     const d = dailyHardSets(), first = S.sessions.length ? S.sessions[0].date : iso;
     const dayN = x=>Math.round(Date.UTC(+x.slice(0,4), +x.slice(5,7)-1, +x.slice(8,10))/864e5), t0 = dayN(first), t1 = dayN(iso);
     const byN = {}; Object.keys(d).forEach(k=>{ byN[dayN(k)] = d[k]; });
@@ -185,7 +185,7 @@ const STATUS = {
   starting:  { n:"En calibrage",    c:"gray",   d:"Il faut environ 3 semaines de séances pour établir ta charge habituelle et ton statut." },
 };
 function trainingStatus(){
-  return memo("status"+todayISO(), ()=>{
+  return memoHist("status"+todayISO(), ()=>{
     const L = trainingLoad(), gap = lastSessionGap();
     if(!S.sessions.length || L.span<21) return "starting";
     if(gap>=7 && L.ratio<0.6) return "detraining";

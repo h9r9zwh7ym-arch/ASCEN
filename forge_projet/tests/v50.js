@@ -133,9 +133,9 @@ const APP = 'file://' + path.resolve(process.argv[2]);
       week: !!document.querySelector('#ascWeek .aw-msg'), next: (document.querySelector('#ascSteps .an-row') || {}).textContent || '', steps: document.querySelectorAll('#ascSteps .exp-track').length, rowsH: Math.round(document.querySelector('.asc-rows').getBoundingClientRect().height),
       folded: document.querySelectorAll('.asc-body .stops li').length, me: !!svg.querySelector('.asc-me[transform]'), seen: S.ascent.seen && S.ascent.seen.key === a.key,
       aspect: Math.round(780 / (h.getBoundingClientRect().width / h.getBoundingClientRect().height)), vh: ASC_DATA[a.key].vh,
-      day: svg.innerHTML.includes('#78A8D6') || svg.innerHTML.includes('#6EA2D2') || svg.innerHTML.includes('#5A8CCD') || svg.innerHTML.includes('#2F62B4') }; });
+      day: svg.innerHTML.includes('#78A8D6') || svg.innerHTML.includes('#6EA2D2') || svg.innerHTML.includes('#5A8CCD') || svg.innerHTML.includes('#2F62B4'), dark: ascDark() }; });
   log('Sheet:', JSON.stringify(sheet));
-  if (!sheet.ready || sheet.paths < 20 || sheet.camps !== sheet.exp || sheet.hud !== sheet.name || !sheet.me || !sheet.seen || !sheet.day) fail('écran Mon ascension : scène, camps, HUD');
+  if (!sheet.ready || sheet.paths < 20 || sheet.camps !== sheet.exp || sheet.hud !== sheet.name || !sheet.me || !sheet.seen || sheet.day === sheet.dark) fail('écran Mon ascension : scène, camps, HUD (ciel selon l\'heure)');
   // lisibilité : le prochain objectif (nom, distance, barre), cette semaine, puis une liste dont chaque ligne ouvre son écran
   if (sheet.cards !== 'Vitesse|Étapes|Itinéraire|Carnet de route|Trophées|Pause' || !sheet.week || !/Camp|Sommet|Prochaine expédition/.test(sheet.next) || !/m/.test(sheet.next) || sheet.steps !== 1 || sheet.rowsH < 260 || sheet.folded || sheet.aspect !== sheet.vh) fail('écran : prochain objectif, semaine, liste');
   await page.click('.asc-row[data-k="itin"]'); await wait(900);
