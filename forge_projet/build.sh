@@ -12,7 +12,7 @@ echo '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta http-equi
 $CSS < src/style.css
 echo '</style></head><body>'
 echo '<div id="app"></div><nav class="tabbar" aria-label="Onglets"></nav><div id="restbar"></div><div id="overlay"></div><div id="toast" role="status" aria-live="polite"></div><input type="file" id="fileImport" accept="application/json,.json" style="display:none"><script>'
-cd src; cat data_equipment.js data_exercises.js data_pictos.js data_rigs.js data_ascent.js data_ascent_story.js core.js engine.js ui_shell.js sfx.js fx.js timer.js charts.js musclemap.js trophies.js view_today.js tpl_editor.js onboarding.js view_history.js recap.js rewind.js view_progress.js strength.js challenges.js ascent.js view_ascent.js trophy3d.js view_profil.js init.js | $JS; cd ..
+cd src; cat data_equipment.js data_exercises.js data_pictos.js data_rigs.js data_ascent.js data_ascent_story.js core.js engine.js ui_shell.js sfx.js fx.js motion.js timer.js charts.js musclemap.js trophies.js view_today.js tpl_editor.js onboarding.js view_history.js recap.js rewind.js view_progress.js strength.js challenges.js ascent.js view_ascent.js trophy3d.js view_profil.js init.js | $JS; cd ..
 echo '</script></body></html>'
 } > dist/forge.html
 cp dist/forge.html ../index.html

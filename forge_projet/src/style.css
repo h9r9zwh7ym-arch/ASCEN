@@ -3250,3 +3250,21 @@ label.switch{display:block;cursor:pointer}
   .sx .focus-card:not(.resting) > .sx-ex ~ .sx-grow{flex:0 0 0;min-height:0;margin-top:auto}
 }
 @media (min-height:761px){.sx .focus-card:not(.resting) > .sx-ex .sx-menu{top:calc(16px + var(--pic)/2 - 22px)}}
+/* ===== mouvement (motion.js) : calques des morphings, île de repos ===== */
+#mo{position:fixed;inset:0;z-index:2000;pointer-events:none}
+#mo .mo-goo{position:absolute;inset:0;filter:url(#moGoo);z-index:2}
+#mo .mo-fx{position:absolute;inset:0;z-index:3}
+#moBack{position:fixed;inset:0;z-index:46;pointer-events:none}
+.mo-blob{position:absolute;left:0;top:0;will-change:transform}
+.mo-snap{position:fixed;overflow:hidden;pointer-events:none}
+.mo-snap>*{display:flex;flex-direction:column}
+.mo-shock{position:fixed;border-radius:14px;border:2px solid var(--green);pointer-events:none}
+.mo-num{position:fixed;left:0;top:0;font-family:var(--num);font-weight:700;white-space:nowrap;line-height:1}
+#overlay.mo-noscrim .scrim{opacity:0!important;transition:opacity .3s}
+#restbar.island{position:fixed;top:11px;left:50%;right:auto;bottom:auto;width:236px;height:37px;margin-left:-118px;padding:0;border-radius:19px;background:#000;color:#fff;z-index:60;box-shadow:none}
+#restbar.island.show{display:block}
+body.live-focus #restbar.island{bottom:auto}
+#restbar.island .ri-hit{width:100%;height:100%;display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 10px;background:none;border-radius:19px;color:#fff}
+#restbar.island .ri-ring{display:grid;place-items:center}
+#restbar.island .ri-ring svg{width:24px;height:24px;transform:rotate(-90deg);display:block}
+#restbar.island .rt-time{font-size:15px;font-weight:600;min-width:0;color:#fff}

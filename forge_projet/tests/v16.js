@@ -56,12 +56,11 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.click('.center-modal [data-a="closesheet"]'); await wait(350);
   for (let i=0;i<2;i++){ await page.click('[data-a="validateSet"]'); await wait(200); const sk = await page.$('.focus-card [data-a="restSkip"]'); if (sk){ await sk.click(); await wait(150);} }
   await wait(600);
-  log('Complete card:', !!(await page.$('.complete-card')), '| restbar shown:', await page.$eval('#restbar', e => e.classList.contains('show')));
+  // 2.3 : plus de carte « Séance complète » ni de bouton à toucher : la séance se termine toute seule
+  await wait(1200);
+  log('Celebration (auto):', !!(await page.$('.cel-page')), '| restbar shown:', await page.$eval('#restbar', e => e.classList.contains('show')));
+  if (!(await page.$('.cel-page'))) errors.push('ASSERT: fin de séance automatique après la dernière série');
   await shot('06_complete');
-  await page.emulateMedia({ colorScheme: 'dark' }); await wait(300);
-  await shot('07_complete_dark');
-  await page.click('.complete-card [data-a="finishSession"]'); await wait(1200);
-  log('Celebration:', !!(await page.$('.center-modal')));
   await browser.close();
   if (errors.length) { console.log('=== ERRORS ==='); errors.forEach(e => console.log(e)); process.exit(1); }
   console.log('=== NO ERRORS ===');

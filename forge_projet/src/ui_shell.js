@@ -319,6 +319,7 @@ function settleSegs(root){
 function afterRenderView(id, el){
   if(id==="progress" && typeof fsDraw==="function") fsDraw(el);
   if(id==="today" && typeof wkClimb==="function") wkClimb(el);
+  if(id==="today" && typeof moFlipPlay==="function") moFlipPlay();
 }
 // ---------- compteurs animés (animation signature n° 1 : les gros chiffres défilent jusqu'à leur valeur) ----------
 // data-from : point de départ (sinon 0) ; un élément déjà en cours repart proprement (une seule boucle par élément)

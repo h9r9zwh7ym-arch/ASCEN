@@ -49,6 +49,10 @@ const path = require('path');
         if (cont) { await cont.click(); await page.waitForTimeout(400); }
       }
     }
+    // 2.3 : la dernière série validée termine la séance toute seule (page de fin)
+    await page.waitForTimeout(900);
+    const done = await page.$('.cel-ft .btn');
+    if (done) { await done.click(); await page.waitForTimeout(1200); }
   } else {
     console.log('No start button found!');
   }

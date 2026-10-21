@@ -81,7 +81,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   // terminer tout
   for (let i = 0; i < 10; i++) { const v = await page.$('[data-a="validateSet"]'); if (!v) break; await v.click(); await wait(150); const sk = await page.$('.focus-card [data-a="restSkip"]'); if (sk) { await sk.click(); await wait(150); } }
   await wait(500);
-  await page.click('.complete-card [data-a="finishSession"]'); await wait(1300);
+  await wait(1300); // 2.3 : la dernière série termine la séance toute seule
   log('Save offer:', !!(await page.$('[data-a="saveDoneSession"]')), '| custom cleared:', await page.evaluate(() => S.custom.exos.length === 0));
   await shot('09_celebration_save');
   await page.click('[data-a="saveDoneSession"]'); await wait(500);

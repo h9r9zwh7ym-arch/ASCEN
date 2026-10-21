@@ -66,14 +66,23 @@ function renderRestBar(remainOverride){
   // sur l'onglet Aujourd'hui, l'anneau du mode focus remplace la pastille tant que
   // l'exercice au repos est celui affiché ; sinon la pastille reste visible partout.
   const focusShowing = typeof currentTab!=="undefined" && currentTab==="today" && typeof liveFocusIdx!=="undefined" && liveFocusIdx===restState.exoIdx;
+  // iPhone à Dynamic Island : la pastille se range dans l'île (anneau + temps), toucher = revenir au repos
+  const isl = typeof moIsland==="function" && moIsland();
+  bar.classList.toggle("island", isl);
   if(focusShowing){ bar.classList.remove("show"); return; }
+  const was = bar.classList.contains("show");
   bar.classList.add("show");
   // appelé 4 fois par seconde : on ne touche qu'au texte une fois la pastille construite
-  const tEl = bar.querySelector(".rt-time");
-  if(tEl && bar._label===restState.label){ const t = fmtMMSS(remain); if(tEl.textContent!==t) tEl.textContent = t; return; }
-  bar._label = restState.label;
-  bar.innerHTML = `<div class="rt-time">${fmtMMSS(remain)}</div><div class="rt-label">${esc(restState.label)}</div>
+  const tEl = bar.querySelector(".rt-time"), key = (isl ? "île:" : "") + restState.label;
+  const arc = ()=>{ const a = isl && bar.querySelector(".ri-arc"); if(a) a.style.strokeDashoffset = (100*(1 - remain/Math.max(1, restState.totalSec))).toFixed(1); };
+  if(tEl && bar._label===key){ const t = fmtMMSS(remain); if(tEl.textContent!==t) tEl.textContent = t; arc(); return; }
+  bar._label = key;
+  bar.innerHTML = isl
+    ? `<button class="ri-hit" data-a="restOpen" aria-label="Repos en cours, revenir au repos"><span class="ri-ring"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="14" fill="none" stroke="#3A3A3C" stroke-width="4"/><circle class="ri-arc" cx="18" cy="18" r="14" fill="none" stroke="#E07A55" stroke-width="4" stroke-linecap="round" pathLength="100" stroke-dasharray="100"/></svg></span><span class="rt-time">${fmtMMSS(remain)}</span></button>`
+    : `<div class="rt-time">${fmtMMSS(remain)}</div><div class="rt-label">${esc(restState.label)}</div>
     <button data-a="restAdjust" data-d="-15">−15</button><button data-a="restAdjust" data-d="15">+15</button><button data-a="restSkip">Passer</button>`;
+  arc();
+  if(isl && !was && typeof moIslandIn==="function") moIslandIn(bar);
 }
 Object.assign(ACT, {
   restAdjust(d){ adjustRestTimer(parseInt(d.d,10)); },

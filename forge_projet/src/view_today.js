@@ -1116,6 +1116,7 @@ function patchFocusSteps(idx){
 function refreshFocusRegion(){
   const el = qs("#focusRegion");
   if(!el || !S.draft || !S.draft.startedAt) return;
+  if(typeof moRememberRing==="function") moRememberRing();
   el.innerHTML = renderFocusRegionInner(S.draft);
   // chaque état (série, repos, exercice terminé) est un écran : il commence en haut
   const v = qs("#v-today"); if(v && v.scrollTop && currentTab==="today") v.scrollTop = 0;
@@ -1519,7 +1520,7 @@ Object.assign(ACT, {
   setType(d){ regenerateDraft(d.v); renderTodaySoft(); },
   warmGo(){ const W = S.draft && S.draft.warm; if(!W || W.end) return; W.end = Date.now() + W.moves[W.i][1]*1000; save(); sfx("go"); refreshFocusRegion(); },
   warmSkip(){ warmFinish(); sfx("swipe"); },
-  startSession(){ if(!S.draft.exos.length) return; S.draft.startedAt = new Date().toISOString(); warmStart(S.draft); liveFocusIdx = 0; completeShown = false; save(); scrollTodayTop(); renderViewAnimated("today"); showLaunch(S.draft); },
+  startSession(){ if(!S.draft.exos.length) return; const mc = typeof moStartCapture==="function" ? moStartCapture() : null; S.draft.startedAt = new Date().toISOString(); warmStart(S.draft); liveFocusIdx = 0; completeShown = false; save(); scrollTodayTop(); renderViewAnimated("today"); if(!(mc && moStart(mc))) showLaunch(S.draft); },
   regenSession(){ regenerateDraft(); renderTodaySoft(); toast("Nouvelle proposition");
     // l'icône du bouton fait un tour : on voit que c'est bien une autre proposition
     const ic = qs('#v-today [data-a="regenSession"] svg');
@@ -1590,6 +1591,7 @@ Object.assign(ACT, {
   customAddOpen(){
     openPicker({ title:"Choisir des exercices", multi:true, exclude:new Set(S.custom.exos.map(e=>e.exoId)), onDone:ids=>{
       editSnap();
+      if(typeof moFlipCapture==="function") moFlipCapture("#v-today .row");
       ids.forEach(id=>{ S.custom.exos.push({ exoId:id, sets:EXO_MAP[id].sets }); freshIds.add(id); });
       customEdit = true; // en train de composer : la liste reste éditable (séries, retrait, Compléter) jusqu'à « OK »
       closeSheet(); save(); changed();
@@ -1610,6 +1612,7 @@ Object.assign(ACT, {
     sfx("remove");
     const i = +d.idx;
     const go = ()=>{
+      if(typeof moFlipCapture==="function") moFlipCapture("#v-today .row");
       const [ex] = S.custom.exos.splice(i,1); if(!ex) return; changed();
       const list = S.custom.exos;
       toast(`Retiré : ${EXO_MAP[ex.exoId] ? EXO_MAP[ex.exoId].n : "exercice"}`, null, ()=>{ if(S.custom.exos!==list || list.includes(ex)) return; list.splice(Math.min(i, list.length), 0, ex); changed(); });
@@ -1630,13 +1633,14 @@ Object.assign(ACT, {
   },
   startCustom(){
     if(!S.custom.exos.length) return;
+    const mc = typeof moStartCapture==="function" ? moStartCapture() : null;
     S.draft = buildCustomSession(S.custom.exos, S.custom.name);
     const planned = plannedTemplate();
     if(S.custom.tplId){ S.draft.tplId = S.custom.tplId; S.draft.planned = !!planned && planned.id===S.custom.tplId; }
     S.draft.startedAt = new Date().toISOString(); warmStart(S.draft);
     liveFocusIdx = 0; completeShown = false;
     save(); scrollTodayTop(); renderViewAnimated("today");
-    showLaunch(S.draft);
+    if(!(mc && moStart(mc))) showLaunch(S.draft);
   },
   saveTemplateOpen(){
     // « Ma séance » s'enregistre via l'éditeur, pré-rempli (et relié à sa séance si elle en vient)
@@ -1777,12 +1781,14 @@ Object.assign(ACT, {
     save(); if(!patchFocusSteps(+d.exi)) refreshFocusRegion();
   },
 
-  validateSet(d){
+  validateSet(d, el){
     const exi = +d.exi;
     const ex = S.draft && S.draft.exos[exi], def = ex && EXO_MAP[ex.exoId];
     if(!def) return;   // séance déjà terminée (double appui) ou exercice disparu
     const si = ex.sets.findIndex(s=>!s.done);
     if(si<0) return;
+    // copie de la carte avant changement : le morphing (motion.js) joue dessus, la vraie interface est déjà à jour
+    const mo = typeof moCapture==="function" && liveFocusIdx===exi ? moCapture(el) : null;
     S.draft.lastSetAt = Date.now();
     const st = ex.sets[si];
     let [bx,by] = centerOf(".validate");
@@ -1821,10 +1827,13 @@ Object.assign(ACT, {
     if(exoFinished){
       if(!st.pr) confettiBurst(bx, by, 36);
       if(ni>=0){ const nm = qs(".focus-card .fc-name"), r = nm && nm.getBoundingClientRect(); floatText(r ? r.left+r.width/2 : bx, r ? r.top+r.height/2 : by, "Exercice terminé !", "big", "flame"); }
-      if(ni>=0){ liveFocusIdx = ni; focusAnimDir = ni>exi ? "r" : "l"; }
+      if(ni>=0){ liveFocusIdx = ni; focusAnimDir = mo ? null : ni>exi ? "r" : "l"; }
     }
     save();
     refreshFocusRegion();
+    if(mo) moValidate(mo, { kind: exoFinished ? (ni>=0 ? "exo" : "end") : "set", exi, label:`Série ${si+1}`, val:sxSetVal(def, st) });
+    // dernière série de la séance : la séance se termine toute seule (pas de bouton de plus)
+    if(ni<0) setTimeout(()=>{ if(S.draft && S.draft.startedAt && !liveCounts(S.draft).left) finalizeSession(); }, mo ? 700 : 450);
   },
 
   showExoInfo(d){
