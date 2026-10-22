@@ -1209,22 +1209,6 @@ h2.sh button.more::after{content:none}
 .lc-cdot{fill:var(--bg2);stroke:var(--tint-ink);stroke-width:2.6;opacity:0;transition:opacity .15s;pointer-events:none}
 .lc-cursor.on,.lc-cdot.on{opacity:1}
 #charttip{transition:opacity .15s,transform .09s ease-out}
-/* v2.5 : transitions entre écrans (View Transitions) */
-.tabbar{view-transition-name:tabbar}
-::view-transition-group(root){animation-duration:.32s;animation-timing-function:cubic-bezier(.32,.72,0,1)}
-::view-transition-old(root),::view-transition-new(root){animation-duration:.32s;animation-timing-function:cubic-bezier(.32,.72,0,1)}
-html[data-vt="tab-r"]::view-transition-old(root){animation-name:vtOutL}
-html[data-vt="tab-r"]::view-transition-new(root){animation-name:vtInR}
-html[data-vt="tab-l"]::view-transition-old(root){animation-name:vtOutR}
-html[data-vt="tab-l"]::view-transition-new(root){animation-name:vtInL}
-html[data-vt="fade"]::view-transition-old(root){animation-name:vtFadeOut}
-html[data-vt="fade"]::view-transition-new(root){animation-name:vtFadeIn}
-@keyframes vtOutL{to{opacity:0;transform:translateX(-7%) scale(.985)}}
-@keyframes vtInR{from{opacity:0;transform:translateX(9%)}}
-@keyframes vtOutR{to{opacity:0;transform:translateX(7%) scale(.985)}}
-@keyframes vtInL{from{opacity:0;transform:translateX(-9%)}}
-@keyframes vtFadeOut{to{opacity:0}}
-@keyframes vtFadeIn{from{opacity:0;transform:translateY(8px)}}
 /* v2.5 : exercice animé dans la fiche */
 .exo-stage{width:168px;height:168px;margin:0 auto 12px;border-radius:40px;background:radial-gradient(circle at 50% 30%,color-mix(in srgb,var(--rc,var(--tint)) 22%,var(--bg2)),var(--bg2) 72%);box-shadow:inset 0 0 0 .5px var(--sep);display:grid;place-items:center;animation:badgePop .5s cubic-bezier(.32,1.4,.4,1)}
 .exo-anim{width:142px;height:142px;overflow:visible}
@@ -1715,7 +1699,6 @@ body.live-focus #restbar{bottom:calc(14px + var(--sab))}
 .why-s{margin-top:6px;font-size:var(--fs-foot);color:var(--label2)}
 /* v4.0 : l'arrivée sur un onglet est animée en JS (Web Animations), une seule fois par changement */
 .view.active{animation:none}
-.tabbar{view-transition-name:none}
 /* corriger les séries faites (v4.0) */
 .ds-row{gap:10px;min-height:56px}
 .ds-n{width:26px;height:26px;border-radius:13px;background:var(--fill);display:grid;place-items:center;font-weight:700;font-size:var(--fs-foot);flex:none;font-variant-numeric:tabular-nums}
@@ -3388,3 +3371,10 @@ body.live-focus #restbar.island{bottom:auto}
 .asc-replay .asc-ic{width:14px;height:14px;color:var(--tint)}
 .asc-replay:active{transform:scale(.96)}
 .asc-scene:not(.ready) .asc-replay,.asc-scene.playing .asc-replay,.asc-toast.on + .asc-replay{opacity:0;pointer-events:none}
+/* « Ce que l'app a compris » (Progrès) : quelques lignes sobres, icône teintée */
+.coach-card{margin-top:16px;display:flex;flex-direction:column;gap:10px}
+.coach-card .co-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.coach-card .co-h .t{font-weight:700;font-size:var(--fs-head,17px)}
+.coach-card .co-goal{flex:none;max-width:45%;font-size:var(--fs-foot,13px);color:var(--label2);text-align:right}
+.coach-card .co-l{display:flex;gap:10px;align-items:flex-start;font-size:var(--fs-sub,15px);line-height:1.35;color:var(--label)}
+.coach-card .co-l .ii,.coach-card .co-l svg{flex:none;width:18px;height:18px;margin-top:1px;color:var(--tint)}

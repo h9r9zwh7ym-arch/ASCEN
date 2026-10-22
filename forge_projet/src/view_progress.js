@@ -108,7 +108,7 @@ function overviewPaneHTML(){
   if(!S.sessions.length){
     return emptyHTML("chart", "Tes progrès commencent ici", "Force, muscles travaillés, records : tout s'affiche après ta première séance.", EMPTY_GO);
   }
-  return `${forceSumHTML()}${muscleSumHTML()}${recordsSumHTML()}${thenNowListHTML()}${progLinksHTML()}`;
+  return `${forceSumHTML()}${muscleSumHTML()}${recordsSumHTML()}${thenNowListHTML()}${coachCardHTML()}${progLinksHTML()}`;
 }
 // « Ta force » : le chiffre et sa courbe depuis tes débuts ; le détail (statut, régions, projections) est un toucher plus loin
 function forceSumHTML(){
@@ -443,12 +443,6 @@ Object.assign(ACT, {
 });
 VIEWS.progress = renderProgress;
 
-// bulle de la série : la règle du joker, et quand il redevient disponible
-function jokerTip(){
-  const si = streakInfo();
-  if(si.recent) return `Joker utilisé (semaine du ${fmtDate(si.recent)}) : la série continue. Prochain joker dans ${si.nextJokerIn} semaine${si.nextJokerIn>1?"s":""}.`;
-  return "Joker disponible : une semaine sans séance par mois ne casse pas la série.";
-}
 
 // glisser depuis le bord gauche sur un sous-écran : retour au Résumé (ui_shell.js, NAV_BACKS)
 NAV_BACKS.push({

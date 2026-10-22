@@ -289,14 +289,6 @@ function tplRegion(t){
 }
 function tplMinutes(t){ return estimateMinutes({ exos:t.exos.map(e=>({ exoId:e.exoId, sets:new Array(e.sets).fill(0) })) }); }
 function daysLabel(days){ return days.slice().sort().map(d=>JOURS_COURTS[d]).join(" · "); }
-// prochaine séance planifiée après aujourd'hui (sur 7 jours)
-function nextPlanned(){
-  for(let k=1;k<=7;k++){
-    const iso = addDaysISO(todayISO(), k), t = plannedTemplate(iso);
-    if(t) return { iso, t, k };
-  }
-  return null;
-}
 
 
 // ---------- « Cette semaine » : la montagne et la semaine dans une seule carte ----------
@@ -830,7 +822,11 @@ function beatLineHTML(ex, def, si, st){
   // après 3 semaines sans l'exercice, on ne cherche pas à battre : on retrouve son niveau (la force revient vite)
   if(gap>=21) return `<div class="fc-beat">${ii("repeat")}<span>Reprise après ${gap} jours : retrouve tes sensations <small>(la dernière fois : ${refTxt})</small></span></div>`;
   if(beatCmp(def, st, ref)>0){ const pop = beatWinKey!==key; beatWinKey = key; return `<div class="fc-beat win${pop ? " pop" : ""}">${ii("trendUp")}<span>Ça bat la dernière fois <small>(${refTxt})</small></span></div>`; }
+  // plus fatigué qu'à la dernière fois : un peu en dessous peut valoir mieux, et on le dit
+  const fN = liveFatigue(S.draft, ex);
+  if(ref.goal<=ref.reps && beatTired(def, st, ref, fN)){ const pop = beatWinKey!==key; beatWinKey = key; return `<div class="fc-beat win${pop ? " pop" : ""}">${ii("trendUp")}<span>Mieux que la dernière fois, fatigue comprise <small>(${refTxt})</small></span></div>`; }
   if(beatWinKey===key) beatWinKey = "";
+  if(ref.goal<=ref.reps && fN<(ref.f||1)-.06) return `<div class="fc-beat">${ii("target")}<span>La dernière fois : <b>${refTxt}</b> <small>(tu étais plus frais)</small></span></div>`;
   // exercice tenu arrêté avant la fin la dernière fois : un simple rappel, pas de « à battre »
   if(ref.goal>ref.reps) return `<div class="fc-beat">${ii("target")}<span>La dernière fois : <b>${ref.reps} s</b> sur ${ref.goal} s</span></div>`;
   // simple rappel de la même série la dernière fois (un « à battre » se lisait comme un record, qui reste géré par isNewPR)
@@ -1182,6 +1178,8 @@ function finalizeSession(){
   draft.durationSec = isFinite(start) ? Math.max(0, Math.round((stop-start)/1000)) : 0;
   delete draft.lastSetAt; delete draft.warm;
   draft.exos = draft.exos.filter(ex=>ex.sets.some(s=>s.done));
+  // rangés dans l'ordre où ils ont été faits : la fatigue de chaque exercice se lit dans cet ordre (coach.js)
+  draft.exos.sort((a, b)=>(a.first ?? 1e9)-(b.first ?? 1e9));
   // séries meilleures que la même série la dernière fois (comptées avant d'ajouter la séance)
   if(S.settings.beat!==false) draft.beats = draftBeats(draft);
   // étirements : gardés à part (nom et secondes tenues), hors séries, volume et muscles travaillés
@@ -1506,7 +1504,7 @@ Object.assign(ACT, {
   pickerInfo(d){ const l = qs("#pickerList"); if(picker && l) picker.scroll = l.scrollTop; ACT.showExoInfo({ id:d.id }); },
   swapFromInfo(d){
     const idx = +d.idx;
-    S.draft.exos[idx] = sessionEntryFor(EXO_MAP[d.id]);
+    S.draft.exos[idx] = entryAt(S.draft.exos, EXO_MAP[d.id], idx);
     liveFocusIdx = idx; focusAnimDir = "r";
     closeSheet(); save(); refreshFocusRegion();
     toast(`Remplacé par ${EXO_MAP[d.id].n}`);
@@ -1518,7 +1516,7 @@ Object.assign(ACT, {
       if(main.length>=10) return;
       const add = suggestComplement(main.map(e=>e.exoId), 1)[0];
       if(!add){ toast("Plus d'exercice disponible avec ton matériel"); return; }
-      ex.splice(firstCool<0 ? ex.length : firstCool, 0, sessionEntryFor(add)); freshIds.add(add.id);
+      { const at = firstCool<0 ? ex.length : firstCool; ex.splice(at, 0, entryAt(ex, add, at)); } freshIds.add(add.id);
     } else {
       if(main.length<=1) return;
       ex.splice(ex.indexOf(main[main.length-1]), 1);
@@ -1558,7 +1556,7 @@ Object.assign(ACT, {
   },
   addExoOpen(){
     openPicker({ title:"Ajouter des exercices", multi:true, exclude:new Set(S.draft.exos.map(e=>e.exoId)), onDone:ids=>{
-      ids.forEach(id=>S.draft.exos.push(sessionEntryFor(EXO_MAP[id])));
+      ids.forEach(id=>S.draft.exos.push(entryAt(S.draft.exos, EXO_MAP[id], S.draft.exos.length)));
       closeSheet(); changed();
     }});
   },
@@ -1567,7 +1565,7 @@ Object.assign(ACT, {
     const cur = EXO_MAP[S.draft.exos[idx].exoId];
     // un étirement se remplace par un autre étirement (tous muscles), un exercice par un exercice du même muscle
     openPicker({ title:"Remplacer "+cur.n, muscle:isStretch(cur) ? null : cur.muscles[0], cat:isStretch(cur) ? "stretch" : null, exclude:new Set(S.draft.exos.map(e=>e.exoId)), onDone:ids=>{
-      S.draft.exos[idx] = sessionEntryFor(EXO_MAP[ids[0]]);
+      S.draft.exos[idx] = entryAt(S.draft.exos, EXO_MAP[ids[0]], idx);
       closeSheet(); changed();
     }});
   },
@@ -1715,7 +1713,7 @@ Object.assign(ACT, {
   swapHarder(d){
     const i = +d.idx, ex = S.draft.exos[i]; if(!ex || !ex.harder || !EXO_MAP[ex.harder]) return;
     const h = EXO_MAP[ex.harder];
-    const entry = sessionEntryFor(h, ex.sets.length);
+    const entry = entryAt(S.draft.exos, h, i, ex.sets.length);
     // les séries déjà faites restent acquises sur l'exercice d'origine
     if(ex.sets.some(s=>s.done)){ ex.sets = ex.sets.filter(s=>s.done); delete ex.harder; S.draft.exos.splice(i+1, 0, entry); liveFocusIdx = i+1; }
     else S.draft.exos[i] = entry;
@@ -1820,16 +1818,20 @@ Object.assign(ACT, {
     // mieux que la même série la dernière fois : petit retour immédiat (le record a déjà le sien)
     const ref = !st.pr && S.settings.beat!==false && !isStretch(def) ? beatRef(ex.exoId, si) : null;
     const beat = !!ref && daysBetween(ref.date, todayISO())<21 && beatCmp(def, st, ref)>0;
+    const tired = !beat && !!ref && daysBetween(ref.date, todayISO())<21 && !(ref.goal>ref.reps) && beatTired(def, st, ref, liveFatigue(S.draft, ex));
     if(beat){ floatText(fx0, fy0, "Mieux que la dernière fois", "beat", "trendUp"); haptic(20); }
+    else if(tired){ floatText(fx0, fy0, "Mieux, fatigue comprise", "beat", "trendUp"); haptic(20); }
+    // ordre réel des exercices (on peut passer de l'un à l'autre) : sert à mesurer la fatigue
+    if(ex.first==null) ex.first = S.draft.seq = (S.draft.seq||0)+1;
     st.done = true;
     { const fin = ex.sets.every(s=>s.done), rest = S.draft.exos.some(e=>e.sets.some(s=>!s.done));
       // record > exercice terminé > mieux que la dernière fois > série (la fin de séance a son propre son)
-      sfx(st.pr ? "pr" : fin || !rest ? "exo" : beat ? "beat" : "set"); }
+      sfx(st.pr ? "pr" : fin || !rest ? "exo" : beat || tired ? "beat" : "set"); }
     haptic(st.pr ? [25, 40, 25] : 18); // la coche franche : une vibration nette (deux pour un record)
     justDone = { exi, si }; savedFresh = true;
     stripBump = exi;
     // la scène de validation (motion.js) montre déjà la série qui part dans sa case : pas de bulle en plus
-    if(!mo && !st.pr && !beat && !exoFinished0(ex)) floatText(fx0, fy0, `Série ${si+1}`, "", "check");
+    if(!mo && !st.pr && !beat && !tired && !exoFinished0(ex)) floatText(fx0, fy0, `Série ${si+1}`, "", "check");
     const exoFinished = !ex.sets.some(s=>!s.done);
     const ni = nextUndone(exi);
     if(ni>=0) startRestTimer(S.draft.express ? Math.min(45, restFor(def)) : restFor(def), def.n, exoFinished ? ni : exi, exoFinished, { exi, si });
@@ -1916,7 +1918,7 @@ Object.assign(ACT, {
     }
     if(ctx==="live" || ctx==="proposal"){
       if(S.draft.exos.some(x=>x.exoId===id)) return;
-      S.draft.exos.push(sessionEntryFor(def));
+      S.draft.exos.push(entryAt(S.draft.exos, def, S.draft.exos.length));
       save(); closeSheet(); changed();
       toast(ctx==="live" ? "Ajouté à la séance en cours" : "Ajouté à la séance proposée", "check");
       return;

@@ -49,11 +49,6 @@ const MOTIV = [["beat","target","orange","Comparer à la dernière fois","Ta sé
   ["nextGoal","flag","red","Prochain cap sur l'accueil","Le but le plus proche : record à battre, trophée, muscle à reprendre"],
   ["trend","trendUp","green","Progression de force","Ta courbe depuis tes débuts, ton statut et les alertes de pause"],
   ["thenNow","chart","blue","Avant et maintenant","Tes séries d'avant face à celles de maintenant"]];
-function motivSummary(){ const on = MOTIV.filter(([k])=>S.settings[k]!==false).length; return on===MOTIV.length ? "Toutes les aides actives" : on ? `${on} aide${on>1?"s":""} sur ${MOTIV.length} active${on>1?"s":""}` : "Aides désactivées"; }
-function sessionPrefsSummary(){
-  const r = { court:"repos courts", normal:"repos conseillés", long:"repos longs" }[S.settings.rest||"normal"];
-  return [deloadActive() ? "semaine allégée en cours" : "", r, S.settings.warmup ? "échauffement" : "", S.settings.stretching ? "étirements" : "", appPicksOn() ? "suggestions de l'app" : ""].filter(Boolean).join(" · ");
-}
 function sessionPrefsHTML(){
   return `<div class="group">
       <div class="row rest-row">
@@ -673,10 +668,6 @@ VIEWS.profil = renderProfil;
 // Le poids varie de 1 à 2 kg d'un jour à l'autre (eau, glycogène, repas) : on montre la
 // tendance sur plusieurs semaines plutôt que la dernière pesée seule.
 function bodyLast(){ return S.body[S.body.length-1]; }
-function bodyRowText(){
-  const l = bodyLast();
-  return l ? `${fmtDec(l.kg)} kg · ${fmtRelative(l.d)}` : "";
-}
 function bodyTrend(){
   // moyenne des pesées des 14 derniers jours comparée à celle des 14 jours précédant il y a 30 jours
   const t = todayISO(), avg = (from, to)=>{ const l = S.body.filter(e=>e.d>from && e.d<=to); return l.length ? l.reduce((a,e)=>a+e.kg,0)/l.length : null; };

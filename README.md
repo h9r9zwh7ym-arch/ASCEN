@@ -2,6 +2,7 @@
 
 Suivi de musculation à domicile pour iPhone, en application web installable (PWA).
 Séances proposées selon le matériel disponible, suivi des séries, progression, trophées.
+L'app apprend ta manière de t'entraîner : fatigue en séance, rythme de charge, répétitions habituelles.
 Les données restent sur l'appareil : pas de compte, pas de serveur.
 
 ## Installation

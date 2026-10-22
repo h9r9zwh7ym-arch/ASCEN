@@ -43,12 +43,14 @@ function bodyKgAt(iso){
   let k = b[0].kg; for(const e of b){ if(e.d<=iso) k = e.kg; else break; } return k;
 }
 // meilleure performance d'un exercice dans une séance : { v, conf } (v en kg de 1RM estimé, ou en reps / secondes)
-function sessionPerf(def, ex, date){
+// f : fatigue de l'exercice dans sa séance (coach.js) : les répétitions sont ramenées « à frais », un
+// exercice placé en fin de séance ne fait pas baisser la force estimée
+function sessionPerf(def, ex, date, f){
   let best = 0, conf = 1;
   const bwFrac = BW_FRACTION[def.id], bw = bwFrac ? bodyKgAt(date) : 0, timed = isTimed(def), kg = kgType(def);
   for(const st of ex.sets){
     if(!st.done || !(st.reps>0)) continue;
-    const reps = st.reps + (timed ? 0 : (RIR_OF_EFFORT[st.effort]||0));
+    const reps = st.reps/(f || 1) + (timed ? 0 : (RIR_OF_EFFORT[st.effort]||0));
     let v, c = 1;
     if(kg){ if(!st.weight) continue; v = e1rmOf(st.weight, reps); c = reps>10 ? .6 : 1; }
     else if(bw){ v = e1rmOf(bw*bwFrac, reps); c = reps>10 ? .6 : 1; }
@@ -66,7 +68,7 @@ function strengthData(){
       const def = EXO_MAP[ex.exoId]; if(!def || isStretch(def)) continue;
       // le muscle est « travaillé » ce jour-là, qu'il soit principal ou secondaire (arrête le désentraînement)
       if(ex.sets.some(st=>st.done && st.reps>0)) def.muscles.forEach(m=>{ const a = muscleDays[m] || (muscleDays[m] = []); if(a[a.length-1]!==s.date) a.push(s.date); });
-      const p = sessionPerf(def, ex, s.date); if(!p) continue;
+      const p = sessionPerf(def, ex, s.date, exoFatigue(s, ex)); if(!p) continue;
       (exos[ex.exoId] = exos[ex.exoId] || []).push({ date:s.date, v:p.v, conf:p.conf });
     }
     return { exos, muscleDays };
@@ -90,7 +92,7 @@ function sessionForm(session){
     const done = ex.sets.filter(st=>st.done && st.reps>0); if(!done.length || done.every(st=>st.effort===1)) return;
     const from = addDaysISO(session.date, -42), prior = (exos[ex.exoId]||[]).filter(x=>x.date<session.date && x.date>=from).slice(-6);
     if(prior.length<3 || daysBetween(prior[prior.length-1].date, session.date)>=21) return;
-    const p = sessionPerf(def, ex, session.date); if(!p) return;
+    const p = sessionPerf(def, ex, session.date, exoFatigue(session, ex)); if(!p) return;
     const sorted = prior.map(x=>x.v).sort((a,b)=>a-b), ref = sorted[sorted.length>>1];
     if(ref>0) out.push(p.v/ref);
   });

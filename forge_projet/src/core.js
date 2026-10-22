@@ -55,6 +55,8 @@ function packSession(s){
       if(st.goal) return [st.reps||0, st.weight==null?null:st.weight, f, st.goal];
       return f ? [st.reps||0, st.weight==null?null:st.weight, f] : st.weight!=null ? [st.reps||0, st.weight] : [st.reps||0];
     });
+    // pw : charge que l'app avait proposée (apprend si tu montes plus vite ou plus lentement qu'elle)
+    if(ex.pw>0) return [ex.exoId, sets, ex.targetReps || 0, ex.pw];
     return ex.targetReps ? [ex.exoId, sets, ex.targetReps] : [ex.exoId, sets];
   });
   if(s.stretches && s.stretches.length) o.s = s.stretches.map(x=>[x.exoId, x.sec||0]);
@@ -68,9 +70,10 @@ function unpackSession(o){
   if(o.a) s.startedAt = new Date(o.a).toISOString(); if(o.c) s.completedAt = new Date(o.c).toISOString();
   if(o.u) s.durationSec = o.u;
   if(o.b) s.beats = o.b;
-  s.exos = (o.x||[]).map(([exoId, sets, targetReps])=>{
+  s.exos = (o.x||[]).map(([exoId, sets, targetReps, pw])=>{
     const ex = { exoId, sets: sets.map(([reps, weight, f, g])=>{ const st = { reps:+reps||0, done:true }; if(weight!=null && isFinite(weight)) st.weight = +weight; if(f&1) st.pr = true; if(f>>1) st.effort = f>>1; if(g>0) st.goal = +g; return st; }) };
     if(targetReps) ex.targetReps = targetReps;
+    if(pw>0) ex.pw = +pw;
     return ex;
   });
   if(Array.isArray(o.s) && o.s.length) s.stretches = o.s.map(([exoId, sec])=>({ exoId, sec }));
@@ -381,6 +384,7 @@ function compactSession(s){
   out.exos = (s.exos||[]).map(ex=>({
     exoId: ex.exoId,
     targetReps: ex.targetReps,
+    ...(+ex.pw>0 && isFinite(ex.pw) ? { pw:+ex.pw } : {}),
     sets: ex.sets.filter(st=>st.done).map(st=>{
       // nombres garantis (sauvegarde restaurée, import) : un texte ferait des totaux faux
       const o = { reps: Math.max(0, +st.reps||0), done: true };
@@ -559,7 +563,7 @@ function beatRef(exoId, si){
   const last = lastPerformance(exoId); if(!last) return null;
   const d = last.exo.sets.filter(s=>s.done && (s.reps||0)>0); if(!d.length) return null;
   const p = d[Math.min(si, d.length-1)];
-  return { reps:p.reps||0, weight:p.weight||0, date:last.session.date, goal:p.goal||0 };
+  return { reps:p.reps||0, weight:p.weight||0, date:last.session.date, goal:p.goal||0, f:exoFatigue(last.session, last.exo) };
 }
 // 1 : mieux que la référence, 0 : égal, -1 : en dessous. Charge en kg différente : 1RM estimé (Epley) ;
 // élastique plus dur à répétitions égales ou plus = mieux.
@@ -761,10 +765,6 @@ function perfectWeeksCount_raw(){
   const goal = S.goals.daysPerWeek||3, per = {};
   S.sessions.forEach(s=>{ const k=weekKey(s.date); per[k]=(per[k]||0)+1; });
   return Object.values(per).filter(n=>n>=goal).length;
-}
-function sessionsInMonth(){
-  const ym = todayISO().slice(0,7);
-  return S.sessions.filter(s=>s.date.slice(0,7)===ym).length;
 }
 function sessionsInYear(){
   const y = todayISO().slice(0,4);

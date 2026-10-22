@@ -162,20 +162,6 @@ let currentTab = "today";
 const TAB_ORDER = ["today","progress","history","profil"];
 // l'Historique vit sous l'onglet Progrès (refonte 5.0 : trois onglets)
 const tabOf = id=>id==="history" ? "progress" : id;
-// transitions entre écrans : View Transitions (Safari 18+, Chrome) quand disponible,
-// sinon l'animation d'entrée CSS habituelle
-const canVT = ()=>!!document.startViewTransition && !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
-function withTransition(kind, fn){
-  if(!canVT()) return fn();
-  document.documentElement.dataset.vt = kind;
-  const t = document.startViewTransition(fn);
-  // deux changements rapprochés interrompent la transition précédente : ses promesses sont
-  // rejetées (AbortError), sans conséquence ; une erreur de l'écran lui-même est notée
-  const done = ()=>{ if(document.documentElement.dataset.vt===kind) delete document.documentElement.dataset.vt; };
-  t.finished.then(done, done);
-  t.ready.catch(()=>{});
-  if(t.updateCallbackDone) t.updateCallbackDone.catch(err=>{ if(!err || err.name!=="AbortError") reportError("transition", err); });
-}
 // Changement d'onglet (v4.0) : comme sur iOS, immédiat et léger. L'écran d'arrivée apparaît en
 // fondu court avec un petit glissement dans le sens de l'onglet ; son contenu n'est reconstruit
 // que si les données ont changé, et les animations d'entrée (cartes en cascade, compteurs) ne se
@@ -382,16 +368,6 @@ document.addEventListener("focusin", e=>{ const t = e.target.closest && e.target
 document.addEventListener("scroll", hideTip, true);
 
 // ---------- saisie d'une valeur numérique ----------
-function promptNumber({title, value, unit, step, onOk}){
-  openModal(`<div style="font-weight:700;font-size:calc(17rem/17);margin-bottom:12px">${esc(title)}</div>
-    <div class="num-field"><input id="numInput" type="number" inputmode="decimal" step="${step||"any"}" value="${value??""}"><span>${esc(unit||"")}</span></div>
-    <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
-      <button class="btn" data-a="numOk">Valider</button>
-      <button class="btn ghost" data-a="closesheet" style="height:40px">Annuler</button>
-    </div>`);
-  qs("#overlay")._onNum = onOk;
-  setTimeout(()=>{ const i=qs("#numInput"); if(i){ i.focus(); i.select(); } }, 80);
-}
 function changed(){
   save();
   const sheetOpen = qs("#overlay").classList.contains("open");
@@ -946,11 +922,6 @@ const ACT = {
   dismisssheet(){ if(Date.now()>suppressSheetClick) dismissSheet(); },
   confirmYes(){ const fn = qs("#overlay")._onYes; closeSheet(); if(fn) fn(); },
   asRun(d){ const ov = qs("#overlay"), act = ov._asActs && ov._asActs[+d.i]; closeSheet(); if(act && act.run) act.run(); },
-  numOk(){
-    const fn = qs("#overlay")._onNum, v = parseFloat((qs("#numInput")||{}).value);
-    closeSheet();
-    if(fn && !isNaN(v) && v>=0) fn(v);
-  },
   noop(){},
 };
 
@@ -996,7 +967,6 @@ document.addEventListener("click", e=>{
 });
 document.addEventListener("keydown", e=>{
   if((e.key==="Enter" || e.key===" ") && e.target && e.target.tagName==="LABEL" && /^(button|switch)$/.test(e.target.getAttribute("role")) && e.target.dataset.a){ e.preventDefault(); runAction(e.target.dataset.a, e.target, e); return; }
-  if(e.key==="Enter" && e.target && e.target.id==="numInput"){ e.preventDefault(); ACT.numOk(); }
   // champs sans bouton propre : Entrée ferme le clavier ; recherche : idem (la liste est déjà filtrée)
   if(e.key==="Enter" && e.target && /^(tplEdName|obName|obWhy|pickerSearch)$/.test(e.target.id||"")){ e.preventDefault(); e.target.blur(); }
   if(e.key==="Enter" && e.target && e.target.id==="obDbAdd"){ e.preventDefault(); ACT.obDbAdd(); }

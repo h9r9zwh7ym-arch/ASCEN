@@ -77,12 +77,12 @@ function scoreExo(exo){
   return score;
 }
 
+// fourchette de l'objectif ; sur les exercices chargés, elle suit tes répétitions habituelles si tu
+// travailles nettement plus lourd ou plus léger (coach.js)
 function repRangeForGoal(exo){
-  const goal = S.goals.overall;
-  const mid = Math.round((exo.repsMin+exo.repsMax)/2);
-  if(goal==="force") return [exo.repsMin, mid];
-  if(goal==="endurance") return [mid, exo.repsMax+4];
-  return [exo.repsMin, exo.repsMax];
+  const [a, b] = goalRange(exo), p = coachProfile(), k = p.repShift && kgType(exo) && !isTimed(exo) ? p.repShift : 0;
+  if(!k) return [a, b];
+  const a2 = Math.max(3, a+k); return [a2, Math.max(a2+2, b+k)];
 }
 
 function loadableTypeOf(exo){
@@ -163,7 +163,8 @@ function startWeight(exo, type){
   const below = owned.filter(w=>w<=target+0.001);
   return below.length ? below[below.length-1] : owned[0];
 }
-function suggestForExo(exo, setsN, deload){
+// pre : séries déjà prévues avant cet exercice sur son muscle principal (fatigue, coach.js)
+function suggestForExo(exo, setsN, deload, pre){
   const [rMin,rMax] = repRangeForGoal(exo);
   const n = setsN || exo.sets, timed = isTimed(exo);
   const type = loadableTypeOf(exo);
@@ -178,12 +179,26 @@ function suggestForExo(exo, setsN, deload){
   if(!last) return { targetReps:[rMin,rMax], weight, reps, note: type ? "Première fois : choisis une charge qui te laisse 2 à 3 répétitions en réserve." : null };
 
   const done = last.exo.sets.filter(st=>st.done);
-  const lastReps = i => (done[Math.min(i, done.length-1)]||{}).reps || mid;
+  // fatigue : la dernière fois et aujourd'hui, selon la place de l'exercice dans la séance. Les répétitions
+  // sont jugées « à frais » (une fin de séance n'est pas un échec), et l'objectif suit la place du jour.
+  const m = exo.muscles[0], fT = fatigueFactor(pre||0, m), fOf = p=>{ const i = p.session.exos.indexOf(p.exo); return i>0 ? fatigueFactor(preFatigue(p.session, i), m) : 1; };
+  const fL = fOf(last), preL = (()=>{ const i = last.session.exos.indexOf(last.exo); return i>0 ? preFatigue(last.session, i) : 0; })();
+  const prof = coachProfile();
+  const lastReps = i => Math.max(1, Math.round(((done[Math.min(i, done.length-1)]||{}).reps || mid)/fL*fT));
   const top = last.exo.targetReps ? last.exo.targetReps[1] : rMax, bottom = last.exo.targetReps ? last.exo.targetReps[0] : rMin;
-  const effort = perfEffort(last.exo);
-  const hitTop = done.every(st=>(st.reps||0)>=top);
-  const missed = done.some(st=>(st.reps||0) < bottom);
-  const prevMissed = prev && prev.exo.sets.filter(st=>st.done).some(st=>(st.reps||0) < (prev.exo.targetReps ? prev.exo.targetReps[0] : rMin));
+  // aller au bout de ses séries, quand c'est ta façon de faire, ne bloque plus la progression
+  let effort = perfEffort(last.exo); if(effort===3 && prof.failure) effort = 2;
+  const fresh = (st, f)=>(st.reps||0)/f;
+  const hitTopOf = (p, f, t)=>p.exo.sets.filter(st=>st.done).every(st=>fresh(st, f)>=t-.25);
+  const hitTop = hitTopOf(last, fL, top), nearTop = done.every(st=>fresh(st, fL)>=top-1);
+  const rawMissed = done.some(st=>(st.reps||0) < bottom);
+  const missed = done.some(st=>fresh(st, fL) < bottom-.25);
+  const tiredMiss = rawMissed && !missed;
+  const prevMissed = prev && prev.exo.sets.filter(st=>st.done).some(st=>fresh(st, fOf(prev)) < (prev.exo.targetReps ? prev.exo.targetReps[0] : rMin)-.25);
+  const lo = Math.max(1, Math.round(rMin*fT));
+  // rythme appris : plus vite si tu montes souvent la charge toi-même, plus lentement si tu la gardes plus légère
+  const goUp = (hitTop && effort!==3) || (effort===1 && nearTop) || (prof.pace>0 && nearTop && effort!==3);
+  const slowOK = prof.pace>=0 || effort===1 || (prev && hitTopOf(prev, fOf(prev), prev.exo.targetReps ? prev.exo.targetReps[1] : rMax));
 
   const gap = daysBetween(last.session.date, todayISO());
   if(type){
@@ -193,10 +208,10 @@ function suggestForExo(exo, setsN, deload){
       // après 3 semaines sans cet exercice : on repart un cran plus léger, sans pression
       weight = lowerWeight(exo, lastW); reps = new Array(n).fill(mid);
       note = `Reprise après ${gap} jours : charge un peu allégée pour retrouver tes sensations.`;
-    } else if((hitTop && effort!==3) || (effort===1 && done.every(st=>(st.reps||0)>=top-1))){
+    } else if(goUp && slowOK){
       const nw = nextWeight(exo, lastW);
       if(nw>lastW+0.001){
-        weight = nw; reps = new Array(n).fill(rMin);
+        weight = nw; reps = new Array(n).fill(lo);
         note = type==="bands" ? `Passe à l'élastique ${bandLabel(nw).toLowerCase()} : tu as dépassé la fourchette. Reprends en bas (${rMin} répétitions) et remonte.` : `Charge augmentée à ${fmtDec(nw)} kg : tu as dépassé la fourchette. Reprends en bas (${rMin} répétitions) et remonte.`;
       } else {
         reps = reps.map((_,i)=>Math.min(rMax+4, lastReps(i)+1));
@@ -204,14 +219,14 @@ function suggestForExo(exo, setsN, deload){
       }
     } else if(missed && (effort===3 || prevMissed)){
       const lw = lowerWeight(exo, lastW);
-      weight = lw; reps = new Array(n).fill(rMin);
+      weight = lw; reps = new Array(n).fill(lo);
       note = lw<lastW ? `Charge allégée (${fmtLoad(exo, lw)}) pour retrouver une exécution propre, puis on remonte.` : "On garde la charge : vise une exécution propre avant tout.";
     } else if(missed){
-      reps = new Array(n).fill(rMin);
+      reps = new Array(n).fill(lo);
       note = "Même charge : consolide les répétitions avant d'aller plus loin.";
     } else {
       const add = effort===3 ? 0 : 1;
-      reps = reps.map((_,i)=>Math.max(rMin, Math.min(rMax, lastReps(i)+add)));
+      reps = reps.map((_,i)=>Math.max(lo, Math.min(rMax, lastReps(i)+add)));
       if(add && reps.some((r,i)=>r>lastReps(i))) note = "Objectif du jour : une répétition de plus par série que la dernière fois.";
       else if(effort===3) note = "Dernière fois à fond : on refait pareil, en soignant l'exécution.";
     }
@@ -220,7 +235,7 @@ function suggestForExo(exo, setsN, deload){
     // exercice tenu : on repropose la dernière durée telle quelle (l'app s'en souvient), sauf après une longue pause
     const step = timed ? 5 : 1, cap = timed ? 600 : rMax+6;
     const add = gap>=21 ? -step : timed || effort===3 ? 0 : effort===1 ? step*2 : step;
-    reps = reps.map((_,i)=>Math.max(rMin, Math.min(cap, lastReps(i)+add)));
+    reps = reps.map((_,i)=>Math.max(lo, Math.min(cap, lastReps(i)+add)));
     // exercice tenu arrêté avant la fin la dernière fois : on repart du temps réellement tenu (au cran de 5 s, 15 s minimum)
     if(timed && done.some(st=>st.goal>(st.reps||0))) reps = reps.map((_,i)=>{ const d = done[Math.min(i, done.length-1)]||{}; return d.goal>(d.reps||0) ? Math.max(15, Math.floor((d.reps||0)/5)*5) : lastReps(i); });
     if(gap>=21){
@@ -232,6 +247,14 @@ function suggestForExo(exo, setsN, deload){
     } else if(add){
       note = timed ? `Objectif : +${add} s par rapport à la dernière fois.` : `Objectif : +${add} répétition${add>1?"s":""} par série par rapport à la dernière fois.`;
     }
+  }
+  // la fatigue explique l'écart : on le dit simplement (une phrase, la plus utile)
+  if(gap<21){
+    const r0 = reps[0], u = timed ? " s" : " répétitions", generic = !note || /^(Objectif du jour|Objectif :|Dernière fois à fond)/.test(note);
+    if(tiredMiss && type && weight>=Math.max(0, ...done.map(st=>st.weight||0)) && !/augmentée|Passe à/.test(note||""))
+      note = `La dernière fois, cet exercice venait après ${nb(Math.round(preL), "série")} pour ${musclePoss(m)} : les répétitions en moins venaient de la fatigue, on garde la charge.`;
+    else if(fT<fL-.06 && generic) note = `Placé après ${nb(Math.round(pre), "série")} pour ${musclePoss(m)} : ${r0}${u} suffisent aujourd'hui.`;
+    else if(fT>fL+.06 && generic) note = `Plus tôt dans la séance que la dernière fois : tu es plus frais, vise ${r0}${u}.`;
   }
   // semaine allégée : même charge (pas de progression), 2 répétitions de moins (10 s pour un exercice
   // tenu), aucune série à fond. On réduit le volume et l'effort, pas la charge (consensus Delphi, Bell 2023)
@@ -375,12 +398,13 @@ function pickExosForSession(n, pool, avoid, typeId){
   return chosen.map((e,i)=>({ e, k:(PATTERN_LATE[e.pattern]||0)*100 + i })).sort((a,b)=>a.k-b.k).map(x=>x.e);
 }
 
-function sessionEntryFor(exo, setsN){
+function sessionEntryFor(exo, setsN, pre){
   // semaine allégée : environ 40 % de séries en moins (3 → 2, 5 → 3), jamais moins de 2
   const dl = typeof deloadActive==="function" && deloadActive() && !isStretch(exo);
   const n0 = setsN || exo.sets, n = dl ? Math.max(2, Math.min(n0, Math.round(n0*.6))) : n0;
-  const sug = suggestForExo(exo, n, dl);
+  const sug = suggestForExo(exo, n, dl, pre);
   const e = { exoId:exo.id, targetSets:n, targetReps:sug.targetReps, note:sug.note, sets:buildSetsFor(Object.assign({},exo,{sets:n}),sug) };
+  if(kgType(exo) && sug.weight>0) e.pw = sug.weight;   // charge proposée (apprentissage du rythme)
   if(sug.harder) e.harder = sug.harder;
   if(dl) e.deload = true;
   return e;
@@ -396,7 +420,7 @@ function generateEngineSession(typeId, avoid){
   const session = {
     id: uid(), date: todayISO(), source:"engine", type:typeId, resolvedType:resolved, reason, stim:stim.length ? stimTargetsText(stim) : null,
     startedAt:null, completedAt:null,
-    exos: exos.map(exo=>sessionEntryFor(exo))
+    exos: entriesInOrder(exos.map(exo=>[exo]))
   };
   if(S.settings.stretching) session.exos.push(...stretchBlock(session));
   return session;
@@ -431,12 +455,12 @@ function buildExpressSession(){
   let exos = pickExosForSession(3, poolForType("full"), undefined, "full");
   if(exos.length<3) exos = engineExos().filter(e=>!isStretch(e)).slice(0,3);
   return { id: uid(), date: todayISO(), source:"engine", type:"auto", resolvedType:"full", name:"Séance express", express:true,
-    startedAt:null, completedAt:null, exos: exos.map(exo=>sessionEntryFor(exo, 2)) };
+    startedAt:null, completedAt:null, exos: entriesInOrder(exos.map(exo=>[exo, 2])) };
 }
 function buildCustomSession(entries, name){
   return {
     id: uid(), date: todayISO(), source:"custom", name: name||null, startedAt:null, completedAt:null,
-    exos: entries.filter(e=>EXO_MAP[e.exoId]).map(e=>sessionEntryFor(EXO_MAP[e.exoId], e.sets))
+    exos: entriesInOrder(entries.filter(e=>EXO_MAP[e.exoId]).map(e=>[EXO_MAP[e.exoId], e.sets]))
   };
 }
 
