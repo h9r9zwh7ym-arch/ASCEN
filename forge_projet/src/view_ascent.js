@@ -43,6 +43,7 @@ const ASC_IC = {
   sun:'<circle cx="12" cy="12" r="4.2" fill="currentColor"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   moon:'<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" fill="currentColor"/>',
   loop:'<path d="M5 13a7 7 0 1 0 2.2-6.2M5 4.5v4.6h4.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+  play:'<path d="M8 5.5v13l10.5-6.5Z" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
   bolt:'<path d="M13 2.5 5 13.5h6l-1 8 8-11h-6Z" fill="currentColor"/>',
   trophy:'<path d="M7 4h10v4a5 5 0 0 1-10 0Z M5 5H3v2a3 3 0 0 0 3 3M19 5h2v2a3 3 0 0 1-3 3M12 13v4M8 20h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   peak:'<path d="m2.5 19 7-11.5 3.5 5.5 2.5-3.5 6 9.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
@@ -200,6 +201,7 @@ function ascBuildScene(host, k){
   };
   // toucher la montagne : le camp (ou le sommet, ou soi) le plus proche ouvre sa bulle
   el.addEventListener("click", e=>{
+    if(G.playing){ e.stopPropagation(); G.stop = true; return; }
     const m = el.getScreenCTM(); if(!m) return;
     const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
     const cands = G.camps.filter(c=>c.h!==2).map(c=>({ kind:"camp", c, x:c.x, y:c.y }))
@@ -226,12 +228,14 @@ function ascBurst(G, c){
 }
 // montée (ou descente) animée du grimpeur ; onCamp(camp) à chaque camp franchi en montant
 function ascAnimate(G, from, to, dur, onCamp, onStep){
-  return new Promise(res=>{
+  return new Promise(done=>{
+    const res = ()=>{ if(G) G.anim = false; done(); };
+    if(G) G.anim = true;
     if(!G || reducedMotion() || Math.abs(to-from)<1){ if(G) G.set(to); if(onStep) onStep(to); res(); return; }
     const t0 = performance.now(), crossed = new Set(), ease = t=>t<.5 ? 4*t*t*t : 1-Math.pow(-2*t+2, 3)/2;
     let prev = from;
     const step = now=>{
-      if(!G.el.isConnected){ res(); return; }
+      if(!G.el.isConnected || G.stop){ res(); return; }
       const t = Math.min(1, (now-t0)/dur), a = from+(to-from)*ease(t);
       G.set(a); if(onStep) onStep(a);
       if(to>from) G.camps.forEach(c=>{ if(c.a>prev && c.a<=a && !crossed.has(c.i)){ crossed.add(c.i); c.inner.classList.remove("pop"); void c.inner.getBBox(); c.inner.classList.add("pop"); ascBurst(G, c); sfx("ascCamp"); haptic(12); if(onCamp) onCamp(c); } });
@@ -754,6 +758,7 @@ function ascBodyHTML(a){
       <div class="asc-ph">${ascSkySVG(a.key, "asc-ph-svg", true)}</div>
       ${ascHudHTML(a)}
       <div class="asc-toast" role="status" aria-live="polite"></div>
+      ${a.wait || a.alt>D.start+20 ? `<button class="asc-replay" data-a="ascRewatch">${ascIc("play")}Revoir</button>` : ""}
     </section>
     ${ascNextHTML(a)}
     ${S.sessions.length ? ascWeekHTML(a) : `<section class="asc-week"><div class="card asc-card"><p class="aw-msg">Chaque séance te fait monter. Commence par ta première.</p></div></section>`}
@@ -805,6 +810,22 @@ function ascMountScene(a, intro){
           introToast(); });
     }, reducedMotion() ? 0 : 450);
   }).catch(()=>{ const host = qs("#ascScene"); if(host){ host.classList.add("offline"); introToast(); } });
+}
+// « Revoir la montée » : le grimpeur repart du départ, chaque camp passé affiche sa date ; toucher la scène va à la fin
+function ascRewatch(){
+  const G = ascG, host = qs("#ascScene"); if(!G || !G.el.isConnected || !host || G.playing || G.anim) return;
+  const a = ascent(), D = ASC_DATA[a.key], end = a.wait ? D.top : a.alt, altEl = host.querySelector(".asc-alt"), bar = ascStepsBar(a.key);
+  const n = G.camps.filter(c=>c.a<=end+.5).length, dur = Math.max(2200, Math.min(7000, 1200+n*650));
+  ascBubbleHide(); G.playing = true; G.stop = false; host.classList.add("playing");
+  G.set(D.start, false); bar(D.start); sfx("ascClimb", dur/1000);
+  const when = c=>{ const d = a.campDates[c.name]; return d ? ` · ${fmtDate(d)}` : ""; };
+  ascAnimate(G, D.start, end, dur, c=>ascSceneToast(c.hut ? "hut" : "tent", `<b>${esc(c.name)}</b>${when(c)}`, 1600),
+    v=>{ if(altEl) altEl.textContent = fmtNum(v)+" m"; bar(v); })
+    .then(()=>{ G.playing = false; G.stop = false; host.classList.remove("playing");
+      if(!G.el.isConnected) return;
+      G.set(end, a.wait); bar(end); if(altEl) altEl.textContent = fmtNum(end)+" m";
+      const d = ascSummitDate(a);
+      ascSceneToast("flag", a.wait ? `<b>Sommet</b>${d ? ` · ${fmtDate(d)}` : ""}` : `<b>Aujourd'hui</b> · ${fmtNum(end)} m`, 2400); });
 }
 // après une pause : le sous-écran ouvert se met à jour sur place (l'écran principal se redessine au retour)
 function ascRefreshSheet(){
@@ -1096,6 +1117,7 @@ function ascDescentNotice(){
 Object.assign(ACT, {
   openAscent(){ ascBubOn = null; ascCarnetOpen = new Set(); openAscent(); },
   ascSub(d){ ascOpenSub(d.k); },
+  ascRewatch(){ ascRewatch(); },
   // fiche d'une montagne gravie (depuis l'itinéraire) : stats, trophées de matière, « Regravir »
   ascMount(d){
     const k = d.k; if(!ASC_DATA[k]) return;

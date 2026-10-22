@@ -3382,3 +3382,9 @@ body.live-focus #restbar.island{bottom:auto}
 .mm-go .chev{display:flex;width:14px;height:14px;color:var(--label3)}
 .pc-view{justify-content:flex-start}
 .pc-mem .mem-card{width:100%;box-sizing:border-box;margin:0}
+/* « Revoir la montée » : petite pastille en bas de la scène, cachée pendant la lecture */
+.asc-replay{position:absolute;right:12px;bottom:12px;display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px 0 11px;border-radius:18px;border:0;background:var(--pill,rgba(255,255,255,.9));color:var(--pill-ink,#13202A);font:600 calc(14rem/17)/1 var(--font,inherit);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 4px 14px rgba(0,0,0,.14);transition:opacity .25s,transform .25s}
+.asc-replay .asc-ic{width:14px;height:14px;color:var(--tint)}
+.asc-replay:active{transform:scale(.96)}
+.asc-scene:not(.ready) .asc-replay,.asc-scene.playing .asc-replay,.asc-toast.on + .asc-replay{opacity:0;pointer-events:none}
