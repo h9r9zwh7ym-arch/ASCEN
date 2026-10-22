@@ -318,19 +318,19 @@ function moStartCapture(){
   const btn = view && qsa('[data-a="startCustom"],[data-a="startSession"],[data-a="startTemplate"]', view).find(b=>b.offsetParent && b.getBoundingClientRect().height>20);
   if(!btn) return null;
   if(MO.busy) MO.busy();
-  const cs = getComputedStyle(btn), idx = qsa("button", view).indexOf(btn);
-  const cap = { G:moRect(btn), label:btn.textContent.trim(), font:cs.font, radius:parseFloat(cs.borderRadius)||13, snap:moSnap(view, { bg:moVar("--bg") }) };
-  // dans la copie, le bouton laisse place à sa forme liquide (même rang dans la copie : rien à mesurer,
-  // donc pas de mise en page forcée de toute la copie au moment du toucher)
-  const k = qsa("button", cap.snap)[idx];
-  if(k) k.style.visibility = "hidden";
+  const cs = getComputedStyle(btn);
+  // pas de copie figée de l'accueil : le vrai écran reste dessous, vivant, jusqu'à ce que l'orange le
+  // couvre (la séance n'est construite qu'à ce moment-là). Le bouton laisse place à sa forme liquide.
+  const cap = { G:moRect(btn), label:btn.textContent.trim(), font:cs.font, radius:parseFloat(cs.borderRadius)||13, btn };
+  btn.style.visibility = "hidden";
+  cap.snap = { remove(){ if(btn.isConnected) btn.style.visibility = ""; } };
   return cap;
 }
 // render : construit l'écran de la séance ; appelé quand l'orange couvre tout (le départ reste fluide),
 // ou tout de suite si l'animation est interrompue
 function moStart(cap, render){
   if(!cap) return false;
-  if(!S.draft){ cap.snap.remove(); return false; }
+  if(!S.draft || !render){ cap.snap.remove(); return false; }
   let rendered = !render;
   const doRender = ()=>{ if(rendered) return; rendered = true; try{ render(); }catch(e){ console.error(e); } };
   const { G, snap } = cap, W = innerWidth, H = innerHeight, tint = moVar("--tint") || "#BC5736";
