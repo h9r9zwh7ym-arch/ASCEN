@@ -3,6 +3,7 @@ const OUT_ROOT = process.env.OUT_DIR || require('path').join(__dirname, 'out'); 
 // 2.6.0 : chiffres qui roulent sur − / +, nombre de séries réglable (menu de l'exercice, exercices ajoutés),
 // images de profil, pictogrammes en volume (membres du fond en retrait), montagnes plus riches.
 // 2.6.3 : une fiche ouverte depuis un écran (Mes exercices…) ramène à cet écran.
+// 2.6.4 : barre d'état — les calques d'animation n'existent à l'écran que pendant une animation.
 const __pw = require('playwright'); const path = require('path'); const fs = require('fs');
 const OUT = path.join(OUT_ROOT, 'v74'); fs.mkdirSync(OUT, { recursive: true });
 const APP = 'file://' + path.resolve(process.argv[2]);
@@ -67,6 +68,11 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const nav = { back: !!back, title: await top() };
   log('Back from exercise sheet:', JSON.stringify(nav));
   if (!nav.back || nav.title !== 'Mes exercices') fail('retour à « Mes exercices » après la fiche');
+
+  // 7. barre d'état : hors animation, rien d'invisible ne couvre le bandeau du haut (iOS y lit la couleur)
+  const sb = await page.evaluate(() => { closeSheet(); return [...document.querySelectorAll('body *')].filter(e => { const c = getComputedStyle(e); if (c.position !== 'fixed' || c.display === 'none') return false; const r = e.getBoundingClientRect(); return r.top <= 0 && r.bottom > 0 && r.width > 300 && +c.zIndex > 45; }).map(e => e.id || e.className); });
+  log('Above status band:', JSON.stringify(sb));
+  if (sb.some(x => /^mo/.test(x))) fail('calques d\'animation au-dessus du bandeau de la barre d\'état');
 
   await browser.close();
   if (errors.length) { errors.forEach(e => log(e)); log(`ERRORS: ${errors.length}`); process.exit(1); }

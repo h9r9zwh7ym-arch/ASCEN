@@ -1866,6 +1866,9 @@ body.live-focus #restbar{bottom:calc(14px + var(--sab))}
    (couleur écrite par syncStatusBar) ; invisible, puisqu'il a la couleur de ce qui est dessous */
 #sbar{position:fixed;top:0;left:0;right:0;height:max(var(--sat),1px);z-index:45;pointer-events:none;transition:background-color .2s}
 body.mo-on #sbar{z-index:2001}
+/* hors animation, les calques du mouvement n'existent pas à l'écran : iOS colore la barre d'état d'après
+   l'élément fixe tout en haut, et ce calque vide (au-dessus de tout) masquait le bandeau → orange figé */
+body:not(.mo-on) #mo,body:not(.mo-on) #moBack{display:none}
 
 /* carte des muscles en une seule teinte : l'intensité dit combien le muscle a travaillé */
 .mm.mono .mm-z.on{fill:var(--tint);stroke:var(--tint)}
