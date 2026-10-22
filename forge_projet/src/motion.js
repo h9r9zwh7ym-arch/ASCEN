@@ -121,7 +121,9 @@ function moSnap(el, opts={}){
 function moBegin(cleanup){
   if(MO.busy) MO.busy();
   let ended = false;
-  const end = ()=>{ if(ended) return; ended = true; clearTimeout(t); try{ cleanup && cleanup(); }catch(e){} moClear(); if(MO.busy===end) MO.busy = null; if(typeof syncStatusBar==="function") syncStatusBar(undefined, true);
+  // le bandeau de la barre d'état passe au-dessus de l'animation : iOS y lit la couleur de l'app, jamais l'orange
+  document.body.classList.add("mo-on");
+  const end = ()=>{ if(ended) return; ended = true; clearTimeout(t); try{ cleanup && cleanup(); }catch(e){} moClear(); if(MO.busy===end){ MO.busy = null; document.body.classList.remove("mo-on"); } if(typeof syncStatusBar==="function") syncStatusBar(undefined, true);
     // filet : une étape programmée en retard ne doit jamais laisser de forme à l'écran
     setTimeout(()=>{ if(!MO.busy) moClear(); }, 700); };
   const t = setTimeout(end, 4000);   // filet de sécurité

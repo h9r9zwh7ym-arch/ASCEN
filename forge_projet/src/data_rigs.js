@@ -23,7 +23,7 @@ function bodyLine(F, Ny, face, len){
   return { P:[F[0]+Math.cos(a)*leg, F[1]+Math.sin(a)*leg], t:a/RAD, face };
 }
 // allongé sur le dos, tête à gauche, bassin en (x, y)
-const supine = (x, y, o)=>Object.assign({ P:[x, y], t:182, h:204, face:-1, E:4, W:0 }, o||{});
+const supine = (x, y, o)=>Object.assign({ P:[x, y], t:182, h:204, face:-1, sup:1, E:4, W:0 }, o||{});
 // quatre pattes, tête à gauche : mains sous les épaules, genoux sous les hanches
 const QUAD_N = [7, 14.7], QUAD_P = [12.4, 16.2];
 const quad = o=>Object.assign({ P:QUAD_P.slice(), t:Math.atan2(QUAD_N[1]-QUAD_P[1], QUAD_N[0]-QUAD_P[0])/RAD, h:-172, face:-1, K:90, F:0, pin:{ W:[7,G] } }, o||{});
@@ -59,8 +59,8 @@ const PUSH_B = Object.assign(bodyLine([20.4,G], 18.5), { h:-172, E:-40, pin:{ F:
 const ROW_A = { P:[10.6,12.9], t:-20, h:-15, K:80, E:90, W:90, pin:{ F:[12,G] } };
 const ROW_B = Object.assign({}, ROW_A, { E:-160, W:92 });
 const HANG = (Ny, o)=>Object.assign({ front:true, P:[12, Ny+5.6], t:-90, h:-90, K:92, F:92, K2:88, F2:88, pin:{ W:[8.8,1.2], W2:[15.2,1.2] }, E:180, E2:0 }, o||{});
-const BENCH_LIE = (o)=>Object.assign({ P:[13.8,14.9], t:180, h:196, face:-1, K:-35, pin:{ F:[18.8,G] } }, o||{});
-const INCL_LIE = (o)=>Object.assign({ P:[13.9,14.8], t:-148, h:-150, face:-1, K:-15, pin:{ F:[19,G] } }, o||{});
+const BENCH_LIE = (o)=>Object.assign({ P:[13.8,14.9], t:180, h:196, face:-1, sup:1, K:-35, pin:{ F:[18.8,G] } }, o||{});
+const INCL_LIE = (o)=>Object.assign({ P:[13.9,14.8], t:-148, h:-150, face:-1, sup:1, K:-15, pin:{ F:[19,G] } }, o||{});
 const FLOOR_LIE = (o)=>supine(13, 19.7, Object.assign({ K:-40, pin:{ F:[17.6,G] } }, o||{}));
 const LUNGE_B = (x, o)=>Object.assign({ P:[x,16.2], t:-90, K:15, K2:100, pin:{ F:[x+3.8,G], F2:[x-4,G] } }, o||{});
 const BENT = (o)=>Object.assign({}, ROW_A, o||{});
@@ -93,8 +93,8 @@ const RIGS = {
 
   // ---------------- dips ----------------
   // jambes fléchies, pieds derrière (comme aux barres), le corps descend en se penchant un peu vers l'avant
-  dips_barres:     { env:ENV.dip, A:{ P:[12,12.1], t:-92, h:-92, K:82, F:140, E:92, pin:{ W:[13.6,12.4] } },
-                     B:{ P:[11.9,15.2], t:-78, h:-76, K:70, F:165, E:-140, pin:{ W:[13.6,12.4] } } },
+  dips_barres:     { env:FL+"M8 11h9.8", A:{ P:[12,10.7], t:-92, h:-92, K:82, F:140, E:92, pin:{ W:[13.6,11] } },
+                     B:{ P:[11.9,13.8], t:-78, h:-76, K:40, F:170, E:-140, pin:{ W:[13.6,11] } } },
   releve_genoux_barres:{ env:ENV.dip, A:{ P:[12,12.1], t:-90, K:88, F:92, E:92, pin:{ W:[13.6,12.4] } }, B:{ P:[12,12.1], t:-94, K:-8, F:88, E:92, pin:{ W:[13.6,12.4] } } },
   l_sit:           { env:ENV.dip, dur:3.6, A:{ P:[12,12.1], t:-90, K:88, F:92, E:92, pin:{ W:[13.6,12.4] } }, B:{ P:[12,12.0], t:-94, K:-2, F:0, E:92, pin:{ W:[13.6,12.4] } } },
   dips_banc:       { env:ENV.lowBench, A:{ P:[12.8,16.1], t:-92, h:-100, face:-1, K:-150, E:60, pin:{ F:[6,G], W:[14.5,16.5] } },
@@ -115,34 +115,34 @@ const RIGS = {
                      B:{ P:[9.6,16.3], t:-55, h:-45, K:8, K2:-8, F2:-8, E:-12, W:-8, pin:{ F:[12,G] } } },
   squat_sumo_haltere:{ A:FRONT({ P:[12,12.9], pin:{ F:[8.8,G], F2:[15.2,G] }, E:100, W:80, E2:80, W2:100 }),
                      B:FRONT({ P:[12,16.2], K:160, K2:20, pin:{ F:[8.4,G], F2:[15.6,G] }, E:100, W:80, E2:80, W2:100 }) },
-  band_walk:       { env:FL+"M9.6 16.8h4.8", dur:1.4, A:FRONT({ P:[12,13.0], K:120, K2:60, pin:{ F:[9.6,G], F2:[14.8,G] } }),
-                     B:FRONT({ P:[13,13.0], K:120, K2:60, pin:{ F:[11.8,G], F2:[14.8,G] } }) },
+  band_walk:       { env:FL+"M9.6 16.8h4.8", dur:1.4, A:FRONT({ P:[12,13.0], K:120, K2:60, E:118, W:62, E2:62, W2:118, pin:{ F:[9.6,G], F2:[14.8,G] } }),
+                     B:FRONT({ P:[13,13.0], K:120, K2:60, E:118, W:62, E2:62, W2:118, pin:{ F:[11.8,G], F2:[14.8,G] } }) },
 
   // ---------------- fentes ----------------
-  fentes_avant:    { A:stand(10, { E:125, W:20 }), B:LUNGE_B(12.6, { E:125, W:20, pin:{ F:[16.4,G], F2:[10,G] } }) },
-  fentes_arriere:  { A:stand(15.6, { E:125, W:20 }), B:LUNGE_B(12, { E:125, W:20, pin:{ F:[15.6,G], F2:[7.8,G] } }) },
-  fentes_marchees: { A:stand(9, { E:125, W:20 }), B:LUNGE_B(13, { E:125, W:20, pin:{ F:[16.8,G], F2:[9,G] } }) },
+  fentes_avant:    { A:stand(10, { E:96, W:84 }), B:LUNGE_B(12.6, { E:96, W:84, pin:{ F:[16.4,G], F2:[10,G] } }) },
+  fentes_arriere:  { A:stand(15.6, { E:96, W:84 }), B:LUNGE_B(12, { E:96, W:84, pin:{ F:[15.6,G], F2:[7.8,G] } }) },
+  fentes_marchees: { A:stand(9, { E:96, W:84 }), B:LUNGE_B(13, { E:96, W:84, pin:{ F:[16.8,G], F2:[9,G] } }) },
   fentes_halteres: { A:stand(10), B:LUNGE_B(12.6, { pin:{ F:[16.4,G], F2:[10,G] } }) },
   fente_arriere_barre:{ A:stand(15.6, BAR_BACK), B:LUNGE_B(12, Object.assign({ pin:{ F:[15.6,G], F2:[7.8,G] } }, BAR_BACK)) },
   fente_goblet_kb: { A:stand(15.6, GOBLET), B:LUNGE_B(12, Object.assign({ pin:{ F:[15.6,G], F2:[7.8,G] } }, GOBLET)) },
   fentes_sautees:  { dur:1.6, A:{ P:[12,11.3], t:-90, K:60, F:100, K2:118, F2:78, E:-60, W:-70, E2:120, W2:100 }, B:LUNGE_B(12, { E:120, W:100, E2:60, W2:70 }) },
-  fentes_laterales:{ A:FRONT({ P:[12,12.7], pin:{ F:[9.8,G], F2:[14.2,G] }, E:120, W:40, E2:60, W2:140 }),
-                     B:FRONT({ P:[9.4,15.6], t:-80, K:150, pin:{ F:[7.2,G], F2:[15.8,G] }, E:120, W:40, E2:60, W2:140 }) },
-  step_up:         { env:ENV.box, A:{ P:[11.2,12.6], t:-90, K:20, K2:90, pin:{ F:[16.2,19], F2:[11,G] } },
-                     B:{ P:[15.6,10.4], t:-90, K2:98, F2:130, pin:{ F:[16.2,19] } } },
-  montees_chaise:  { env:ENV.box, A:{ P:[11.2,12.6], t:-90, K:20, K2:90, E:110, W:30, pin:{ F:[16.2,19], F2:[11,G] } },
-                     B:{ P:[15.6,10.4], t:-90, K2:-10, F2:90, E:110, W:30, pin:{ F:[16.2,19] } } },
-  squat_bulgare_pdc:{ env:FL+"M1.8 17.2h6M2.6 17.2V21M7 17.2V21", A:{ P:[11.2,12.8], t:-90, K:10, K2:112, E:125, W:20, pin:{ F:[12.8,G], F2:[6.2,17.2] } },
-                     B:{ P:[10.6,16.2], t:-84, K:0, K2:100, E:125, W:20, pin:{ F:[13.6,G], F2:[6.2,17.2] } } },
+  fentes_laterales:{ A:FRONT({ P:[12,12.7], pin:{ F:[9.8,G], F2:[14.2,G] }, E:118, W:62, E2:62, W2:118 }),
+                     B:FRONT({ P:[9.4,15.6], t:-80, K:150, pin:{ F:[7.2,G], F2:[15.8,G] }, E:118, W:62, E2:62, W2:118 }) },
+  step_up:         { icon:"A", env:FL+"M13.2 21V18H20.6V21", A:{ P:[11.6,12.7], t:-86, h:-84, E:84, W:92, pin:{ F:[15.4,18], F2:[11.4,G] } },
+                     B:{ P:[16.4,9.7], t:-90, h:-88, E:84, W:92, pin:{ F:[16.8,18], F2:[15.8,18] } } },
+  montees_chaise:  { icon:"A", env:FL+"M13.2 21V18H20.6V21", A:{ P:[11.6,12.7], t:-86, h:-84, E:70, W:60, E2:110, W2:100, pin:{ F:[15.4,18], F2:[11.4,G] } },
+                     B:{ P:[16.4,9.7], t:-90, h:-88, E:110, W:100, E2:70, W2:60, pin:{ F:[16.8,18], F2:[15.8,18] } } },
+  squat_bulgare_pdc:{ env:FL+"M1.8 17.2h6M2.6 17.2V21M7 17.2V21", A:{ P:[11.2,12.8], t:-90, K:10, K2:112, E:96, W:84, pin:{ F:[12.8,G], F2:[6.2,17.2] } },
+                     B:{ P:[10.6,16.2], t:-84, K:0, K2:100, E:96, W:84, pin:{ F:[13.6,G], F2:[6.2,17.2] } } },
   squat_bulgare_halteres:{ env:FL+"M1.8 17.2h6M2.6 17.2V21M7 17.2V21", A:{ P:[11.2,12.8], t:-90, K:10, K2:112, pin:{ F:[12.8,G], F2:[6.2,17.2] } },
                      B:{ P:[10.6,16.2], t:-84, K:0, K2:100, pin:{ F:[13.6,G], F2:[6.2,17.2] } } },
   etir_psoas:      { dur:5, A:{ P:[11.4,16.2], t:-90, K:20, K2:92, F2:178, E:60, W:10, pin:{ F:[15.6,G] } },
                      B:{ P:[12.6,16.8], t:-97, h:-100, K:10, K2:100, F2:178, E:55, W:5, pin:{ F:[15.6,G] } } },
 
   // ---------------- ponts, hip thrust (allongé, tête à gauche) ----------------
-  pont_fessier:    { A:supine(12.2,19.6, { K:-45, pin:{ F:[15.8,G] } }), B:{ P:[11.3,16.3], t:146, h:200, face:-1, E:0, W:0, K:-45, pin:{ F:[15.8,G] } } },
-  pont_fessier_elastique:{ env:FL+"M14.6 17.2v1.6", A:supine(12.2,19.6, { K:-45, pin:{ F:[15.8,G] } }), B:{ P:[11.3,16.3], t:146, h:200, face:-1, E:0, W:0, K:-45, pin:{ F:[15.8,G] } } },
-  pont_fessier_uni:{ A:supine(12.2,19.6, { K:-45, K2:-35, F2:-30, pin:{ F:[15.8,G] } }), B:{ P:[11.3,16.3], t:146, h:200, face:-1, E:0, W:0, K:-45, K2:-25, F2:-25, pin:{ F:[15.8,G] } } },
+  pont_fessier:    { A:supine(12.6,19.6, { K:-45, pin:{ F:[16.2,G] } }), B:{ P:[11.6,17.9], t:162, h:194, face:-1, sup:1, E:4, W:0, K:-18, F:82, pin:{ F:[16.2,G] } } },
+  pont_fessier_elastique:{ env:FL+"M14.6 17.2v1.6", A:supine(12.6,19.6, { K:-45, pin:{ F:[16.2,G] } }), B:{ P:[11.6,17.9], t:162, h:194, face:-1, sup:1, E:4, W:0, K:-18, F:82, pin:{ F:[16.2,G] } } },
+  pont_fessier_uni:{ A:supine(12.6,19.6, { K:-45, K2:-14, F2:-14, pin:{ F:[16.2,G] } }), B:{ P:[11.6,17.9], t:162, h:194, face:-1, sup:1, E:4, W:0, K:-18, F:82, K2:-18, F2:-18, pin:{ F:[16.2,G] } } },
   hip_thrust_barre:{ env:ENV.hipBench, A:{ P:[11.2,19.4], t:-142, h:-155, face:-1, K:-40, E:36, W:46, pin:{ F:[16.4,G] } },
                      B:{ P:[12.2,16.1], t:178, h:-165, face:-1, K:-40, E:2, W:4, pin:{ F:[16.4,G] } } },
   hip_thrust_haltere:{ env:ENV.hipBench, A:{ P:[11.2,19.4], t:-142, h:-155, face:-1, K:-40, E:36, W:46, pin:{ F:[16.4,G] } },
@@ -152,8 +152,8 @@ const RIGS = {
   // ---------------- gainage au sol ----------------
   planche:         { dur:3.6, A:Object.assign(bodyLine([20.6,G], 17.1), { h:-168, E:92, pin:{ F:[20.6,G], W:[3.6,20.3] } }),
                      B:Object.assign(bodyLine([20.6,G], 16.8), { h:-168, E:92, pin:{ F:[20.6,G], W:[3.6,20.3] } }) },
-  planche_laterale:{ dur:3.6, A:Object.assign(bodyLine([20.6,G], 17.1), { h:-168, E:92, E2:-92, W2:-90, pin:{ F:[20.6,G], W:[3.6,20.3] } }),
-                     B:Object.assign(bodyLine([20.6,G], 16.4), { h:-168, E:92, E2:-92, W2:-90, pin:{ F:[20.6,G], W:[3.6,20.3] } }) },
+  planche_laterale:{ dur:3.6, flat:1, A:Object.assign(bodyLine([20.6,G], 17.6), { h:-168, E:90, W:180, E2:-72, W2:-70, pin:{ F:[20.6,G], W:[3.9,20.4] } }),
+                     B:Object.assign(bodyLine([20.6,G], 17.1), { h:-168, E:90, W:180, E2:-76, W2:-74, pin:{ F:[20.6,G], W:[3.9,20.4] } }) },
   planche_commando:{ A:Object.assign(bodyLine([20.6,G], 17.1), { h:-168, E:92, pin:{ F:[20.6,G], W:[3.6,20.3] } }),
                      B:Object.assign(bodyLine([20.6,G], 14.8), { h:-160, E:-40, pin:{ F:[20.6,G], W:[7.4,G] } }) },
   extension_triceps_sol:{ A:Object.assign(bodyLine([20.6,G], 17.1), { h:-168, E:92, pin:{ F:[20.6,G], W:[3.6,20.3] } }),
@@ -325,7 +325,7 @@ const RIGS = {
                      B:{ front:true, P:[11.4,18.8], t:180, h:184, face:-1, K:2, F:0, K2:-32, F2:-32, E:180, W:180, E2:6, W2:4 } },
   kickback_quadrupedie:{ A:quad({ pin:{ W:[7,G], F:[16.6,20.4] } }), B:quad({ K:-6, F:-96, K2:90, F2:0 }) },
   crunch_velo:     { dur:1.4, A:supine(12.4,19.6, { t:204, h:226, K:-128, F:-30, K2:-18, F2:-18, E:-118, W:150 }), B:supine(12.4,19.6, { t:204, h:226, K:-18, F:-18, K2:-128, F2:-30, E:-118, W:150 }) },
-  fente_croisee:   { A:FRONT({ E:118, W:30, E2:62, W2:150 }), B:FRONT({ P:[12.6,15.8], E:118, W:30, E2:62, W2:150, pin:{ F:[16.2,G], F2:[11,G] } }) },
+  fente_croisee:   { A:FRONT({ E:118, W:62, E2:62, W2:118 }), B:FRONT({ P:[12.6,15.8], E:118, W:62, E2:62, W2:118, pin:{ F:[16.2,G], F2:[11,G] } }) },
   pompes_mur:      { icon:"A", env:FL+"M5 1.5V21", A:Object.assign(bodyLine([15.6,G], 7.8), { h:-140, E:-170, pin:{ F:[15.6,G], W:[5.3,8.4] } }),
                      B:Object.assign(bodyLine([15.6,G], 9.4), { h:-120, E:-120, pin:{ F:[15.6,G], W:[5.3,8.4] } }) },
   planche_touches: { dur:1.4, A:PUSH_A, B:Object.assign({}, PUSH_A, { E2:40, W2:-150, pin:{ F:[20.4,G], W:[7.8,G] } }) },
@@ -339,7 +339,7 @@ const RIGS = {
   etir_torsion:    { dur:5, env:"M2.6 3.4h18.8v17.2H2.6z", A:{ front:true, P:[14.4,12.6], t:180, h:180, face:-1, K:12, F:174, K2:-2, F2:0, E:102, W:100, E2:-102, W2:-100 },
                      B:{ front:true, P:[14.4,12.6], t:180, h:160, face:-1, K:-46, F:118, K2:-2, F2:0, E:102, W:100, E2:-102, W2:-100 } },
   etir_chien:      { dur:4, icon:"A", A:{ P:[13.4,13.4], t:138, h:118, face:-1, pin:{ F:[17.8,G], W:[5,G] } }, B:{ P:[13.4,13.4], t:138, h:118, face:-1, K:-20, pin:{ F:[16.8,19.6], F2:[17.8,G], W:[5,G] } } },
-  etir_dorsaux:    { env:ENV.chair, dur:5, A:{ P:[8.6,12.8], t:-30, h:-24, pin:{ F:[9,G], W:[19.4,9.8] } }, B:{ P:[9.6,12.9], t:10, h:62, pin:{ F:[9,G], W:[19.4,9.8] } } },
+  etir_dorsaux:    { env:ENV.chair, dur:5, A:{ P:[8.6,12.8], t:-30, h:-24, pin:{ F:[9,G], W:[19.4,9.8] } }, B:{ P:[8.2,12.6], t:-5, h:8, pin:{ F:[9,G], W:[19.4,9.8] } } },
   etir_lateral:    { dur:4.6, A:FRONT({ E:-96, W:-94, E2:60, W2:150 }), B:FRONT({ t:-72, h:-66, E:-56, W:-30, E2:60, W2:150 }) },
   etir_biceps:     { env:FL+"M17.6 1.5V21", dur:5, A:stand(12, { h:-90, face:-1, pin:{ F:[12,G], W:[17.2,7.6] } }), B:{ P:[11.8,12.5], t:-96, h:-108, face:-1, pin:{ F:[12,G], W:[17.2,7.6] } } },
   etir_livre:      { dur:3.6, A:{ front:true, P:[13.4,18.8], t:180, h:184, face:-1, K:4, F:178, K2:2, F2:178, E:180, W:180, E2:60, pin:{ W2:[9.6,20.4] } },

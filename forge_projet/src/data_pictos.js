@@ -78,7 +78,14 @@ const ONE_LOAD = new Set(["woodchopper_haltere","pullover_haltere","squat_sumo_h
 function loadKind(def){ if(NO_LOAD.has(def.id)) return null; const t = typeof loadableTypeOf==="function" ? loadableTypeOf(def) : null; return t==="dumbbells" || t==="barbell" || t==="kettlebell" || t==="bands" ? t : null; }
 // main (W, W2) ou milieu des deux mains (M)
 const handAt = (f, k)=> k==="M" ? [(f.W[0]+f.W2[0])/2, (f.W[1]+f.W2[1])/2] : f[k];
-const loadHands = (def, two)=> ONE_LOAD.has(def.id) ? ["M"] : two ? ["W","W2"] : ["W"];
+// la charge n'est que dans la main qui travaille : une main en appui (banc, sol) n'en tient pas
+const loadHands = (def, two, rig)=>{
+  if(ONE_LOAD.has(def.id)) return ["M"];
+  const c = (rig && rig.contacts) || [];
+  if(def.id!=="renegade_row" && c.includes("W2") && !c.includes("W")) return ["W"];
+  if(def.id!=="renegade_row" && c.includes("W") && !c.includes("W2")) return ["W2"];
+  return two ? ["W","W2"] : ["W"];
+};
 // roue abdominale : jante, et deux rayons qui tournent quand elle roule (rayon 1,15 : WR dans data_rigs.js)
 const WHEEL_R = 1.15, WHEEL_SPOKES = "M0 0V-1.05M0 0L.91 .52M0 0L-.91 .52";
 const DB_SHAPE = "M-1.45 -1.25V1.25M1.45 -1.25V1.25M-1.45 0H1.45", KB_SHAPE = "M-.95 .85C-.95 -.75 .95 -.75 .95 .85";
@@ -102,7 +109,7 @@ function barPath(f){
 // pour rester lisibles quand la charge passe devant le corps (kettlebell le long des jambes…)
 function loadStatic(def, rig, f, two, sw){
   const kind = loadKind(def), out = { back:"", front:"" }; if(!kind) return out;
-  const r = v=>v.toFixed(2), hands = loadHands(def, two);
+  const r = v=>v.toFixed(2), hands = loadHands(def, two, rig);
   if(kind==="bands"){ out.back = hands.map(k=>{ const a = bandAnchor(def, f, rig.A, k); return a ? `<path d="M${r(f[k][0])} ${r(f[k][1])}L${r(a[0])} ${r(a[1])}" stroke="currentColor" stroke-width="${sw*.42}" stroke-linecap="round" opacity=".7"/>` : ""; }).join(""); return out; }
   if(kind==="barbell"){
     if(two && !ONE_LOAD.has(def.id)){ const d = barPath(f); out.front = `<path class="pk" d="${d}" stroke-width="${sw*.9+1.4}"/><path d="${d}" stroke="currentColor" stroke-width="${sw*.6}" stroke-linecap="round"/>`; }
@@ -130,7 +137,7 @@ function exoPicto(def){
     const rig = animRig(def), rd = RIGS[def.id], f = rd.icon==="A" ? rig.A : rd.icon==="mid" ? rig.frames[rig.frames.length>>1] : rig.B;
     const ld = loadStatic(def, rig, f, Math.hypot(f.W[0]-f.W2[0], f.W[1]-f.W2[1])>.6, 2.3);
     if(rig.wheel) ld.front += `<circle class="pkf" cx="${f.W[0].toFixed(2)}" cy="${f.W[1].toFixed(2)}" r="${WHEEL_R+.9}"/><circle cx="${f.W[0].toFixed(2)}" cy="${f.W[1].toFixed(2)}" r="${WHEEL_R}" fill="currentColor"/>`;
-    svg = `<svg class="picto" viewBox="0 0 24 24" aria-hidden="true"><path d="${rig.env||FLOOR}" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity=".38"/>${ld.back}${bodyStatic(f, 2.15, 1.95)}${ld.front}</svg>`;
+    svg = `<svg class="picto" viewBox="0 0 24 24" aria-hidden="true"><path d="${rig.env||FLOOR}" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity=".38"/>${ld.back}${bodyStatic(f, 2.15, 1.95, rig.flat)}${ld.front}</svg>`;
   }catch(e){ svg = pictoSVG(pictoKey(def)); }
   PICTO_CACHE.set(def.id, svg);
   return svg;
@@ -363,14 +370,17 @@ function animPath(p){
 // rien n'est transparent. De profil : bras et jambe du fond (teinte atténuée), puis buste, jambe et
 // tête, puis bras du premier plan et charge. Un membre du fond confondu avec celui de devant est
 // retiré (bras) ou légèrement décalé (jambes : on lit deux jambes).
-const BODY_W = { torso:1.5, thigh:1.26, shin:1.0, uarm:1.0, farm:.84 };
+const BODY_W = { torso:1.5, thigh:1.26, shin:1.0, uarm:1.0, farm:.84, foot:.72 };
 const HEAD_R = 1.8;
-function bodyLayers(F){
+function bodyLayers(F, flat){
   const f0 = F[0] || F;
   if(f0.S) return { far:[], base:[["N","P","torso"],["Q","K","thigh"],["K","F","shin"],["Q2","K2","thigh"],["K2","F2","shin"]], top:[["S","E","uarm"],["E","W","farm"],["S2","E2","uarm"],["E2","W2","farm"]], legOff:0, arm2:true };
   const fr = Array.isArray(F) ? F : [F], same = (a, b)=>fr.every(f=>!f[b] || Math.hypot(f[a][0]-f[b][0], f[a][1]-f[b][1])<.35);
   const legs2 = !(same("K","K2") && same("F","F2")), arms2 = !(same("E","E2") && same("W","W2"));
-  return { far:[...(legs2 ? [["P","K2","thigh"],["K2","F2","shin"]] : []), ...(arms2 ? [["N","E2","uarm"],["E2","W2","farm"]] : [])], base:[["N","P","torso"],["P","K","thigh"],["K","F","shin"]], top:[["N","E","uarm"],["E","W","farm"]], legOff:0, arm2:arms2 };
+  const ft = !!f0.T;
+  // flat : les deux côtés du corps sont à la même distance (planche latérale vue de face) → même teinte
+  if(flat) return { far:[], base:[...(legs2 ? [["P","K2","thigh"],["K2","F2","shin"]] : []), ["N","P","torso"],["P","K","thigh"],["K","F","shin"], ...(ft ? [["F","T","foot"]] : [])], top:[["N","E","uarm"],["E","W","farm"],["N","E2","uarm"],["E2","W2","farm"]], legOff:0, arm2:true };
+  return { far:[...(legs2 ? [["P","K2","thigh"],["K2","F2","shin"], ...(ft ? [["F2","T2","foot"]] : [])] : []), ...(arms2 ? [["N","E2","uarm"],["E2","W2","farm"]] : [])], base:[["N","P","torso"],["P","K","thigh"],["K","F","shin"], ...(ft ? [["F","T","foot"]] : [])], top:[["N","E","uarm"],["E","W","farm"]], legOff:0, arm2:arms2 };
 }
 // point d'un os ; la jambe du fond confondue est décalée vers l'arrière (sens opposé au regard)
 function bonePt(p, k, off){
@@ -404,8 +414,8 @@ function torsoD(p, sw){
   return `M${pt(a, hN)}L${pt(b, hP)}L${pt(b, -hP)}L${pt(a, -hN)}Z`;
 }
 // pose figée (petites tuiles) : le liseré est un trait de la couleur de la tuile (--tile)
-function bodyStatic(p, sw, headR){
-  const L = bodyLayers(p), g = .62, w = x=>(sw*BODY_W[x]).toFixed(2);
+function bodyStatic(p, sw, headR, flat){
+  const L = bodyLayers(p, flat), g = .62, w = x=>(sw*BODY_W[x]).toFixed(2);
   const one = (halo)=>([a, b, x])=>x==="torso"
     ? `<path d="${torsoD(p, sw)}" ${halo ? `class="pkf pkb" stroke="var(--tile,transparent)" stroke-width="${(sw*.7+g*2).toFixed(2)}"` : `fill="currentColor" stroke="currentColor" stroke-width="${(sw*.7).toFixed(2)}"`} stroke-linejoin="round"/>`
     : `<path d="${(halo ? haloD : boneD)(p, a, b, x, L.legOff)}" ${halo ? `class="pk pkb" stroke-width="${(+w(x)+g*2).toFixed(2)}"` : `stroke="currentColor" stroke-width="${w(x)}"`}/>`;
@@ -487,6 +497,25 @@ function rigSolve(p){
   o.pin = pin;
   return o;
 }
+// le pied : perpendiculaire au tibia, du côté du devant de la jambe (opposé au pli du genou) ;
+// jambe tendue : vers le devant du corps, ou vers le haut si l'on est allongé sur le dos (sup)
+const FOOT_L = 1.35;
+function footAt(f, r, m, e, A){
+  const R = f[r], K = f[m], F = f[e]; if(!R || !K || !F) return null;
+  const t = [K[0]-R[0], K[1]-R[1]], sl = Math.hypot(F[0]-K[0], F[1]-K[1]) || 1, sv = [(F[0]-K[0])/sl, (F[1]-K[1])/sl];
+  const cr = t[0]*sv[1]-t[1]*sv[0], tl = Math.hypot(t[0], t[1]) || 1;
+  let side;
+  if(Math.abs(cr)/tl > .2) side = cr>0 ? 1 : -1;
+  else {
+    const face = A.face || 1, tr = [f.N[0]-f.P[0], f.N[1]-f.P[1]];
+    const fr = A.sup ? [0, -1] : [-tr[1]*face, tr[0]*face];
+    side = (sv[1]*fr[0] - sv[0]*fr[1]) >= 0 ? 1 : -1;
+  }
+  const d = side>0 ? [sv[1], -sv[0]] : [-sv[1], sv[0]];
+  // pointe légèrement vers le bas (cheville détendue)
+  const x = d[0]*.94+sv[0]*.34, y = d[1]*.94+sv[1]*.34, n = Math.hypot(x, y) || 1;
+  return [F[0]+x/n*FOOT_L, F[1]+y/n*FOOT_L];
+}
 function rigFromData(def, rd){
   const base = animPose(def), A = rigSolve(rd.A), B = rigSolve(rd.B), front = !!(rd.A.front || rd.B.front);
   // angles de chaque os, membres mesurés depuis leur racine (épaule ou hanche en vue de face)
@@ -510,11 +539,12 @@ function rigFromData(def, rd){
       const L = BONE_L.uarm+BONE_L.farm-.06, y = A.pin.W[1], dy = y-f.N[1], dx = Math.sqrt(Math.max(0, L*L-dy*dy)), face = rd.A.face||1;
       const s = ik2(f.N, [f.N[0]+face*dx, y], BONE_L.uarm, BONE_L.farm, f.E); f.E = f.E2 = s[0]; f.W = f.W2 = s[1];
     }
+    if(!front){ f.T = footAt(f, "P", "K", "F", rd.A); f.T2 = footAt(f, "P", "K2", "F2", rd.A); }
     return f;
   };
   const ease = x=>x*x*(3-2*x), frames = [];
   for(let i=0;i<=ANIM_FRAMES;i++) frames.push(frame(ease(i/ANIM_FRAMES)));
-  return { env:rd.env || FLOOR, dur:rd.dur || base.dur, grip:rd.grip || base.grip, frames, A:frames[0], B:frames[ANIM_FRAMES], anchor:"P", contacts:both.map(c=>c[2]), two:true, wheel:!!rd.wheel };
+  return { env:rd.env || FLOOR, dur:rd.dur || base.dur, grip:rd.grip || base.grip, frames, A:frames[0], B:frames[ANIM_FRAMES], anchor:"P", contacts:both.map(c=>c[2]), two:true, wheel:!!rd.wheel, flat:!!rd.flat };
 }
 function animRig(def){
   if(ANIM_CACHE.has(def.id)) return ANIM_CACHE.get(def.id);
@@ -558,7 +588,7 @@ function exoAnimSVG(def){
   // (la zone travaillée n'est plus surlignée sur le corps : la carte des muscles de la fiche la montre)
   const focus = "";
   // matériel : suit la main (translation) et l'avant-bras (rotation, angles déroulés sans saut de 360°)
-  const kind = loadKind(def), hands = loadHands(def, two);
+  const kind = loadKind(def), hands = loadHands(def, two, rig);
   const unwrap = arr=>{ for(let i=1;i<arr.length;i++){ while(arr[i]-arr[i-1]>180) arr[i] -= 360; while(arr[i]-arr[i-1]<-180) arr[i] += 360; } return arr; };
   const follow = (k, inner)=>`<g transform="translate(${r2(handAt(F[0],k)[0])} ${r2(handAt(F[0],k)[1])})">${animT("translate", f=>r2(handAt(f,k)[0])+" "+r2(handAt(f,k)[1]))}${inner}</g>`;
   // halo : même forme, plus épaisse, pour découper le liseré dans les calques du dessous
@@ -583,7 +613,7 @@ function exoAnimSVG(def){
   // calques : le fond (membres éloignés), le corps (buste, jambe, tête), le premier plan (bras, charge) ;
   // chaque calque est découpé par un liseré autour de ce qui passe devant lui (masques : marche sur
   // n'importe quel fond, dégradé de la fiche compris)
-  const L = bodyLayers(F), sw = 2, gap = .5, id = "ea"+(++EA_UID);
+  const L = bodyLayers(F, rig.flat), sw = 2, gap = .5, id = "ea"+(++EA_UID);
   const bone = (cls, halo)=>([a, b, x])=>x==="torso"
     ? `<path${cls ? ` class="ea-torso"` : ""} d="${torsoD(F[0], sw)}" stroke-width="${(sw*.7+(halo ? gap*2 : 0)).toFixed(2)}">${anim("d", f=>torsoD(f, sw))}</path>`
     : `<path d="${(halo ? haloD : boneD)(F[0], a, b, x, L.legOff)}" stroke-width="${(sw*BODY_W[x]+(halo ? gap*2 : 0)).toFixed(2)}">${anim("d", f=>(halo ? haloD : boneD)(f, a, b, x, L.legOff))}</path>`;

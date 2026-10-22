@@ -1865,6 +1865,7 @@ body.live-focus #restbar{bottom:calc(14px + var(--sab))}
 /* bandeau sous la barre d'état : Safari 26 colore la barre d'après cet élément fixe et opaque
    (couleur écrite par syncStatusBar) ; invisible, puisqu'il a la couleur de ce qui est dessous */
 #sbar{position:fixed;top:0;left:0;right:0;height:max(var(--sat),1px);z-index:45;pointer-events:none;transition:background-color .2s}
+body.mo-on #sbar{z-index:2001}
 
 /* carte des muscles en une seule teinte : l'intensité dit combien le muscle a travaillé */
 .mm.mono .mm-z.on{fill:var(--tint);stroke:var(--tint)}
@@ -3394,6 +3395,6 @@ body.live-focus #restbar.island{bottom:auto}
 .av-opt.av-ini span{font-family:var(--display);font-weight:700;font-size:20px;color:var(--tint-ink)}
 .av-opt.av-ini{background:var(--tint-bg)}
 /* silhouette : côté éloigné estompé (profondeur) */
-.exo-anim .ea-far{opacity:.5}
+.exo-anim .ea-far{opacity:.6}
 .exo-anim .ea-torso{fill:var(--tint-ink)}
 .rw-stage .exo-anim .ea-torso{fill:#fff}
