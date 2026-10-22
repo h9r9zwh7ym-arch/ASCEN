@@ -89,7 +89,8 @@ const RIGS = {
   mountain_climbers:{ dur:1.1, A:PUSH_A, B:Object.assign({}, PUSH_A, { K:150, pin:{ F:[13.4,G], F2:[20.4,G], W:[7.8,G] } }) },
   renegade_row:    { icon:"A", A:Object.assign({}, PUSH_A, { pin:{ F:[20.4,G], W:[7.8,G], W2:[7.8,G] } }),
                      B:Object.assign({}, PUSH_A, { E:-30, W:95, pin:{ F:[20.4,G], W2:[7.8,G] } }) },
-  burpees:         { dur:1.8, A:stand(12, { E:-100, W:-92 }), B:Object.assign({}, PUSH_A) },
+  // accroupi mains au sol, puis les jambes partent en arrière : la planche (le geste qui fait le burpee)
+  burpees:         { dur:1.6, A:{ P:[13.6,17.2], t:-155, h:-158, face:-1, pin:{ F:[15.2,G], W:[7.8,G] } }, B:Object.assign({}, PUSH_A) },
 
   // ---------------- dips ----------------
   // jambes fléchies, pieds derrière (comme aux barres), le corps descend en se penchant un peu vers l'avant
@@ -199,8 +200,8 @@ const RIGS = {
   warm_hanches:    { dur:1.6, A:FRONT({ P:[11.2,12.5], t:-84, h:-88, E:128, W:40, E2:52, W2:140 }), B:FRONT({ P:[12.8,12.5], t:-96, h:-92, E:128, W:40, E2:52, W2:140 }) },
   montees_genoux:  { dur:.9, A:{ P:[12,12.4], t:-90, K:-12, F:90, E:60, W:-40, E2:125, W2:100, pin:{ F2:[12,G] } },
                      B:{ P:[12,12.4], t:-90, K2:-12, F2:90, E:125, W:100, E2:60, W2:-40, pin:{ F:[12,G] } } },
-  corde_a_sauter:  { dur:.7, env:"M5.6 20.6Q12 23.4 18.4 20.6", A:FRONT({ P:[12,12.4], pin:{ F:[11.4,G], F2:[12.6,G] }, E:112, W:40, E2:68, W2:140 }),
-                     B:FRONT({ P:[12,11.2], K:94, F:88, K2:86, F2:92, E:112, W:40, E2:68, W2:140, pin:{} }) },
+  corde_a_sauter:  { dur:.7, env:"M5.6 20.6Q12 23.4 18.4 20.6", A:FRONT({ P:[12,12.4], pin:{ F:[11.4,G], F2:[12.6,G] }, E:116, W:150, E2:64, W2:30 }),
+                     B:FRONT({ P:[12,11.2], K:94, F:88, K2:86, F2:92, E:116, W:150, E2:64, W2:30, pin:{} }) },
 
   // ---------------- mollets ----------------
   mollets_pdc:     { env:FL+"M7.6 20.8h8.8", A:stand(12), B:stand(12, { P:[12,10.9], pin:{ F:[12.4,19.3] } }) },
@@ -247,7 +248,8 @@ const RIGS = {
   rowing_barre:    { A:ROW_A, B:ROW_B },
   rowing_uni_kb:   { env:FL+"M14.4 15.2h6M15 15.2V21M19.8 15.2V21", A:BENT({ E:90, W:90, pin:{ F:[12,G], W2:[16.4,15.2] } }), B:BENT({ E:-160, W:92, pin:{ F:[12,G], W2:[16.4,15.2] } }) },
   rowing_uni_haltere:{ env:FL+"M14.4 15.2h6M15 15.2V21M19.8 15.2V21", A:BENT({ E:90, W:90, pin:{ F:[12,G], W2:[16.4,15.2] } }), B:BENT({ E:-160, W:92, pin:{ F:[12,G], W2:[16.4,15.2] } }) },
-  oiseau_haltere:  { A:ROW_A, B:BENT({ E:18, W:14 }) },
+  // vu de face, penché vers nous (tronc raccourci, tête devant la poitrine) : les bras s'ouvrent sur les côtés
+  oiseau_haltere:  { headFront:1, A:FRONT({ tl:3.6, h:90, nk:1.1, E:118, W:96, E2:62, W2:84 }), B:FRONT({ tl:3.6, h:90, nk:1.1, E:174, W:178, E2:6, W2:2 }) },
   kickback_triceps:{ env:FL+"M14.4 15.2h6M15 15.2V21M19.8 15.2V21", A:BENT({ E:170, W:90, pin:{ F:[12,G], W2:[16.4,15.2] } }), B:BENT({ E:170, W:168, pin:{ F:[12,G], W2:[16.4,15.2] } }) },
   tirage_elastique:{ env:FL+"M21.8 7.6v4", A:stand(12, { E:0, W:0 }), B:stand(12, { E:160, W:10 }) },
   rowing_appui_banc:{ env:ENV.incline, A:INCL_LIE({ P:[14.2,15.6], t:-146, h:-140, E:90, W:90 }), B:INCL_LIE({ P:[14.2,15.6], t:-146, h:-140, E:-118, W:92 }) },

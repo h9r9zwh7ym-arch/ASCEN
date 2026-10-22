@@ -21,7 +21,7 @@ const OUT = path.join(OUT_ROOT, 'v34'); fs.mkdirSync(OUT, { recursive: true });
       if (!RIGS[e.id]) { missing.push(e.id); return; }
       const g = animRig(e);
       g.frames.forEach(f => {
-        B.forEach(([a, b, l, root]) => { const A = (root && f[root]) || f[a]; const d = Math.hypot(A[0] - f[b][0], A[1] - f[b][1]); worst = Math.max(worst, Math.abs(d - BONE_L[l])); });
+        B.forEach(([a, b, l, root]) => { const A = (root && f[root]) || f[a]; const d = Math.hypot(A[0] - f[b][0], A[1] - f[b][1]); worst = Math.max(worst, Math.abs(d - (l === 'trunk' && RIGS[e.id].A.tl ? RIGS[e.id].A.tl : BONE_L[l]))); });
         ['F', 'F2', 'W', 'W2', 'K', 'K2', 'E', 'E2', 'P', 'N'].forEach(k => { if (f[k][1] > 21.4) under.push(e.id); });
       });
       ['A', 'B'].forEach(k => { const s = rigSolve(RIGS[e.id][k]); Object.keys(s.pin).forEach(p => { if (Math.hypot(s[p][0] - s.pin[p][0], s[p][1] - s.pin[p][1]) > .35) pins.push(e.id + ':' + k + p); }); });

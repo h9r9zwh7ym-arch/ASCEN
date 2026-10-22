@@ -2,6 +2,7 @@
 const OUT_ROOT = process.env.OUT_DIR || require('path').join(__dirname, 'out'); require('fs').mkdirSync(OUT_ROOT, { recursive: true });
 // 2.6.0 : chiffres qui roulent sur − / +, nombre de séries réglable (menu de l'exercice, exercices ajoutés),
 // images de profil, pictogrammes en volume (membres du fond en retrait), montagnes plus riches.
+// 2.6.3 : une fiche ouverte depuis un écran (Mes exercices…) ramène à cet écran.
 const __pw = require('playwright'); const path = require('path'); const fs = require('fs');
 const OUT = path.join(OUT_ROOT, 'v74'); fs.mkdirSync(OUT, { recursive: true });
 const APP = 'file://' + path.resolve(process.argv[2]);
@@ -55,6 +56,17 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const pic = await page.evaluate(() => { const s = exoAnimSVG(EXO_MAP.fentes_halteres) || '', c = exoAnimSVG(EXO_MAP.curl_biceps) || ''; return { far: /ea-far/.test(s), torso: /ea-torso/.test(s), mask: /<mask /.test(c) && !/ea-far/.test(c), ids: new Set([...document.body.innerHTML.matchAll(/mask id="([^"]+)"/g)].map(m => m[1])).size }; });
   log('Picto:', JSON.stringify(pic));
   if (!pic.far || !pic.torso || !pic.mask) fail('pictogramme animé en calques (jambe du fond, bras confondus retirés, liseré)');
+
+  // 6. une fiche ouverte depuis « Mes exercices » ramène à « Mes exercices » (pas au Profil)
+  await page.evaluate(() => closeSheet()); await page.waitForTimeout(600);
+  await page.evaluate(() => { switchTab('profil'); openExoPrefs(); }); await page.waitForTimeout(500);
+  await page.click('#overlay [data-a="showExoInfo"]'); await page.waitForTimeout(700);
+  const top = () => page.evaluate(() => { const s = [...document.querySelectorAll('#overlay .sheet')].filter(x => !x.classList.contains('sheet-kept') && !x.classList.contains('nav-leaving')).pop(); return s ? s.querySelector('.sheet-hd .t').textContent : ''; });
+  const back = await page.$('#overlay .sheet:not(.sheet-kept) [data-a="sheetBack"]');
+  if (back) await back.click(); await page.waitForTimeout(800);
+  const nav = { back: !!back, title: await top() };
+  log('Back from exercise sheet:', JSON.stringify(nav));
+  if (!nav.back || nav.title !== 'Mes exercices') fail('retour à « Mes exercices » après la fiche');
 
   await browser.close();
   if (errors.length) { errors.forEach(e => log(e)); log(`ERRORS: ${errors.length}`); process.exit(1); }

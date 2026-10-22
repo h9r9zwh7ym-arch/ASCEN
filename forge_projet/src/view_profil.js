@@ -460,7 +460,8 @@ function exoPrefSync(id){
   const dh = f.offsetHeight - h0; if(dh && b.scrollTop > f.offsetTop + 10) b.scrollTop += dh;
 }
 function openExoPrefs(){
-  openSheet(`<div class="sheet-hd"><span class="t">Mes exercices</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body ep-body">${exoPrefsBodyHTML()}</div>`);
+  openSheet(`<div class="sheet-hd"><span class="t">Mes exercices</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body ep-body">${exoPrefsBodyHTML()}</div>`,
+    { restore:openExoPrefs, refresh:el=>{ const b = qs(".sheet-body", el); if(!b) return; const top = b.scrollTop, open = !!qs(".pref-more[open]", b); b.innerHTML = exoPrefsBodyHTML(); if(open){ const d = qs(".pref-more", b); if(d) d.open = true; } b.scrollTop = top; } });
 }
 function refreshExoPrefs(){
   const b = qs(".sheet-body"); if(!b) return;

@@ -137,7 +137,7 @@ function exoPicto(def){
     const rig = animRig(def), rd = RIGS[def.id], f = rd.icon==="A" ? rig.A : rd.icon==="mid" ? rig.frames[rig.frames.length>>1] : rig.B;
     const ld = loadStatic(def, rig, f, Math.hypot(f.W[0]-f.W2[0], f.W[1]-f.W2[1])>.6, 2.3);
     if(rig.wheel) ld.front += `<circle class="pkf" cx="${f.W[0].toFixed(2)}" cy="${f.W[1].toFixed(2)}" r="${WHEEL_R+.9}"/><circle cx="${f.W[0].toFixed(2)}" cy="${f.W[1].toFixed(2)}" r="${WHEEL_R}" fill="currentColor"/>`;
-    svg = `<svg class="picto" viewBox="0 0 24 24" aria-hidden="true"><path d="${rig.env||FLOOR}" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity=".38"/>${ld.back}${bodyStatic(f, 2.15, 1.95, rig.flat)}${ld.front}</svg>`;
+    svg = `<svg class="picto" viewBox="0 0 24 24" aria-hidden="true"><path d="${rig.env||FLOOR}" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity=".38"/>${ld.back}${bodyStatic(f, 2.15, 1.95, rig.flat, rig.headFront)}${ld.front}</svg>`;
   }catch(e){ svg = pictoSVG(pictoKey(def)); }
   PICTO_CACHE.set(def.id, svg);
   return svg;
@@ -414,13 +414,13 @@ function torsoD(p, sw){
   return `M${pt(a, hN)}L${pt(b, hP)}L${pt(b, -hP)}L${pt(a, -hN)}Z`;
 }
 // pose figée (petites tuiles) : le liseré est un trait de la couleur de la tuile (--tile)
-function bodyStatic(p, sw, headR, flat){
+function bodyStatic(p, sw, headR, flat, hf){
   const L = bodyLayers(p, flat), g = .62, w = x=>(sw*BODY_W[x]).toFixed(2);
   const one = (halo)=>([a, b, x])=>x==="torso"
     ? `<path d="${torsoD(p, sw)}" ${halo ? `class="pkf pkb" stroke="var(--tile,transparent)" stroke-width="${(sw*.7+g*2).toFixed(2)}"` : `fill="currentColor" stroke="currentColor" stroke-width="${(sw*.7).toFixed(2)}"`} stroke-linejoin="round"/>`
     : `<path d="${(halo ? haloD : boneD)(p, a, b, x, L.legOff)}" ${halo ? `class="pk pkb" stroke-width="${(+w(x)+g*2).toFixed(2)}"` : `stroke="currentColor" stroke-width="${w(x)}"`}/>`;
   const head = halo=>`<circle cx="${p.H[0].toFixed(2)}" cy="${p.H[1].toFixed(2)}" r="${(headR+(halo ? g : 0)).toFixed(2)}" ${halo ? `class="pkf pkb"` : `fill="currentColor"`}/>`;
-  return `<g fill="none" stroke-linecap="round">${L.far.length ? `<g opacity=".5">${L.far.map(one(false)).join("")}</g>` : ""}${L.base.map(one(true)).join("")}${L.base.map(one(false)).join("")}${head(false)}${L.top.map(one(true)).join("")}${L.top.map(one(false)).join("")}</g>`;
+  return `<g fill="none" stroke-linecap="round">${L.far.length ? `<g opacity=".5">${L.far.map(one(false)).join("")}</g>` : ""}${L.base.map(one(true)).join("")}${L.base.map(one(false)).join("")}${hf ? head(true) : ""}${head(false)}${L.top.map(one(true)).join("")}${L.top.map(one(false)).join("")}</g>`;
 }
 function focusPath(p, seg){
   const a = p.S && seg[0]==="N" && seg[1]==="E" ? p.S : p.S && seg[0]==="P" && seg[1]==="K" ? p.Q : p[seg[0]], b = p[seg[1]], at = t=>[(a[0]+(b[0]-a[0])*t).toFixed(2), (a[1]+(b[1]-a[1])*t).toFixed(2)].join(" ");
@@ -483,7 +483,7 @@ function rigSolve(p){
   const add = (q,a,l)=>[q[0]+Math.cos(a)*l, q[1]+Math.sin(a)*l];
   const o = { P:p.P.slice() };
   // nk : cou raccourci (haussement d'épaules : les épaules montent vers les oreilles)
-  o.N = add(o.P, p.t*R, BONE_L.trunk); o.H = add(o.N, (p.h!==undefined ? p.h : p.t)*R, p.nk || BONE_L.head); o.nk = p.nk || BONE_L.head;
+  o.N = add(o.P, p.t*R, p.tl || BONE_L.trunk); o.tl = p.tl || BONE_L.trunk; o.H = add(o.N, (p.h!==undefined ? p.h : p.t)*R, p.nk || BONE_L.head); o.nk = p.nk || BONE_L.head;
   if(p.front) frontRoots(o, p.t*R);
   LIMBS.forEach(([r,m,e,l1,l2])=>{
     const leg = r==="P", u = ang[m]!==undefined ? ang[m] : 90, l = ang[e]!==undefined ? ang[e] : 90, root = rootOf(o, r, m.endsWith("2"));
@@ -500,13 +500,13 @@ function rigSolve(p){
 // le pied : perpendiculaire au tibia, du côté du devant de la jambe (opposé au pli du genou) ;
 // jambe tendue : vers le devant du corps, ou vers le haut si l'on est allongé sur le dos (sup)
 const FOOT_L = 1.35;
-function footAt(f, r, m, e, A){
+function footAt(f, r, m, e, A, forced){
   const R = f[r], K = f[m], F = f[e]; if(!R || !K || !F) return null;
   const t = [K[0]-R[0], K[1]-R[1]], sl = Math.hypot(F[0]-K[0], F[1]-K[1]) || 1, sv = [(F[0]-K[0])/sl, (F[1]-K[1])/sl];
   const cr = t[0]*sv[1]-t[1]*sv[0], tl = Math.hypot(t[0], t[1]) || 1;
-  let side;
-  if(Math.abs(cr)/tl > .2) side = cr>0 ? 1 : -1;
-  else {
+  let side = forced;
+  if(!side && Math.abs(cr)/tl > .2) side = cr>0 ? 1 : -1;
+  else if(!side){
     const face = A.face || 1, tr = [f.N[0]-f.P[0], f.N[1]-f.P[1]];
     const fr = A.sup ? [0, -1] : [-tr[1]*face, tr[0]*face];
     side = (sv[1]*fr[0] - sv[0]*fr[1]) >= 0 ? 1 : -1;
@@ -530,7 +530,7 @@ function rigFromData(def, rd){
   const frame = t=>{
     const g = {}; Object.keys(gA).forEach(k=>g[k] = lerpA(gA[k], gB[k], t));
     const add = (q,a,l)=>[q[0]+Math.cos(a)*l, q[1]+Math.sin(a)*l];
-    const f = { P:hipAt(t) }; f.N = add(f.P, g.t, BONE_L.trunk); f.H = add(f.N, g.h, A.nk+(B.nk-A.nk)*t);
+    const f = { P:hipAt(t) }; f.N = add(f.P, g.t, A.tl+(B.tl-A.tl)*t); f.H = add(f.N, g.h, A.nk+(B.nk-A.nk)*t);
     if(front) frontRoots(f, g.t);
     LIMBS.forEach(([r,m,e,l1,l2])=>{ const root = rootOf(f, r, m.endsWith("2")); f[m] = add(root, g[m], BONE_L[l1]); f[e] = add(f[m], g[e], BONE_L[l2]); });
     both.forEach(([r,m,e,l1,l2])=>{ const s = ik2(rootOf(f, r, m.endsWith("2")), lerpP(A.pin[e], B.pin[e], t), BONE_L[l1], BONE_L[l2], f[m]); f[m] = s[0]; f[e] = s[1]; });
@@ -539,12 +539,22 @@ function rigFromData(def, rd){
       const L = BONE_L.uarm+BONE_L.farm-.06, y = A.pin.W[1], dy = y-f.N[1], dx = Math.sqrt(Math.max(0, L*L-dy*dy)), face = rd.A.face||1;
       const s = ik2(f.N, [f.N[0]+face*dx, y], BONE_L.uarm, BONE_L.farm, f.E); f.E = f.E2 = s[0]; f.W = f.W2 = s[1];
     }
-    if(!front){ f.T = footAt(f, "P", "K", "F", rd.A); f.T2 = footAt(f, "P", "K2", "F2", rd.A); }
     return f;
   };
   const ease = x=>x*x*(3-2*x), frames = [];
   for(let i=0;i<=ANIM_FRAMES;i++) frames.push(frame(ease(i/ANIM_FRAMES)));
-  return { env:rd.env || FLOOR, dur:rd.dur || base.dur, grip:rd.grip || base.grip, frames, A:frames[0], B:frames[ANIM_FRAMES], anchor:"P", contacts:both.map(c=>c[2]), two:true, wheel:!!rd.wheel, flat:!!rd.flat };
+  // pieds : le côté se décide sur l'image où le genou est le plus plié, puis reste le même partout
+  if(!front) [["K","F","T"],["K2","F2","T2"]].forEach(([m, e, tk])=>{
+    let best = 0, side = 0;
+    frames.forEach(f=>{ const R = f.P, K = f[m], F = f[e], t = [K[0]-R[0], K[1]-R[1]], sl = Math.hypot(F[0]-K[0], F[1]-K[1]) || 1;
+      const cr = (t[0]*(F[1]-K[1])-t[1]*(F[0]-K[0]))/sl/(Math.hypot(t[0], t[1]) || 1); if(Math.abs(cr)>best){ best = Math.abs(cr); side = cr>0 ? 1 : -1; } });
+    frames.forEach(f=>{ f[tk] = footAt(f, "P", m, e, rd.A, best>.2 ? side : 0); });
+    if(best<=.2){ const s0 = frames[0][tk], F0 = frames[0][e]; const v = [s0[0]-F0[0], s0[1]-F0[1]];
+      // jambe tendue : le côté de la première image vaut pour toutes
+      frames.forEach(f=>{ const K = f[m], F = f[e], sl = Math.hypot(F[0]-K[0], F[1]-K[1]) || 1, sv = [(F[0]-K[0])/sl, (F[1]-K[1])/sl];
+        const sd = (sv[0]*v[1]-sv[1]*v[0])>=0 ? 1 : -1; f[tk] = footAt(f, "P", m, e, rd.A, sd); }); }
+  });
+  return { env:rd.env || FLOOR, dur:rd.dur || base.dur, grip:rd.grip || base.grip, frames, A:frames[0], B:frames[ANIM_FRAMES], anchor:"P", contacts:both.map(c=>c[2]), two:true, wheel:!!rd.wheel, flat:!!rd.flat, headFront:!!rd.headFront };
 }
 function animRig(def){
   if(ANIM_CACHE.has(def.id)) return ANIM_CACHE.get(def.id);
@@ -620,15 +630,15 @@ function exoAnimSVG(def){
   const head = halo=>`<circle${halo ? "" : ` class="ea-head"`} cx="${r2(F[0].H[0])}" cy="${r2(F[0].H[1])}" r="${(HEAD_R+(halo ? gap : 0)).toFixed(2)}">${anim("cx", f=>r2(f.H[0]))}${anim("cy", f=>r2(f.H[1]))}</circle>`;
   const fx = /^[NE]/.test(seg ? seg[0] : "") && (seg[0]!=="N" || seg[1]==="E") ? "top" : "base";
   const halos = list=>`<g fill="#000" stroke="#000" stroke-linecap="round" stroke-linejoin="round">${list}</g>`;
-  const topHalo = L.top.map(bone(false, true)).join("") + loadSVG(true) + wheelSVG(true);
-  const baseHalo = L.base.map(bone(false, true)).join("") + head(true);
+  const hf = !!rig.headFront, topHalo = L.top.map(bone(false, true)).join("") + loadSVG(true) + wheelSVG(true) + (hf ? head(true) : "");
+  const baseHalo = L.base.map(bone(false, true)).join("") + (rig.headFront ? "" : head(true));
   const box = `x="-12" y="-12" width="48" height="48"`;
   const mask = (mid, list)=>`<mask id="${id}${mid}" maskUnits="userSpaceOnUse" ${box}><rect ${box} fill="#fff"/>${halos(list)}</mask>`;
   return `<svg class="exo-anim" viewBox="0 0 24 24" aria-label="Animation du mouvement">
     <defs>${mask("t", topHalo)}${L.far.length ? mask("f", baseHalo+topHalo) : ""}</defs>
     ${shadow}<path class="ea-env" d="${rig.env||FLOOR}"/>
     ${L.far.length ? `<g class="ea-body ea-far" mask="url(#${id}f)">${L.far.map(bone(false)).join("")}</g>` : ""}
-    <g mask="url(#${id}t)"><g class="ea-body">${L.base.map(bone(true)).join("")}</g>${head(false)}${fx==="base" ? focus : ""}</g>
+    <g mask="url(#${id}t)"><g class="ea-body">${L.base.map(bone(true)).join("")}</g>${hf ? "" : head(false)}${fx==="base" ? focus : ""}</g>${hf ? head(false) : ""}
     <g class="ea-body">${L.top.map(bone(false)).join("")}</g>${fx==="top" ? focus : ""}
     ${wheelSVG(false)}
     ${loadSVG(false)}

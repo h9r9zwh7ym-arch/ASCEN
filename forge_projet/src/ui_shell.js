@@ -529,6 +529,16 @@ function openSheet(html, opts){
   if(!sheetRestoring){
     if(!sheetShown()) sheetStackClear();
     else if(opts.child && sheetRestore){ keep = sheetKeep(sheetRestore); sheetStack.push(sheetRestore); }
+    // écran ouvert sans moyen de le rouvrir (Mes exercices, Défis…) : on le garde tel qu'il est, pour
+    // y revenir au lieu de tout fermer
+    else if(opts.child){
+      const cur = sheetActive();
+      if(cur){
+        const snap = cur.innerHTML.replace(/^<div class="sheet-grab"><\/div>/, ""), tall = cur.classList.contains("tall");
+        const r = ()=>openSheet(snap, { tall, restore:r });
+        keep = sheetKeep(r); sheetStack.push(r);
+      }
+    }
   }
   navSheetDir = sheetRestoring ? "pop" : opts.child && sheetStack.length ? "push" : null;
   sheetRestore = opts.restore || null;
