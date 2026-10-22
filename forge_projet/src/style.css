@@ -758,10 +758,6 @@ button.sec-h:active{background:var(--fill2)}
 @keyframes readyBump{0%{transform:scale(.94)}50%{transform:scale(1.04)}100%{transform:none}}
 .validate::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.35) 50%,transparent 65%);transform:translateX(-120%)}
 .validate.ready::after{animation:heroSheen 1.6s ease-in-out}
-.bs-val.roll-up{animation:rollUp .28s cubic-bezier(.2,.8,.2,1)}
-.bs-val.roll-down{animation:rollDown .28s cubic-bezier(.2,.8,.2,1)}
-@keyframes rollUp{from{transform:translateY(55%);opacity:0}to{transform:none;opacity:1}}
-@keyframes rollDown{from{transform:translateY(-55%);opacity:0}to{transform:none;opacity:1}}
 .fc-done-t{font-weight:700;font-size:var(--fs-body);margin:-6px 0 10px;color:var(--green)}
 .next-exo{flex-direction:row;gap:6px;justify-content:space-between;text-align:left;padding:0 16px 0 18px;margin-top:4px}
 .next-exo .ne-k{font-size:var(--fs-cap);font-weight:700;opacity:.85;text-transform:none;letter-spacing:0;flex:none}
@@ -3382,3 +3378,24 @@ body.live-focus #restbar.island{bottom:auto}
 .hero .hero-meta .hero-tag{flex-basis:100%}
 .hero .hero-meta .hero-tag+span::before{content:none}
 .hero .hero-meta span{white-space:nowrap}
+/* chiffres qui roulent : une colonne par chiffre qui change, découpée en hauteur */
+.rl-col{display:inline-grid;overflow:hidden;vertical-align:bottom;line-height:inherit}
+.rl-col>i{grid-area:1/1;font-style:normal;display:block}
+/* séries par exercice (feuille d'ajout en séance) et nombre de séries dans le menu « … » de l'exercice */
+.pk-sets{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;font-size:var(--fs-sub);color:var(--label2)}
+.menu-list .fm-sets{display:flex;align-items:center;gap:12px;padding:10px 14px;min-height:48px}
+.menu-list .fm-sets>svg{width:20px;height:20px;color:var(--tint);flex:none}
+.menu-list .fm-sets>span{flex:1;font-size:var(--fs-body);text-align:left;font-weight:600}
+/* images de profil */
+.ph-avatar.pic span,.ph-avatar.pic>span{overflow:hidden;padding:0;background:none}
+.av-svg{width:100%;height:100%;display:block;border-radius:50%}
+.av-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:0 0 16px}
+.av-opt{aspect-ratio:1;border-radius:50%;border:0;padding:0;background:var(--fill2);display:grid;place-items:center;position:relative;transition:transform .2s cubic-bezier(.3,1.4,.5,1)}
+.av-opt:active{transform:scale(.92)}
+.av-opt.on::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2.5px solid var(--tint)}
+.av-opt.av-ini span{font-family:var(--display);font-weight:700;font-size:20px;color:var(--tint-ink)}
+.av-opt.av-ini{background:var(--tint-bg)}
+/* silhouette : côté éloigné estompé (profondeur) */
+.exo-anim .ea-far{opacity:.42}
+.exo-anim .ea-torso{fill:var(--rc,var(--tint))}
+.rw-stage .exo-anim .ea-torso{fill:#fff}

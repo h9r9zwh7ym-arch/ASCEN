@@ -147,7 +147,11 @@ function ascBuildScene(host, k){
   host.style.setProperty("--pill", night ? "rgba(17,23,38,.86)" : "rgba(255,255,255,.9)"); host.style.setProperty("--pill-ink", night ? "#F2F4F8" : "#13202A");
   // vue recadrée sous le point le plus bas de la voie (D.vh) : moins de premier plan vide, la carte des étapes remonte
   const svg = `<svg class="asc-svg" viewBox="0 0 ${W} ${VH}" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs>
-      <linearGradient id="asSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.sky[0]}"/><stop offset="1" stop-color="${P.sky[1]}"/></linearGradient>
+      <linearGradient id="asSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.sky[0]}"/><stop offset=".62" stop-color="${P.sky[1]}"/><stop offset="1" stop-color="${night ? "#2A2F52" : "#F3DEC4"}"/></linearGradient>
+      <linearGradient id="asHazeG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgb(${P.haze})" stop-opacity="${night ? .5 : .55}"/><stop offset=".55" stop-color="rgb(${P.haze})" stop-opacity="0"/></linearGradient>
+      <linearGradient id="asFore" x1="0" y1="0" x2="0" y2="1"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="${night ? .38 : .26}"/></linearGradient>
+      <radialGradient id="asWash" cx="${(ox/W).toFixed(3)}" cy="${(oy/VH).toFixed(3)}" r=".75"><stop offset="0" stop-color="${night ? "#B8C8F0" : "#FFE2B0"}" stop-opacity="${night ? .28 : .42}"/><stop offset="1" stop-color="${night ? "#B8C8F0" : "#FFE2B0"}" stop-opacity="0"/></radialGradient>
+      <filter id="asSoft" x="-2%" y="-2%" width="104%" height="104%"><feGaussianBlur stdDeviation="1.3"/></filter>
       <radialGradient id="asGlow"><stop offset="0" stop-color="${night ? "rgba(170,195,240,.35)" : "rgba(255,224,160,.6)"}"/><stop offset="1" stop-color="${night ? "rgba(170,195,240,0)" : "rgba(255,224,160,0)"}"/></radialGradient>
       <radialGradient id="asMe"><stop offset="0" stop-color="#E07A55" stop-opacity=".6"/><stop offset="1" stop-color="#E07A55" stop-opacity="0"/></radialGradient>
       <radialGradient id="asLamp"><stop offset="0" stop-color="#FFE2B8" stop-opacity=".4"/><stop offset="1" stop-color="#FFE2B8" stop-opacity="0"/></radialGradient>
@@ -156,7 +160,9 @@ function ascBuildScene(host, k){
     <style>${fills}</style>
     <rect width="${W}" height="${H}" fill="url(#asSky)"/>${stars}${orb}
     <g opacity=".95">${cloud(80, H*.42, 1, 110, 20)}${cloud(500, H*.36, .75, 140, 80)}</g>
-    <g clip-path="url(#asLand)">${terrain}</g>
+    <g clip-path="url(#asLand)"><g filter="url(#asSoft)">${terrain}</g>
+      <rect width="${W}" height="${VH}" fill="url(#asHazeG)"/><rect width="${W}" height="${VH}" fill="url(#asWash)"/><rect width="${W}" height="${VH}" fill="url(#asFore)"/></g>
+    <g fill="none" stroke="${night ? "#C9D6F5" : "#FFF4DE"}" stroke-opacity="${night ? .35 : .6}" stroke-width="2.4" stroke-linejoin="round" filter="url(#asSoft)">${land}</g>
     ${rp.hid ? `<path d="${rp.hid}" fill="none" stroke="${ghost}" stroke-width="2.2" stroke-dasharray="1.5 8" stroke-linecap="round" stroke-linejoin="round"/>` : ""}
     <path d="${rp.vis}" fill="none" stroke="rgba(0,0,0,.22)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="${rp.vis}" fill="none" stroke="${route}" stroke-width="3.2" stroke-dasharray="3 9" stroke-linecap="round" stroke-linejoin="round"/>
@@ -472,7 +478,7 @@ function ascCarnetHTML(a){
 // en attendant, la silhouette de la montagne.
 const ASC_STRIP_KEY = STORAGE_KEY+".strip"; // effacée avec le reste à la réinitialisation
 let ascStripMem = null;
-function ascStripId(k){ return k+":"+(ascDark() ? "n" : "d")+":1"; }
+function ascStripId(k){ return k+":"+(ascDark() ? "n" : "d")+":2"; }
 function ascStripCached(id){
   if(ascStripMem && ascStripMem.id===id) return ascStripMem.url;
   try{ const o = JSON.parse(localStorage.getItem(ASC_STRIP_KEY)||"null"); if(o && o.id===id && /^data:image\//.test(o.url)){ ascStripMem = o; return o.url; } }catch(e){}
@@ -492,9 +498,13 @@ function ascStripSVG(k){
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 ${y0} ${W} ${h}" width="${W}" height="${h}" preserveAspectRatio="xMidYMid slice"><defs>
     <linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.sky[0]}"/><stop offset="1" stop-color="${P.sky[1]}"/></linearGradient>
     <radialGradient id="sg"><stop offset="0" stop-color="rgba(255,224,160,.6)"/><stop offset="1" stop-color="rgba(255,224,160,0)"/></radialGradient>
-    <clipPath id="ld">${sc.land.map(d=>`<path d="${d}"/>`).join("")}</clipPath></defs><style>${fills}</style>
+    <clipPath id="ld">${sc.land.map(d=>`<path d="${d}"/>`).join("")}</clipPath>
+    <linearGradient id="hz" x1="0" y1="${y0}" x2="0" y2="${y0+h}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="rgb(${P.haze})" stop-opacity=".5"/><stop offset=".6" stop-color="rgb(${P.haze})" stop-opacity="0"/></linearGradient>
+    <radialGradient id="wa" cx="${ox}" cy="${oy}" r="${W*.7}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${night ? "#B8C8F0" : "#FFE2B0"}" stop-opacity="${night ? .25 : .4}"/><stop offset="1" stop-color="${night ? "#B8C8F0" : "#FFE2B0"}" stop-opacity="0"/></radialGradient>
+    <filter id="sf" x="-2%" y="-2%" width="104%" height="104%"><feGaussianBlur stdDeviation="1.3"/></filter></defs><style>${fills}</style>
     <rect y="${y0}" width="${W}" height="${h}" fill="url(#sk)"/>${orb}
-    <g clip-path="url(#ld)">${sc.paths.map(([c, d])=>`<path class="ak${c}" d="${d}"/>`).join("")}</g>
+    <g clip-path="url(#ld)"><g filter="url(#sf)">${sc.paths.map(([c, d])=>`<path class="ak${c}" d="${d}"/>`).join("")}</g><rect y="${y0}" width="${W}" height="${h}" fill="url(#hz)"/><rect y="${y0}" width="${W}" height="${h}" fill="url(#wa)"/></g>
+    <g fill="none" stroke="${night ? "#C9D6F5" : "#FFF4DE"}" stroke-opacity="${night ? .35 : .6}" stroke-width="2.4" filter="url(#sf)">${sc.land.map(d=>`<path d="${d}"/>`).join("")}</g>
     <g transform="translate(${sc.summit[0]} ${sc.summit[1]})"><line x1="0" y1="0" x2="0" y2="-40" stroke="${night || D.pal==="hima" ? "#F4F6FA" : "#0F1B28"}" stroke-width="3" stroke-linecap="round"/><path d="M0 -40h26l-6 8 6 8H0Z" fill="#BC5736"/></g></svg>`;
 }
 let ascStripBusy = "";

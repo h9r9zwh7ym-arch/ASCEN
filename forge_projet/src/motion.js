@@ -164,28 +164,32 @@ async function moValidate(mo, k){
       const B = mo.btnR; btn.style.visibility = "hidden";
       [".sx-steps", ".fc-beat", ".fc-next", ".sx-note"].forEach(sel=>{ const e = qs(sel, snap); if(!e) return; const r = moRect(e);
         moXform(e).to({ y:B.y - r.y, s:.25, o:0 }, { per:{ y:{ response:.32, damping:.9 }, s:{ response:.3, damping:.9 }, o:{ response:.22 } } }); });
-      const b = moBlob({ x:B.x, y:B.y, w:B.w, h:B.h, r:16 }, tint); b.colors = [tint, green];
-      b.to({ w:B.w*1.05, h:B.h*.78 }, { response:.18, damping:.55 });
-      await moWait(130);
+      // une seule forme du début à la fin : le bouton se ramasse, file dans la case (en verdissant), puis
+      // devient la goutte du repos (moDrip). Pas de pause marquée : chaque étape part avant la fin de la précédente.
+      const b = moBlob({ x:B.x, y:B.y, w:B.w, h:B.h, r:16 }, tint, { o:1 }); b.colors = [tint, green];
+      b.to({ w:B.w*1.03, h:B.h*.84 }, { response:.14, damping:.6 });
+      await moWait(70);
       tile.style.background = "transparent"; tile.style.boxShadow = "none";
       const tb = moBlob({ x:T.x, y:T.y, w:T.w, h:T.h, r:12 }, card); tb.colors = [card, green]; tb.stretch = 0;
-      b.push("x", -900).push("y", -500).to({ x:T.x, y:T.y }, { per:{ x:{ response:.56, damping:.78 }, y:{ response:.44, damping:.8 } } }).to({ w:T.w*.9, h:T.h*.9, r:14 }, { response:.38, damping:.7 });
-      await moWait(290);
-      // impact : la case s'écrase et rebondit, onde de choc, cases voisines bousculées
-      tb.to({ w:T.w, h:T.h }, { response:.42, damping:.32 }).push("h", -520).push("w", 560).to({ p:1 }, { response:.22 });
-      b.to({ p:1, w:T.w*.6, h:T.h*.6 }, { response:.26, damping:.75 });
-      moShock(T);
-      tiles.forEach((t, i)=>{ if(t===tile) return; const dir = i < tiles.indexOf(tile) ? -1 : 1; moXform(t).push("x", dir*260).to({ x:0 }, { response:.4, damping:.35 }); });
+      b.push("x", -560).push("y", -320).to({ x:T.x, y:T.y }, { per:{ x:{ response:.46, damping:.84 }, y:{ response:.4, damping:.86 } } })
+       .to({ w:T.w*.92, h:T.h*.92, r:13 }, { response:.34, damping:.8 }).to({ p:1 }, { response:.46 });
+      await moWait(250);
+      // arrivée : la case l'absorbe en douceur (petit rebond), légère onde, voisines à peine bousculées
+      tb.to({ w:T.w, h:T.h }, { response:.4, damping:.5 }).push("h", -240).push("w", 260).to({ p:1 }, { response:.2 });
+      moShock(T, .6);
+      tiles.forEach((t, i)=>{ if(t===tile) return; const dir = i < tiles.indexOf(tile) ? -1 : 1; moXform(t).push("x", dir*120).to({ x:0 }, { response:.38, damping:.5 }); });
       moTileDone(tile, k.label, k.val);
       tile.style.background = "transparent";
-      setTimeout(()=>{ b.stop(); b.el.remove(); }, 160);
+      // la même forme continue : elle devient la goutte du repos (ou s'efface si l'exercice est fini)
+      if(k.kind==="set") MO.carry = b;
+      else { b.to({ o:0, w:T.w*.6, h:T.h*.6 }, { response:.22, damping:.9 }); setTimeout(()=>{ b.stop(); b.el.remove(); }, 220); }
       MO.tileBlob = tb;
     } else {
       moTileDone(tile, k.label, k.val);
       moXform(tile, { s:.88 }).to({ s:1 }, { response:.34, damping:.45 });
       MO.tileBlob = null;
     }
-    await moWait(140);
+    await moWait(90);
     if(k.kind==="set") await moDrip(mo, tile, T, rx, green, card);
     else if(k.kind==="exo") await moToSegment(mo, tiles, tile, rx, k, green, tint);
     else { MO.endCtx = { mo, tile, T, end }; return; }   // la suite : quand la page de fin s'ouvre (moCelebrate)
@@ -193,11 +197,12 @@ async function moValidate(mo, k){
   end();
 }
 // onde de choc qui part d'une case
-function moShock(R){
+function moShock(R, k){
+  k = k || 1;
   const d = document.createElement("div"); d.className = "mo-shock";
   Object.assign(d.style, { left:(R.x-R.w/2)+"px", top:(R.y-R.h/2)+"px", width:R.w+"px", height:R.h+"px" });
   moLayer().querySelector(".mo-fx").appendChild(d);
-  d.animate([{ transform:"scale(.9)", opacity:.9 }, { transform:"scale(1.9,2.6)", opacity:0 }], { duration:560, easing:"cubic-bezier(.1,.7,.2,1)", fill:"forwards" }).finished.then(()=>d.remove()).catch(()=>{});
+  d.animate([{ transform:"scale(.9)", opacity:.9*k }, { transform:`scale(${1+.9*k},${1+1.6*k})`, opacity:0 }], { duration:560, easing:"cubic-bezier(.1,.7,.2,1)", fill:"forwards" }).finished.then(()=>d.remove()).catch(()=>{});
 }
 // 1 · le repos coule de la case comme une goutte, tombe, s'écrase et gonfle en anneau (le vrai anneau)
 async function moDrip(mo, tile, T, rx, green, card){
@@ -210,14 +215,15 @@ async function moDrip(mo, tile, T, rx, green, card){
   if(tb){ if(!tb.s.o) tb.s.o = { v:1, t:1, vel:0, ...moParams(.3, 1) }; tb.push("h", 120); setTimeout(()=>tb.to({ o:0 }, { response:.25 }), 160); }
   if(!ring) return;
   const R = moRect(ring), size = Math.min(R.w, R.h);
-  // la goutte : elle s'étire hors de la case (pont liquide), se détache et tombe en restant ronde
-  const drop = moBlob({ x:T.x, y:T.y+6, w:26, h:26, r:13 }, green, { o:1 }); drop.colors = [green, moVar("--tint") || "#BC5736"];
-  drop.to({ y:T.y+40, h:40 }, { response:.3, damping:.9 });
+  // la goutte : la forme arrivée dans la case (MO.carry) se resserre, s'étire vers le bas et se détache
+  let drop = MO.carry; MO.carry = null;
+  if(drop && drop.el.isConnected){ drop.colors = [green, moVar("--tint") || "#BC5736"]; drop.s.p.v = drop.s.p.t = 0; drop.to({ w:26, h:34, r:13, y:T.y+22 }, { response:.26, damping:.82 }); }
+  else { drop = moBlob({ x:T.x, y:T.y+6, w:26, h:26, r:13 }, green, { o:1 }); drop.colors = [green, moVar("--tint") || "#BC5736"]; drop.to({ y:T.y+40, h:40 }, { response:.3, damping:.9 }); }
   // le vrai anneau attend au centre, minuscule et caché
   const rf = moXform(ring, { s:.2, o:0 });
-  await moWait(160);
-  drop.push("y", 600).to({ x:R.x, y:R.y }, { per:{ x:{ response:.5, damping:.9 }, y:{ response:.42, damping:.82 } } }).to({ w:34, h:34, r:17, p:1 }, { response:.4, damping:.9 });
-  await moWait(330);
+  await moWait(120);
+  drop.push("y", 420).to({ x:R.x, y:R.y }, { per:{ x:{ response:.46, damping:.9 }, y:{ response:.4, damping:.85 } } }).to({ w:34, h:34, r:17, p:1 }, { response:.38, damping:.9 });
+  await moWait(300);
   // impact : la goutte est absorbée et l'anneau éclot d'elle avec un rebond
   drop.to({ w:0, h:0, o:0 }, { response:.22, damping:.9 });
   rf.to({ o:1 }, { response:.12 }).to({ s:1 }, { response:.42, damping:.5 });
@@ -545,3 +551,45 @@ Object.assign(ACT, {
 // page de fin : « Terminé » (closesheet) la replie dans le jour de la semaine
 { const base = ACT.closesheet;
   ACT.closesheet = function(d, el){ if(el && el.closest && el.closest(".cel-ft") && moOn() && qs("#v-today .wk-day.today")) return moCloseCelebration(); return base.apply(this, arguments); }; }
+
+// ---------- chiffres qui roulent (compteur) ----------
+// Seuls les chiffres qui changent bougent : l'ancien part, le nouveau arrive du côté du changement (+ : par
+// le bas, − : par le haut), avec un léger ressort ; les autres restent immobiles. dir : 1 ou −1.
+// valeur affichée, même pendant qu'un chiffre roule (le texte contient alors l'ancien et le nouveau)
+const rollVal = el => el ? (el.dataset.rv!=null ? el.dataset.rv : el.textContent) : "";
+function rollText(el, from, to, dir){
+  from = String(from); to = String(to);
+  if(el) el.dataset.rv = to;
+  if(!el || from===to || !moOn() || !el.animate){ if(el) el.textContent = to; return; }
+  const n = Math.max(from.length, to.length), a = from.padStart(n, " "), b = to.padStart(n, " ");
+  const sp = moEase(.42, .78), d = dir<0 ? -1 : 1;
+  el.textContent = "";
+  const cols = [];
+  for(let i=0;i<n;i++){
+    const s = document.createElement("span");
+    if(a[i]===b[i]){ s.textContent = b[i]===" " ? "" : b[i]; el.appendChild(s); continue; }
+    s.className = "rl-col";
+    const o = document.createElement("i"), nw = document.createElement("i");
+    o.className = "rl-o"; o.textContent = a[i]===" " ? "" : a[i]; nw.textContent = b[i]===" " ? "" : b[i];
+    o.setAttribute("aria-hidden","true"); s.append(nw, o); el.appendChild(s); cols.push([o, nw]);
+  }
+  // les chiffres de droite partent les premiers, comme un compteur mécanique
+  cols.reverse().forEach(([o, nw], k)=>{
+    const delay = k*28;
+    o.animate([{ transform:"translateY(0)", opacity:1, filter:"blur(0)" }, { transform:`translateY(${-d*70}%)`, opacity:0, filter:"blur(1.5px)" }], { duration:200, delay, easing:"cubic-bezier(.4,0,.6,1)", fill:"forwards" });
+    nw.animate([{ transform:`translateY(${d*70}%)`, opacity:0, filter:"blur(1.5px)" }, { transform:"translateY(0)", opacity:1, filter:"blur(0)" }], { ...sp, delay, fill:"backwards" });
+  });
+  clearTimeout(el._rl); el._rl = setTimeout(()=>{ if(el.isConnected && el.querySelector(".rl-col")) el.textContent = to; }, sp.duration + cols.length*28 + 60);
+}
+// tous les petits − / + de l'app : la valeur est relevée avant l'action, puis roule vers la nouvelle
+document.addEventListener("click", e=>{
+  const btn = e.target.closest && e.target.closest(".mini-step button[data-a]"); if(!btn || btn.disabled) return;
+  const box = btn.closest(".mini-step"), span = box && box.querySelector("span"); if(!span) return;
+  const keys = ["a","i","exi","si","f","k","id"].filter(k=>btn.dataset[k]!=null).map(k=>`[data-${k}="${CSS.escape(btn.dataset[k])}"]`).join("");
+  const from = rollVal(span), dir = +btn.dataset.d || 1;
+  requestAnimationFrame(()=>{
+    // l'écran a pu être redessiné : on retrouve le même compteur par son bouton
+    const b2 = document.querySelector(`.mini-step button${keys}`), s2 = b2 && b2.closest(".mini-step").querySelector("span");
+    const now = s2 && rollVal(s2); if(s2 && now!==from) rollText(s2, from, now, dir);
+  });
+}, true);

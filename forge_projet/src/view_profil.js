@@ -18,13 +18,26 @@ const LEVEL_HINTS = { debutant:"Exercices accessibles, la technique d'abord.", i
 
 function ownedEquipCount(){ return EQUIP_TYPES.filter(e=>!e.always && S.equipment.owned[e.id]).length; }
 
+// ---------- images de profil : petites scènes dessinées (≈ 400 octets chacune), dans les couleurs de l'app ----------
+const AVATARS = {
+  sommet:`<rect width="64" height="64" fill="#F4E3D3"/><circle cx="46" cy="18" r="7" fill="#E07A55"/><path d="M0 64 22 26l9 12 7-9 26 35Z" fill="#5B6472"/><path d="m22 26 6.5 9-4-2-2.5 4-4-3Z" fill="#fff"/><path d="m38 29 5 6.5-3-1-2 3-2.5-2.5Z" fill="#fff"/>`,
+  nuit:`<rect width="64" height="64" fill="#1B2440"/><circle cx="44" cy="18" r="8" fill="#F2EEE4"/><circle cx="48" cy="15" r="7" fill="#1B2440"/><g fill="#fff"><circle cx="14" cy="14" r="1.2"/><circle cx="26" cy="9" r=".9"/><circle cx="20" cy="24" r=".8"/><circle cx="56" cy="32" r=".9"/></g><path d="M0 64 18 36l10 12 12-18 24 34Z" fill="#2E3A5C"/><path d="m40 30 6 8.5-3.5-1.5-2.5 3-3-2.5Z" fill="#C9D3E8"/>`,
+  lac:`<rect width="64" height="64" fill="#DCEAF2"/><path d="M0 40 20 18l10 11 8-8 26 19Z" fill="#59708A"/><path d="m20 18 5 6-3-1-2 2.5-3-2Z" fill="#fff"/><rect y="40" width="64" height="24" fill="#8FB3C9"/><path d="M0 40 20 60l10-10 8 7 26-17Z" fill="#59708A" opacity=".35"/><path d="M10 50h12M34 54h16M18 58h10" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".7"/>`,
+  aube:`<rect width="64" height="64" fill="#F6D9C2"/><circle cx="32" cy="40" r="12" fill="#F2A25F"/><path d="M0 44c10-6 20-7 32-3s22 3 32-2v25H0Z" fill="#D9774E"/><path d="M0 52c12-5 22-5 34-1s20 3 30-1v14H0Z" fill="#B85A3A"/><path d="M0 59c14-3 26-3 38 0s18 2 26 0v5H0Z" fill="#8E4430"/>`,
+  sapin:`<rect width="64" height="64" fill="#E6EFE6"/><path d="M0 50c14-8 30-10 64-4v18H0Z" fill="#9DBF9A"/><g fill="#3F6B4E"><path d="m20 18-9 16h5l-7 12h22l-7-12h5Z"/><path d="m42 26-7 12h4l-5 9h16l-5-9h4Z"/></g><path d="M19 46h3v6h-3zM41 47h2.5v5H41z" fill="#5C4535"/>`,
+  drapeau:`<rect width="64" height="64" fill="#EFE7DF"/><path d="M0 64 30 24l34 40Z" fill="#6E7682"/><path d="m30 24 7 9-4-1.5-3 3.5-3-3-4 1.5Z" fill="#fff"/><path d="M30 24V8" stroke="#2A2F36" stroke-width="2" stroke-linecap="round"/><path d="M30 8h13l-3.5 4.5L43 17H30Z" fill="#E07A55"/>`,
+  vague:`<rect width="64" height="64" fill="#E3EEF3"/><circle cx="46" cy="16" r="6" fill="#F2A25F"/><path d="M0 40c8 0 10-12 22-12 9 0 12 8 9 12-2 3-7 2-6-2 3 4 10 4 14-1 6-7 16-6 25 1v26H0Z" fill="#3E7C9B"/><path d="M0 50c10-3 20 3 32 0s22-3 32 0v14H0Z" fill="#2D5F79"/>`,
+  boussole:`<rect width="64" height="64" fill="#F1E7DC"/><circle cx="32" cy="32" r="20" fill="none" stroke="#5B6472" stroke-width="2.5"/><g fill="#5B6472"><circle cx="32" cy="12" r="1.6"/><circle cx="32" cy="52" r="1.6"/><circle cx="12" cy="32" r="1.6"/><circle cx="52" cy="32" r="1.6"/></g><path d="m32 17 5 15H27Z" fill="#E07A55"/><path d="m32 47-5-15h10Z" fill="#5B6472"/><circle cx="32" cy="32" r="2.4" fill="#F1E7DC"/>`,
+  kettle:`<rect width="64" height="64" fill="#EDE6E0"/><path d="M23 30a9 9 0 0 1 18 0" fill="none" stroke="#2F3540" stroke-width="5" stroke-linecap="round"/><circle cx="32" cy="40" r="14" fill="#2F3540"/><path d="M24 50h16" stroke="#E07A55" stroke-width="3" stroke-linecap="round"/><path d="M25 36a8 8 0 0 1 6-6" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none" opacity=".35"/>`,
+};
+function avatarSVG(id){ return AVATARS[id] ? `<svg class="av-svg" viewBox="0 0 64 64" aria-hidden="true">${AVATARS[id]}</svg>` : ""; }
 // carte d'identité : qui tu es et depuis quand (l'ascension est sur l'accueil, les chiffres dans Progrès)
 function profileHeroHTML(){
   const name = (S.settings.name||"").trim(), since = firstSessionDate(), n = S.sessions.length;
   const initial = name ? esc(name[0].toUpperCase()) : `<svg viewBox="0 0 24 24" class="ph-person">${GLYPHS.person.replace(/#fff/g,"currentColor")}</svg>`;
   const d = since ? parseISO(since) : null, y = d && d.getFullYear()!==parseISO(todayISO()).getFullYear() ? " "+d.getFullYear() : "";
   return `<button class="profile-hero stagger" style="--i:0" data-a="editName" aria-label="${name ? esc(name)+" : modifier ton prénom" : "Ajoute ton prénom"}">
-    <span class="ph-avatar" aria-hidden="true"><span>${initial}</span></span>
+    <span class="ph-avatar${AVATARS[S.settings.avatar] ? " pic" : ""}" aria-hidden="true"><span>${AVATARS[S.settings.avatar] ? avatarSVG(S.settings.avatar) : initial}</span></span>
     <span class="ph-main">
       <span class="ph-name">${name ? esc(name) : "Ajoute ton prénom"}</span>
       <span class="ph-sub">${n ? `${nb(n, "séance")} depuis ${MOIS_LONG[d.getMonth()]}${y}` : "Ta première séance t'attend"}</span>
@@ -520,13 +533,25 @@ function openAbout(){
 let whyFrom = null; // « Ton pourquoi » ouvert depuis Motivation : on y revient après l'enregistrement
 Object.assign(ACT, {
   editName(){
-    openModal(`<div style="font-weight:700;font-size:calc(17rem/17);margin-bottom:12px">Ton prénom</div>
+    const cur = S.settings.avatar, ini = esc(((S.settings.name||"").trim()[0]||"·").toUpperCase());
+    openModal(`<div style="font-weight:700;font-size:calc(17rem/17);margin-bottom:12px">Ton profil</div>
+      <div class="av-grid" role="radiogroup" aria-label="Image de profil">
+        <button class="av-opt av-ini${!AVATARS[cur] ? " on" : ""}" data-a="setAvatar" data-v="" role="radio" aria-checked="${!AVATARS[cur]}" aria-label="Initiale"><span>${ini}</span></button>
+        ${Object.keys(AVATARS).map(k=>`<button class="av-opt${cur===k ? " on" : ""}" data-a="setAvatar" data-v="${k}" role="radio" aria-checked="${cur===k}" aria-label="Image ${k}">${avatarSVG(k)}</button>`).join("")}
+      </div>
       <div class="num-field txt"><input id="nameInput" type="text" maxlength="30" placeholder="Prénom" autocomplete="given-name" autocapitalize="words" autocorrect="off" spellcheck="false" enterkeyhint="done" value="${esc(S.settings.name||"")}"></div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
         <button class="btn" data-a="saveName">Enregistrer</button>
         <button class="btn ghost" data-a="closesheet" style="height:40px">Annuler</button>
       </div>`);
-    setTimeout(()=>{ const i=qs("#nameInput"); if(i) i.focus(); }, 80);
+    // le clavier ne s'ouvre que s'il n'y a pas encore de prénom (on vient souvent choisir une image)
+    if(!(S.settings.name||"").trim()) setTimeout(()=>{ const i=qs("#nameInput"); if(i) i.focus(); }, 80);
+  },
+  setAvatar(d){
+    if(d.v) S.settings.avatar = d.v; else delete S.settings.avatar;
+    qsa(".av-opt").forEach(b=>{ const on = (b.dataset.v||"")===(d.v||""); b.classList.toggle("on", on); b.setAttribute("aria-checked", on); });
+    sfx("seg"); haptic(6); save();
+    const hero = qs("#v-profil .profile-hero"); if(hero){ hero.outerHTML = profileHeroHTML(); const h = qs("#v-profil .profile-hero"); if(h) h.classList.remove("stagger"); }
   },
   aboutPage(d){
     const P = ABOUT_PAGES[d.k]; if(!P) return;

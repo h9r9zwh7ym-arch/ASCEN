@@ -509,7 +509,7 @@ function renderPickerSheet(){
       <div class="chip-scroll" id="pickerChips" style="margin-top:8px">${chips}</div>
     </div>
     <div class="sheet-body" id="pickerList">${pickerListHTML()}</div>`,
-    { tall:true, footer: picker.multi ? `<button class="btn" id="pickerDone" data-a="pickerDone" disabled>Ajouter</button>` : null,
+    { tall:true, footer: picker.multi ? `${picker.sets ? `<div class="pk-sets"><span>Séries par exercice</span><div class="mini-step"><button data-a="pickerSets" data-d="-1" aria-label="Une série de moins">−</button><span>${picker.sets}</span><button data-a="pickerSets" data-d="1" aria-label="Une série de plus">+</button></div></div>` : ""}<button class="btn" id="pickerDone" data-a="pickerDone" disabled>Ajouter</button>` : null,
       restore:renderPickerSheet, onBack:picker.onCancel || null });
   const inp = qs("#pickerSearch");
   // recherche : une seule reconstruction de la liste par image, même en tapant vite
@@ -983,7 +983,7 @@ setInterval(()=>{
 // la charge puis les répétitions : gros chiffres, gros boutons ; en bas, la série à battre
 function sxStepsHTML(idx, ex, def, si, st){
   const lt = loadableTypeOf(def), bands = lt==="bands", timed = isTimed(def);
-  const roll = f => valRoll.f===f ? "roll-"+valRoll.d : "";
+  const roll = f => "";   // le chiffre modifié roule après coup (rollText, motion.js)
   const at = `data-exi="${idx}" data-si="${si}"`;
   const wRow = !lt ? "" : `<div class="big-stepper sx-row">
       <button class="sx-pm" aria-label="${bands?"Élastique plus léger":"Charge plus légère"}" data-a="stepWeight" ${at} data-d="-1">${SX_PM(-1)}</button>
@@ -1105,8 +1105,12 @@ function patchFocusSteps(idx){
   const ex = S.draft.exos[idx], si = ex.sets.findIndex(s=>!s.done); if(si<0) return false;
   const def = EXO_MAP[ex.exoId], a = qs(".sx-sets", card), b = qs(".sx-steps", card);
   if(!a || !b) return false;
+  const old = {}; ["weight","reps"].forEach(f=>{ const t = qs(`.bs-val[data-f="${f}"] b`, b) || (f==="weight" && qs(".band-val", b)); if(t) old[f] = rollVal(t); });
   a.outerHTML = sxSetsHTML(idx, ex, def, si, -1);
   b.outerHTML = sxStepsHTML(idx, ex, def, si, ex.sets[si]);
+  // le chiffre modifié roule (seuls les chiffres qui changent), dans le sens du changement
+  const nb = qs(".sx-steps", card), dir = valRoll.d==="down" ? -1 : 1;
+  if(nb) ["weight","reps"].forEach(f=>{ const t = qs(`.bs-val[data-f="${f}"] b`, nb) || (f==="weight" && qs(".band-val", nb)); if(t && old[f]!=null && rollVal(t)!==old[f]) rollText(t, old[f], rollVal(t), valRoll.f===f ? dir : 1); });
   // exercice tenu : le bouton du chrono suit la durée choisie
   const hg = qs(".hold-go", card); if(hg) hg.innerHTML = `${icon("timer")} Lancer le chrono · ${ex.sets[si].reps||30} s${hg.tagName==="LABEL"?HX_INPUT:""}`;
   setTimeout(()=>{ valRoll = {}; }, 0);
@@ -1554,11 +1558,26 @@ Object.assign(ACT, {
     };
     if(row){ row.classList.add("leaving"); setTimeout(go, 220); } else go();
   },
+  // en séance (souvent en fin de séance, « encore un exercice ») : le nombre de séries se choisit dans la feuille
   addExoOpen(){
-    openPicker({ title:"Ajouter des exercices", multi:true, exclude:new Set(S.draft.exos.map(e=>e.exoId)), onDone:ids=>{
-      ids.forEach(id=>S.draft.exos.push(entryAt(S.draft.exos, EXO_MAP[id], S.draft.exos.length)));
+    openPicker({ title:"Ajouter des exercices", multi:true, sets:3, exclude:new Set(S.draft.exos.map(e=>e.exoId)), onDone:ids=>{
+      const n = picker && picker.sets || 3;
+      ids.forEach(id=>S.draft.exos.push(entryAt(S.draft.exos, EXO_MAP[id], S.draft.exos.length, n)));
+      completeShown = false;
       closeSheet(); changed();
     }});
+  },
+  pickerSets(d){ if(!picker) return; picker.sets = Math.max(1, Math.min(8, (picker.sets||3) + (+d.d||0))); const sp = qs(".pk-sets .mini-step span"); if(sp) sp.textContent = picker.sets; sfx("step", +d.d>0); },
+  // nombre de séries d'un exercice en cours (menu « … ») : jamais moins que les séries déjà faites, ni que 1
+  focusSets(d){
+    const ex = S.draft && S.draft.exos[+d.exi]; if(!ex) return;
+    const done = ex.sets.filter(s=>s.done).length;
+    if(+d.d>0){ if(ex.sets.length>=12) return; const last = ex.sets[ex.sets.length-1]; ex.sets.push({ reps:last?last.reps:null, weight:last?last.weight:null, done:false }); }
+    else { if(ex.sets.length<=Math.max(1, done)) return; const k = ex.sets.map(s=>s.done).lastIndexOf(false); if(k<0) return; ex.sets.splice(k, 1); }
+    ex.targetSets = ex.sets.length; completeShown = false;
+    sfx("step", +d.d>0); haptic(6); save(); refreshFocusRegion();
+    const sp = qs('#overlay .fm-sets .mini-step span'); if(sp) sp.textContent = ex.sets.length;
+    qsa('#overlay .fm-sets [data-a="focusSets"]').forEach(b=>{ b.disabled = +b.dataset.d<0 ? ex.sets.length<=Math.max(1, done) : ex.sets.length>=12; });
   },
   swapExoOpen(d){
     const idx = +d.idx;
@@ -1740,7 +1759,7 @@ Object.assign(ACT, {
         <button data-a="showExoInfo" data-id="${def.id}">${icon("search")}<span>Fiche et technique</span></button>
         <button data-a="favToggle" data-id="${def.id}">${icon("star")}<span>${isIncluded(def.id) ? "Retirer des favoris" : "Ajouter aux favoris"}</span></button>
         <button data-a="swapExoOpen" data-idx="${i}">${icon("swap")}<span>Remplacer l'exercice</span></button>
-        <button data-a="addSetFocus" data-exi="${i}">${icon("plus")}<span>Ajouter une série</span></button>
+        ${(()=>{ const ex = S.draft.exos[i], dn = ex.sets.filter(s=>s.done).length; return `<div class="fm-sets">${icon("repeat")}<span>Séries</span><div class="mini-step"><button data-a="focusSets" data-exi="${i}" data-d="-1" aria-label="Une série de moins" ${ex.sets.length<=Math.max(1, dn) ? "disabled" : ""}>−</button><span>${ex.sets.length}</span><button data-a="focusSets" data-exi="${i}" data-d="1" aria-label="Une série de plus" ${ex.sets.length>=12 ? "disabled" : ""}>+</button></div></div>`; })()}
         ${S.draft.exos[i].sets.some(s=>s.done) ? `<button data-a="editDoneSets" data-exi="${i}">${icon("edit")}<span>Corriger les séries faites</span></button>` : ""}
         <button data-a="toggleFlow">${icon("repeat")}<span>${circuitMode()?"Enchaînement : exercice suivant après chaque repos":"Enchaînement : toutes les séries d'abord"}</span></button>
         <button class="danger" data-a="removeExo" data-idx="${i}">${icon("trash")}<span>Retirer de la séance</span></button>

@@ -130,7 +130,7 @@ function exoPicto(def){
     const rig = animRig(def), rd = RIGS[def.id], f = rd.icon==="A" ? rig.A : rd.icon==="mid" ? rig.frames[rig.frames.length>>1] : rig.B;
     const ld = loadStatic(def, rig, f, Math.hypot(f.W[0]-f.W2[0], f.W[1]-f.W2[1])>.6, 2.3);
     if(rig.wheel) ld.front += `<circle class="pkf" cx="${f.W[0].toFixed(2)}" cy="${f.W[1].toFixed(2)}" r="${WHEEL_R+.9}"/><circle cx="${f.W[0].toFixed(2)}" cy="${f.W[1].toFixed(2)}" r="${WHEEL_R}" fill="currentColor"/>`;
-    svg = `<svg class="picto" viewBox="0 0 24 24" aria-hidden="true"><path d="${rig.env||FLOOR}" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity=".38"/>${ld.back}<path d="${animPath(f)}" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${f.H[0].toFixed(2)}" cy="${f.H[1].toFixed(2)}" r="2.3" fill="currentColor"/>${ld.front}</svg>`;
+    svg = `<svg class="picto" viewBox="0 0 24 24" aria-hidden="true"><path d="${rig.env||FLOOR}" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity=".38"/>${ld.back}${bodyStatic(f, 2.15)}<circle cx="${f.H[0].toFixed(2)}" cy="${f.H[1].toFixed(2)}" r="2.15" fill="currentColor"/>${ld.front}</svg>`;
   }catch(e){ svg = pictoSVG(pictoKey(def)); }
   PICTO_CACHE.set(def.id, svg);
   return svg;
@@ -357,6 +357,34 @@ function animPath(p){
   if(p.S) return `M${q("N")}L${q("P")}M${q("S")}L${q("S2")}M${q("Q")}L${q("Q2")}M${q("Q")}L${q("K")}L${q("F")}M${q("Q2")}L${q("K2")}L${q("F2")}M${q("S")}L${q("E")}L${q("W")}M${q("S2")}L${q("E2")}L${q("W2")}`;
   return `M${q("N")}L${q("P")}M${q("P")}L${q("K")}L${q("F")}M${q("P")}L${q("K2")}L${q("F2")}M${q("N")}L${q("E")}L${q("W")}M${q("N")}L${q("E2")}L${q("W2")}`;
 }
+// ---------- silhouette (v5) : des membres qui ont du volume ----------
+// Tronc plus épais que les cuisses, cuisses et bras plus épais que tibias et avant-bras, tête bien
+// détachée ; de profil, le bras et la jambe du côté éloigné sont estompés (on lit le mouvement en
+// profondeur). Mêmes points que le squelette : rien ne change dans les poses.
+const BODY_W = { torso:1.5, thigh:1.22, shin:.98, uarm:.98, farm:.8 };
+function bodyBones(p){
+  if(p.S) return { far:[], near:[["N","P","torso"],["S","S2","uarm"],["Q","Q2","thigh"],["Q","K","thigh"],["K","F","shin"],["Q2","K2","thigh"],["K2","F2","shin"],["S","E","uarm"],["E","W","farm"],["S2","E2","uarm"],["E2","W2","farm"]] };
+  return { far:[["P","K2","thigh"],["K2","F2","shin"],["N","E2","uarm"],["E2","W2","farm"]], near:[["N","P","torso"],["P","K","thigh"],["K","F","shin"],["N","E","uarm"],["E","W","farm"]] };
+}
+// un os ; le tronc est raccourci aux deux bouts (place pour le cou, hanche nette)
+function boneD(p, a, b){
+  const q = k=>p[k] || p[k.replace("2","")], A = q(a), B = q(b); if(!A || !B) return "";
+  let x1 = A[0], y1 = A[1], x2 = B[0], y2 = B[1];
+  if(a==="N" && b==="P"){ const L = Math.hypot(x2-x1, y2-y1) || 1, ux = (x2-x1)/L, uy = (y2-y1)/L; x1 += ux*1.25; y1 += uy*1.25; x2 -= ux*.55; y2 -= uy*.55; }
+  return `M${x1.toFixed(2)} ${y1.toFixed(2)}L${x2.toFixed(2)} ${y2.toFixed(2)}`;
+}
+// le tronc en forme : plus large à la poitrine qu'à la taille (polygone arrondi par son contour)
+function torsoD(p, sw){
+  const N = p.N, P = p.P; if(!N || !P) return "";
+  const L = Math.hypot(P[0]-N[0], P[1]-N[1]) || 1, ux = (P[0]-N[0])/L, uy = (P[1]-N[1])/L, nx = -uy, ny = ux;
+  const a = [N[0]+ux*1.35, N[1]+uy*1.35], b = [P[0]-ux*.5, P[1]-uy*.5], hN = sw*.62, hP = sw*.4;
+  const pt = (c, h)=>`${(c[0]+nx*h).toFixed(2)} ${(c[1]+ny*h).toFixed(2)}`;
+  return `M${pt(a, hN)}L${pt(b, hP)}L${pt(b, -hP)}L${pt(a, -hN)}Z`;
+}
+function bodyStatic(p, sw){
+  const B = bodyBones(p), seg = ([a, b, w])=>w==="torso" ? `<path d="${torsoD(p, sw)}" fill="currentColor" stroke-width="${(sw*.7).toFixed(2)}" stroke-linejoin="round"/>` : `<path d="${boneD(p, a, b)}" stroke-width="${(sw*BODY_W[w]).toFixed(2)}"/>`;
+  return `<g fill="none" stroke="currentColor" stroke-linecap="round">${B.far.length ? `<g opacity=".42">${B.far.map(seg).join("")}</g>` : ""}${B.near.map(seg).join("")}</g>`;
+}
 function focusPath(p, seg){
   const a = p.S && seg[0]==="N" && seg[1]==="E" ? p.S : p.S && seg[0]==="P" && seg[1]==="K" ? p.Q : p[seg[0]], b = p[seg[1]], at = t=>[(a[0]+(b[0]-a[0])*t).toFixed(2), (a[1]+(b[1]-a[1])*t).toFixed(2)].join(" ");
   return `M${at(seg[2])}L${at(seg[3])}`;
@@ -525,7 +553,8 @@ function exoAnimSVG(def){
   return `<svg class="exo-anim" viewBox="0 0 24 24" aria-label="Animation du mouvement">
     ${shadow}<path class="ea-env" d="${rig.env||FLOOR}"/>
     ${ghost}
-    <path class="ea-body" d="${animPath(F[0])}">${anim("d", animPath)}</path>
+    <g class="ea-body">${(()=>{ const B = bodyBones(F[0]), sw = 1.75, seg = ([a, b, w])=>w==="torso" ? `<path class="ea-torso" d="${torsoD(F[0], sw)}" stroke-width="${(sw*.7).toFixed(2)}">${anim("d", f=>torsoD(f, sw))}</path>` : `<path d="${boneD(F[0], a, b)}" stroke-width="${(sw*BODY_W[w]).toFixed(2)}">${anim("d", f=>boneD(f, a, b))}</path>`;
+      return (B.far.length ? `<g class="ea-far">${B.far.map(seg).join("")}</g>` : "") + B.near.map(seg).join(""); })()}</g>
     ${focus}
     ${wheel}
     ${dot("H", 2.15, "ea-head")}

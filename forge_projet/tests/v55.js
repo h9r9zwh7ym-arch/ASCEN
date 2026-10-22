@@ -51,7 +51,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const pm = await page.evaluate(() => { const pic = document.querySelector('.sx-pic svg'), r0 = S.draft.exos[0].sets[0].reps;
     document.querySelector('[data-a="stepReps"][data-d="1"]').click(); document.querySelector('[data-a="stepWeight"][data-d="1"]').click();
     const st = S.draft.exos[0].sets[0]; return { same: pic === document.querySelector('.sx-pic svg'), reps: st.reps - r0, now: String(st.reps), w: st.weight,
-      shown: document.querySelector('[data-f="reps"] b').textContent, cell: document.querySelector('.sx-set.cur b').textContent }; });
+      shown: rollVal(document.querySelector('[data-f="reps"] b')), cell: document.querySelector('.sx-set.cur b').textContent }; });
   log('Steppers:', JSON.stringify(pm));
   if (!pm.same || pm.reps !== 1 || pm.shown !== pm.now || pm.cell.trim() !== '') fail('+/− sans re-rendu, case en cours sans valeur (le gros chiffre la donne)');
 

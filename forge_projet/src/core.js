@@ -325,6 +325,7 @@ function normalizeState(parsed){
     merged.goals.exoCount = Math.min(12, Math.max(0, Math.round(merged.goals.exoCount)||0));
     merged.settings.name = String(merged.settings.name||"").slice(0,40);
     merged.settings.why = String(merged.settings.why||"").slice(0,120);
+    if(merged.settings.avatar!=null && !/^[a-z]{2,12}$/.test(String(merged.settings.avatar))) delete merged.settings.avatar;
     merged.templates.forEach(t=>{ if(!safeId(t.id)) t.id = uid(); });
     merged.targets.forEach(t=>{ if(!safeId(t.id)) t.id = uid(); });
     merged.challenges = merged.challenges.filter(c=>safeId(c.id));

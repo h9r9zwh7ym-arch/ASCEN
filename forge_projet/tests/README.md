@@ -81,6 +81,7 @@ Variables utiles :
 | `v71.js` | 2.4.0 : regravir une montagne (choix daté, pente plus raide, trophée Saphir puis Rubis et Diamant), expédition mise de côté puis reprise au sommet, arrêt d'une nouvelle ascension, fiche de montagne, itinéraire |
 | `v72.js` | 2.4.3 : « Revoir la montée » (repart du départ, date de chaque camp, toucher la scène pour aller à la fin, bouton caché pendant la lecture), distinct de « revoir le sommet » des trophées |
 | `v73.js` | 2.5.0 : fatigue en séance (charge gardée quand les répétitions en moins viennent de la fatigue, force ramenée « à frais », objectif selon la place de l'exercice, « mieux, fatigue comprise »), ordre réel enregistré, charge proposée gardée, manière de faire apprise et carte « Ce que l'app a compris » |
+| `v74.js` | 2.6.0 : chiffres qui roulent sur − / + (valeur lue juste pendant l'animation), séries réglables en séance et pour les exercices ajoutés, images de profil, pictogrammes en volume |
 | `monkey.js` | Test du singe (aussi dans `run.sh`) : touchers aléatoires pondérés vers les boutons peu essayés, avec changement d'onglet régulier. Toute erreur ou écran en échec est signalé. `SEED`, `N`, `ENGINE=webkit` |
 
 Les tests partent d'un état vierge. Ils passent le premier lancement avec `ACT.obSkip()` ou injectent leurs données avec `addInitScript`.
