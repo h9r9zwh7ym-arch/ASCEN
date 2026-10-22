@@ -30,7 +30,8 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     const d = { dos: stimDeficit('dos'), quad: stimDeficit('quadriceps'), biceps: stimDeficit('biceps') };
     const runs = []; for (let i = 0; i < 6; i++) { const s = generateEngineSession('full'); runs.push(s.exos.filter(e => !isStretch(EXO_MAP[e.exoId])).map(e => EXO_MAP[e.exoId].muscles[0])); }
     const draft = generateEngineSession('auto'); S.draft = draft; save(); renderView('today');
-    const add = suggestComplement([], 3).map(e => e.muscles[0]);
+    // tirage fixé : le complément mélange un peu au hasard, le test vérifie la priorité, pas le tirage
+    const rnd = Math.random; Math.random = () => .5; const add = suggestComplement([], 3).map(e => e.muscles[0]); Math.random = rnd;
     return { d, upper: runs.map(r => r.filter(m => ['dos', 'biceps', 'epaules'].includes(m)).length), stim: draft.stim, add };
   });
   log('Engine:', JSON.stringify(eng));

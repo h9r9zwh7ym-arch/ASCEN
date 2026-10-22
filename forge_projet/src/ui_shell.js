@@ -533,7 +533,8 @@ function openSheet(html, opts){
     // y revenir au lieu de tout fermer
     else if(opts.child){
       const cur = sheetActive();
-      if(cur){
+      // (pas pour un écran dessiné sur canvas : sa copie serait vide)
+      if(cur && !cur.querySelector("canvas")){
         const snap = cur.innerHTML.replace(/^<div class="sheet-grab"><\/div>/, ""), tall = cur.classList.contains("tall");
         const r = ()=>openSheet(snap, { tall, restore:r });
         keep = sheetKeep(r); sheetStack.push(r);

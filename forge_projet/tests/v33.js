@@ -53,7 +53,8 @@ const OUT = path.join(OUT_ROOT, 'v33'); fs.mkdirSync(OUT, { recursive: true });
   await page.evaluate(() => ACT.showExoInfo({ id: 'squat_barre' })); await wait(600);
   const sw = await page.$eval('.exo-anim .ea-focus', e => parseFloat(getComputedStyle(e).strokeWidth)).catch(() => 0);
   log('Pictos:', JSON.stringify(pic), '| focus stroke:', sw);
-  if (pic.bad || pic.dups.length || pic.benchLeft || !(sw > 1.75 && sw < 2.6)) fail('pictogrammes animés');
+  // 2.6.1 : plus de zone surlignée sur le corps (la carte des muscles de la fiche la montre)
+  if (pic.bad || pic.dups.length || pic.benchLeft || sw !== 0) fail('pictogrammes animés');
   await shot('03_anim_focus');
   await browser.close();
   errors.forEach(e => log(e)); log(errors.length ? 'ERRORS: ' + errors.length : '=== NO ERRORS ===');
