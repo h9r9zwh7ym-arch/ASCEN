@@ -1,5 +1,5 @@
 // ================= INITIALISATION =================
-const APP_VERSION = "2.6.5";
+const APP_VERSION = "2.7.0";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 // séance en sombre (réglage, actif par défaut) : pendant la séance, l'écran passe en sombre quel que
@@ -19,14 +19,9 @@ function applyTheme(soft){
   // garde la couleur lue au départ ; on la lui fait relire une fois le fondu fini
   if(flip) setTimeout(()=>syncStatusBar(undefined, true), 260);
 }
-// Barre d'état (heure, batterie). Depuis iOS 26, Safari ignore theme-color : il colore la barre
-// d'après l'élément fixe et opaque collé au bord haut de l'écran, à défaut d'après le fond de la
-// page (et seulement s'il est écrit en style direct). Avant, l'écran de lancement (noir) et la
-// bulle des graphiques (couleur du texte, en haut à gauche même invisible) lui donnaient du noir.
-// On lui fournit donc un bandeau fixe (#sbar) toujours à la bonne couleur : le fond de l'app en
-// haut de page, la barre de navigation (translucide, composée sur le fond) dès qu'on a défilé,
-// assombri comme la page quand une feuille est ouverte. theme-color reste écrit pour les iOS
-// plus anciens et Android.
+// Barre d'état (heure, batterie) en « black-translucent » : l'app passe dessous, comme une app native.
+// Le bandeau #sbar n'est plus qu'un voile (CSS) qui garde l'heure blanche lisible sur les écrans clairs.
+// Le fond de page reste écrit en style direct et theme-color mis à jour (iOS plus anciens, Android).
 let statusDim = false;
 // regroupé sur l'image suivante : lire le style calculé en plein script (fin de séance, ouverture d'une
 // feuille) forçait un recalcul complet ; plusieurs appels dans la même image n'en font qu'un
@@ -53,10 +48,7 @@ function syncStatusBarNow(nudge){
     const k = statusDim ? .6 : 1, hex = "#"+rgb.map(x=>Math.round(x*k).toString(16).padStart(2,"0")).join("");
     let bar = document.getElementById("sbar");
     if(!bar){ bar = document.createElement("div"); bar.id = "sbar"; bar.setAttribute("aria-hidden","true"); document.body.appendChild(bar); }
-    // nudge : iOS ne relit la couleur que quand le bandeau change ; on la change d'un cran puis on la remet,
-    // pour qu'il la reprenne (fin de l'écran de lancement, retour dans l'app)
-    if(nudge){ bar.style.backgroundColor = "#"+rgb.map(x=>Math.max(0, Math.round(x*k)-1).toString(16).padStart(2,"0")).join(""); requestAnimationFrame(()=>requestAnimationFrame(()=>{ bar.style.backgroundColor = hex; })); }
-    else if(bar.style.backgroundColor!==hex) bar.style.backgroundColor = hex;
+    // le bandeau n'a plus de couleur pleine : l'app passe sous la barre d'état (voile et flou en CSS)
     let m = document.querySelector('meta[name="theme-color"]:not([media])');
     if(!m){ document.querySelectorAll('meta[name="theme-color"]').forEach(x=>x.remove()); m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
     if(m.content!==hex) m.content = hex;

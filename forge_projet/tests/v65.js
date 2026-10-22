@@ -23,7 +23,8 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   if (await page.evaluate(() => !!document.getElementById('splash') || /id="splash"/.test(document.documentElement.outerHTML))) fail('pas d\'écran de lancement');
   const bgs = await page.evaluate(() => [getComputedStyle(document.body).backgroundColor, getComputedStyle(document.body).backgroundColor, document.getElementById('sbar') && getComputedStyle(document.getElementById('sbar')).backgroundColor]);
   log('Lancement : fond', bgs.join(' / '));
-  if (!bgs[0] || bgs[0] !== bgs[1] || bgs[2] !== bgs[1]) fail('écran de lancement et barre d\'état aux couleurs de l\'app');
+  // 2.7.0 : la barre d'état est fondue (voile transparent, pas de couleur pleine)
+  if (!bgs[0] || bgs[0] !== bgs[1] || !/rgba\(0, 0, 0, 0\)|transparent/.test(bgs[2] || 'transparent')) fail('écran de lancement aux couleurs de l\'app, barre d\'état fondue');
   const wait = ms => page.waitForTimeout(ms), shot = n => page.screenshot({ path: `${OUT}/${wk ? 'wk_' : ''}${n}.png` });
   const tap = sel => page.evaluate(sel => { const el = document.querySelector(sel); if (!el) throw new Error('absent : ' + sel); el.click(); }, sel);
   const sheets = () => page.evaluate(() => [...document.querySelectorAll('#overlay .sheet')].map(s => (s.classList.contains('sheet-kept') ? 'K' : s.classList.contains('nav-leaving') ? 'L' : s.classList.contains('nav-ghost') ? 'G' : 'A') + ':' + ((s.querySelector('.sheet-hd .t') || {}).textContent || '')).join('|'));

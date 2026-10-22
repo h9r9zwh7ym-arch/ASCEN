@@ -1864,7 +1864,15 @@ body.live-focus #restbar{bottom:calc(14px + var(--sab))}
 
 /* bandeau sous la barre d'état : Safari 26 colore la barre d'après cet élément fixe et opaque
    (couleur écrite par syncStatusBar) ; invisible, puisqu'il a la couleur de ce qui est dessous */
-#sbar{position:fixed;top:0;left:0;right:0;height:max(var(--sat),1px);z-index:45;pointer-events:none;transition:background-color .2s}
+/* barre d'état fondue dans l'écran (black-translucent : l'app passe dessous, heure et batterie en blanc).
+   Écrans clairs : un voile sombre très doux, flouté, juste derrière l'heure, qui s'efface vers le bas.
+   Sombre et séance : seulement le flou. Hauteur nulle hors iPhone (pas de zone de barre d'état). */
+#sbar{position:fixed;top:0;left:0;right:0;height:calc(var(--sat) * 1.7);z-index:45;pointer-events:none;
+  background:linear-gradient(rgba(0,0,0,.36),rgba(0,0,0,.28) 22%,rgba(0,0,0,.15) 45%,rgba(0,0,0,.05) 70%,rgba(0,0,0,0));
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  -webkit-mask-image:linear-gradient(#000 40%,transparent);mask-image:linear-gradient(#000 40%,transparent)}
+:root[data-theme="dark"] #sbar{background:linear-gradient(rgba(0,0,0,.25),rgba(0,0,0,0))}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) #sbar{background:linear-gradient(rgba(0,0,0,.25),rgba(0,0,0,0))} }
 body.mo-on #sbar{z-index:2001}
 /* hors animation, les calques du mouvement n'existent pas à l'écran : iOS colore la barre d'état d'après
    l'élément fixe tout en haut, et ce calque vide (au-dessus de tout) masquait le bandeau → orange figé */

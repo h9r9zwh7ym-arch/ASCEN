@@ -24,7 +24,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.goto(APP); await page.waitForSelector('#splash', { state: 'detached', timeout: 9000 }); await page.waitForTimeout(700);
   const wait = ms => page.waitForTimeout(ms), shot = n => page.screenshot({ path: `${OUT}/${wk ? 'wk_' : ''}${n}.png` });
 
-  // 1. barre d'état : bandeau fixe en haut à la couleur du fond de l'app (clair), même système sombre
+  // 1. barre d'état : fondue dans l'écran (2.7.0), fond de page en style direct, même système sombre
   const sb = async () => page.evaluate(() => { const b = document.getElementById('sbar'), r = b.getBoundingClientRect();
     return { bg: b.style.backgroundColor, top: r.top, w: Math.round(r.width), pos: getComputedStyle(b).position, body: document.body.style.backgroundColor, meta: document.querySelector('meta[name="theme-color"]:not([media])').content, tipTop: getComputedStyle(document.getElementById('charttip')).top }; });
   const s0 = await sb();
@@ -32,7 +32,9 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const s1 = await sb();
   await page.evaluate(() => { document.querySelector('#v-today').scrollTop = 0; }); await wait(300);
   log('Status strip:', JSON.stringify(s0), '→ scrolled', s1.bg);
-  if (s0.bg !== 'rgb(242, 242, 247)' || s0.top !== 0 || s0.w !== 390 || s0.pos !== 'fixed' || s0.body !== 'rgb(242, 242, 247)' || s0.meta !== '#f2f2f7' || s1.bg !== 'rgb(248, 248, 249)' || s0.tipTop !== '-400px') fail('barre d\'état à la couleur de l\'app (bandeau fixe, fond en style direct)');
+  // 2.7.0 : barre d'état fondue (black-translucent) : le bandeau n'est plus qu'un voile, sans couleur pleine
+  const st = await page.evaluate(() => document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').content);
+  if (st !== 'black-translucent' || s0.bg !== '' || s0.top !== 0 || s0.w !== 390 || s0.pos !== 'fixed' || s0.body !== 'rgb(242, 242, 247)' || s0.meta !== '#f2f2f7' || s0.tipTop !== '-400px') fail('barre d\'état fondue (voile, fond en style direct)');
 
   // 2. Ma séance ↔ séance de l'app (liens de la carte principale) : seul le bloc de la séance change, sans cascade de tout l'écran
   // au démarrage, les trophées sont vérifiés à part (~1,6 s) et peuvent redessiner l'écran : on passe ce moment
