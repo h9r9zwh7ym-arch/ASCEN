@@ -72,8 +72,9 @@ const OUT = path.join(OUT_ROOT, 'v27'); fs.mkdirSync(OUT, { recursive: true });
   await page.keyboard.press('Escape'); await wait(700);
   // « Retour » : la feuille Trophées revient, la médaille 3D reprend sa place dans la carte mise en avant
   await page.click('#overlay .te-cancel'); await wait(900);
-  const back = await page.evaluate(() => ({ closed: !document.querySelector('.t3d-full'), inCard: !!document.querySelector('#t3dStage canvas'), id: T3D.ctx.id }));
-  log('Back & canvas on featured:', JSON.stringify(back)); if (!back.closed || !back.inCard || back.id !== 'sessions') fail('retour à la carte mise en avant');
+  // la carte mise en avant montre le dernier palier gagné (un palier gagné en cours de test la change, à raison)
+  const back = await page.evaluate(() => ({ closed: !document.querySelector('.t3d-full'), inCard: !!document.querySelector('#t3dStage canvas'), id: T3D.ctx.id, featured: t3dFeatured().id }));
+  log('Back & canvas on featured:', JSON.stringify(back)); if (!back.closed || !back.inCard || back.id !== back.featured) fail('retour à la carte mise en avant');
   // hors écran : la boucle s'arrête (on allonge la feuille pour sortir la carte de l'écran)
   await page.evaluate(() => { const b = document.querySelector('.trophies-body'); b.style.paddingBottom = '1600px'; b.scrollTop = 99999; }); await wait(800);
   const idle = await page.evaluate(() => T3D.ctx.running); log('Render loop running when scrolled away:', idle);

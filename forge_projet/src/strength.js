@@ -242,7 +242,7 @@ function strengthCardHTML(){
     return `<div class="tr-reg r-${r}"><i></i><span>${r==="core" ? "Gainage" : REGIONS[r].n}</span><b>${pctTxt(v)}</b>${down ? `<em>${ii("warn")}</em>` : ""}</div>`; }).join("");
   return `<div class="chart-card trend-card stagger" style="--i:1">${head}
     <div class="tr-hero"><span class="tr-v" ${(()=>{ const p = Math.round(last.v-100); return `data-count="${Math.abs(p)}" data-pre="${p>0?"+":p<0?"−":""}" data-unit="%" data-thin="1"`; })()}>${pctTxt(last.v)}</span>${wk>0 ? `<span class="tr-d ${d>0?"up":d<0?"down":""}">${d>0?"+":d<0?"−":"±"}${nb(Math.abs(d), "point")} en ${nb(wk,"semaine")}</span>` : ""}</div>
-    <button class="tr-status st-${status.c}" data-a="strengthHow" aria-label="Statut : ${status.n}. Voir comment il est calculé"><span class="tr-dot"></span><span><b>${status.n}</b> · ${fmtDec(round1(L.acute))} série${round1(L.acute)>=2?"s":""} difficile${round1(L.acute)>=2?"s":""} sur 7 jours (d'habitude : ${Math.round(L.chronic)})</span></button>
+    <button class="tr-status st-${status.c}" data-a="strengthHow" aria-label="Statut : ${status.n}. Voir comment il est calculé"><span class="tr-dot"></span><span><b>${status.n}</b> · ${nb(Math.round(L.acute), "série")} difficile${Math.round(L.acute)>=2?"s":""} sur 7 jours (d'habitude : ${Math.round(L.chronic)})</span></button>
     ${lineChart(pts.map(p=>({ label:fmtDate(p.wk), v:p.v-100, tip:`Semaine du ${fmtDate(p.wk)} : ${pctTxt(p.v)} (${nb(p.n,"muscle")})` })), { aria:"Progression de force par semaine", fmt:v=>pctTxt(v+100), tickFmt:v=>(v>0?"+":v<0?"−":"")+Math.abs(v)+"\u202f%" })}
     ${regions ? `<div class="tr-regs">${regions}</div>` : ""}
     ${lines.map(l=>`<div class="tr-line">${l}</div>`).join("")}
@@ -274,7 +274,7 @@ Object.assign(ACT, {
       <h3>3. Quand tu t'arrêtes</h3>
       <p>Rien ne bouge pendant 21 jours sans travailler un muscle (en principal ou en secondaire) : les études montrent que la force reste quasi intacte pendant 3 à 4 semaines. Ensuite, l'estimation baisse de ${S.goals.senior ? "4,5" : "3"}&nbsp;% par semaine${S.goals.senior ? " (plus vite à partir de 65 ans)" : ""}, jusqu'à −30&nbsp;%. Une séance qui travaille le muscle arrête la baisse, et tes vraies performances remplacent l'estimation : la force revient vite à la reprise.</p>
       <h3>4. Le statut</h3>
-      <p>Comme sur une montre de sport : ta charge des 7 derniers jours (${fmtDec(round1(L.acute))} séries difficiles) comparée à ton habitude sur 28 jours (${fmtDec(round1(L.chronic))}), et l'évolution de l'indice sur 4 semaines. Ce rapport décrit ta charge ; il ne prédit pas les blessures.</p>
+      <p>Comme sur une montre de sport : ta charge des 7 derniers jours (${nb(Math.round(L.acute), "série")} difficile${Math.round(L.acute)>=2?"s":""}) comparée à ton habitude sur 28 jours (${Math.round(L.chronic)}), et l'évolution de l'indice sur 4 semaines. Ce rapport décrit ta charge ; il ne prédit pas les blessures.</p>
       <h3>Sources</h3>
       <ul class="how-src">${STRENGTH_SOURCES.map(([t,u])=>`<li><a href="${u}" target="_blank" rel="noopener">${esc(t)}</a></li>`).join("")}</ul>
       <p class="hr-note">Ce sont des estimations à partir de tes séances, pas un test de 1RM ni un avis médical.</p>

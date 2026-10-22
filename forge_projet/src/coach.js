@@ -119,7 +119,7 @@ function coachLines(){
   else if(p.pace<0) L.push(["leaf", "Tu gardes souvent une charge plus légère que proposé : la progression ralentit d'un cran."]);
   if(p.failure) L.push(["flame", "Tu vas souvent au bout de tes séries : c'est ta façon de faire, ça ne freine plus la progression."]);
   const ms = Object.keys(p.learned).sort((a,b)=>p.rates[b]-p.rates[a]).slice(0, 2);
-  if(ms.length) L.push(["repeat", `En fin de séance, ${ms.map(m=>`${musclePoss(m)} perdent ${Math.round(p.rates[m]*100)} %`).join(", ")} de répétitions par série déjà faite : l'app en tient compte.`]);
+  if(ms.length) L.push(["repeat", `Fatigue en fin de séance : ${ms.map(m=>`−${Math.round(p.rates[m]*100)} % de répétitions par série déjà faite pour ${musclePoss(m)}`).join(", ")}. L'app en tient compte.`]);
   else if(p.n>=4) L.push(["repeat", "Les répétitions en moins en fin de séance sont comptées comme de la fatigue, pas comme un manque de force."]);
   return L;
 }

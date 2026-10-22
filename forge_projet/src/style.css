@@ -1633,7 +1633,7 @@ h2.sh .more{font-family:var(--sans);font-size:var(--fs-sub);font-weight:500;lett
 .mm-z.on{fill:var(--rc);fill-opacity:var(--v);stroke:var(--rc);stroke-opacity:.9}
 .mm-z[data-tip]{cursor:pointer}
 .mm-z.tip-on{stroke:var(--label);stroke-width:.8}
-.mm-cap{font-size:4.4px;fill:var(--label2);text-anchor:middle;font-weight:600;letter-spacing:0;text-transform:none}
+.mm-cap{font-size:5.6px;fill:var(--label2);text-anchor:middle;font-weight:600;letter-spacing:0;text-transform:none}
 .exo-mm{margin:6px 16px 0;padding:10px 0 4px;border-radius:var(--r-card);background:var(--bg2)}
 .exo-mm .mm{max-width:210px}
 .mm-card .mm{max-width:270px;margin-top:10px}
@@ -3378,3 +3378,7 @@ body.live-focus #restbar.island{bottom:auto}
 .coach-card .co-goal{flex:none;max-width:45%;font-size:var(--fs-foot,13px);color:var(--label2);text-align:right}
 .coach-card .co-l{display:flex;gap:10px;align-items:flex-start;font-size:var(--fs-sub,15px);line-height:1.35;color:var(--label)}
 .coach-card .co-l .ii,.coach-card .co-l svg{flex:none;width:18px;height:18px;margin-top:1px;color:var(--tint)}
+/* carte du jour : l'étiquette (« Proposée par l'app ») sur sa ligne, le détail dessous sans « · » orphelin */
+.hero .hero-meta .hero-tag{flex-basis:100%}
+.hero .hero-meta .hero-tag+span::before{content:none}
+.hero .hero-meta span{white-space:nowrap}

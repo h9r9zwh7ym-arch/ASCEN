@@ -390,7 +390,9 @@ function overlayA11y(ov, wasOpen){
   if(t){ t.id = "ovTitle"; dlg.setAttribute("aria-labelledby", "ovTitle"); }
   if(!wasOpen) ovReturnFocus = document.activeElement;
   overlayInert(true);
-  try{ dlg.focus({ preventScroll:true }); }catch(e){}
+  // le focus attend l'image suivante : la feuille vient d'être mise en page pour s'afficher, le donner tout
+  // de suite forçait une mise en page complète en plein script (≈ 40 ms sur une page de fin de séance)
+  requestAnimationFrame(()=>{ if(dlg.isConnected && ov.classList.contains("open")) try{ dlg.focus({ preventScroll:true }); }catch(e){} });
 }
 function showOverlay(inner, kind, keep){
   const ov = qs("#overlay");

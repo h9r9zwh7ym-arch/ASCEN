@@ -21,7 +21,8 @@ const APP = 'file://' + path.resolve(process.argv[2]);
 
   // 1. onglet re-touché : remonte en haut, sans reconstruire la page ; autre onglet : rendu réutilisé
   // (Historique est un segment de Progrès : l'onglet Progrès touché depuis l'Historique ramène au Résumé)
-  await page.evaluate(() => switchTab('history')); await wait(500);
+  // trophées à jour d'abord : un palier débloqué au passage sur Progrès rebâtirait (à raison) les autres onglets
+  await page.evaluate(() => { checkMedals(true); switchTab('history'); }); await wait(500);
   await page.evaluate(() => { document.querySelector('#v-history').firstElementChild.dataset.keep = '1'; });
   await page.click('.tabbtn[data-id="progress"]'); await wait(700);
   const toRes = await page.evaluate(() => currentTab);

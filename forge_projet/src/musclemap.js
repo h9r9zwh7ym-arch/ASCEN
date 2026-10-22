@@ -46,9 +46,9 @@ function muscleMapSVG(levels, tips, opts){
     return `<g class="mm-z r-${r} ${v>0 ? "on" : ""}" style="--v:${v.toFixed(2)}"${tip}>${shape}</g>`;
   };
   const side = (k)=>Object.keys(MM_SHAPES[k]).map(id=>zone(id, MM_SHAPES[k][id])).join("");
-  return `<svg class="mm ${opts.mono ? "mono" : ""} ${opts.cls||""}" viewBox="0 0 120 ${opts.caps===false ? 102 : 107}" role="img" aria-label="${esc(opts.label||"Carte des muscles")}">
+  return `<svg class="mm ${opts.mono ? "mono" : ""} ${opts.cls||""}" viewBox="0 0 120 ${opts.caps===false ? 102 : 109}" role="img" aria-label="${esc(opts.label||"Carte des muscles")}">
     <g class="mm-base">${MM_SHAPES.base}</g>${side("front")}${side("back")}
-    ${opts.caps===false ? "" : `<text x="30" y="106" class="mm-cap">face</text><text x="90" y="106" class="mm-cap">dos</text>`}
+    ${opts.caps===false ? "" : `<text x="30" y="107.5" class="mm-cap">face</text><text x="90" y="107.5" class="mm-cap">dos</text>`}
   </svg>`;
 }
 // fiche d'un exercice : muscle principal plein, secondaires atténués

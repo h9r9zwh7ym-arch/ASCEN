@@ -1,5 +1,5 @@
 // ================= INITIALISATION =================
-const APP_VERSION = "2.5.0";
+const APP_VERSION = "2.5.1";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 // séance en sombre (réglage, actif par défaut) : pendant la séance, l'écran passe en sombre quel que
@@ -28,8 +28,16 @@ function applyTheme(soft){
 // assombri comme la page quand une feuille est ouverte. theme-color reste écrit pour les iOS
 // plus anciens et Android.
 let statusDim = false;
+// regroupé sur l'image suivante : lire le style calculé en plein script (fin de séance, ouverture d'une
+// feuille) forçait un recalcul complet ; plusieurs appels dans la même image n'en font qu'un
+let sbRaf = 0, sbNudge = false;
 function syncStatusBar(dim, nudge){
   if(dim!==undefined) statusDim = dim;
+  if(nudge) sbNudge = true;
+  if(sbRaf) return;
+  sbRaf = requestAnimationFrame(()=>{ sbRaf = 0; const n = sbNudge; sbNudge = false; syncStatusBarNow(n); });
+}
+function syncStatusBarNow(nudge){
   try{
     const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
     let rgb = hexRGB(bg);
