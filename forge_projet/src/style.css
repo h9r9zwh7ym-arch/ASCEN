@@ -3252,10 +3252,10 @@ label.switch{display:block;cursor:pointer}
 }
 @media (min-height:761px){.sx .focus-card:not(.resting) > .sx-ex .sx-menu{top:calc(16px + var(--pic)/2 - 22px)}}
 /* ===== mouvement (motion.js) : calques des morphings, île de repos ===== */
-#mo{position:fixed;inset:0;z-index:2000;pointer-events:none}
+#mo{position:fixed;inset:0;z-index:2000;pointer-events:none;overflow:hidden;contain:strict}
 #mo .mo-goo{position:absolute;inset:0;filter:url(#moGoo);z-index:2;contain:layout style}
 #mo .mo-fx{position:absolute;inset:0;z-index:3}
-#moBack{position:fixed;inset:0;z-index:46;pointer-events:none}
+#moBack{position:fixed;inset:0;z-index:46;pointer-events:none;overflow:hidden;contain:strict}
 .mo-blob{position:absolute;left:0;top:0;will-change:transform}
 .mo-snap{position:fixed;overflow:hidden;pointer-events:none}
 .mo-snap>*{display:flex;flex-direction:column}

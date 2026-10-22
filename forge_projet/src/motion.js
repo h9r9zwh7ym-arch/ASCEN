@@ -121,7 +121,9 @@ function moSnap(el, opts={}){
 function moBegin(cleanup){
   if(MO.busy) MO.busy();
   let ended = false;
-  const end = ()=>{ if(ended) return; ended = true; clearTimeout(t); try{ cleanup && cleanup(); }catch(e){} moClear(); if(MO.busy===end) MO.busy = null; };
+  const end = ()=>{ if(ended) return; ended = true; clearTimeout(t); try{ cleanup && cleanup(); }catch(e){} moClear(); if(MO.busy===end) MO.busy = null;
+    // filet : une étape programmée en retard ne doit jamais laisser de forme à l'écran
+    setTimeout(()=>{ if(!MO.busy) moClear(); }, 700); };
   const t = setTimeout(end, 4000);   // filet de sécurité
   MO.busy = end; return end;
 }
@@ -316,27 +318,33 @@ function moStartCapture(){
   const btn = view && qsa('[data-a="startCustom"],[data-a="startSession"],[data-a="startTemplate"]', view).find(b=>b.offsetParent && b.getBoundingClientRect().height>20);
   if(!btn) return null;
   if(MO.busy) MO.busy();
-  const cs = getComputedStyle(btn);
+  const cs = getComputedStyle(btn), idx = qsa("button", view).indexOf(btn);
   const cap = { G:moRect(btn), label:btn.textContent.trim(), font:cs.font, radius:parseFloat(cs.borderRadius)||13, snap:moSnap(view, { bg:moVar("--bg") }) };
-  // dans la copie, le bouton laisse place à sa forme liquide
-  const k = qsa("button", cap.snap).find(b=>{ const r = b.getBoundingClientRect(); return Math.abs(r.left-cap.G.l)<2 && Math.abs(r.top-cap.G.t)<2; });
+  // dans la copie, le bouton laisse place à sa forme liquide (même rang dans la copie : rien à mesurer,
+  // donc pas de mise en page forcée de toute la copie au moment du toucher)
+  const k = qsa("button", cap.snap)[idx];
   if(k) k.style.visibility = "hidden";
   return cap;
 }
-function moStart(cap){
+// render : construit l'écran de la séance ; appelé quand l'orange couvre tout (le départ reste fluide),
+// ou tout de suite si l'animation est interrompue
+function moStart(cap, render){
   if(!cap) return false;
   if(!S.draft){ cap.snap.remove(); return false; }
+  let rendered = !render;
+  const doRender = ()=>{ if(rendered) return; rendered = true; try{ render(); }catch(e){ console.error(e); } };
   const { G, snap } = cap, W = innerWidth, H = innerHeight, tint = moVar("--tint") || "#BC5736";
   const fx = moLayer().querySelector(".mo-fx");
   let raf = 0;
   const vbtn = ()=>qs("#focusRegion .validate");
   const name = ()=>qs("#v-today .sx-clock small");
   const end = moBegin(()=>{
-    cancelAnimationFrame(raf); document.removeEventListener("pointerdown", end, true);
+    cancelAnimationFrame(raf); document.removeEventListener("pointerdown", end, true); doRender();
     const b = vbtn(); if(b) b.style.visibility = ""; const n = name(); if(n) n.style.opacity = "";
   });
   // un toucher pendant l'animation la termine : la séance, déjà prête dessous, répond normalement
   setTimeout(()=>document.addEventListener("pointerdown", end, true), 0);
+  try{
   const el = (cls, css, html)=>{ const d = document.createElement("div"); d.className = cls; if(css) Object.assign(d.style, css); if(html!=null) d.textContent = html; fx.appendChild(d); return d; };
   // 1 · le mot s'efface, le bouton s'écrase puis fond en goutte ; ses deux bouts traînent derrière
   const lab = el("mo-lab", { left:G.l+"px", top:G.t+"px", width:G.w+"px", height:G.h+"px", font:cap.font }, cap.label);
@@ -345,7 +353,9 @@ function moStart(cap){
   const ends = [-1, 1].map(s=>moDisc({ x:G.x + s*(G.w/2-G.h/2), y:G.y, w:G.h, h:G.h }, tint));
   core.to({ w:G.w*1.06, h:G.h*.78, r:cap.radius+3 }, { response:.14, damping:1 });
   if(typeof haptic==="function" && typeof hapticOn==="function" && hapticOn()) haptic(10);
+  const live = ()=>MO.busy===end;   // une étape programmée ne démarre plus si l'animation a été interrompue
   setTimeout(()=>{
+    if(!live()) return;
     core.to({ w:50, h:50, r:25 }, { response:.5, damping:.55 });
     ends.forEach(e=>e.to({ x:G.x, w:G.h*.6 }, { response:.6, damping:.7 }));
   }, 110);
@@ -355,25 +365,30 @@ function moStart(cap){
   flood.style.clipPath = `circle(0px at ${G.x}px ${G.y}px)`;
   const title = el("mo-ltitle", null, liveName(S.draft));
   const n = S.draft.exos.length, sub = el("mo-lsub", { top:(H*.40+40)+"px" }, `${n} exercice${n>1?"s":""} · ≈ ${estimateMinutes(S.draft)} min`);
-  const tw = title.offsetWidth, th = title.offsetHeight, size = parseFloat(getComputedStyle(title).fontSize);
-  const T0 = { x:Math.max(16, W/2 - tw/2), y:H*.40 - th/2 - 8 };
   title.style.opacity = 0; sub.style.opacity = 0;
+  // mesuré au moment où il apparaît : le lire tout de suite forcerait la mise en page de toute la copie
+  let th = 0, size = 60, T0 = { x:16, y:H*.4 };
   setTimeout(()=>{
+    if(!live()) return;
+    const tw = title.offsetWidth; th = title.offsetHeight; size = parseFloat(getComputedStyle(title).fontSize) || 60;
+    T0 = { x:Math.max(16, W/2 - tw/2), y:H*.40 - th/2 - 8 };
     flood.animate([{ clipPath:`circle(24px at ${G.x}px ${G.y}px)` }, { clipPath:`circle(${R}px at ${G.x}px ${G.y}px)` }], { ...moEase(.62,.92), fill:"forwards" });
     for(let i=0;i<9;i++){ const a = -Math.PI/2 + (i-4)*.38 + (Math.random()-.5)*.2, dist = 80 + Math.random()*110, sz = 10 + Math.random()*14;
       const d = moDisc({ x:G.x, y:G.y, w:sz, h:sz }, tint, { o:1 });
       d.to({ x:G.x + Math.cos(a)*dist, y:G.y + Math.sin(a)*dist }, { response:.5, damping:.9 });
-      setTimeout(()=>d.to({ o:0 }, { response:.2 }), 300); }
-    core.to({ w:120, h:120 }, { response:.3, damping:1 }); setTimeout(()=>core.to({ o:0 }, { response:.15 }), 180);
+      setTimeout(()=>{ if(live()) d.to({ o:0 }, { response:.2 }); }, 300); }
+    core.to({ w:120, h:120 }, { response:.3, damping:1 }); setTimeout(()=>{ if(live()) core.to({ o:0 }, { response:.15 }); }, 180);
     ends.forEach(e=>{ e.stop(); e.el.remove(); });
     title.animate([{ opacity:0, transform:`translate(${T0.x}px,${T0.y+18}px)` }, { opacity:1, transform:`translate(${T0.x}px,${T0.y}px)` }], { ...moEase(.5,.8), delay:120, fill:"forwards" });
     sub.animate([{ opacity:0 }, { opacity:1 }], { duration:300, delay:260, fill:"forwards" });
     if(typeof sfx==="function") sfx("open");
   }, 200);
+  // l'orange couvre l'écran : la séance se construit dessous, sans que ça se voie
+  setTimeout(()=>{ if(MO.busy===end) doRender(); }, 560);
   // 3 · le niveau baisse en ondulant et dévoile la séance ; la dernière flaque devient « Valider la série »
   setTimeout(()=>{
     if(MO.busy!==end) return;
-    snap.remove(); flood.remove();
+    doRender(); snap.remove(); flood.remove();
     const b = vbtn(), V = b && b.offsetParent ? moRect(b) : { x:W/2, y:H-70, w:W-32, h:56, l:16, t:H-98 };
     if(b) b.style.visibility = "hidden";
     const nm = name(), N = nm ? moRect(nm) : null; if(nm) nm.style.opacity = 0;
@@ -417,6 +432,7 @@ function moStart(cap){
     };
     raf = requestAnimationFrame(step);
   }, 1020);
+  }catch(e){ console.error(e); end(); }
   return true;
 }
 

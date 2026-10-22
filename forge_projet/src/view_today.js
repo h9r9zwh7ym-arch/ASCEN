@@ -1529,7 +1529,7 @@ Object.assign(ACT, {
   setType(d){ regenerateDraft(d.v); renderTodaySoft(); },
   warmGo(){ const W = S.draft && S.draft.warm; if(!W || W.end) return; W.end = Date.now() + W.moves[W.i][1]*1000; save(); sfx("go"); refreshFocusRegion(); },
   warmSkip(){ warmFinish(); sfx("swipe"); },
-  startSession(){ if(!S.draft.exos.length) return; const mc = typeof moStartCapture==="function" ? moStartCapture() : null; S.draft.startedAt = new Date().toISOString(); warmStart(S.draft); liveFocusIdx = 0; completeShown = false; save(); scrollTodayTop(); renderViewAnimated("today"); if(!(mc && moStart(mc))) showLaunch(S.draft); },
+  startSession(){ if(!S.draft.exos.length) return; const mc = typeof moStartCapture==="function" ? moStartCapture() : null; S.draft.startedAt = new Date().toISOString(); warmStart(S.draft); liveFocusIdx = 0; completeShown = false; save(); const draw = ()=>{ scrollTodayTop(); renderViewAnimated("today"); }; if(!(mc && moStart(mc, draw))){ draw(); showLaunch(S.draft); } },
   regenSession(){ regenerateDraft(); renderTodaySoft(); toast("Nouvelle proposition");
     // l'icône du bouton fait un tour : on voit que c'est bien une autre proposition
     const ic = qs('#v-today [data-a="regenSession"] svg');
@@ -1648,8 +1648,8 @@ Object.assign(ACT, {
     if(S.custom.tplId){ S.draft.tplId = S.custom.tplId; S.draft.planned = !!planned && planned.id===S.custom.tplId; }
     S.draft.startedAt = new Date().toISOString(); warmStart(S.draft);
     liveFocusIdx = 0; completeShown = false;
-    save(); scrollTodayTop(); renderViewAnimated("today");
-    if(!(mc && moStart(mc))) showLaunch(S.draft);
+    save(); const draw = ()=>{ scrollTodayTop(); renderViewAnimated("today"); };
+    if(!(mc && moStart(mc, draw))){ draw(); showLaunch(S.draft); }
   },
   saveTemplateOpen(){
     // « Ma séance » s'enregistre via l'éditeur, pré-rempli (et relié à sa séance si elle en vient)
