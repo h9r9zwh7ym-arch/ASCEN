@@ -85,13 +85,13 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await tap('.asc-row[data-k="speed"]'); await wait(900);
   const rg = await page.evaluate(() => { const steps = [...document.querySelectorAll('#ascSub .rg-step')];
     return { title: document.querySelector('.sheet-hd .t').textContent, back: !!document.querySelector('.sheet-hd [data-a="sheetBack"]'), hero: (document.querySelector('#ascSub .sp-hero b') || {}).textContent,
-      factors: [...document.querySelectorAll('#ascSub .fx-r > span')].map(e => e.firstChild.textContent.trim()), steps: steps.length, cur: steps.findIndex(s => s.classList.contains('cur')),
+      factors: [...document.querySelectorAll('#ascSub .sp-r > span')].map(e => e.firstChild.textContent.trim()), steps: steps.length, cur: steps.findIndex(s => s.classList.contains('cur')),
       rising: steps.every((s, i) => !i || s.querySelector('i').offsetHeight > steps[i - 1].querySelector('i').offsetHeight), cap: (document.querySelector('#ascSub .rg-cap') || {}).textContent,
       note: (document.querySelector('#ascSub .note') || {}).textContent, weeks: [...document.querySelectorAll('#ascSub .rg-weeks .rg-w')].map(w => w.className.replace('rg-w ', '') + ':' + w.querySelector('small').textContent),
       icons: [...document.querySelectorAll('#ascSub .rg-weeks .rg-w:not(.cur) i svg')].length, legend: [...document.querySelectorAll('#ascSub .rg-legend .rg-w')].map(w => w.className.replace('rg-w ', '')) }; });
   log('Vitesse:', JSON.stringify(rg));
   const lastW = rg.weeks[rg.weeks.length - 1] || '';
-  if (rg.title !== 'Vitesse de montée' || !rg.back || !/^\+\d+\s?m$/.test(rg.hero || '') || rg.factors[0] !== 'Effort' || !rg.factors.includes('Régularité') || rg.factors.includes('Par séance')
+  if (rg.title !== 'Vitesse de montée' || !rg.back || !/^\+\d+\s?m$/.test(rg.hero || '') || rg.factors[0] !== 'Effort' || !rg.factors.some(f => /^(Régularité|Élan de départ)$/.test(f)) || rg.factors.includes('Par séance')
     || rg.steps !== 6 || rg.cur !== 0 || !rg.rising || !/×1 = vitesse normale/.test(rg.cap || '') || !/Encore 2 semaines à 3 séances pour passer à ×1/.test(rg.note || '')
     || lastW !== 'cur:en cours' || !rg.weeks.some(w => /^frozen:\d+ \S+/.test(w)) || rg.icons !== rg.weeks.length - 1 || rg.legend.join() !== 'frozen,empty') fail('vitesse et régularité lisibles');
   await shot('04_speed');

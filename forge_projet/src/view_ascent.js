@@ -23,8 +23,8 @@ function ascClassColor(pal, mode, k){
 }
 // le ciel suit l'heure réelle, pas le thème : nuit entre le coucher et le lever du soleil (durée du jour et midi
 // solaire approximés pour la Suisse, 46,5° N, heure d'été comprise), crépuscule compté comme du jour
-function ascDark(){
-  const d = new Date(), y = d.getFullYear(), doy = Math.floor((d - new Date(y, 0, 0))/864e5);
+function ascDark(when){
+  const d = when ? new Date(when) : new Date(), y = d.getFullYear(), doy = Math.floor((d - new Date(y, 0, 0))/864e5);
   const L = 12.15 + 3.65*Math.sin(2*Math.PI*(doy-80)/365);
   const dst = d.getTimezoneOffset() < Math.max(new Date(y, 0, 1).getTimezoneOffset(), new Date(y, 6, 1).getTimezoneOffset()) ? 1 : 0;
   const noon = 12.25 + dst, h = d.getHours() + d.getMinutes()/60;
@@ -40,6 +40,8 @@ const ASC_IC = {
   lock:'<rect x="5" y="11" width="14" height="10" rx="2.5" fill="currentColor"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.4"/>',
   pulse:'<path d="M3 12h4l2.5-6 4 12 2.5-6H21" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
   card:'<rect x="4" y="3" width="16" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="m7 16 3.5-5 2.5 3 1.5-2 2.5 4Z" fill="currentColor"/>',
+  sun:'<circle cx="12" cy="12" r="4.2" fill="currentColor"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  moon:'<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" fill="currentColor"/>',
   loop:'<path d="M5 13a7 7 0 1 0 2.2-6.2M5 4.5v4.6h4.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
   bolt:'<path d="M13 2.5 5 13.5h6l-1 8 8-11h-6Z" fill="currentColor"/>',
   trophy:'<path d="M7 4h10v4a5 5 0 0 1-10 0Z M5 5H3v2a3 3 0 0 0 3 3M19 5h2v2a3 3 0 0 1-3 3M12 13v4M8 20h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
@@ -409,6 +411,33 @@ function ascPostcardHTML(k, i, o){
     <span class="pc-b"><span class="pc-n"><b>${esc(name)}</b><span class="num">${fmtNum(alt)} m</span></span><span class="pc-l">${esc(sub)}</span>${q ? `<span class="pc-q">${esc(q)}</span>` : ""}</span>
   </${tag}>`;
 }
+// le souvenir d'une carte : la séance qui l'a gagnée (heure, jour ou nuit, séries, record, note, mètres)
+function ascMemoryHTML(c){
+  const s = c.sid && S.sessions.find(x=>x.id===c.sid); if(!s) return "";
+  const a = ascent(), e = a.log[s.id], when = s.completedAt || s.startedAt;
+  const t = when ? new Date(when) : null, hh = t ? `${t.getHours()} h ${String(t.getMinutes()).padStart(2, "0")}` : "";
+  const night = t ? ascDark(t) : false;
+  let pr = null; for(const ex of s.exos){ const st = ex.sets.find(x=>x.done && x.pr), def = EXO_MAP[ex.exoId]; if(st && def){ pr = `${def.n} : ${setTxt(def, st)}`; break; } }
+  const sets = typeof sessionSetCount==="function" ? sessionSetCount(s) : 0;
+  const row = (ic, tx)=>`<div class="mm-r">${ascIc(ic)}<span>${tx}</span></div>`;
+  return `<section class="pc-mem"><h3>Ce jour-là</h3><div class="card asc-card mem-card">
+      ${row(night ? "moon" : "sun", `${esc(fmtDate(s.date, "long"))}${hh ? `, ${night ? "de nuit" : "de jour"} · ${hh}` : ""}`)}
+      ${row("flag", `${esc(sessionTitle(s))} · ${nb(sets, "série")}${s.durationSec ? ` · ${fmtDuration(s.durationSec)}` : ""}`)}
+      ${e && e.gain>=.5 ? row("peak", `+${ascM(e.gain)} gravis ce jour-là${e.re ? ` (${ascNth(e.re)} ascension)` : ""}`) : ""}
+      ${pr ? row("trophy", `Record : ${esc(pr)}`) : ""}
+      ${s.note ? `<p class="mm-note">« ${esc(s.note)} »</p>` : ""}
+      <button class="mm-go" data-a="openSessionDetail" data-id="${esc(s.id)}">Voir la séance<span class="chev">${icon("chev")}</span></button>
+    </div></section>`;
+}
+// bilan d'une montagne dans le carnet : sa (dernière) expédition, et son plus beau jour
+function ascExpHTML(a, k){
+  const sm = a.summits.filter(x=>x.key===k), last = sm[sm.length-1];
+  let best = null; for(const e of Object.values(a.log)) if(e.key===k && e.gain>.5 && (!best || e.gain>best.gain)) best = e;
+  const bits = [];
+  if(last) bits.push(`${nb(last.sessions, "séance")} · ${nb(last.weeks, "semaine")}${sm.length>1 ? ` · gravi ${sm.length} fois` : ""}`);
+  if(best) bits.push(`plus beau jour : ${fmtDate(best.date)} (+${ascM(best.gain)})`);
+  return bits.length ? `<p class="pc-exp">${bits.map(esc).join(" · ")}</p>` : "";
+}
 // le carnet (une ligne repliable de l'écran) : la montagne en cours d'abord, avec la prochaine carte à découvrir ;
 // les deux plus récentes dépliées, les plus anciennes se déplient au toucher (des années de cartes restent légères)
 let ascCarnetOpen = new Set();
@@ -423,10 +452,12 @@ function ascCarnetHTML(a){
   const keys = Object.keys(last).sort((x, y)=>last[x]<last[y] ? 1 : last[x]>last[y] ? -1 : 0).filter(k=>k!==cur);
   if(cur) keys.unshift(cur);
   return `${keys.map((k, gi)=>{
-      const N = ascCamps(k).length + 1, cnt = `<span class="num">${n[k] || 0}/${N}</span>`, open = gi<2 || ascCarnetOpen.has(k);
-      if(gi<2) return `<div class="pc-grp"><div class="pc-gh"><b>${esc(ASC_DATA[k].n)}</b>${cnt}</div>${ascCarnetRow(a, k)}</div>`;
+      const N = ascCamps(k).length + 1, got = n[k] || 0, full = got>=N, open = gi<2 || ascCarnetOpen.has(k);
+      const cnt = full ? `<span class="pc-full">${ascIc("check")}Carnet complet</span>` : `<span class="num">${got}/${N}</span>`;
+      const bar = `<span class="pc-prog${full ? " full" : ""}" aria-hidden="true"><i style="width:${Math.round(got/N*100)}%"></i></span>`;
+      if(gi<2) return `<div class="pc-grp"><div class="pc-gh"><b>${esc(ASC_DATA[k].n)}</b>${cnt}</div>${bar}${ascExpHTML(a, k)}${ascCarnetRow(a, k)}</div>`;
       return `<div class="pc-grp"><button class="pc-gh tap${open ? " on" : ""}" data-a="ascCarnetGrp" data-k="${k}" aria-expanded="${open}"><b>${esc(ASC_DATA[k].n)}</b>${cnt}<span class="chev">${icon("chev")}</span></button>
-        <div class="clp" id="ascCg-${k}">${open ? ascCarnetRow(a, k) : ""}</div></div>`;
+        ${bar}<div class="clp" id="ascCg-${k}">${open ? ascExpHTML(a, k)+ascCarnetRow(a, k) : ""}</div></div>`;
     }).join("")}`;
 }
 
@@ -1087,7 +1118,7 @@ Object.assign(ACT, {
     const k = d.k, on = !ascCarnetOpen.has(k), box = qs("#ascCg-"+k); if(!box || !ASC_DATA[k]) return;
     on ? ascCarnetOpen.add(k) : ascCarnetOpen.delete(k);
     el.classList.toggle("on", on); el.setAttribute("aria-expanded", on); sfx(on ? "open" : "close");
-    animateCollapse(box, on, on ? ascCarnetRow(ascent(), k) : "");
+    const a = ascent(); animateCollapse(box, on, on ? ascExpHTML(a, k)+ascCarnetRow(a, k) : "");
   },
   // comment ça marche : feuille empilée (retour vers l'écran ou vers À propos)
   ascHow(){
@@ -1101,7 +1132,7 @@ Object.assign(ACT, {
   ascCard(d){
     const k = d.k, i = +d.i, c = ascCards(ascent()).find(x=>x.k===k && x.i===i); if(!c || !ASC_DATA[k]) return;
     openSheet(`<div class="sheet-hd te-hd"><button class="te-cancel" data-a="sheetBack">${icon("chev")}<span>Retour</span></button><span class="t">Carte postale</span><span class="te-spacer"></span></div>
-      <div class="sheet-body pc-view">${ascPostcardHTML(k, i, { date:c.date, big:true })}</div>`, { child:true, restore:()=>ACT.ascCard(d) });
+      <div class="sheet-body pc-view">${ascPostcardHTML(k, i, { date:c.date, big:true })}${ascMemoryHTML(c)}</div>`, { child:true, restore:()=>ACT.ascCard(d) });
     if(!sheetCanGoBack()){ const hd = qs(".sheet .sheet-hd"); if(hd){ hd.classList.remove("te-hd"); hd.innerHTML = `<span class="t">Carte postale</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button>`; } }
   },
   // une étape de la liste : on remonte à la montagne et sa bulle s'ouvre

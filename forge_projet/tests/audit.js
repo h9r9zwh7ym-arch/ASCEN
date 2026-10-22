@@ -83,7 +83,9 @@ const W = +(process.env.W || 375), DARK = process.env.DARK === '1', wk = process
   await act('openOverview'); await audit('live_overview'); await close();
   for (let i = 0; i < 40; i++) { const v = await page.$('[data-a="validateSet"]'); if (!v) break; await v.click(); await wait(60); const sk = await page.$('.focus-card [data-a="restSkip"]'); if (sk) { await sk.click(); await wait(60); } }
   await audit('live_complete');
-  await page.click('.complete-card [data-a="finishSession"]'); await wait(1200); await audit('celebration'); await close();
+  // depuis 2.3.0 la dernière série termine la séance toute seule ; sinon on clique « Enregistrer »
+  if (await page.$('.complete-card [data-a="finishSession"]')) await page.click('.complete-card [data-a="finishSession"]');
+  await page.waitForSelector('#overlay.open', { timeout: 6000 }); await wait(1200); await audit('celebration'); await close();
   await audit('today_done');
   await page.evaluate(() => switchTab('history')); await audit('history');
   await page.click('#v-history [data-a="openSessionDetail"]'); await audit('history_detail'); await close();

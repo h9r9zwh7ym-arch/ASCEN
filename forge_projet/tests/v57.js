@@ -43,7 +43,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     const oa = ascent; window.ascent = () => Object.assign({}, oa(), { comeback: 9000, wait: false }); renderView('today');
     const cb = document.querySelector('.wk-n small').textContent; window.ascent = oa; renderView('today'); return { r, g, cb }; });
   log('Week card:', JSON.stringify(risk));
-  if (!/^5 sem\. d'affilée en jeu$/.test(risk.r.trim()) || /en jeu/.test(risk.g)) fail('série en jeu dans la carte de la semaine, pas dans « Prochain cap »');
+  if (risk.r.trim() || /en jeu|d'affilée/.test(risk.g)) fail('plus de « semaines d\'affilée en jeu » (retiré à la demande)');
   if (!/^Retour en force : séance ×2 jusqu'à 9\s?000/.test(risk.cb)) fail('retour en force dans la carte de la semaine');
 
   // 2. Progrès › Résumé : Ta force, Muscles, Derniers records, Avant et maintenant, 3 liens ; rien d'autre
