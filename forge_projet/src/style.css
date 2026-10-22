@@ -3298,3 +3298,63 @@ body.live-focus #restbar.island{bottom:auto}
 #mo .mo-fx>.mo-pool{position:fixed}
 #mo .mo-fx>.mo-ltitle{position:fixed;left:0;top:0;font-size:60px;font-weight:800;letter-spacing:-.025em;line-height:1.1;color:#fff;white-space:nowrap;max-width:calc(100vw - 32px);overflow:hidden;text-overflow:ellipsis;transform-origin:0 0}
 #mo .mo-fx>.mo-lsub{position:fixed;left:0;right:0;text-align:center;color:rgba(255,255,255,.8);font-size:var(--fs-sub);font-weight:500}
+/* ---------- ascension : vitesse en mètres, itinéraire en lignes, fiche de montagne (regravir) ---------- */
+.asc-sub .sp-hero{flex-direction:column;align-items:center;gap:2px;padding:6px 0 0}
+.asc-sub .sp-hero b{font-size:calc(46rem/17);line-height:1}
+.asc-sub .sp-hero span{color:var(--label2);font-size:var(--fs-sub)}
+.sp-lead{margin:2px 12px 0;text-align:center;font-size:var(--fs-sub);line-height:1.4;color:var(--label)}
+.sp-card{padding:0!important;overflow:hidden}
+.sp-bar{display:flex;gap:2px;height:10px;margin:14px 16px 6px;border-radius:5px;overflow:hidden}
+.sp-bar i{display:block;height:100%}
+.c-gray{background:var(--label3)}.c-yellow{background:#D9A520}.c-orange{background:var(--tint)}.c-teal{background:#2E9BA3}
+.sp-r{display:flex;align-items:center;gap:12px;padding:10px 16px;position:relative}
+.sp-r+.sp-r::before{content:"";position:absolute;left:38px;right:0;top:0;height:1px;background:var(--sep);transform:scaleY(.5);transform-origin:0 0}
+.sp-r>i{flex:none;width:10px;height:10px;border-radius:3px}
+.sp-r>span{flex:1;min-width:0;display:flex;flex-direction:column;font-weight:600;font-size:var(--fs-body)}
+.sp-r>span small{font-weight:400;font-size:var(--fs-foot);color:var(--label2)}
+.sp-r>b{font-weight:600}
+.sp-tip{display:flex;gap:10px;padding:12px 14px;border-radius:var(--r-card,14px);background:var(--tint-bg);margin-top:4px}
+.sp-tip svg{flex:none;width:20px;height:20px;color:var(--tint-ink);margin-top:1px}
+.sp-tip p{margin:0;font-size:var(--fs-sub);line-height:1.4;color:var(--label)}
+.sp-tip p>b:first-child{color:var(--tint-ink)}
+.asc-sub .it-sub{margin:0 4px 4px;color:var(--label2);font-size:var(--fs-sub)}
+.asc-sec .it-sub+.stage,.asc-sec .stage{margin:14px 4px 6px;text-transform:uppercase;letter-spacing:.04em;font-size:calc(11.5rem/17);color:var(--label2)}
+.it-list{margin:0}
+.it-row{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;text-align:left}
+.it-md{flex:none;width:34px;height:34px;display:grid;place-items:center}
+.it-md svg{width:34px;height:34px}
+.it-ph{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--fill);color:var(--label3)}
+.it-ph svg{width:16px;height:16px}
+.it-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.it-t b{font-weight:600;font-size:var(--fs-body)}
+.it-t small{font-size:var(--fs-foot);color:var(--label2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.it-row.cur .it-t small{color:var(--tint-ink);font-weight:600}
+.it-row.locked .it-t b,.it-row.locked .it-r{color:var(--label3)}
+.it-r{font-weight:600;font-size:var(--fs-sub);color:var(--label2)}
+.it-foot{margin:10px 6px 0;font-size:var(--fs-foot);color:var(--label2)}
+.an-re{display:flex;align-items:center;gap:10px;width:100%;margin-top:10px;padding:10px 0 2px;border-top:.5px solid var(--sep);text-align:left;color:var(--label)}
+.an-re>svg{flex:none;width:22px;height:22px;color:var(--tint-ink)}
+.an-re>span:not(.chev){flex:1;display:flex;flex-direction:column;font-weight:600;font-size:var(--fs-sub)}
+.an-re small{font-weight:400;color:var(--label2);font-size:var(--fs-foot)}
+.asc-mount .mt-hd{display:flex;align-items:center;gap:14px;padding:4px 4px 12px}
+.asc-mount .mt-hd b{display:block;font-size:calc(26rem/17);font-weight:700;letter-spacing:-.01em}
+.asc-mount .mt-hd span{color:var(--label2);font-size:var(--fs-sub)}
+.asc-body .mt-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:0;padding:0}
+.mt-stats span{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 6px;text-align:center;position:relative}
+.mt-stats span+span::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:1px;background:var(--sep);transform:scaleX(.5)}
+.mt-stats b{font-size:calc(18rem/17);font-weight:700}
+.mt-stats small{font-size:var(--fs-foot);color:var(--label2)}
+.asc-body .mt-mats{display:flex;flex-direction:row;justify-content:space-between;gap:4px;padding:14px 10px}
+.mt-mats .asc-medal{width:46px;height:46px}
+.asc-mount .mt-hd .asc-medal{width:84px;height:84px;flex:none}
+.it-md .asc-medal{width:34px;height:34px}
+.mt-mats .mat{display:flex;flex-direction:column;align-items:center;gap:5px;width:23%;text-align:center}
+.mt-mats .mat b{font-size:var(--fs-foot);font-weight:600}
+.mt-mats .mat small{font-size:calc(11rem/17);color:var(--label2);line-height:1.2}
+.mt-mats .mat.next b{color:var(--tint-ink)}
+.mt-mats .mat.lock svg{opacity:.32;filter:grayscale(.7)}
+.mt-mats .mat.lock b{color:var(--label2)}
+.mt-txt{margin:12px 6px;font-size:var(--fs-sub);line-height:1.45;color:var(--label2)}
+.mt-txt b{color:var(--label)}
+.asc-mount .btn{width:100%}
+.asc-summit .medal.gem svg{filter:drop-shadow(0 10px 30px rgba(255,255,255,.35))}

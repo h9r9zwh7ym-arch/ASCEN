@@ -40,6 +40,9 @@ const ASC_IC = {
   lock:'<rect x="5" y="11" width="14" height="10" rx="2.5" fill="currentColor"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.4"/>',
   pulse:'<path d="M3 12h4l2.5-6 4 12 2.5-6H21" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
   card:'<rect x="4" y="3" width="16" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="m7 16 3.5-5 2.5 3 1.5-2 2.5 4Z" fill="currentColor"/>',
+  loop:'<path d="M5 13a7 7 0 1 0 2.2-6.2M5 4.5v4.6h4.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+  bolt:'<path d="M13 2.5 5 13.5h6l-1 8 8-11h-6Z" fill="currentColor"/>',
+  trophy:'<path d="M7 4h10v4a5 5 0 0 1-10 0Z M5 5H3v2a3 3 0 0 0 3 3M19 5h2v2a3 3 0 0 1-3 3M12 13v4M8 20h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   peak:'<path d="m2.5 19 7-11.5 3.5 5.5 2.5-3.5 6 9.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
   pause:'<path d="M9 6v12M15 6v12" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>',
   snow:'<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9M9.5 4.5 12 7l2.5-2.5M9.5 19.5 12 17l2.5 2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
@@ -87,8 +90,9 @@ function ascSkyline(k, x0, y0, w, h, span){
 }
 // trophée de sommet : médaille gravée de la vraie silhouette, métal selon la difficulté
 let ascMedalN = 0;
-function ascMedalSVG(k, size, engrave, cols){
-  const [dk, md, lt] = cols || ASC_TIERS[ASC_TIER_OF(k)].slice(0,3), id = "am"+(++ascMedalN);
+function ascMedalSVG(k, size, engrave, cols, nth){
+  const gem = nth>=2 ? ascGemOf(nth) : null;
+  const [dk, md, lt] = gem ? gem : cols || ASC_TIERS[ASC_TIER_OF(k)].slice(0,3), id = "am"+(++ascMedalN);
   const sh = k ? ascSkyline(k, 24, 32, 52, 24, .32) : [], lp = pts=>pts.map((q,i)=>(i?"L":"M")+ascP1(q[0])+" "+ascP1(q[1])).join("");
   return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" class="asc-medal" aria-hidden="true"><defs>
     <linearGradient id="${id}a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${lt}"/><stop offset=".5" stop-color="${md}"/><stop offset="1" stop-color="${dk}"/></linearGradient>
@@ -97,10 +101,14 @@ function ascMedalSVG(k, size, engrave, cols){
     <circle cx="50" cy="50" r="46" fill="url(#${id}a)"/><circle cx="50" cy="50" r="37" fill="url(#${id}b)"/>
     <circle cx="50" cy="50" r="37" fill="none" stroke="${dk}" stroke-opacity=".35" stroke-width="1.2"/>
     ${sh.length ? `<g clip-path="url(#${id}c)"><path d="${lp(sh)}L76 64L24 64Z" fill="${dk}" fill-opacity=".42"/><path d="${lp(sh)}" fill="none" stroke="${lt}" stroke-width="1.4" stroke-linejoin="round" stroke-opacity=".95"/></g>` : ""}
+    ${gem ? `<g clip-path="url(#${id}c)" stroke="${lt}" stroke-opacity=".38" stroke-width=".8">${[0,1,2,3,4,5,6,7].map(i=>{ const t = i*Math.PI/4 - Math.PI/2; return `<line x1="50" y1="50" x2="${ascP1(50+40*Math.cos(t))}" y2="${ascP1(50+40*Math.sin(t))}"/>`; }).join("")}<path d="M50 30L64 36L70 50L64 64L50 70L36 64L30 50L36 36Z" fill="none"/></g><path d="M38 24l5-2" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".9"/>` : ""}
     ${engrave && k ? `<text x="50" y="76" text-anchor="middle" font-family="ui-rounded,-apple-system,sans-serif" font-weight="700" font-size="10" fill="${dk}" fill-opacity=".8">${fmtNum(ASC_DATA[k].top)} m</text>` : ""}
     <path d="M18 34A36 36 0 0 1 60 14" stroke="#fff" stroke-opacity=".55" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`;
 }
 
+// matière du trophée d'un sommet (1re ascension : métal de la montagne, puis Saphir, Rubis, Diamant)
+function ascMatName(k, nth){ const g = nth>=2 ? ascGemOf(nth) : null; return g ? g[3] : ASC_TIERS[ASC_TIER_OF(k)][3]; }
+const ascNth = n=>n===1 ? "1ʳᵉ" : n+"ᵉ";
 // ---------- la scène : relief, voie, camps, grimpeur ----------
 function ascRouteAt(rt, a){ // position sur la voie pour une altitude ; h : 0 visible, 1 derrière un relief, 2 hors cadre
   const P = rt.pts;
@@ -523,6 +531,9 @@ function ascNextHTML(a){
     const X = ASC_DATA[a.next], ok = a.series>=a.nextReq;
     t = `Prochaine expédition : ${X.n}`; sub = ok ? "Elle commence à ta prochaine séance" : `Il faut ${a.nextReq} semaines d'affilée (tu en as ${a.series})`;
     r = fmtNum(X.top)+" m"; rs = esc(X.region);
+    if(!ok) return `<section class="card asc-card asc-steps asc-next" id="ascSteps" aria-label="Prochaine étape">
+      <div class="an-row"><span class="an-t">${esc(t)}<small>${esc(sub)}</small></span><span class="an-r"><b class="num">${r}</b><small>${rs}</small></span></div>
+      <button class="an-re" data-a="ascSub" data-k="itin">${ascIc("loop")}<span>En attendant, regravis une montagne<small>Tes séances continuent de faire monter</small></span><span class="chev">${icon("chev")}</span></button></section>`;
   } else {
     const c = ni>=0 ? camps[ni] : [D.top, "Sommet", D.top], m = c[0]-alt, e = ascEta(m, a);
     t = ni>=0 ? `${c[1]} – ${ascStory(a.key)[ni].t}` : "Sommet";
@@ -535,11 +546,11 @@ function ascNextHTML(a){
 }
 function ascHudHTML(a){
   const D = ASC_DATA[a.key];
-  return `<div class="asc-hud"><div class="hud-l"><div class="hud-k">${esc(D.region)} · ${a.idx+1}/13${a.lap ? ` · ${a.lap+1}ᵉ tour` : ""}</div><div class="hud-n">${esc(D.n)}</div></div>
+  return `<div class="asc-hud"><div class="hud-l"><div class="hud-k">${esc(D.region)} · ${a.re ? `${ascNth(a.re.nth)} ascension` : `${a.idx+1}/13${a.lap ? ` · ${a.lap+1}ᵉ tour` : ""}`}</div><div class="hud-n">${esc(D.n)}</div></div>
     <div class="hud-r"><b class="asc-alt">${fmtNum(a.wait ? D.top : a.alt)} m</b><span>${a.wait ? "sommet atteint" : `sur ${fmtNum(D.top)} m`}</span></div></div>`;
 }
 // vitesse d'une séance type maintenant (séries des 6 dernières séances en moyenne, palier et force actuels)
-function ascSpeedNow(a){ return (a.effAvg || ascEffort(15))*a.mul*a.force/(1 + .25*a.lap); }
+function ascSpeedNow(a){ return (a.effAvg || ascEffort(15))*a.mul*a.force/(1 + .25*a.lap)*(a.reF || 1); }
 // ---------- « Cette semaine » : le compte et une phrase ----------
 function ascPauseBoxHTML(a){
   // des boutons, pas des interrupteurs : on met une semaine en pause d'un toucher, elle se termine seule le
@@ -590,22 +601,30 @@ function ascOpenSub(k){
 const ascList = x=>x.length>2 ? x.slice(0,-1).join(", ")+" et "+x.slice(-1) : x.join(" et ");
 function ascSecBody(k, a){
   if(k==="speed"){
-    // une séance type (6 dernières en moyenne), facteur par facteur : la même que pour les délais estimés
-    const hard = S.sessions.length ? a.hardAvg : 15, eff = ascEffort(hard), lapF = 1/(1+.25*a.lap), pct = a.index==null ? null : Math.round(a.index-100);
-    const row = (t, sub, v, cls)=>`<div class="fx-r${cls ? " "+cls : ""}"><span>${t}${sub ? `<small>${sub}</small>` : ""}</span><b class="num">${v}</b></div>`;
-    const near = !a.wait && a.index!=null && a.done>.7, L = a.last, elan = a.elan>a.reg+.005;
-    const tot = ascSpeedNow(a)*(a.comeback ? ASC_BACK : 1);
+    // une séance type (6 dernières en moyenne) en mètres : l'effort, puis ce que chaque facteur y ajoute
+    const hard = S.sessions.length ? a.hardAvg : 15, m = a.mul*a.force/(1 + .25*a.lap)*(a.reF || 1)*(a.comeback ? ASC_BACK : 1);
+    const base = ascEffort(hard), bonus = ascEffort(a.bonusAvg||0), tot = (base + bonus)*m;
+    const fx = a.force, reg = Math.max(.01, m/fx);   // régularité, tour et nouvelle ascension ensemble ; la force à part
+    const withReg = (base + bonus)*reg, parts = [
+      ["Effort", `${fmtDec(Math.round(hard*2)/2)} séries difficiles${S.sessions.length>1 ? " par séance" : ""}`, base, "gray"],
+      ["Records", a.bonusAvg>.05 ? "records et séries battues" : "aucun ces dernières séances", bonus, "yellow"],
+      [a.elan>a.reg+.005 ? "Élan de départ" : "Régularité", a.elan>a.reg+.005 ? `jusqu'à ta ${ASC_ELAN[1]}ᵉ séance` : a.series ? `${nb(a.series, "semaine")} d'affilée tenue${a.series>1 ? "s" : ""}` : "pas encore de série", withReg - base - bonus, "orange"],
+      ["Force", a.index==null ? "pas encore mesurée" : `${a.index>=100 ? "+" : "−"}${Math.abs(Math.round(a.index-100))} % depuis tes débuts`, tot - withReg, "teal"],
+    ];
+    const pos = parts.filter(p=>p[2]>.05), sum = pos.reduce((t, p)=>t + p[2], 0) || 1;
+    const sm = v=>(v<0 ? "−" : (v>=.05 ? "+" : ""))+ascM(Math.abs(v));
+    // le levier qui ferait le plus : le prochain palier de régularité
+    const p = a.tier, nextP = p<ASC_TH.length-1 ? p+1 : null, gain = nextP==null ? 0 : tot/a.mul*Math.max(a.elan, ASC_MUL[nextP]) - tot;
+    const tip = a.re ? `Ta ${ascNth(a.re.nth)} ascension ${ascDu(a.re.k)} est plus raide : chaque mètre demande ${ascX(ASC_RE_MUL(a.re.nth))} d'effort.`
+      : nextP!=null && gain>.5 ? `Tiens ton objectif <b class="num">${nb(ASC_TH[nextP]-a.series, "semaine")}</b> de plus : environ <b class="num">+${ascM(tot+gain)}</b> par séance au lieu de ${ascM(tot)}.`
+      : `Plus de séries difficiles ou un record de plus par séance : c'est ce qui fait encore monter plus vite.`;
+    const L = a.last, near = !a.wait && a.index!=null && a.done>.7;
     return `<div class="sp-hero"><b class="num">+${ascM(tot)}</b><span>par séance, en ce moment</span></div>
-      <div class="card asc-card fx">
-        ${row("Effort", `${fmtDec(Math.round(hard*2)/2)} séries difficiles${S.sessions.length>1 ? " en moyenne" : ""}`, ascM(eff))}
-        ${a.bonusAvg>.05 ? row("Records et progrès", `+${fmtDec(Math.round(a.bonusAvg*2)/2)} série${a.bonusAvg>=2 ? "s" : ""} en moyenne`, "+"+ascM(ascEffort(a.bonusAvg))) : ""}
-        ${elan ? row("Élan de départ", `jusqu'à ta ${ASC_ELAN[1]}ᵉ séance`, ascX(Math.round(a.elan*10)/10)) : ""}
-        ${row("Régularité", elan ? "l'élan compte à sa place" : a.series ? nb(a.series, "semaine")+" d'affilée" : "pas encore de série", ascX(a.reg), elan ? "off" : "")}
-        ${row("Force", pct==null ? "pas encore mesurée" : `${pct>=0 ? "+" : "−"}${Math.abs(pct)} % depuis tes débuts`, ascX(Math.round(a.force*100)/100))}
-        ${lapF<.999 ? row(`${a.lap+1}ᵉ tour`, "plus exigeant", ascX(Math.round(lapF*100)/100)) : ""}
-        ${a.comeback ? row("Retour en force", `jusqu'à ${ascM(a.comeback)}`, ascX(ASC_BACK)) : ""}
-      </div>
-      ${L && L.waiting ? `<p class="note">Ta dernière séance n'a pas fait monter : l'expédition suivante attend ta série.</p>` : ""}
+      <p class="sp-lead">Une séance comme les tiennes te fait monter de ${ascM(tot)}${a.comeback ? " (compte double : retour en force)" : ""}. Voici d'où ils viennent :</p>
+      <div class="card asc-card sp-card"><div class="sp-bar" aria-hidden="true">${pos.map(q=>`<i class="c-${q[3]}" style="flex:${(q[2]/sum).toFixed(3)}"></i>`).join("")}</div>
+        ${parts.map(q=>`<div class="sp-r"><i class="c-${q[3]}"></i><span>${q[0]}<small>${esc(q[1])}</small></span><b class="num">${q===parts[0] ? ascM(q[2]) : sm(q[2])}</b></div>`).join("")}</div>
+      <div class="sp-tip">${ascIc("bolt")}<p><b>Pour monter plus vite</b><br>${tip}</p></div>
+      ${L && L.waiting ? `<p class="note">Ta dernière séance n'a pas fait monter : l'expédition suivante attend ta série. Tu peux regravir une montagne en attendant (Itinéraire).</p>` : ""}
       ${near ? `<div class="wx ${a.pushOK ? "" : "warn"}">${ascIc("pulse", a.pushOK ? "" : "warn")}<span><b>Dernière ligne droite : ${a.pushOK ? "pleine vitesse" : "mi-vitesse"}</b><span>Ta force est à ${Math.round(a.form*100)} % de ton meilleur niveau récent${a.pushOK ? "." : ` (il faut ${Math.round(ASC_FORM_OK*100)} %).`}</span></span></div>` : ""}
       <h2 class="sh">Régularité</h2>
       ${ascRegHTML(a)}`;
@@ -617,16 +636,25 @@ function ascSecBody(k, a){
   if(k==="pause") return ascPauseBoxHTML(a);
   if(k==="reg") return ascRegHTML(a);
   if(k==="itin"){
-    const done = new Set(a.summits.filter(s=>s.lap===a.lap).map(s=>s.key)), any = new Set(a.summits.map(s=>s.key));
-    return `${a.lap ? `<p class="sub">${a.lap+1}ᵉ tour de l'itinéraire.</p>` : ""}${ASC_GROUPS.map(([stage, keys])=>`<div class="stage">${stage}</div><ol class="stops">${keys.map(x=>{
-      const n = ASC_ORDER.indexOf(x), D = ASC_DATA[x], isDone = done.has(x), cur = n===a.idx && !a.wait, locked = !isDone && !cur && ASC_REQ[x]>a.series;
-      const right = isDone ? "atteint" : cur ? `en cours · ${Math.round(Math.max(0, Math.min(1, a.done))*100)} %` : locked ? `${ASC_REQ[x]} sem. d'affilée` : any.has(x) ? "déjà gravi" : "";
-      return `<li class="${isDone ? "done" : cur ? "cur" : locked ? "locked" : ""}"><span class="node">${isDone ? ascIc("check") : locked ? ascIc("lock") : ""}</span><span class="stop-t">${esc(D.n)}<small>${esc(D.region)}</small></span><span class="stop-r"><b class="num">${fmtNum(D.top)} m</b>${right}</span></li>`; }).join("")}</ol>`).join("")}`;
+    const mainKey = a.re ? a.re.main.key : a.key, mainWait = a.re ? a.re.main.wait : a.wait, mainDone = a.re ? a.re.main.done : a.done;
+    const lapDone = new Set(a.summits.filter(x=>x.lap===a.lap && !x.re).map(x=>x.key));
+    const sub = `${nb(lapDone.size, "sommet")} sur 13 · ${a.lap ? `${a.lap+1}ᵉ tour` : "1er tour"}`;
+    return `<p class="it-sub">${sub}</p>${ASC_GROUPS.map(([stage, keys])=>`<div class="stage">${stage}</div><div class="group it-list">${keys.map(x=>{
+      const D = ASC_DATA[x], st = ascMountStats(a, x), best = st.list.reduce((m, q)=>Math.max(m, q.nth||1), 0);
+      const isRe = a.re && a.re.k===x, isMain = x===mainKey && !mainWait, locked = !st.n && !isMain && ASC_REQ[x]>a.series && ASC_ORDER.indexOf(x)>ASC_ORDER.indexOf(mainKey);
+      const pct = v=>Math.round(Math.max(0, Math.min(1, v))*100);
+      const state = isRe ? `${ascNth(a.re.nth)} ascension en cours · ${pct(a.done)} %` : isMain ? (a.re ? `mise de côté à ${pct(mainDone)} %` : `en cours · ${pct(mainDone)} %`)
+        : st.n ? `gravi${st.n>1 ? ` ${st.n} fois` : ""}${st.best ? ` · record ${nb(st.best, "séance")}` : ""}` : locked ? `${ASC_REQ[x]} semaines d'affilée` : "à venir";
+      const md = st.n ? ascMedalSVG(x, 34, false, null, best) : `<span class="it-ph${locked ? " lk" : ""}">${locked ? ascIc("lock") : ascIc("peak")}</span>`;
+      const cls = isRe || (isMain && !a.re) ? " cur" : locked ? " locked" : "";
+      const inner = `<span class="it-md">${md}</span><span class="it-t"><b>${esc(D.n)}</b><small>${esc(state)}</small></span><span class="it-r num">${fmtNum(D.top)} m</span>`;
+      return st.n ? `<button class="row tap it-row${cls}" data-a="ascMount" data-k="${x}">${inner}<span class="chev">${icon("chev")}</span></button>` : `<div class="row it-row${cls}">${inner}</div>`; }).join("")}</div>`).join("")}
+      ${a.summits.length ? `<p class="it-foot">Touche une montagne gravie pour la regravir.</p>` : ""}`;
   }
   if(k==="carnet") return ascCarnetHTML(a);
   // trophées de sommet : ceux gagnés (touche pour revoir le sommet), puis celui à gagner
   const x = a.wait ? a.next : a.key, t = ASC_TIERS[ASC_TIER_OF(x)], mine = a.summits.slice().reverse();
-  return `${mine.length ? `<div class="asc-trophies">${mine.map((s,i)=>`<button class="asc-tr" data-a="ascReplay" data-i="${a.summits.length-1-i}" aria-label="${esc(ASC_DATA[s.key].n)}, atteint le ${fmtDate(s.date)}">${ascMedalSVG(s.key, 56, true)}<b>${esc(ASC_DATA[s.key].n)}</b><small>${fmtDate(s.date)} ${s.date.slice(0,4)}</small></button>`).join("")}</div>` : ""}
+  return `${mine.length ? `<div class="asc-trophies">${mine.map((s,i)=>`<button class="asc-tr" data-a="ascReplay" data-i="${a.summits.length-1-i}" aria-label="${esc(ASC_DATA[s.key].n)}, atteint le ${fmtDate(s.date)}">${ascMedalSVG(s.key, 56, true, null, s.nth)}<b>${esc(ASC_DATA[s.key].n)}</b><small>${s.nth>=2 ? `${ascMatName(s.key, s.nth)} · ` : ""}${fmtDate(s.date)} ${s.date.slice(0,4)}</small></button>`).join("")}</div>` : ""}
     <div class="rw-row"><span class="rw-ic">${ascMedalSVG(x, 44, true)}</span><span><span class="t">À gagner : trophée ${ascDu(x)}</span><span class="s">${t[3]}, gravé de sa vraie silhouette, avec sa carte de sommet</span></span></div>`;
 }
 // la régularité en clair : l'escalier des paliers (hauteur = vitesse), ce que rapporte le prochain, les dernières
@@ -773,8 +801,39 @@ function ascPanoSVG(k){
 function ascShowSummit(s){
   if(!s) return;
   const D = ASC_DATA[s.key], t = ASC_TIERS[ASC_TIER_OF(s.key)], ni = (ASC_ORDER.indexOf(s.key)+1)%13, nk = ASC_ORDER[ni];
+  const nth = s.nth || 1, prev = ascent().summits.filter(x=>x.key===s.key && x.date<=s.date && x!==s && (x.nth||1)<nth), rec = prev.length ? Math.min(...prev.map(x=>x.sessions||99)) : null;
+  if(nth>=2){
+    const B = s.back || null, back = B && B.key;
+    const gifts2 = [[ascMedalSVG(s.key, 26, false, null, nth), `${ascMatName(s.key, nth)} ${ascDu(s.key)}`, `${ascNth(nth)} ascension · ${nb(s.sessions, "séance")}`],
+      [ascIc("trophy"), rec && s.sessions<rec ? `Record battu de ${nb(rec - s.sessions, "séance")}` : rec ? `Ton record reste ${nb(rec, "séance")}` : "Premier record", "Le nombre de séances pour gravir la montagne"],
+      [ascIc("flag"), back ? `L'expédition reprend : ${ASC_DATA[back].n}` : "Retour à ton expédition", back && !B.wait ? `à ${fmtNum(B.alt)} m, là où tu l'avais laissée` : "rien n'a été perdu"]];
+    return ascSummitShow(s, gifts2, `${ascNth(nth)} ascension`);
+  }
   const gifts = [[ascMedalSVG(s.key, 26, false), `Trophée ${t[3].toLowerCase()} ${ascDu(s.key)}`, "Gravé de sa vraie silhouette"], [ascIc("card"), "Carte postale du sommet", "Dans ton carnet de route"],
     [ascIc("flag"), ni===0 ? "Deuxième tour" : `Prochaine expédition : ${ASC_DATA[nk].n}`, ni===0 ? "L'itinéraire recommence, plus exigeant" : `${fmtNum(ASC_DATA[nk].top)} m · ${ASC_DATA[nk].region}${ASC_REQ[nk] ? ` · série de ${ASC_REQ[nk]} sem.` : ""}`]];
+  return ascSummitShow(s, gifts, "");
+}
+function ascMountHTML(k){
+  const a = ascent(), D = ASC_DATA[k], st = ascMountStats(a, k), best = st.list.reduce((m, q)=>Math.max(m, q.nth||1), 0), nth = st.n + 1;
+  const isRe = a.re && a.re.k===k, isMain = !a.re && a.key===k && !a.wait;
+  const steps = [1, 2, 3, 4].map(n=>{ const got = st.list.find(q=>(q.nth||1)===n), g = n>=2 ? ascGemOf(n) : null;
+    const cls = got ? "got" : n===nth ? "next" : "lock";
+    return `<span class="mat ${cls}">${ascMedalSVG(k, 46, false, null, n)}<b>${n>=2 ? g[3] : ASC_TIERS[ASC_TIER_OF(k)][3]}</b><small>${got ? `${ascNth(n)} · ${nb(got.sessions, "séance")}` : `${ascNth(n)} ascension`}</small></span>`; }).join("");
+  const est = ascSessionsFor((D.top - D.start)*ASC_RE_MUL(nth), a);
+  let act;
+  if(isRe) act = `<p class="mt-txt">Ta ${ascNth(a.re.nth)} ascension est en cours (${Math.round(a.done*100)} %).</p><button class="btn secondary" data-a="ascReStop">Arrêter et reprendre ${esc(ASC_DATA[a.re.main.key].n)}</button>`;
+  else if(a.re) act = `<p class="mt-txt">Termine d'abord ta ${ascNth(a.re.nth)} ascension ${esc(ascDu(a.re.k))}.</p>`;
+  else if(isMain) act = `<p class="mt-txt">C'est ton expédition en cours.</p>`;
+  else act = `<p class="mt-txt">La ${ascNth(nth)} ascension est plus raide (<b>${ascX(ASC_RE_MUL(nth))}</b> d'effort par mètre) : compte environ <b>${nb(est, "séance")}</b>.${a.wait ? "" : ` ${esc(ASC_DATA[a.key].n)} t'attend à ${Math.round(a.done*100)} % : tu reprendras cette expédition au sommet.`}</p>
+    <button class="btn" data-a="ascRegravir" data-k="${k}">Regravir ${esc(ascLe(k))}</button>`;
+  return `<div class="mt-hd">${ascMedalSVG(k, 84, true, null, best)}<div><b>${esc(D.n)}</b><span>${fmtNum(D.top)} m · ${esc(D.region)}</span></div></div>
+    <div class="card asc-card mt-stats"><span><b class="num">${st.n}</b><small>ascension${st.n>1 ? "s" : ""}</small></span><span><b class="num">${st.best || "–"}</b><small>séances, ton record</small></span><span><b>${ascMatName(k, best)}</b><small>ton trophée</small></span></div>
+    <h2 class="sh">Trophées ${esc(ascDu(k))}</h2>
+    <div class="card asc-card mt-mats">${steps}</div>
+    ${act}`;
+}
+function ascSummitShow(s, gifts, kick){
+  const D = ASC_DATA[s.key], nth = s.nth || 1;
   let fl = ""; const rs = ascRng(3);
   for(let i=0;i<34;i++) fl += `<i class="flake" style="left:${(rs()*100).toFixed(1)}%;--dx:${((rs()-.5)*80).toFixed(0)}px;animation-duration:${(5+rs()*6).toFixed(1)}s;animation-delay:-${(rs()*8).toFixed(1)}s;width:${(2+rs()*4).toFixed(1)}px;height:${(2+rs()*4).toFixed(1)}px;opacity:${(.35+rs()*.5).toFixed(2)}"></i>`;
   let el = qs("#ascSummit"); if(el) el.remove();
@@ -783,8 +842,8 @@ function ascShowSummit(s){
   el.innerHTML = `<div class="flakes">${fl}</div><div class="sm-stage">${ascPanoSVG(s.key)}</div><div class="rays"></div>
     <div class="sm-count" aria-hidden="true"><small>${esc(D.n)}</small><b class="num">${fmtNum(a0)} m</b></div>
     <div class="sm-main">
-      <div class="medal-wrap"><div class="medal">${ascMedalSVG(s.key, 176, true)}</div></div>
-      <div class="k">Sommet atteint</div><h2>${esc(D.n)} · ${fmtNum(D.top)} m</h2>
+      <div class="medal-wrap"><div class="medal${nth>=2 ? " gem" : ""}">${ascMedalSVG(s.key, 176, true, null, nth)}</div></div>
+      <div class="k">${kick ? `Sommet atteint · ${kick}` : "Sommet atteint"}</div><h2>${esc(D.n)} · ${fmtNum(D.top)} m</h2>
       ${ASC_TOPS[s.key] ? `<p class="story">${esc(ASC_TOPS[s.key])}</p>` : ""}
       <div class="facts"><b>${nb(s.weeks, "semaine")}</b> · <b>${nb(s.sessions, "séance")}</b> · série de <b>${nb(s.series, "semaine")}</b></div>
       <div class="gifts">${gifts.map(([i, x, y], n)=>`<div class="gift" style="animation-delay:${(.45+n*.12).toFixed(2)}s"><span class="gi">${i}</span><span>${esc(x)}<small>${esc(y)}</small></span></div>`).join("")}</div>
@@ -866,7 +925,7 @@ function ascLive(draft){
     v.target = nc || [D.top, "Sommet", D.top];
     v.rest = Math.max(0, v.target[0]-alt); v.pct = Math.max(0, Math.min(1, (alt-p0)/Math.max(1, v.target[0]-p0)));
     // mètres d'une série difficile de plus (0 au-delà de 20 séries : le plafond de l'effort)
-    const m = e ? e.mul*e.force*e.lapF : a.mul*a.force/(1+.25*a.lap);
+    const m = e ? e.mul*e.force*e.lapF : a.mul*a.force/(1+.25*a.lap)*(a.reF || 1);
     v.perSet = (e && e.hard>=20) ? 0 : ascEffort(1)*m*(a.comeback ? ASC_BACK : 1);
     v.back = !!(a.comeback || (e && e.back>0));
   }
@@ -1001,6 +1060,24 @@ function ascDescentNotice(){
 Object.assign(ACT, {
   openAscent(){ ascBubOn = null; ascCarnetOpen = new Set(); openAscent(); },
   ascSub(d){ ascOpenSub(d.k); },
+  // fiche d'une montagne gravie (depuis l'itinéraire) : stats, trophées de matière, « Regravir »
+  ascMount(d){
+    const k = d.k; if(!ASC_DATA[k]) return;
+    openSheet(`<div class="sheet-hd"><span class="t">${esc(ASC_DATA[k].n)}</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
+      <div class="sheet-body asc-body asc-sub asc-mount">${ascMountHTML(k)}</div>`, { tall:true, child:true, restore:()=>ACT.ascMount(d) });
+    sheetBackHead();
+  },
+  ascRegravir(d){
+    const k = d.k, a = ascent(); if(!ASC_DATA[k] || a.re || !ascMountStats(a, k).n) return;
+    ascChooseRe(k); save(); changed(); sfx("open"); haptic(12);
+    closeSheet();
+    setTimeout(()=>{ openAscent(); toast(`Nouvelle ascension ${ascDu(k)} : tes prochaines séances y comptent`, "flag"); }, 320);
+  },
+  ascReStop(){
+    const a = ascent(); if(!a.re) return;
+    confirmSheet({ title:"Arrêter cette ascension ?", html:`Tu reprends ${esc(ascLe(a.re.main.key))} là où tu l'avais laissé. Les mètres de cette ascension ne sont pas gardés.`, ok:"Arrêter", danger:true,
+      onOk:()=>{ ascChooseRe(null, true); save(); changed(); setTimeout(()=>openAscent(), 320); } });
+  },
   ascCarnetGrp(d, el){
     const k = d.k, on = !ascCarnetOpen.has(k), box = qs("#ascCg-"+k); if(!box || !ASC_DATA[k]) return;
     on ? ascCarnetOpen.add(k) : ascCarnetOpen.delete(k);

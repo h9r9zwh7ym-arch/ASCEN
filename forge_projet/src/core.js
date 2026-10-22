@@ -305,7 +305,10 @@ function normalizeState(parsed){
     merged.deloadLog = (Array.isArray(parsed.deloadLog) ? parsed.deloadLog : []).filter(isoOK).slice(-50);
     { const a = parsed.ascent && typeof parsed.ascent==="object" ? parsed.ascent : {}, sn = a.seen;
       merged.ascent = { pauses:(Array.isArray(a.pauses) ? a.pauses : []).filter(isoOK).slice(-40), descSeen:isoOK(a.descSeen) ? a.descSeen : "", intro:a.intro ? 1 : 0,
-        seen:sn && typeof sn==="object" && typeof ASC_DATA!=="undefined" && ASC_DATA[sn.key] && isFinite(sn.alt) ? { key:sn.key, lap:Math.max(0, +sn.lap||0), alt:+sn.alt, wait:!!sn.wait } : null }; }
+        seen:sn && typeof sn==="object" && typeof ASC_DATA!=="undefined" && ASC_DATA[sn.key] && isFinite(sn.alt) ? { key:sn.key, lap:Math.max(0, +sn.lap||0), alt:+sn.alt, wait:!!sn.wait } : null,
+        // nouvelles ascensions choisies (regravir) : montagne connue ou arrêt, date, séance d'avant
+        re:(Array.isArray(a.re) ? a.re : []).filter(c=>c && isoOK(c.date) && (c.stop || (typeof ASC_DATA!=="undefined" && ASC_DATA[c.k])))
+          .map(c=>c.stop ? { stop:true, date:c.date, after:typeof c.after==="string" ? c.after : null } : { k:c.k, date:c.date, after:typeof c.after==="string" ? c.after : null }).slice(-60) }; }
     merged.body = (Array.isArray(parsed.body)?parsed.body:[]).filter(e=>e && /^\d{4}-\d{2}-\d{2}$/.test(e.d) && e.kg>=20 && e.kg<=400).sort((a,b)=>a.d<b.d?-1:1);
     // réglages : même type que la valeur par défaut ; les textes-codes (thème, niveau…) restent des
     // mots simples (ils finissent dans des classes et attributs) ; seul le prénom est libre (échappé)

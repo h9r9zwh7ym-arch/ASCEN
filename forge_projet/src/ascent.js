@@ -20,7 +20,12 @@ const ASC_GROUPS = [["Suisse", ASC_ORDER.slice(0, 8)], ["Le monde", ASC_ORDER.sl
 // trophées de sommet : métal selon la difficulté
 const ASC_TIER_OF = k=>({ moleson:"bronze", pilatus:"bronze", titlis:"silver", eiger:"silver" }[k] || (ASC_ORDER.indexOf(k)<9 ? "gold" : "diamond"));
 const ASC_TIERS = { bronze:["#7A4520","#A8672F","#E7B07A","Bronze","Préalpes"], silver:["#5E636B","#9AA0A8","#EEF0F3","Argent","les 3 000"],
-  gold:["#8A6206","#BF8A0F","#F6D56A","Or","les 4 000"], diamond:["#5B6FD6","#9FE6FF","#F3E8FF","Diamant","le monde"] };
+  gold:["#8A6206","#BF8A0F","#F6D56A","Or","les 4 000"], diamond:["#4F5868","#AEB7C4","#F4F6FA","Platine","le monde"] };
+// regravir une montagne déjà gravie : chaque nouvelle ascension est plus raide (effort par mètre) et le trophée
+// change de matière. ASC_GEM[n] : n-ième ascension (2 = Saphir, 3 = Rubis, 4 et plus = Diamant)
+const ASC_RE_MUL = n=>n<=1 ? 1 : n===2 ? 1.25 : n===3 ? 1.5 : 1.75;
+const ASC_GEM = { 2:["#0B2A7A","#2350C8","#9DB9FF","Saphir"], 3:["#5A0614","#B3122E","#FF8098","Rubis"], 4:["#6A7A8E","#C9D6E3","#FFFFFF","Diamant"] };
+const ascGemOf = n=>n>=4 ? ASC_GEM[4] : ASC_GEM[n] || null;
 
 function ascTier(series){ let p = 0; ASC_TH.forEach((t,i)=>{ if(series>=t) p = i; }); return p; }
 function ascDrop(series){ return ASC_TH[Math.max(0, ascTier(series)-1)]; }
@@ -127,7 +132,7 @@ function ascent_raw(extra){
     if(s.exos.some(ex=>ex.deload)) deloads.add(w);
   }
   const k0 = ASC_ORDER[0];
-  const st = { lap:0, i:0, alt:ASC_DATA[k0].start, wait:false, series:0, expFrom:null, expN:0, campDates:{}, n:0 };
+  const st = { lap:0, i:0, alt:ASC_DATA[k0].start, wait:false, series:0, expFrom:null, expN:0, campDates:{}, n:0, re:null, saved:null };
   const out = { weeks:[], summits:[], descents:[], log:{}, last:null }, effs = [], bons = [];
   // force : indice à la fin de la semaine précédente, recalculé toutes les 4 semaines ; forme = indice
   // rapporté à son meilleur niveau des 6 derniers mois (la dernière ligne droite la demande)
@@ -143,16 +148,37 @@ function ascent_raw(extra){
     force = { mult:ascForceMult(sAt.index), form:best>0 ? sAt.index/best : 1, index:sAt.index };
     return force;
   };
-  const key = ()=>ASC_ORDER[st.i], nextIdx = ()=>(st.i+1)%ASC_ORDER.length;
+  const key = ()=>ASC_ORDER[st.i], nextIdx = ()=>((st.re ? st.saved.i : st.i)+1)%ASC_ORDER.length;
+  // choix « regravir » (S.ascent.re) : appliqués juste après la séance qui les précédait (after), sinon avant la
+  // première séance d'une date ultérieure ; l'expédition en cours est mise de côté puis reprise au sommet
+  const sids = new Set(S.sessions.map(x=>x.id)), RE = ((S.ascent && S.ascent.re) || []).map(c=>({ ...c }));
+  const reApply = c=>{
+    c.done = true;
+    if(c.stop){ if(st.re){ Object.assign(st, st.saved); st.re = null; st.saved = null; } return; }
+    if(st.re || !ASC_DATA[c.k]) return;
+    const nth = out.summits.filter(x=>x.key===c.k).length + 1;
+    if(nth<2 || (ASC_ORDER[st.i]===c.k && !st.wait)) return;
+    st.saved = { i:st.i, alt:st.alt, wait:st.wait, expFrom:st.expFrom, expN:st.expN, campDates:st.campDates, comeback:st.comeback };
+    st.re = { k:c.k, nth, from:c.date };
+    st.i = ASC_ORDER.indexOf(c.k); st.alt = ASC_DATA[c.k].start; st.wait = false; st.expFrom = null; st.expN = 0; st.campDates = {}; st.comeback = null;
+  };
+  // un choix compte à sa date : avant toute séance d'un jour suivant, ou, le jour même, après la séance qui le
+  // précédait ; une semaine qui commence après lui le trouve déjà appliqué (descentes comprises)
+  const seenS = new Set();
+  const rePre = s=>RE.forEach(c=>{ if(!c.done && (s.date>c.date || (s.date===c.date && c.after && seenS.has(c.after)))) reApply(c); });
+  const rePost = s=>{ seenS.add(s.id); };
+  RE.forEach(c=>{ if(!c.done && !c.after) reApply(c); });
   const misses = [];
   if(firstWeek) for(let w = firstWeek, wi = 0; w<=thisWeek; w = addDaysISO(w, 7), wi++){
     const list = byWeek.get(w) || [];
+    RE.forEach(c=>{ if(!c.done && c.date<w) reApply(c); });
     let n = 0;
     for(const { s, hard } of list){
+      rePre(s);
       n++; st.n++;
       const series = st.series + (n>=goal ? 1 : 0), tier = ascTier(series), f = forceFor(wi);
       const prs = ascPRs(s), beats = s.beats||0, bonus = ascEffort(ascBonusSets(prs, beats));
-      let lapF = 1/(1 + .25*st.lap), mul = ascMulEff(tier, st.n, st.lap);
+      let lapF = 1/(1 + .25*st.lap)/(st.re ? ASC_RE_MUL(st.re.nth) : 1), mul = ascMulEff(tier, st.n, st.lap);
       let gain = (ascEffort(hard) + bonus)*mul*f.mult*lapF;
       effs.push(hard); bons.push(ascBonusSets(prs, beats));
       const e = { id:s.id, date:s.date, hard, eff:ascEffort(hard), bonus, prs, beats, mul, reg:ASC_MUL[tier], elan:ascElan(st.n, st.lap), series, force:f.mult, lapF, gain:0, from:st.alt, to:st.alt, camps:[], summit:null, started:null, key:key(), push:false, waiting:false };
@@ -163,7 +189,7 @@ function ascent_raw(extra){
           st.i = ni; st.alt = ASC_DATA[nk].start; st.wait = false; st.expFrom = s.date; st.expN = 0; st.campDates = {}; st.comeback = null;
           e.started = nk; e.key = nk; e.from = e.to = st.alt;
           e.lapF = lapF = 1/(1 + .25*st.lap); e.mul = mul = ascMulEff(tier, st.n, st.lap); e.elan = ascElan(st.n, st.lap); gain = (ascEffort(hard) + bonus)*mul*f.mult*lapF;
-        } else { e.waiting = true; out.log[s.id] = e; out.last = e; continue; }
+        } else { e.waiting = true; out.log[s.id] = e; out.last = e; rePost(s); continue; }
       }
       const D = ASC_DATA[key()], pushFrom = D.top - ASC_PUSH*(D.top - D.start);
       // retour en force : double jusqu'à l'altitude perdue, puis vitesse normale pour le reste de la séance
@@ -179,12 +205,19 @@ function ascent_raw(extra){
       st.expN++;
       e.camps = ascCamps(key()).filter(c=>c[0]>st.alt+.5 && c[0]<=to+.5).map(c=>c[1]);   // même tolérance que « passed »
       e.camps.forEach(nm=>{ st.campDates[nm] = s.date; });
+      let reDone = false;
+      if(st.re) e.re = st.re.nth;
       if(to>=D.top){
         to = D.top; e.summit = key(); st.wait = true; st.comeback = null;
-        out.summits.push({ key:key(), lap:st.lap, date:s.date, sessions:st.expN, weeks:Math.max(1, Math.round(daysBetween(weekKey(st.expFrom), w)/7)+1), series });
+        const nth = out.summits.filter(x=>x.key===key()).length + 1;
+        out.summits.push({ key:key(), lap:st.lap, date:s.date, sessions:st.expN, weeks:Math.max(1, Math.round(daysBetween(weekKey(st.expFrom), w)/7)+1), series, nth, re:!!st.re, sid:s.id });
+        reDone = !!st.re;
       }
       e.gain = to - st.alt; e.to = to; st.alt = to;
       out.log[s.id] = e; out.last = e;
+      // nouvelle ascension terminée : l'expédition mise de côté reprend là où elle était
+      if(reDone){ Object.assign(st, st.saved); st.re = null; st.saved = null; out.summits[out.summits.length-1].back = { key:key(), alt:st.alt, wait:st.wait }; }
+      rePost(s);
     }
     if(w===thisWeek){ out.weeks.push({ w, n, state:n>=goal ? "ok" : pauses.has(w) ? "pause" : "cur" }); break; }
     // semaine terminée : on tient compte de l'objectif
@@ -208,7 +241,11 @@ function ascent_raw(extra){
     }
     out.weeks.push({ w, n, state });
   }
+  RE.forEach(c=>{ if(!c.done) reApply(c); });   // choix faits après la dernière séance
   const k = key(), D = ASC_DATA[k], ni = nextIdx(), nk = ASC_ORDER[ni];
+  const reF = st.re ? 1/ASC_RE_MUL(st.re.nth) : 1;
+  const re = st.re ? { k:st.re.k, nth:st.re.nth, from:st.re.from, main:{ key:ASC_ORDER[st.saved.i], alt:st.saved.alt, wait:st.saved.wait,
+    done:st.saved.wait ? 1 : (st.saved.alt - ASC_DATA[ASC_ORDER[st.saved.i]].start)/(ASC_DATA[ASC_ORDER[st.saved.i]].top - ASC_DATA[ASC_ORDER[st.saved.i]].start) } } : null;
   const sNow = st.series + ((out.weeks.length && out.weeks[out.weeks.length-1].w===thisWeek && out.weeks[out.weeks.length-1].state==="ok") ? 1 : 0);
   const fNow = firstWeek ? forceFor(Math.round(daysBetween(firstWeek, thisWeek)/7)) : force;
   const done = st.wait ? 1 : (st.alt - D.start)/(D.top - D.start);
@@ -230,14 +267,27 @@ function ascent_raw(extra){
     pushOK:fNow.form>=ASC_FORM_OK, pushFrom:D.top - ASC_PUSH*(D.top - D.start),
     expFrom:st.expFrom, expN:st.expN, paused:pauses.has(thisWeek), pausesLeft:Math.max(0, ASC_PAUSE_MAX - pausesQ),
     camps, campDates:st.campDates, comeback:!st.wait && st.comeback && st.alt<st.comeback-.01 ? st.comeback : null, perWeek, hardAvg, bonusAvg, effAvg:ascEffort(hardAvg) + ascEffort(bonusAvg),
-    summitCount:out.summits.length, goal,
+    summitCount:out.summits.length, goal, re, reF,
   });
 }
 // séances pour un dénivelé donné, avec une séance type au palier et à la force actuels (estimation affichée)
 function ascSessionsFor(m, a){
   a = a || ascent();
-  const per = (a.effAvg || ascEffort(15))*a.mul*a.force/(1 + .25*a.lap);
+  const per = (a.effAvg || ascEffort(15))*a.mul*a.force/(1 + .25*a.lap)*(a.reF || 1);
   return Math.max(1, Math.ceil(m/Math.max(1, per)));
+}
+// regravir : un choix daté, placé après la dernière séance (le calcul le rejoue à cet endroit)
+function ascChooseRe(k, stop){
+  S.ascent = S.ascent || { pauses:[], seen:0 };
+  const last = S.sessions[S.sessions.length-1];
+  const list = (S.ascent.re || []).slice(-60);
+  list.push(stop ? { stop:true, date:todayISO(), after:last ? last.id : null } : { k, date:todayISO(), after:last ? last.id : null });
+  S.ascent.re = list;
+}
+// record d'une montagne (séances pour la gravir) et nombre d'ascensions
+function ascMountStats(a, k){
+  const list = a.summits.filter(s=>s.key===k);
+  return { n:list.length, best:list.length ? Math.min(...list.map(s=>s.sessions||0).filter(x=>x>0)) : null, list };
 }
 // pauses : la semaine en cours ou la suivante, dans la limite du trimestre
 function ascTogglePause(w){

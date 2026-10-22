@@ -101,9 +101,9 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.evaluate(() => closeSheet()); await wait(400);
   await page.evaluate(() => ACT.openAscent()); await page.waitForSelector('#ascScene .asc-svg', { timeout: 8000 }); await wait(800);
   await page.evaluate(() => document.querySelector('.asc-row[data-k="speed"]').scrollIntoView({ block: 'center' })); await page.click('.asc-row[data-k="speed"]'); await wait(600);
-  const sp = await page.evaluate(() => [...document.querySelectorAll('#ascSub .fx-r')].map(r => r.textContent.replace(/\s+/g, ' ').trim()));
+  const sp = await page.evaluate(() => [...document.querySelectorAll('#ascSub .sp-r')].map(r => r.textContent.replace(/\s+/g, ' ').trim()));
   log('Speed rows:', JSON.stringify(sp));
-  if (!sp.some(t => /^Élan de départ/.test(t)) || !sp.some(t => /^Records et progrès/.test(t)) || !sp.some(t => /^Régularité.*l'élan compte à sa place/.test(t))) fail('Vitesse : élan de départ et records');
+  if (!sp.some(t => /^Élan de départ/.test(t)) || !sp.some(t => /^Records.*\+/.test(t))) fail('Vitesse : élan de départ et records');
   await shot('04_speed');
   await page.evaluate(() => closeSheet()); await wait(400);
 

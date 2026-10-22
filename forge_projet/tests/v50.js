@@ -139,7 +139,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   // lisibilité : le prochain objectif (nom, distance, barre), cette semaine, puis une liste dont chaque ligne ouvre son écran
   if (sheet.cards !== 'Vitesse|Étapes|Itinéraire|Carnet de route|Trophées|Pause' || !sheet.week || !/Camp|Sommet|Prochaine expédition/.test(sheet.next) || !/m/.test(sheet.next) || sheet.steps !== 1 || sheet.rowsH < 260 || sheet.folded || sheet.aspect !== sheet.vh) fail('écran : prochain objectif, semaine, liste');
   await page.click('.asc-row[data-k="itin"]'); await wait(900);
-  const itin = await page.evaluate(() => ({ stops: document.querySelectorAll('#ascSub .stops li').length, t: document.querySelector('.sheet-hd .t').textContent, back: !!document.querySelector('.sheet-hd [data-a="sheetBack"]') }));
+  const itin = await page.evaluate(() => ({ stops: document.querySelectorAll('#ascSub .it-row').length, t: document.querySelector('.sheet-hd .t').textContent, back: !!document.querySelector('.sheet-hd [data-a="sheetBack"]') }));
   await page.click('.sheet-hd [data-a="sheetBack"]'); await wait(1200);
   const itin2 = await page.evaluate(() => !!document.querySelector('#ascScene') && !document.querySelector('#ascSub'));
   log('Itinerary:', JSON.stringify(itin), itin2); if (itin.stops !== 13 || itin.t !== 'Itinéraire' || !itin.back || !itin2) fail('itinéraire en sous-écran, puis retour');
@@ -228,8 +228,8 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   // 5. nuit : la scène passe en palette de nuit
   await page.emulateMedia({ colorScheme: 'dark' }); await page.evaluate(() => { S.settings.theme = 'auto'; save(); applyTheme(); });
   await page.evaluate(() => ACT.openAscent()); await page.waitForSelector('#ascScene .asc-svg', { timeout: 8000 }); await wait(2500);
-  const night = await page.evaluate(() => { const svg = document.querySelector('#ascScene .asc-svg'); return { night: /#0[0-9A-F]{5}/.test(svg.querySelector('#asSky stop').getAttribute('stop-color')), stars: svg.querySelectorAll('.asc-star').length }; });
-  log('Night:', JSON.stringify(night)); if (!night.night || night.stars < 20) fail('scène de nuit');
+  const night = await page.evaluate(() => { const svg = document.querySelector('#ascScene .asc-svg'); return { night: /#0[0-9A-F]{5}/.test(svg.querySelector('#asSky stop').getAttribute('stop-color')), stars: svg.querySelectorAll('.asc-star').length, dark: ascDark() }; });
+  log('Night:', JSON.stringify(night)); if (night.dark ? (!night.night || night.stars < 20) : (night.night || night.stars)) fail('scène : ciel selon l\'heure');
   await shot('06_sheet_dark');
   await page.evaluate(() => closeSheet()); await wait(400);
 
