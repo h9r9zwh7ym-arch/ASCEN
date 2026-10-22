@@ -52,9 +52,9 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.screenshot({ path: path.join(OUT, '01_profile.png') });
 
   // 5. pictogrammes en volume, montagnes avec lumière et brume
-  const pic = await page.evaluate(() => { const s = exoAnimSVG(EXO_MAP.dc_haltere) || ''; return { far: /ea-far/.test(s), torso: /ea-torso/.test(s) }; });
+  const pic = await page.evaluate(() => { const s = exoAnimSVG(EXO_MAP.fentes_halteres) || '', c = exoAnimSVG(EXO_MAP.curl_biceps) || ''; return { far: /ea-far/.test(s), torso: /ea-torso/.test(s), mask: /<mask /.test(c) && !/ea-far/.test(c), ids: new Set([...document.body.innerHTML.matchAll(/mask id="([^"]+)"/g)].map(m => m[1])).size }; });
   log('Picto:', JSON.stringify(pic));
-  if (!pic.far || !pic.torso) fail('pictogramme animé en volume');
+  if (!pic.far || !pic.torso || !pic.mask) fail('pictogramme animé en calques (jambe du fond, bras confondus retirés, liseré)');
 
   await browser.close();
   if (errors.length) { errors.forEach(e => log(e)); log(`ERRORS: ${errors.length}`); process.exit(1); }

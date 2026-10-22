@@ -284,7 +284,7 @@ const RIGS = {
   curl_concentre:  { env:ENV.seat, A:{ P:[10.8,16.2], t:-62, h:-55, K:0, F:90, E:82, W:92 }, B:{ P:[10.8,16.2], t:-62, h:-55, K:0, F:90, E:82, W:-100 } },
   curl_poignets:   { env:ENV.seat, A:{ P:[10.8,16.2], t:-80, h:-70, K:0, F:90, E:70, W:4 }, B:{ P:[10.8,16.2], t:-80, h:-70, K:0, F:90, E:70, W:-18 } },
   curl_incline:    { env:FL+"M7.6 4.4L11.4 15.6H16.6M15.8 15.6V21M12 15.6V21", A:{ P:[12.4,15.2], t:-112, h:-100, K:4, F:90, E:96, W:90 }, B:{ P:[12.4,15.2], t:-112, h:-100, K:4, F:90, E:96, W:-40 } },
-  extension_triceps_nuque:{ A:FRONT({ E:-110, W:32, E2:-70, W2:148 }), B:FRONT({ E:-98, W:-86, E2:-82, W2:-94 }) },
+  extension_triceps_nuque:{ A:stand(12, { h:-84, E:-104, W:104 }), B:stand(12, { h:-84, E:-100, W:-96 }) },
   extension_triceps_elastique:{ env:FL+"M15.6 1.5v3", A:stand(12, { E:92, W:-45 }), B:stand(12, { E:94, W:88 }) },
   elevations_frontales:{ A:stand(12, { E:92, W:90 }), B:stand(12, { E:2, W:0 }) },
   face_pull_elastique:{ env:FL+"M21.8 5.2v3.2", A:stand(12, { E:-8, W:-6 }), B:stand(12, { E:184, W:-10 }) },

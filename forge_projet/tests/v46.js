@@ -35,6 +35,8 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   if (s0.bg !== 'rgb(242, 242, 247)' || s0.top !== 0 || s0.w !== 390 || s0.pos !== 'fixed' || s0.body !== 'rgb(242, 242, 247)' || s0.meta !== '#f2f2f7' || s1.bg !== 'rgb(248, 248, 249)' || s0.tipTop !== '-400px') fail('barre d\'état à la couleur de l\'app (bandeau fixe, fond en style direct)');
 
   // 2. Ma séance ↔ séance de l'app (liens de la carte principale) : seul le bloc de la séance change, sans cascade de tout l'écran
+  // au démarrage, les trophées sont vérifiés à part (~1,6 s) et peuvent redessiner l'écran : on passe ce moment
+  await page.evaluate(() => { checkMedals(true); renderView('today'); }); await wait(1200);
   const before = await page.evaluate(() => { window.__head = document.querySelector('#v-today .home-head'); window.__seg = null; return document.querySelector('#v-today .seg-pane').className; });
   await page.evaluate(() => ACT.todayMode({ v: 'proposal' })); await wait(80);
   const mid = await page.evaluate(() => ({ same: document.querySelector('#v-today .home-head') === window.__head && !document.querySelector('#v-today .home-seg'), enter: document.querySelector('#v-today').classList.contains('enter'),
@@ -53,13 +55,13 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   log('Pictos:', JSON.stringify(pic));
   if (pic.db < 1 || !pic.bar || pic.front !== 1 || !pic.kb || !pic.band || pic.fixed || pic.one !== 1 || pic.nan.length) fail('matériel dans les pictogrammes');
 
-  // 4. animations : rythme (temps d'arrêt), fantôme, ombre, matériel qui suit la main
+  // 4. animations : rythme (temps d'arrêt), calques découpés par un liseré (2.6.1 : plus de fantôme), ombre, matériel qui suit la main
   const an = await page.evaluate(() => { const a = id => exoAnimSVG(EXO_MAP[id]);
     const c = a('curl_biceps'), kt = (c.match(/keyTimes="([^"]+)"/) || [])[1] || '';
-    return { hold: /0\.400;0\.500/.test(kt) && /0\.900;1\.000$/.test(kt), ghost: /ea-ghost/.test(c), shadow: /ea-shadow/.test(c), db: /ea-db/.test(c) && /type="rotate"/.test(c), bar: /ea-bar/.test(a('militaire_barre')), kb: /ea-handle/.test(a('swing_kb')), band: /ea-band/.test(a('tirage_elastique')),
+    return { hold: /0\.400;0\.500/.test(kt) && /0\.900;1\.000$/.test(kt), ghost: !/ea-ghost/.test(c) && /<mask /.test(c), shadow: /ea-shadow/.test(c), db: /ea-db/.test(c) && /type="rotate"/.test(c), bar: /ea-bar/.test(a('militaire_barre')), kb: /ea-handle/.test(a('swing_kb')), band: /ea-band/.test(a('tirage_elastique')),
       nan: EXOS.filter(e => /NaN|undefined/.test(exoAnimSVG(e))).map(e => e.id) }; });
   log('Animations:', JSON.stringify(an));
-  if (!an.hold || !an.ghost || !an.shadow || !an.db || !an.bar || !an.kb || !an.band || an.nan.length) fail('animations : rythme, fantôme, ombre, matériel');
+  if (!an.hold || !an.ghost || !an.shadow || !an.db || !an.bar || !an.kb || !an.band || an.nan.length) fail('animations : rythme, calques découpés (sans fantôme), ombre, matériel');
   await page.evaluate(() => ACT.showExoInfo({ id: 'curl_biceps' })); await wait(150);
   const casc = await page.evaluate(() => document.querySelector('#overlay .sheet').classList.contains('sh-in'));
   await wait(1400); await shot('02_fiche_anim');

@@ -1211,15 +1211,13 @@ h2.sh button.more::after{content:none}
 .exo-anim .ea-env{fill:none;stroke:var(--label3);stroke-width:1.1;stroke-linecap:round}
 .exo-anim .ea-body{fill:none;stroke:var(--rc,var(--tint));stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
 .exo-anim .ea-head{fill:var(--rc,var(--tint))}
-.exo-anim .ea-load{fill:var(--label);opacity:.85}
-.exo-anim .ea-plate{fill:none;stroke:var(--label);stroke-width:1.05;opacity:.85}
-.exo-anim .ea-handle{fill:none;stroke:var(--label);stroke-width:.85;opacity:.85}
-.exo-anim .ea-db{fill:none;stroke:var(--label);stroke-width:1.15;stroke-linecap:round;opacity:.85}
+.exo-anim .ea-load{fill:var(--label)}
+.exo-anim .ea-plate{fill:none;stroke:var(--label);stroke-width:1.05}
+.exo-anim .ea-handle{fill:none;stroke:var(--label);stroke-width:.85}
+.exo-anim .ea-db{fill:none;stroke:var(--label);stroke-width:1.15;stroke-linecap:round}
 .exo-anim .ea-wheel{fill:var(--bg2,#fff);stroke:var(--label);stroke-width:.75;opacity:.9}
 .exo-anim .ea-spokes{fill:none;stroke:var(--label);stroke-width:.32;stroke-linecap:round;opacity:.75}
 .exo-anim .ea-band{fill:none;stroke:var(--rc,var(--tint));stroke-width:.7;stroke-linecap:round;opacity:.55;stroke-dasharray:.1 1.1}
-.exo-anim .ea-ghost{fill:none;stroke:var(--label);stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;opacity:.09}
-.exo-anim .ea-ghost circle{fill:var(--label);stroke:none}
 .exo-anim .ea-shadow{fill:var(--label);opacity:.08}
 /* ================= v2.5 : Rewind ================= */
 .rc-sec{margin:18px 20px 8px}
@@ -1316,7 +1314,7 @@ h2.sh button.more::after{content:none}
 /* exercice favori */
 .rw-stage{width:190px;height:190px;border-radius:48px;background:rgba(255,255,255,.14);display:grid;place-items:center;margin:6px 0 4px;--rc:#fff}
 .rw-stage .exo-anim{width:160px;height:160px}
-.rw-stage .exo-anim .ea-body{stroke:#fff}.rw-stage .exo-anim .ea-head{fill:#fff}.rw-stage .exo-anim .ea-env{stroke:rgba(255,255,255,.45)}.rw-stage .exo-anim .ea-load{fill:#1b1b1b}.rw-stage .exo-anim .ea-plate,.rw-stage .exo-anim .ea-handle,.rw-stage .exo-anim .ea-db,.rw-stage .exo-anim .ea-wheel,.rw-stage .exo-anim .ea-spokes{stroke:#1b1b1b}.rw-stage .exo-anim .ea-ghost{stroke:#fff}.rw-stage .exo-anim .ea-ghost circle,.rw-stage .exo-anim .ea-shadow{fill:#fff}.rw-stage .exo-anim .ea-band{stroke:#fff}
+.rw-stage .exo-anim .ea-body{stroke:#fff}.rw-stage .exo-anim .ea-head{fill:#fff}.rw-stage .exo-anim .ea-env{stroke:rgba(255,255,255,.45)}.rw-stage .exo-anim .ea-load{fill:#1b1b1b}.rw-stage .exo-anim .ea-plate,.rw-stage .exo-anim .ea-handle,.rw-stage .exo-anim .ea-db,.rw-stage .exo-anim .ea-wheel,.rw-stage .exo-anim .ea-spokes{stroke:#1b1b1b}.rw-stage .exo-anim .ea-shadow{fill:#fff}.rw-stage .exo-anim .ea-band{stroke:#fff}
 .rw-list{width:100%;max-width:340px;margin-top:18px;display:flex;flex-direction:column;gap:8px}
 .rw-list div{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:16px;background:rgba(255,255,255,.14);font-weight:600;text-align:left;animation:rwUp .5s calc(.9s + var(--k)*.12s) both}
 .rw-list b{width:22px;opacity:.7}
@@ -1878,7 +1876,7 @@ body.live-focus #restbar{bottom:calc(14px + var(--sab))}
 /* matériel des pictogrammes : liseré de la couleur de la tuile sous la charge */
 .picto .pk{fill:none;stroke:var(--tile,transparent);stroke-linecap:round}
 .picto .pkf{fill:var(--tile,transparent)}
-.exo-anim .ea-bar{fill:none;stroke:var(--label);stroke-width:1.05;stroke-linecap:round;opacity:.85}
+.exo-anim .ea-bar{fill:none;stroke:var(--label);stroke-width:1.05;stroke-linecap:round}
 .rw-stage .exo-anim .ea-bar{stroke:#1b1b1b}
 
 /* petits détails (4.0, suite) */
@@ -3379,7 +3377,7 @@ body.live-focus #restbar.island{bottom:auto}
 .hero .hero-meta .hero-tag+span::before{content:none}
 .hero .hero-meta span{white-space:nowrap}
 /* chiffres qui roulent : une colonne par chiffre qui change, découpée en hauteur */
-.rl-col{display:inline-grid;overflow:hidden;vertical-align:bottom;line-height:inherit}
+.rl-col{display:inline-grid;overflow:hidden;vertical-align:bottom;line-height:inherit;font-style:normal}
 .rl-col>i{grid-area:1/1;font-style:normal;display:block}
 /* séries par exercice (feuille d'ajout en séance) et nombre de séries dans le menu « … » de l'exercice */
 .pk-sets{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;font-size:var(--fs-sub);color:var(--label2)}
@@ -3396,6 +3394,6 @@ body.live-focus #restbar.island{bottom:auto}
 .av-opt.av-ini span{font-family:var(--display);font-weight:700;font-size:20px;color:var(--tint-ink)}
 .av-opt.av-ini{background:var(--tint-bg)}
 /* silhouette : côté éloigné estompé (profondeur) */
-.exo-anim .ea-far{opacity:.42}
-.exo-anim .ea-torso{fill:var(--rc,var(--tint))}
+.exo-anim .ea-far{opacity:.5}
+.exo-anim .ea-torso{fill:var(--tint-ink)}
 .rw-stage .exo-anim .ea-torso{fill:#fff}

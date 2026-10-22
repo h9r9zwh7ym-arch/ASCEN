@@ -121,7 +121,7 @@ function moSnap(el, opts={}){
 function moBegin(cleanup){
   if(MO.busy) MO.busy();
   let ended = false;
-  const end = ()=>{ if(ended) return; ended = true; clearTimeout(t); try{ cleanup && cleanup(); }catch(e){} moClear(); if(MO.busy===end) MO.busy = null;
+  const end = ()=>{ if(ended) return; ended = true; clearTimeout(t); try{ cleanup && cleanup(); }catch(e){} moClear(); if(MO.busy===end) MO.busy = null; if(typeof syncStatusBar==="function") syncStatusBar(undefined, true);
     // filet : une étape programmée en retard ne doit jamais laisser de forme à l'écran
     setTimeout(()=>{ if(!MO.busy) moClear(); }, 700); };
   const t = setTimeout(end, 4000);   // filet de sécurité
@@ -566,9 +566,9 @@ function rollText(el, from, to, dir){
   el.textContent = "";
   const cols = [];
   for(let i=0;i<n;i++){
-    const s = document.createElement("span");
-    if(a[i]===b[i]){ s.textContent = b[i]===" " ? "" : b[i]; el.appendChild(s); continue; }
-    s.className = "rl-col";
+    // texte brut et balises <i> : aucune règle des unités (span « kg », compteurs) ne s'y applique
+    if(a[i]===b[i]){ if(b[i]!==" ") el.appendChild(document.createTextNode(b[i])); continue; }
+    const s = document.createElement("i"); s.className = "rl-col";
     const o = document.createElement("i"), nw = document.createElement("i");
     o.className = "rl-o"; o.textContent = a[i]===" " ? "" : a[i]; nw.textContent = b[i]===" " ? "" : b[i];
     o.setAttribute("aria-hidden","true"); s.append(nw, o); el.appendChild(s); cols.push([o, nw]);
