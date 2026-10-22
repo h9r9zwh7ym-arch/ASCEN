@@ -1,5 +1,5 @@
 // ================= INITIALISATION =================
-const APP_VERSION = "2.4.0";
+const APP_VERSION = "2.4.1";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 // séance en sombre (réglage, actif par défaut) : pendant la séance, l'écran passe en sombre quel que

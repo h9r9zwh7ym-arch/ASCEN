@@ -541,7 +541,7 @@ function ascNextHTML(a){
   }
   return `<section class="card asc-card asc-steps asc-next" id="ascSteps" aria-label="Prochaine étape">
     <div class="an-row"><span class="an-t">${esc(t)}<small>${esc(sub)}</small></span><span class="an-r"><b class="num">${r}</b><small>${rs}</small></span></div>
-    <div class="exp-track" aria-hidden="true"><div class="exp-push" style="width:${ASC_PUSH*100}%"></div><div class="exp-fill" style="width:${P(ascPos(a.key, alt))}%"></div>${camps.map((c, i)=>`<i class="exp-tick${c[0]<=alt+.5 ? " past" : ""}${i===ni ? " next" : ""}" style="left:${P(ascPos(a.key, c[0]))}%"></i>`).join("")}<i class="exp-me" style="left:${P(ascPos(a.key, alt))}%"></i></div>
+    <div class="exp-track" aria-hidden="true"><div class="exp-push" style="width:${P(100 - ascPos(a.key, ascPushFrom(a.key)))}%"></div><div class="exp-fill" style="width:${P(ascPos(a.key, alt))}%"></div>${camps.map((c, i)=>`<i class="exp-tick${c[0]<=alt+.5 ? " past" : ""}${i===ni ? " next" : ""}" style="left:${P(ascPos(a.key, c[0]))}%"></i>`).join("")}<i class="exp-me" style="left:${P(ascPos(a.key, alt))}%"></i></div>
   </section>`;
 }
 function ascHudHTML(a){
@@ -550,7 +550,9 @@ function ascHudHTML(a){
     <div class="hud-r"><b class="asc-alt">${fmtNum(a.wait ? D.top : a.alt)} m</b><span>${a.wait ? "sommet atteint" : `sur ${fmtNum(D.top)} m`}</span></div></div>`;
 }
 // vitesse d'une séance type maintenant (séries des 6 dernières séances en moyenne, palier et force actuels)
-function ascSpeedNow(a){ return (a.effAvg || ascEffort(15))*a.mul*a.force/(1 + .25*a.lap)*(a.reF || 1); }
+function ascSpeedNow(a){ return (a.effAvg || ascEffort(15))*a.mul*a.force/(1 + .25*a.lap)*(a.reF || 1)*(a.slF || 1); }
+// pente d'une montagne en crampons (1 à 5)
+function ascCrampHTML(k){ const n = ascCramp(k); return `<span class="cr" role="img" aria-label="pente ${n} sur 5">${[1,2,3,4,5].map(i=>`<i${i<=n ? ' class="on"' : ""}></i>`).join("")}</span>`; }
 // ---------- « Cette semaine » : le compte et une phrase ----------
 function ascPauseBoxHTML(a){
   // des boutons, pas des interrupteurs : on met une semaine en pause d'un toucher, elle se termine seule le
@@ -602,30 +604,31 @@ const ascList = x=>x.length>2 ? x.slice(0,-1).join(", ")+" et "+x.slice(-1) : x.
 function ascSecBody(k, a){
   if(k==="speed"){
     // une séance type (6 dernières en moyenne) en mètres : l'effort, puis ce que chaque facteur y ajoute
-    const hard = S.sessions.length ? a.hardAvg : 15, m = a.mul*a.force/(1 + .25*a.lap)*(a.reF || 1)*(a.comeback ? ASC_BACK : 1);
-    const base = ascEffort(hard), bonus = ascEffort(a.bonusAvg||0), tot = (base + bonus)*m;
-    const fx = a.force, reg = Math.max(.01, m/fx);   // régularité, tour et nouvelle ascension ensemble ; la force à part
-    const withReg = (base + bonus)*reg, parts = [
+    const hard = S.sessions.length ? a.hardAvg : 15, lapC = 1/(1 + .25*a.lap)*(a.comeback ? ASC_BACK : 1);
+    const base = ascEffort(hard), bonus = ascEffort(a.bonusAvg||0), raw = base + bonus;
+    const withReg = raw*a.mul*lapC, withForce = withReg*a.force, tot = withForce*(a.reF || 1)*(a.slF || 1), slope = tot - withForce;
+    const elanOn = a.elan>a.reg+.005, parts = [
       ["Effort", `${fmtDec(Math.round(hard*2)/2)} séries difficiles${S.sessions.length>1 ? " par séance" : ""}`, base, "gray"],
       ["Records", a.bonusAvg>.05 ? "records et séries battues" : "aucun ces dernières séances", bonus, "yellow"],
-      [a.elan>a.reg+.005 ? "Élan de départ" : "Régularité", a.elan>a.reg+.005 ? `jusqu'à ta ${ASC_ELAN[1]}ᵉ séance` : a.series ? `${nb(a.series, "semaine")} d'affilée tenue${a.series>1 ? "s" : ""}` : "pas encore de série", withReg - base - bonus, "orange"],
-      ["Force", a.index==null ? "pas encore mesurée" : `${a.index>=100 ? "+" : "−"}${Math.abs(Math.round(a.index-100))} % depuis tes débuts`, tot - withReg, "teal"],
+      [elanOn ? "Élan de départ" : "Régularité", elanOn ? `jusqu'à ta ${ASC_ELAN[1]}ᵉ séance` : a.series ? `${nb(a.series, "semaine")} d'affilée tenue${a.series>1 ? "s" : ""}` : "pas encore de série", withReg - raw, "orange"],
+      ["Force", a.index==null ? "pas encore mesurée" : `${a.index>=100 ? "+" : "−"}${Math.abs(Math.round(a.index-100))} % depuis tes débuts`, withForce - withReg, "teal"],
     ];
+    if(slope<-.05) parts.push([`Pente ${ascDu(a.key)}`, `${nb(ascCramp(a.key), "crampon")} sur 5${a.re ? ` · ${ascNth(a.re.nth)} ascension` : ""}`, slope, "slope"]);
     const pos = parts.filter(p=>p[2]>.05), sum = pos.reduce((t, p)=>t + p[2], 0) || 1;
     const sm = v=>(v<0 ? "−" : (v>=.05 ? "+" : ""))+ascM(Math.abs(v));
     // le levier qui ferait le plus : le prochain palier de régularité
     const p = a.tier, nextP = p<ASC_TH.length-1 ? p+1 : null, gain = nextP==null ? 0 : tot/a.mul*Math.max(a.elan, ASC_MUL[nextP]) - tot;
-    const tip = a.re ? `Ta ${ascNth(a.re.nth)} ascension ${ascDu(a.re.k)} est plus raide : chaque mètre demande ${ascX(ASC_RE_MUL(a.re.nth))} d'effort.`
+    const tip = a.re ? `Ta ${ascNth(a.re.nth)} ascension ${ascDu(a.re.k)} est plus raide : chaque mètre demande ${ascX(Math.round(ASC_RE_MUL(a.re.nth)*ascSlope(a.re.k)*100)/100)} d'effort.`
       : nextP!=null && gain>.5 ? `Tiens ton objectif <b class="num">${nb(ASC_TH[nextP]-a.series, "semaine")}</b> de plus : environ <b class="num">+${ascM(tot+gain)}</b> par séance au lieu de ${ascM(tot)}.`
       : `Plus de séries difficiles ou un record de plus par séance : c'est ce qui fait encore monter plus vite.`;
-    const L = a.last, near = !a.wait && a.index!=null && a.done>.7;
+    const L = a.last, near = !a.wait && a.index!=null && a.alt > a.pushFrom - .1*(a.top - a.start), death = a.top>ASC_DEATH;
     return `<div class="sp-hero"><b class="num">+${ascM(tot)}</b><span>par séance, en ce moment</span></div>
       <p class="sp-lead">Une séance comme les tiennes te fait monter de ${ascM(tot)}${a.comeback ? " (compte double : retour en force)" : ""}. Voici d'où ils viennent :</p>
       <div class="card asc-card sp-card"><div class="sp-bar" aria-hidden="true">${pos.map(q=>`<i class="c-${q[3]}" style="flex:${(q[2]/sum).toFixed(3)}"></i>`).join("")}</div>
         ${parts.map(q=>`<div class="sp-r"><i class="c-${q[3]}"></i><span>${q[0]}<small>${esc(q[1])}</small></span><b class="num">${q===parts[0] ? ascM(q[2]) : sm(q[2])}</b></div>`).join("")}</div>
       <div class="sp-tip">${ascIc("bolt")}<p><b>Pour monter plus vite</b><br>${tip}</p></div>
       ${L && L.waiting ? `<p class="note">Ta dernière séance n'a pas fait monter : l'expédition suivante attend ta série. Tu peux regravir une montagne en attendant (Itinéraire).</p>` : ""}
-      ${near ? `<div class="wx ${a.pushOK ? "" : "warn"}">${ascIc("pulse", a.pushOK ? "" : "warn")}<span><b>Dernière ligne droite : ${a.pushOK ? "pleine vitesse" : "mi-vitesse"}</b><span>Ta force est à ${Math.round(a.form*100)} % de ton meilleur niveau récent${a.pushOK ? "." : ` (il faut ${Math.round(ASC_FORM_OK*100)} %).`}</span></span></div>` : ""}
+      ${near ? `<div class="wx ${a.pushOK ? "" : "warn"}">${ascIc("pulse", a.pushOK ? "" : "warn")}<span><b>${death ? `Zone de la mort (au-dessus de ${fmtNum(ASC_DEATH)} m)` : "Dernière ligne droite"} : ${a.pushOK ? "pleine vitesse" : "mi-vitesse"}</b><span>Ta force est à ${Math.round(a.form*100)} % de ton meilleur niveau récent${a.pushOK ? "." : ` (il faut ${Math.round(ASC_FORM_OK*100)} %).`}</span></span></div>` : ""}
       <h2 class="sh">Régularité</h2>
       ${ascRegHTML(a)}`;
   }
@@ -647,7 +650,7 @@ function ascSecBody(k, a){
         : st.n ? `gravi${st.n>1 ? ` ${st.n} fois` : ""}${st.best ? ` · record ${nb(st.best, "séance")}` : ""}` : locked ? `${ASC_REQ[x]} semaines d'affilée` : "à venir";
       const md = st.n ? ascMedalSVG(x, 34, false, null, best) : `<span class="it-ph${locked ? " lk" : ""}">${locked ? ascIc("lock") : ascIc("peak")}</span>`;
       const cls = isRe || (isMain && !a.re) ? " cur" : locked ? " locked" : "";
-      const inner = `<span class="it-md">${md}</span><span class="it-t"><b>${esc(D.n)}</b><small>${esc(state)}</small></span><span class="it-r num">${fmtNum(D.top)} m</span>`;
+      const inner = `<span class="it-md">${md}</span><span class="it-t"><b>${esc(D.n)} ${ascCrampHTML(x)}</b><small>${esc(state)}</small></span><span class="it-r num">${fmtNum(D.top)} m</span>`;
       return st.n ? `<button class="row tap it-row${cls}" data-a="ascMount" data-k="${x}">${inner}<span class="chev">${icon("chev")}</span></button>` : `<div class="row it-row${cls}">${inner}</div>`; }).join("")}</div>`).join("")}
       ${a.summits.length ? `<p class="it-foot">Touche une montagne gravie pour la regravir.</p>` : ""}`;
   }
@@ -706,7 +709,9 @@ function ascHowHTML(){
     <h3>Les grandes montagnes</h3>
     <p>Pour partir, il te faut des semaines d'affilée :</p>
     <ul class="how-req">${Object.keys(byReq).map(Number).sort((x, y)=>x-y).map(r=>`<li><b class="num">${r} sem.</b><span>${esc(ascList(byReq[r]))}</span></li>`).join("")}</ul>
-    <p>La dernière ligne droite (les 12 derniers %, hachurés sur la barre) se fait à pleine vitesse si ta force est à ${Math.round(ASC_FORM_OK*100)} % de son meilleur niveau des 6 derniers mois, sinon à mi-vitesse.</p>
+    <p><b>La pente</b> : chaque montagne a sa difficulté, de 1 à 5 crampons ; plus elle est raide, plus chaque mètre demande d'effort (jusqu'à ×1,6 sur le K2). Les camps restent espacés de 2 à 3 séances.</p>
+    <p>La dernière ligne droite (les 12 derniers %, hachurés sur la barre) se fait à pleine vitesse si ta force est à ${Math.round(ASC_FORM_OK*100)} % de son meilleur niveau des 6 derniers mois, sinon à mi-vitesse. Sur le K2 et l'Everest, cette règle commence dès ${fmtNum(ASC_DEATH)} m : la zone de la mort.</p>
+    <p><b>Regravir</b> : une montagne déjà gravie se regravit depuis l'itinéraire, plus raide à chaque fois, pour un trophée Saphir, puis Rubis, puis Diamant.</p>
     <h3>La montagne</h3>
     <p>La voie tracée est la vraie voie d'ascension ; en pointillé estompé, les passages cachés derrière un relief. Touche un camp, le sommet ou ton grimpeur pour voir son altitude et le temps qu'il te reste.</p>
     <h3>Tout part de ton historique</h3>
@@ -819,14 +824,14 @@ function ascMountHTML(k){
   const steps = [1, 2, 3, 4].map(n=>{ const got = st.list.find(q=>(q.nth||1)===n), g = n>=2 ? ascGemOf(n) : null;
     const cls = got ? "got" : n===nth ? "next" : "lock";
     return `<span class="mat ${cls}">${ascMedalSVG(k, 46, false, null, n)}<b>${n>=2 ? g[3] : ASC_TIERS[ASC_TIER_OF(k)][3]}</b><small>${got ? `${ascNth(n)} · ${nb(got.sessions, "séance")}` : `${ascNth(n)} ascension`}</small></span>`; }).join("");
-  const est = ascSessionsFor((D.top - D.start)*ASC_RE_MUL(nth), a);
+  const est = ascSessionsFor((D.top - D.start)*ASC_RE_MUL(nth)*ascSlope(k)*(a.slF || 1), a);
   let act;
   if(isRe) act = `<p class="mt-txt">Ta ${ascNth(a.re.nth)} ascension est en cours (${Math.round(a.done*100)} %).</p><button class="btn secondary" data-a="ascReStop">Arrêter et reprendre ${esc(ASC_DATA[a.re.main.key].n)}</button>`;
   else if(a.re) act = `<p class="mt-txt">Termine d'abord ta ${ascNth(a.re.nth)} ascension ${esc(ascDu(a.re.k))}.</p>`;
   else if(isMain) act = `<p class="mt-txt">C'est ton expédition en cours.</p>`;
-  else act = `<p class="mt-txt">La ${ascNth(nth)} ascension est plus raide (<b>${ascX(ASC_RE_MUL(nth))}</b> d'effort par mètre) : compte environ <b>${nb(est, "séance")}</b>.${a.wait ? "" : ` ${esc(ASC_DATA[a.key].n)} t'attend à ${Math.round(a.done*100)} % : tu reprendras cette expédition au sommet.`}</p>
+  else act = `<p class="mt-txt">La ${ascNth(nth)} ascension est plus raide (<b>${ascX(ASC_RE_MUL(nth))}</b> d'effort par mètre, en plus de la pente) : compte environ <b>${nb(est, "séance")}</b>.${a.wait ? "" : ` ${esc(ASC_DATA[a.key].n)} t'attend à ${Math.round(a.done*100)} % : tu reprendras cette expédition au sommet.`}</p>
     <button class="btn" data-a="ascRegravir" data-k="${k}">Regravir ${esc(ascLe(k))}</button>`;
-  return `<div class="mt-hd">${ascMedalSVG(k, 84, true, null, best)}<div><b>${esc(D.n)}</b><span>${fmtNum(D.top)} m · ${esc(D.region)}</span></div></div>
+  return `<div class="mt-hd">${ascMedalSVG(k, 84, true, null, best)}<div><b>${esc(D.n)}</b><span>${fmtNum(D.top)} m · ${esc(D.region)}</span><span class="mt-cr">Pente ${ascCrampHTML(k)}</span></div></div>
     <div class="card asc-card mt-stats"><span><b class="num">${st.n}</b><small>ascension${st.n>1 ? "s" : ""}</small></span><span><b class="num">${st.best || "–"}</b><small>séances, ton record</small></span><span><b>${ascMatName(k, best)}</b><small>ton trophée</small></span></div>
     <h2 class="sh">Trophées ${esc(ascDu(k))}</h2>
     <div class="card asc-card mt-mats">${steps}</div>
@@ -925,7 +930,7 @@ function ascLive(draft){
     v.target = nc || [D.top, "Sommet", D.top];
     v.rest = Math.max(0, v.target[0]-alt); v.pct = Math.max(0, Math.min(1, (alt-p0)/Math.max(1, v.target[0]-p0)));
     // mètres d'une série difficile de plus (0 au-delà de 20 séries : le plafond de l'effort)
-    const m = e ? e.mul*e.force*e.lapF : a.mul*a.force/(1+.25*a.lap)*(a.reF || 1);
+    const m = e ? e.mul*e.force*e.lapF : a.mul*a.force/(1+.25*a.lap)*(a.reF || 1)*(a.slF || 1);
     v.perSet = (e && e.hard>=20) ? 0 : ascEffort(1)*m*(a.comeback ? ASC_BACK : 1);
     v.back = !!(a.comeback || (e && e.back>0));
   }

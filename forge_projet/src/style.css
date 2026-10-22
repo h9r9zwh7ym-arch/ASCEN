@@ -3358,3 +3358,9 @@ body.live-focus #restbar.island{bottom:auto}
 .mt-txt b{color:var(--label)}
 .asc-mount .btn{width:100%}
 .asc-summit .medal.gem svg{filter:drop-shadow(0 10px 30px rgba(255,255,255,.35))}
+.c-slope{background:repeating-linear-gradient(135deg,var(--label3) 0 2px,transparent 2px 4px)}
+.it-t .cr,.mt-cr .cr{display:inline-flex;gap:2px;margin-left:5px;vertical-align:middle}
+.it-t .cr i,.mt-cr .cr i{width:5px;height:5px;border-radius:50%;background:var(--label3);opacity:.4}
+.it-t .cr i.on,.mt-cr .cr i.on{background:var(--label2);opacity:1}
+.asc-mount .mt-hd .mt-cr{display:block;margin-top:2px}
+.asc-mount .mt-hd .mt-cr .cr{margin-left:4px}

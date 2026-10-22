@@ -14,7 +14,14 @@ const ASC_ORDER = Object.keys(ASC_DATA);
 const ASC_REQ = { moleson:0, pilatus:2, titlis:4, eiger:8, monch:8, jungfrau:8, dentblanche:8, cervin:8, montblanc:12, kilimanjaro:12, aconcagua:20, k2:20, everest:20 };
 const ASC_TH = [0, 2, 4, 8, 12, 20], ASC_MUL = [.5, 1, 1.5, 2, 2.5, 3];
 const ASC_PUSH = .12;          // dernière ligne droite : les 12 derniers % du dénivelé
-const ASC_FORM_OK = .95;       // … à pleine vitesse quand la force est à 95 % de son meilleur niveau des 6 derniers mois
+const ASC_FORM_OK = .95;
+// pente : la difficulté propre à chaque montagne (voie, technique, altitude) ; chaque mètre y demande plus
+// d'effort. 1 à 5 crampons dans l'itinéraire. Au-dessus de 7 000 m (zone de la mort), il faut la forme pour
+// avancer à pleine vitesse, comme dans la dernière ligne droite.
+const ASC_SLOPE = { moleson:1, pilatus:1, titlis:1.1, eiger:1.25, monch:1.15, jungfrau:1.2, dentblanche:1.3, cervin:1.35, montblanc:1.25, kilimanjaro:1.15, aconcagua:1.35, k2:1.6, everest:1.5 };
+const ascSlope = k=>ASC_SLOPE[k] || 1;
+const ascCramp = k=>{ const v = ascSlope(k); return v<=1 ? 1 : v<=1.15 ? 2 : v<=1.25 ? 3 : v<=1.4 ? 4 : 5; };
+const ASC_DEATH = 7000;       // … à pleine vitesse quand la force est à 95 % de son meilleur niveau des 6 derniers mois
 const ASC_PAUSE_MAX = 2;       // semaines de pause déclarées par trimestre (vacances, maladie)
 const ASC_GROUPS = [["Suisse", ASC_ORDER.slice(0, 8)], ["Le monde", ASC_ORDER.slice(8)]];
 // trophées de sommet : métal selon la difficulté
@@ -71,7 +78,7 @@ const ASC_CAMPS = (()=>{
     const pos = []; let alt = D.start;
     while(alt<D.top){
       n++; const third = n%3===0;
-      alt += ascEffort(15)*ascMulEff(ascTier(series + (third ? 1 : 0)), n, 0)*(1 + .12*Math.min(1, n/400));
+      alt += ascEffort(15)*ascMulEff(ascTier(series + (third ? 1 : 0)), n, 0)*(1 + .12*Math.min(1, n/400))/ascSlope(k);
       pos.push(Math.min(alt, D.top)); if(third) series++;
     }
     const N = mi<2 ? 2 : 3, step = (D.top - D.start)/pos.length*N, gen = [];
@@ -178,7 +185,7 @@ function ascent_raw(extra){
       n++; st.n++;
       const series = st.series + (n>=goal ? 1 : 0), tier = ascTier(series), f = forceFor(wi);
       const prs = ascPRs(s), beats = s.beats||0, bonus = ascEffort(ascBonusSets(prs, beats));
-      let lapF = 1/(1 + .25*st.lap)/(st.re ? ASC_RE_MUL(st.re.nth) : 1), mul = ascMulEff(tier, st.n, st.lap);
+      let lapF = 1/(1 + .25*st.lap)/(st.re ? ASC_RE_MUL(st.re.nth) : 1)/ascSlope(key()), mul = ascMulEff(tier, st.n, st.lap);
       let gain = (ascEffort(hard) + bonus)*mul*f.mult*lapF;
       effs.push(hard); bons.push(ascBonusSets(prs, beats));
       const e = { id:s.id, date:s.date, hard, eff:ascEffort(hard), bonus, prs, beats, mul, reg:ASC_MUL[tier], elan:ascElan(st.n, st.lap), series, force:f.mult, lapF, gain:0, from:st.alt, to:st.alt, camps:[], summit:null, started:null, key:key(), push:false, waiting:false };
@@ -188,10 +195,10 @@ function ascent_raw(extra){
           if(ni===0) st.lap++;
           st.i = ni; st.alt = ASC_DATA[nk].start; st.wait = false; st.expFrom = s.date; st.expN = 0; st.campDates = {}; st.comeback = null;
           e.started = nk; e.key = nk; e.from = e.to = st.alt;
-          e.lapF = lapF = 1/(1 + .25*st.lap); e.mul = mul = ascMulEff(tier, st.n, st.lap); e.elan = ascElan(st.n, st.lap); gain = (ascEffort(hard) + bonus)*mul*f.mult*lapF;
+          e.lapF = lapF = 1/(1 + .25*st.lap)/ascSlope(nk); e.mul = mul = ascMulEff(tier, st.n, st.lap); e.elan = ascElan(st.n, st.lap); gain = (ascEffort(hard) + bonus)*mul*f.mult*lapF;
         } else { e.waiting = true; out.log[s.id] = e; out.last = e; rePost(s); continue; }
       }
-      const D = ASC_DATA[key()], pushFrom = D.top - ASC_PUSH*(D.top - D.start);
+      const D = ASC_DATA[key()], pushFrom = ascPushFrom(key());
       // retour en force : double jusqu'à l'altitude perdue, puis vitesse normale pour le reste de la séance
       if(st.comeback && st.alt<st.comeback-.01){
         const need = st.comeback - st.alt, dbl = gain*ASC_BACK;
@@ -264,7 +271,7 @@ function ascent_raw(extra){
     key:k, idx:st.i, lap:st.lap, alt:st.alt, start:D.start, top:D.top, wait:st.wait, done, passed, nextCamp,
     next:nk, nextReq:ASC_REQ[nk], nextLap:ni===0 ? st.lap+1 : st.lap,
     series:sNow, tier:ascTier(sNow), mul:Math.max(regNow, elanNow), reg:regNow, elan:elanNow, sessN:st.n, force:fNow.mult, form:fNow.form, index:fNow.index,
-    pushOK:fNow.form>=ASC_FORM_OK, pushFrom:D.top - ASC_PUSH*(D.top - D.start),
+    pushOK:fNow.form>=ASC_FORM_OK, pushFrom:ascPushFrom(k), slF:1/ascSlope(k),
     expFrom:st.expFrom, expN:st.expN, paused:pauses.has(thisWeek), pausesLeft:Math.max(0, ASC_PAUSE_MAX - pausesQ),
     camps, campDates:st.campDates, comeback:!st.wait && st.comeback && st.alt<st.comeback-.01 ? st.comeback : null, perWeek, hardAvg, bonusAvg, effAvg:ascEffort(hardAvg) + ascEffort(bonusAvg),
     summitCount:out.summits.length, goal, re, reF,
@@ -273,9 +280,11 @@ function ascent_raw(extra){
 // séances pour un dénivelé donné, avec une séance type au palier et à la force actuels (estimation affichée)
 function ascSessionsFor(m, a){
   a = a || ascent();
-  const per = (a.effAvg || ascEffort(15))*a.mul*a.force/(1 + .25*a.lap)*(a.reF || 1);
+  const per = (a.effAvg || ascEffort(15))*a.mul*a.force/(1 + .25*a.lap)*(a.reF || 1)*(a.slF || 1);
   return Math.max(1, Math.ceil(m/Math.max(1, per)));
 }
+// dernière ligne droite (12 derniers %) ou, plus bas, la zone de la mort au-dessus de 7 000 m
+function ascPushFrom(k){ const D = ASC_DATA[k], p = D.top - ASC_PUSH*(D.top - D.start); return D.top>ASC_DEATH ? Math.min(p, ASC_DEATH) : p; }
 // regravir : un choix daté, placé après la dernière séance (le calcul le rejoue à cet endroit)
 function ascChooseRe(k, stop){
   S.ascent = S.ascent || { pauses:[], seen:0 };
