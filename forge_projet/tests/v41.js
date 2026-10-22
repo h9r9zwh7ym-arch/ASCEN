@@ -53,7 +53,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await shot('01_home_goal');
 
   // 2. en séance : « à battre » face à la même série la dernière fois, puis retour quand c'est dépassé
-  await page.click('.hero .hero-go'); await page.waitForSelector('#launch', { state: 'detached', timeout: 7000 }); await wait(500);
+  await page.click('.hero .hero-go'); await page.waitForSelector('#launch', { state: 'detached', timeout: 7000 }); await page.waitForFunction(() => !MO.busy && !(S.draft && S.draft.startedAt && !document.querySelector('#focusRegion')), null, { timeout: 7000 }); await wait(500);
   const b0 = await page.evaluate(() => { const ex = S.draft.exos[0], ref = beatRef(ex.exoId, 0); return { ids: S.draft.exos.map(e => e.exoId + ':' + e.sets.map(s => s.weight).join('/')), lp: !!lastPerformance(ex.exoId), ref, st: { r: ex.sets[0].reps, w: ex.sets[0].weight }, line: (document.querySelector('.fc-beat') || {}).textContent }; });
   log('Beat line:', JSON.stringify(b0));
   if (!b0.ref || !/la dernière fois/.test(b0.line || '')) fail('ligne « à battre » en séance');

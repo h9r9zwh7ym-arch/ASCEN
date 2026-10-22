@@ -64,7 +64,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await wait(1300);
   await shot('06_launch_go');
   log('Launch visible:', !!(await page.$('#launch')));
-  await page.waitForSelector('#launch', { state: 'detached', timeout: 5000 });
+  await page.waitForSelector('#launch', { state: 'detached', timeout: 5000 }); await page.waitForFunction(() => !MO.busy && !(S.draft && S.draft.startedAt && !document.querySelector('#focusRegion')), null, { timeout: 5000 });
   log('Live after launch:', !!(await page.$('.focus-card')));
   await page.click('[data-a="validateSet"]'); await wait(250);
   log('Float text:', await page.$$eval('.float-txt', e => e.map(x => x.textContent)));
@@ -85,7 +85,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await wait(300);
   await shot('11_light_proposal');
   await page.click('[data-a="startSession"]');
-  await page.waitForSelector('#launch', { state: 'detached', timeout: 5000 });
+  await page.waitForSelector('#launch', { state: 'detached', timeout: 5000 }); await page.waitForFunction(() => !MO.busy && !(S.draft && S.draft.startedAt && !document.querySelector('#focusRegion')), null, { timeout: 5000 });
   log('Proposal launch -> live:', !!(await page.$('.focus-card')));
   // reduced motion launch
   await page.evaluate(() => { S.draft = null; save(); renderViewAnimated('today'); });
@@ -93,7 +93,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await wait(300);
   await page.click('.hero-go'); await wait(200);
   log('Reduced launch class:', await page.$eval('#launch', e => e.className));
-  await page.waitForSelector('#launch', { state: 'detached', timeout: 3000 });
+  await page.waitForSelector('#launch', { state: 'detached', timeout: 3000 }); await page.waitForFunction(() => !MO.busy && !(S.draft && S.draft.startedAt && !document.querySelector('#focusRegion')), null, { timeout: 3000 });
   await browser.close();
   if (errors.length) { console.log('=== ERRORS ==='); errors.forEach(e => console.log(e)); process.exit(1); }
   console.log('=== NO ERRORS ===');

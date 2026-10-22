@@ -18,7 +18,7 @@ const path = require('path');
   { const b = await page.$('[data-a="todayMode"][data-v="proposal"]'); if (b) { await b.click(); await page.waitForTimeout(300); } }
   await page.waitForTimeout(200);
 
-  await page.click('[data-a="startSession"]'); await page.waitForSelector('#launch', { state: 'detached', timeout: 6000 });
+  await page.click('[data-a="startSession"]'); await page.waitForSelector('#launch', { state: 'detached', timeout: 6000 }); await page.waitForFunction(() => !MO.busy && !(S.draft && S.draft.startedAt && !document.querySelector('#focusRegion')), null, { timeout: 6000 });
   await page.waitForTimeout(250);
   await page.screenshot({ path: `${shotDir}/focus1_sets.png` });
 

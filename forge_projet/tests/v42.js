@@ -67,7 +67,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
 
   // 4. reprise : « à battre » devient « retrouve tes sensations » ; une séance arrête la baisse du muscle travaillé
   await page.evaluate(() => switchTab('today')); await wait(400);
-  await page.click('.hero .hero-go'); await page.waitForSelector('#launch', { state: 'detached', timeout: 7000 }); await wait(500);
+  await page.click('.hero .hero-go'); await page.waitForSelector('#launch', { state: 'detached', timeout: 7000 }); await page.waitForFunction(() => !MO.busy && !(S.draft && S.draft.startedAt && !document.querySelector('#focusRegion')), null, { timeout: 7000 }); await wait(500);
   const back = await page.evaluate(() => (document.querySelector('.fc-beat') || {}).textContent || '');
   log('Comeback line:', back); if (!/Reprise après \d+ jours/.test(back)) fail('« à battre » en mode reprise');
   await page.evaluate(() => { S.draft.exos.forEach(ex => ex.sets.forEach(s => { s.done = true; })); stopRestTimer(); finalizeSession(); }); await wait(800);
