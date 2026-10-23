@@ -1,5 +1,5 @@
 // ================= INITIALISATION =================
-const APP_VERSION = "2.9.3";
+const APP_VERSION = "2.9.4";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 // séance en sombre (réglage, actif par défaut) : pendant la séance, l'écran passe en sombre quel que
@@ -39,7 +39,17 @@ function syncStatusBarNow(nudge){
     if(!rgb){ const c = getComputedStyle(document.body).backgroundColor.match(/[\d.]+/g); if(!c || (c.length>3 && +c[3]===0)) return; rgb = c.slice(0,3).map(Number); }
     const base = "#"+rgb.map(x=>Math.round(x).toString(16).padStart(2,"0")).join("");
     // fond de page en style direct (seul lu en direct par Safari 26)
-    if(document.body.style.backgroundColor!==base){ document.body.style.backgroundColor = base; document.documentElement.style.backgroundColor = base; }
+    if(document.body.style.backgroundColor!==base) document.body.style.backgroundColor = base;
+    // iOS 26 (app installée) arrête parfois la page au-dessus du trait d'accueil et remplit ce bas avec le fond
+    // de la racine : on lui donne la couleur de la barre d'onglets (sur le fond), qui semble alors descendre
+    // jusqu'en bas. Sans barre d'onglets (séance), le fond de la page.
+    let under = base;
+    const tb = document.querySelector(".tabbar");
+    if(tb && !document.body.classList.contains("live-focus")){
+      const b = getComputedStyle(document.documentElement).getPropertyValue("--bar").match(/[\d.]+/g);
+      if(b && b.length>=4) under = "#"+rgb.map((x,i)=>Math.round(+b[i]*+b[3] + x*(1-+b[3])).toString(16).padStart(2,"0")).join("");
+    }
+    if(document.documentElement.style.backgroundColor!==under) document.documentElement.style.backgroundColor = under;
     const v = typeof currentTab!=="undefined" && document.getElementById("v-"+currentTab);
     if(v && v.classList.contains("scrolled")){
       const b = getComputedStyle(document.documentElement).getPropertyValue("--bar").match(/[\d.]+/g);

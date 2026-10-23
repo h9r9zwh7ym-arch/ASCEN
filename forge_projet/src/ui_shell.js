@@ -226,8 +226,10 @@ function reselectTab(){
 // séance en cours à l'écran : la barre d'onglets s'efface (toute la hauteur pour l'effort, rien
 // ne passe dessous) ; « Terminer » et la croix restent en haut pour sortir
 function syncLiveChrome(){
-  document.body.classList.toggle("live-focus", currentTab==="today" && !!(S.draft && S.draft.startedAt));
+  const on = currentTab==="today" && !!(S.draft && S.draft.startedAt), was = document.body.classList.contains("live-focus");
+  document.body.classList.toggle("live-focus", on);
   if(typeof applyTheme==="function") applyTheme(true);
+  if(on!==was && typeof syncStatusBar==="function") syncStatusBar();   // fond sous le trait d'accueil
 }
 
 const VIEWS = {};
