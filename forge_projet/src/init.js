@@ -1,5 +1,5 @@
 // ================= INITIALISATION =================
-const APP_VERSION = "2.9.4";
+const APP_VERSION = "2.9.5";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 // séance en sombre (réglage, actif par défaut) : pendant la séance, l'écran passe en sombre quel que
@@ -63,7 +63,12 @@ function syncStatusBarNow(nudge){
     // le bandeau n'a plus de couleur pleine : l'app passe sous la barre d'état (voile et flou en CSS)
     let m = document.querySelector('meta[name="theme-color"]:not([media])');
     if(!m){ document.querySelectorAll('meta[name="theme-color"]').forEach(x=>x.remove()); m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
-    if(m.content!==hex) m.content = hex;
+    // app installée avec barre fondue : la barre d'état ne prend plus cette couleur, mais iOS 26 s'en sert pour
+    // la bande qu'il laisse sous la page (au-dessus du trait d'accueil) : celle de la barre d'onglets, sauf
+    // sous une feuille ouverte (fond de la feuille)
+    const inst = window.navigator.standalone===true && !(typeof legacyStatusBar==="function" && legacyStatusBar());
+    const tc = inst ? (statusDim ? base : under) : hex;
+    if(m.content!==tc) m.content = tc;
   }catch(e){}
 }
 // iOS 26 (app installée, barre fondue) : la page peut s'arrêter avant le bas de l'écran. On mesure un
