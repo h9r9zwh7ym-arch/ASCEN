@@ -38,7 +38,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
 
   // 2. séance du jour : « Modifier » → ni « Commencer » ni autre choix ; « OK » sans changement → rien n'est demandé
   await tap('.hero .hero-mod'); await wait(600);
-  const ed = await page.evaluate(() => ({ ok: document.querySelector('.hero .hero-mod').textContent, go: !!document.querySelector('.hero .hero-go'), alt: !!document.querySelector('.hero .hero-alt'),
+  const ed = await page.evaluate(() => ({ ok: document.querySelector('.hero .hero-mod').textContent, go: !!document.querySelector('.hero .hero-go'), alt: !!document.querySelector('.hero .hero-alt:not(.hero-tailor)'),
     rows: document.querySelectorAll('.group.builder .row').length, save: !!document.querySelector('.save-row') }));
   await shot('01_editing');
   await tap('.hero .hero-mod'); await wait(600);

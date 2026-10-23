@@ -129,7 +129,7 @@ Object.assign(ACT, {
     const rows = weekVolume(), under = rows.filter(r=>r.sets<STIM.min).map(r=>r.n), twice = rows.filter(r=>r.freq>=2).length;
     openSheet(`<div class="sheet-hd"><span class="t">Stimulus par muscle</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body how-body">
       <h3>Ce qui est compté</h3>
-      <p>Chaque série terminée compte pour <b>1</b> pour le muscle principal de l'exercice et pour <b>½</b> pour chaque muscle qui aide (par exemple les triceps au développé couché). Une série facile (3 répétitions ou plus en réserve) compte moitié moins : loin de l'échec, elle stimule moins. Les étirements ne comptent pas. Touche un muscle pour voir aussi ta moyenne par semaine sur les 4 dernières semaines.</p>
+      <p>Chaque série terminée compte pour <b>1</b> pour le muscle principal de l'exercice et pour <b>½</b> pour chaque muscle qui aide (par exemple les triceps au développé couché). Une série facile (3 répétitions ou plus en réserve) compte moitié moins : loin de l'échec, elle stimule moins. ${goalValueText()} Les étirements ne comptent pas. Touche un muscle pour voir aussi ta moyenne par semaine sur les 4 dernières semaines.</p>
       <h3>Les repères</h3>
       <p><b>${STIM.min} séries</b> par semaine : le seuil à partir duquel un gain de muscle devient mesurable. <b>${STIM.high} séries</b> et plus : le gain continue, mais de plus en plus lentement. Pour gagner seulement en force, environ 3 séries par semaine suffisent.</p>
       <h3>Ta semaine</h3>

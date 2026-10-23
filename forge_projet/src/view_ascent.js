@@ -738,7 +738,7 @@ function ascHowHTML(){
   return `<h3>Ce qui fait monter</h3>
     <p>Chaque séance : <b>effort × régularité × force</b>.</p>
     <ul class="how-list">
-      <li><b>Effort</b> : tes séries difficiles, 20 au plus. Une série faite exprès facile compte moitié.</li>
+      <li><b>Effort</b> : tes séries difficiles, 20 au plus. Une série faite exprès facile compte moitié. ${goalValueText()}</li>
       <li><b>Régularité</b> : tes semaines d'affilée où tu tiens ton objectif, de ×0,5 au départ à ×3 après 20 semaines.</li>
       <li><b>Force</b> : ton indice de force. 10 % de force en plus, 6 % de vitesse en plus.</li>
       <li><b>Records et progrès</b> : un record compte pour ${ASC_BONUS.pr} séries de plus (${ASC_BONUS.prMax} au plus par séance), une série mieux que la dernière fois pour ${ASC_BONUS.beat} de plus (${ASC_BONUS.beatMax} au plus).</li>

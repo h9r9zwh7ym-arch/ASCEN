@@ -4,9 +4,42 @@ const SESSION_SIZE = { court:4, moyen:6, long:8 };
 // la proposition du jour suit les réglages (matériel, niveau, taille) tant qu'elle n'est ni
 // commencée ni issue d'un programme importé
 function regenerateDraftIfIdle(){
-  if(!S.draft || S.draft.startedAt || S.draft.source==="imported") return;
+  if(!S.draft || S.draft.startedAt || S.draft.source==="imported" || S.draft.tailored) return;
   S.draft = generateEngineSession(S.draft.type||"auto"); save();
 }
+// ---------- ce que vaut une série selon l'objectif ----------
+// Une série ne fait pas le même travail selon l'objectif. Pour prendre du muscle, ce qui compte est la
+// tension près de l'échec : une charge (haltères, barre, kettlebell) la donne à coup sûr ; le poids du corps
+// aussi quand il est assez dur (pompes, tractions, dips : Schoenfeld 2015, charges ≥ 30 % efficaces près de
+// l'échec), un peu moins en moyenne ; un gainage tenu sollicite peu l'hypertrophie, le cardio presque pas.
+// Pour la force, la charge lourde compte encore plus. Pour l'endurance et le tonus, tout compte pleinement.
+// Utilisé par le stimulus de la semaine, l'ascension (mètres gagnés) et le choix des exercices.
+const GOAL_VALUE = {
+  hypertrophie:{ loaded:1, band:.8, bodyweight:.85, plyo:.6, hold:.5, cardio:.35 },
+  force:       { loaded:1, band:.6, bodyweight:.7,  plyo:.5, hold:.4, cardio:.25 },
+  endurance:   { loaded:1, band:1,  bodyweight:1,   plyo:1,  hold:.9, cardio:1 },
+};
+function exoKind(def){
+  if(def._kind) return def._kind;
+  let k;
+  if(isStretch(def)) k = "stretch";
+  else if(def.muscles[0]==="cardio") k = "cardio";
+  else if(isTimed(def)) k = "hold";
+  else { const t = loadableTypeOf(def); k = t==="barbell" || t==="dumbbells" || t==="kettlebell" ? "loaded" : t==="bands" ? "band" : def.muscles.includes("cardio") ? "plyo" : "bodyweight"; }
+  return (def._kind = k);
+}
+function goalValue(def, goal){
+  const k = exoKind(def); if(k==="stretch") return 0;
+  return (GOAL_VALUE[goal || S.goals.overall] || GOAL_VALUE.hypertrophie)[k] ?? 1;
+}
+// la règle, dite simplement (fiches « Comment c'est calculé »)
+function goalValueText(){
+  const g = S.goals.overall, v = GOAL_VALUE[g] || GOAL_VALUE.hypertrophie, f = x=>String(x).replace(".", ",");
+  if(g==="endurance") return "Avec ton objectif (endurance et tonus), toutes les séries comptent pleinement, cardio et gainage compris.";
+  return `Avec ton objectif (${g==="force" ? "gagner en force" : "prendre du muscle"}), une série vaut selon ce qu'elle apporte : charge ${f(v.loaded)}, poids du corps ${f(v.bodyweight)}, élastique ${f(v.band)}, sauts ${f(v.plyo)}, gainage tenu ${f(v.hold)}, cardio ${f(v.cardio)}.`;
+}
+// valeur d'une série faite : ½ si elle était facile (3 répétitions ou plus en réserve), × l'objectif
+function setValue(def, st){ return st.done ? (st.effort===1 ? .5 : 1)*goalValue(def) : 0; }
 function sessionSize(){ return Math.max(2, Math.min(10, S.goals.exoCount || SESSION_SIZE[S.goals.sessionLength] || 6)); }
 // exercices adaptés au niveau : un débutant ne se voit pas proposer d'exercice avancé
 // (il reste libre de le choisir lui-même dans la liste)
@@ -74,6 +107,7 @@ function scoreExo(exo){
   else if(lv==="intermediaire" && exo.level===1) score -= 0.7;   // versions allégées (pompes genoux…) : plutôt pour débuter
   else if(lv==="avance") score += exo.level===3 ? 1 : exo.level===1 ? -1 : 0;
   score -= recencyPenalty(exo.id);
+  score += (goalValue(exo)-1)*2.5;   // ce qui sert l'objectif passe devant (cardio : −1,6 pour prendre du muscle)
   return score;
 }
 
@@ -621,6 +655,8 @@ function importProgramJSON(text){
 function suggestComplement(existingIds, n){
   const have = existingIds.map(id=>EXO_MAP[id]).filter(Boolean);
   const coveredMuscles = new Set(have.map(e=>e.muscles[0]));
+  // muscles qui travaillent déjà en renfort (les triceps au développé couché) : un complément les évite aussi
+  const helped = new Set(have.flatMap(e=>e.muscles.slice(1)));
   const coveredPatterns = new Set(have.map(e=>e.pattern));
   const fams = new Set(have.map(exoFamily));
   const pool = engineExos().filter(e=>!existingIds.includes(e.id));
@@ -630,12 +666,12 @@ function suggestComplement(existingIds, n){
     let best=null, bestScore=-Infinity;
     pool.forEach(e=>{
       if(out.includes(e)) return;
-      const sc = scoreExo(e) + jitter[e.id] - (coveredMuscles.has(e.muscles[0])?5:0) - (coveredPatterns.has(e.pattern)?2:0) - (fams.has(exoFamily(e))?3:0);
+      const sc = scoreExo(e) + jitter[e.id] - (coveredMuscles.has(e.muscles[0])?5:0) - (helped.has(e.muscles[0])?1.5:0) - (coveredPatterns.has(e.pattern)?2:0) - (fams.has(exoFamily(e))?3:0);
       if(sc>bestScore){ bestScore=sc; best=e; }
     });
     if(!best) break;
     out.push(best);
-    coveredMuscles.add(best.muscles[0]); coveredPatterns.add(best.pattern); fams.add(exoFamily(best));
+    coveredMuscles.add(best.muscles[0]); best.muscles.slice(1).forEach(m=>helped.add(m)); coveredPatterns.add(best.pattern); fams.add(exoFamily(best));
   }
   return out;
 }

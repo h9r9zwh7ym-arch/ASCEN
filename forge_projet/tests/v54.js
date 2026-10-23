@@ -33,7 +33,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
 
   // 1. accueil : pas de bascule, une action forte et une alternative (« Choisir une autre séance »), un seul message
   const home = await page.evaluate(() => ({ seg: !!document.querySelector('#v-today .home-seg, #v-today [data-seg="today"]'), go: document.querySelectorAll('#v-today .hero .hero-go').length,
-    alt: [...document.querySelectorAll('#v-today .hero .hero-alt')].map(b => b.textContent.trim()), msgs: document.querySelectorAll('#v-today .dl-card, #v-today .goal-line').length }));
+    alt: [...document.querySelectorAll('#v-today .hero .hero-alt:not(.hero-tailor)')].map(b => b.textContent.trim()), msgs: document.querySelectorAll('#v-today .dl-card, #v-today .goal-line').length }));
   const cHome = await choices();
   log('Home:', JSON.stringify(home), 'choices', cHome);
   if (home.seg || home.go !== 1 || home.alt.length !== 1 || !/Choisir une autre séance|laisse l'app choisir/.test(home.alt[0]) || home.msgs > 1) fail('accueil : un seul chemin, un seul message');
@@ -49,7 +49,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     if (!sheet.includes("Laisse l'app choisir") || !sheet.some(t => /Séance express/.test(t)) || !sheet.includes('Composer moi-même')) fail('« Choisir une autre séance » : app, express, composer');
     await page.evaluate(t => [...document.querySelectorAll('.cs-row')].find(r => r.textContent.includes(t)).click(), "Laisse l'app choisir"); await wait(900);
   } else { await page.click('#v-today .hero [data-a="todayMode"][data-v="proposal"]'); await wait(900); }
-  const prop = await page.evaluate(() => ({ mode: S.settings.todayTab, alts: [...document.querySelectorAll('#v-today .hero .hero-alt')].map(b => b.textContent.trim()),
+  const prop = await page.evaluate(() => ({ mode: S.settings.todayTab, alts: [...document.querySelectorAll('#v-today .hero .hero-alt:not(.hero-tailor)')].map(b => b.textContent.trim()),
     chips: document.querySelectorAll('#v-today .type-chip').length, swap: document.querySelectorAll('#v-today [data-a="swapExoOpen"]').length, count: !!document.querySelector('#v-today [data-a="draftCount"]'),
     rows: document.querySelectorAll('#v-today .hero-list .hl-row').length, adj: !!document.querySelector('#v-today [data-a="propAdjust"]'), regen: !!document.querySelector('#v-today .hero [data-a="chooseSession"]') }));
   const cProp = await choices();

@@ -29,7 +29,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   // 1. carte du jour : étiquette, titre, durée, 3 exercices puis « Voir les 5 exercices », « Commencer », une alternative
   const hero = await page.evaluate(() => { const h = document.querySelector('#v-today .hero');
     return { k: (h.querySelector('.hero-eyebrow, .hero-tag') || {}).textContent || '', t: h.querySelector('.hero-title').textContent, rows: [...h.querySelectorAll('.hl-row')].filter(r => r.offsetHeight).length,
-      all: h.querySelectorAll('.hl-row').length, more: (h.querySelector('.hl-toggle') || {}).textContent, go: h.querySelector('.hero-go').textContent.trim(), alt: [...h.querySelectorAll('.hero-alt')].map(b => b.textContent.trim()),
+      all: h.querySelectorAll('.hl-row').length, more: (h.querySelector('.hl-toggle') || {}).textContent, go: h.querySelector('.hero-go').textContent.trim(), alt: [...h.querySelectorAll('.hero-alt:not(.hero-tailor)')].map(b => b.textContent.trim()),
       mod: (h.querySelector('.hero-mod') || {}).textContent, pills: !!document.querySelector('#v-today .stat-pills') }; });
   log('Hero:', JSON.stringify(hero)); await shot('01_home');
   if (hero.k || hero.t !== 'Haut du corps' || hero.rows !== 3 || hero.all !== 5 || hero.more !== 'Voir les 5 exercices' || hero.go !== 'Commencer' || hero.alt.join() !== 'Choisir une autre séance' || hero.mod !== 'Modifier' || hero.pills) fail('carte du jour');

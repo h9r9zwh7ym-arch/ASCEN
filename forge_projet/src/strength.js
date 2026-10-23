@@ -68,6 +68,9 @@ function strengthData(){
       const def = EXO_MAP[ex.exoId]; if(!def || isStretch(def)) continue;
       // le muscle est « travaillé » ce jour-là, qu'il soit principal ou secondaire (arrête le désentraînement)
       if(ex.sets.some(st=>st.done && st.reps>0)) def.muscles.forEach(m=>{ const a = muscleDays[m] || (muscleDays[m] = []); if(a[a.length-1]!==s.date) a.push(s.date); });
+      // le cardio (jumping jacks, corde à sauter…) n'entre pas dans l'indice de force : faire plus de répétitions
+      // y mesure le souffle, pas la force
+      if(def.muscles[0]==="cardio") continue;
       const p = sessionPerf(def, ex, s.date, exoFatigue(s, ex)); if(!p) continue;
       (exos[ex.exoId] = exos[ex.exoId] || []).push({ date:s.date, v:p.v, conf:p.conf });
     }

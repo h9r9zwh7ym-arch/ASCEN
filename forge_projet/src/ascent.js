@@ -37,10 +37,14 @@ const ascGemOf = n=>n>=4 ? ASC_GEM[4] : ASC_GEM[n] || null;
 function ascTier(series){ let p = 0; ASC_TH.forEach((t,i)=>{ if(series>=t) p = i; }); return p; }
 function ascDrop(series){ return ASC_TH[Math.max(0, ascTier(series)-1)]; }
 // séries difficiles d'une séance (même règle que la charge d'entraînement, strength.js)
+// Depuis la 2.8.0 (ASC_GOAL_FROM), chaque série vaut selon l'objectif (goalValue, engine.js) : pour prendre du
+// muscle, une séance de cardio ou de gainage fait monter moins vite qu'une séance aux haltères. Les séances
+// d'avant gardent leur valeur : l'altitude déjà gagnée ne bouge pas.
+const ASC_GOAL_FROM = "2026-10-23";
 function ascHardSets(s){
-  let n = 0;
+  let n = 0; const g = s.date>=ASC_GOAL_FROM;
   for(const ex of s.exos){ const def = EXO_MAP[ex.exoId]; if(def && isStretch(def)) continue;
-    for(const st of ex.sets) if(st.done) n += st.effort===1 ? .5 : 1; }
+    for(const st of ex.sets) if(st.done) n += def && g ? setValue(def, st) : st.effort===1 ? .5 : 1; }
   return n;
 }
 // 11 m pour une séance de 15 séries difficiles : un profil régulier (3 séances, série au palier maximal,

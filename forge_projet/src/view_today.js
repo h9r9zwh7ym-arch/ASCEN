@@ -136,7 +136,7 @@ function heroHTML(mode, draft, force){
       <div class="hero-hd"><span class="hero-title">Compose ta séance</span></div>
       ${pend ? `<span class="hero-sub">Pour le ${pendingDaysLabel()}</span>` : ""}
       <button class="hero-go" data-a="customAddOpen">Choisir mes exercices</button>
-      ${appPicksOn() ? `<button class="hero-alt" data-a="todayMode" data-v="proposal">Ou laisse l'app choisir</button>` : S.templates.length ? `<button class="hero-alt" data-a="chooseSession">Choisir une autre séance</button>` : ""}
+      <div class="hero-alts">${appPicksOn() ? `<button class="hero-alt" data-a="todayMode" data-v="proposal">Ou laisse l'app choisir</button>` : S.templates.length ? `<button class="hero-alt" data-a="chooseSession">Choisir une autre séance</button>` : ""}${tailorBtnHTML()}</div>
     </div>`;
   }
   let tag = "", title, meta, entries, act, mod = "";
@@ -156,8 +156,8 @@ function heroHTML(mode, draft, force){
     mod = `<button class="hero-mod" data-a="heroEdit">Modifier</button>`;
   } else {
     const t = SESSION_TYPE_MAP[draft.type]||SESSION_TYPES[0], rt = SESSION_TYPE_MAP[draft.resolvedType];
-    tag = draft.source==="imported" ? "Programme importé" : "Proposée par l'app";
-    title = draft.source==="imported" ? esc(draft.name||"Séance importée") : draft.type==="auto" && rt ? rt.n : t.n;
+    tag = draft.source==="imported" ? "Programme importé" : draft.tailored ? tailorTag(draft.tailored) : "Proposée par l'app";
+    title = draft.source==="imported" || draft.tailored ? esc(draft.name||"Séance importée") : draft.type==="auto" && rt ? rt.n : t.n;
     entries = draft.exos.map(ex=>({ id:ex.exoId, dose:propDose(ex) }));
     meta = [nb(mainExos(draft).length, "exercice"), nb(mainExos(draft).reduce((t,e)=>t+e.sets.length,0), "série"), `≈ ${estimateMinutes(draft)} min`];
     act = `data-a="startSession"`;
@@ -174,7 +174,7 @@ function heroHTML(mode, draft, force){
     <span class="hero-meta">${tag ? `<span class="hero-tag">${tag}</span>` : ""}${meta.map(m=>`<span>${m}</span>`).join("")}</span>
     ${editing ? "" : `${heroListHTML(entries)}
     <button class="hero-go" ${act}>Commencer</button>
-    <button class="hero-alt" data-a="chooseSession">Choisir une autre séance</button>`}
+    <div class="hero-alts"><button class="hero-alt" data-a="chooseSession">Choisir une autre séance</button>${tailorBtnHTML()}</div>`}
   </div>`;
 }
 // Un seul rappel à la fois, en bas de l'accueil : la sauvegarde d'abord, sinon le Rewind du mois écoulé
@@ -234,11 +234,11 @@ function proposalPaneHTML(draft){
     </div>`;
   } else {
     const t = SESSION_TYPE_MAP[draft.type]||SESSION_TYPES[0], rt = SESSION_TYPE_MAP[draft.resolvedType];
-    const title = draft.type==="auto" && rt ? rt.n : t.n;
+    const title = draft.tailored ? esc(draft.name) : draft.type==="auto" && rt ? rt.n : t.n;
     const focus = focusMuscles(draft).slice(0,4);
     const stim = draft.stim ? `<div class="pc-stim">${ii("target")}<span>${esc(draft.stim)}</span></div>` : "";
     hero = heroShown ? (draft.reason || stim ? `<div class="pc-inline stagger" style="--i:5">${draft.reason ? esc(draft.reason) : ""}${stim}</div>` : "") : `<div class="plan-card stagger" style="--i:5">
-      <div class="pc-eyebrow">${draft.type==="auto"?"Choisie pour toi":"Séance proposée"}</div>
+      <div class="pc-eyebrow">${draft.tailored ? tailorTag(draft.tailored) : draft.type==="auto"?"Choisie pour toi":"Séance proposée"}</div>
       <div class="pc-title">${title}</div>
       ${draft.reason?`<div class="pc-reason">${esc(draft.reason)}</div>`:""}${stim}
       ${draft.exos.length?`<div class="pc-meta"><span>${nb(mainExos(draft).length, "exercice")}</span><span>${nb(mainExos(draft).reduce((t,e)=>t+e.sets.length,0), "série")}</span><span>≈ ${estimateMinutes(draft)} min</span></div>

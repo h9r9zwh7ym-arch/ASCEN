@@ -3409,3 +3409,56 @@ body.live-focus #restbar.island{bottom:auto}
 .exo-anim .ea-far{opacity:.6}
 .exo-anim .ea-torso{fill:var(--tint-ink)}
 .rw-stage .exo-anim .ea-torso{fill:#fff}
+
+/* ---------- séance sur mesure ---------- */
+.hero-alts{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;column-gap:2px;margin-top:8px}
+.hero .hero-alts .hero-alt{align-self:auto;flex:none;margin-top:0;padding:0 8px}
+.ha-dot{color:var(--label3)}
+.hero-alt.hero-tailor{display:inline-flex;align-items:center;gap:4px}
+.hero-alt.hero-tailor .ii{width:14px;height:14px}
+.tl-body{padding-top:4px}
+.tl-intro{margin:0 0 14px;color:var(--label2);font-size:var(--fs-sub);line-height:1.4}
+.tl-grp{margin:0 0 16px}
+.tl-grp[hidden]{display:none}
+.tl-lab{font-size:var(--fs-foot);font-weight:600;color:var(--label2);text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px}
+.tl-chips{display:flex;flex-wrap:wrap;gap:8px}
+.tl-chips .type-chip{height:auto;min-height:38px;padding:8px 14px;flex-direction:column;align-items:flex-start;justify-content:center;gap:0}
+.tl-chips .type-chip small{font-size:var(--fs-foot);font-weight:500;color:inherit;opacity:.7}
+.tl-chips .type-chip.on{background:var(--tint);color:var(--on-tint)}
+/* la réflexion */
+.tl-host{position:fixed;inset:0;z-index:2100;display:grid;place-items:center;padding:calc(var(--sat) + 20px) 24px calc(var(--sab) + 20px);
+  background:radial-gradient(circle at 50% 38%,color-mix(in srgb,var(--tint) 16%,var(--bg)) 0,var(--bg) 62%);
+  opacity:0;transition:opacity .35s ease}
+.tl-host.on{opacity:1}
+.tl-host.out{opacity:0;transition:opacity .4s ease .05s}
+.tl-think{width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;gap:18px}
+.tl-stage{position:relative;width:220px;height:220px}
+.tl-core{position:absolute;left:50%;top:50%;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--tint) 55%,#fff),var(--tint) 60%,color-mix(in srgb,var(--tint) 70%,#000));
+  box-shadow:0 0 0 10px color-mix(in srgb,var(--tint) 14%,transparent),0 0 40px color-mix(in srgb,var(--tint) 45%,transparent);animation:tlBreath 1.6s ease-in-out infinite}
+.tl-host.found .tl-core{animation:tlPop .5s cubic-bezier(.32,1.5,.4,1) both}
+@keyframes tlBreath{0%,100%{transform:scale(.92)}50%{transform:scale(1.06)}}
+@keyframes tlPop{0%{transform:scale(1.06)}45%{transform:scale(1.22)}100%{transform:scale(1)}}
+.tl-ring{position:absolute;inset:0;animation:tlTurn 9s linear infinite}
+.tl-host.found .tl-ring{animation-play-state:paused}
+@keyframes tlTurn{to{transform:rotate(360deg)}}
+.tl-ic{position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;transform:rotate(var(--a)) translateY(-86px) rotate(calc(-1 * var(--a)));transition:opacity .35s,filter .35s}
+.tl-ic .xico{width:44px;height:44px;border-radius:13px;animation:tlCounter 9s linear infinite}
+.tl-host.found .tl-ic .xico{animation-play-state:paused}
+@keyframes tlCounter{to{transform:rotate(-360deg)}}
+.tl-ic.flip .xico{animation:tlCounter 9s linear infinite,tlFlip .28s ease}
+@keyframes tlFlip{0%{opacity:.2;scale:.7}100%{opacity:1;scale:1}}
+.tl-host.found .tl-ic:not(.keep){opacity:0;filter:blur(4px)}
+.tl-host.found .tl-ic.keep .xico{box-shadow:0 0 0 2px var(--tint)}
+.tl-title{font-family:var(--display);font-size:var(--fs-t3);font-weight:700;text-align:center;color:var(--label)}
+.tl-steps{list-style:none;margin:0;padding:0;width:100%;display:flex;flex-direction:column;gap:10px}
+.tl-steps li{display:flex;align-items:flex-start;gap:12px;color:var(--label3);transition:color .3s}
+.tl-steps li.on,.tl-steps li.done{color:var(--label)}
+.tl-dot{flex:none;width:18px;height:18px;margin-top:1px;border-radius:50%;box-shadow:inset 0 0 0 2px var(--sep);position:relative;transition:background .3s,box-shadow .3s}
+.tl-steps li.on .tl-dot{box-shadow:inset 0 0 0 2px var(--tint);animation:tlPulse 1s ease-in-out infinite}
+.tl-steps li.done .tl-dot{background:var(--tint);box-shadow:none}
+.tl-steps li.done .tl-dot::after{content:"";position:absolute;left:6px;top:3px;width:4px;height:8px;border:solid var(--on-tint);border-width:0 2px 2px 0;transform:rotate(45deg)}
+@keyframes tlPulse{0%,100%{box-shadow:inset 0 0 0 2px var(--tint)}50%{box-shadow:inset 0 0 0 5px color-mix(in srgb,var(--tint) 40%,transparent)}}
+.tl-t{display:flex;flex-direction:column;font-size:var(--fs-body);font-weight:600;line-height:1.25}
+.tl-t small{font-size:var(--fs-foot);font-weight:500;color:var(--label2);min-height:1.2em}
+@media (prefers-reduced-motion:reduce){ .tl-core,.tl-ring,.tl-ic .xico,.tl-steps li.on .tl-dot{animation:none!important} }

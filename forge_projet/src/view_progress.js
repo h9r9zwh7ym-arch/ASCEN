@@ -20,7 +20,8 @@ function muscleVolume(days){
       for(const ex of s.exos){
         const def = EXO_MAP[ex.exoId]; if(!def || isStretch(def)) continue;
         // une série facile (3 répétitions ou plus en réserve) compte ½ : loin de l'échec, elle stimule moins
-        const n = ex.sets.reduce((t,st)=>t+(st.done ? (st.effort===1 ? .5 : 1) : 0), 0); if(!n) continue;
+        // × ce que vaut l'exercice pour l'objectif (une série de gainage compte ½ pour prendre du muscle)
+        const n = ex.sets.reduce((t,st)=>t+setValue(def, st), 0); if(!n) continue;
         def.muscles.forEach((m,k)=>{ sets[m] = (sets[m]||0) + (k===0 ? n : n/2); (dset[m] = dset[m]||new Set()).add(s.date); });
       }
     }
