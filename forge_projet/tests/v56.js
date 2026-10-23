@@ -54,7 +54,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.click('.hero [data-a="chooseSession"]'); await wait(450);
   const acts = await page.evaluate(() => [...document.querySelectorAll('.cs-body .sh')].map(h => h.textContent + ':' + [...h.nextElementSibling.querySelectorAll('.cs-row .t')].map(t => t.textContent).join(',')));
   log('Choose:', JSON.stringify(acts)); await shot('03_choose');
-  if (acts.join('|') !== "Mes séances:Jambes|Proposée par l'app:Laisse l'app choisir|Sur le moment:Séance express,Composer moi-même") fail('« Choisir une autre séance » : trois familles');
+  if (acts.join('|') !== "Mes séances:Jambes|Composée par l'app:Laisse l'app choisir,Séance sur mesure|Sur le moment:Séance express,Composer moi-même") fail('« Choisir une autre séance » : trois familles');
   await page.evaluate(t => [...document.querySelectorAll('.cs-row')].find(r => r.textContent.includes(t)).click(), 'Jambes'); await wait(800);
   const loaded = await page.evaluate(() => ({ t: document.querySelector('.hero .hero-title').textContent, n: document.querySelectorAll('.hero .hl-row').length, tab: S.settings.todayTab }));
   log('Loaded:', JSON.stringify(loaded)); if (loaded.t !== 'Jambes' || loaded.n !== 1 || loaded.tab !== 'custom') fail('séance enregistrée chargée dans la carte du jour');

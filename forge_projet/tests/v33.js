@@ -19,7 +19,7 @@ const OUT = path.join(OUT_ROOT, 'v33'); fs.mkdirSync(OUT, { recursive: true });
   // 1. carte principale « Compose ta séance » : Choisir + L'app choisit (+ le lien discret « Sur mesure », 2.8.0)
   const card = await page.$$eval('.hero.compose button', b => b.map(x => x.dataset.a));
   // (loi de Hick : « L'app choisit » ouvre la séance de l'app, une seule voie au lieu de deux)
-  log('Compose card buttons:', card.join(',')); if (card.join() !== 'customAddOpen,todayMode,tailorOpen') fail('un seul « L\'app choisit »');
+  log('Compose card buttons:', card.join(',')); if (card.join() !== 'customAddOpen,todayMode') fail('un seul « L\'app choisit »');
   await shot('01_compose');
   // 2. carte du jour : chaque exercice de la liste ouvre sa fiche
   await page.evaluate(() => { S.settings.todayTab = 'proposal'; getOrCreateDraft(); renderView('today'); document.getElementById('v-today').scrollTop = 0; }); await wait(500);

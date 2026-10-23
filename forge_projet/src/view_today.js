@@ -103,7 +103,7 @@ function propDose(ex){
 // toucher un exercice ouvre sa fiche
 function heroListHTML(entries){
   const rows = entries.map((e,i)=>{ const d = EXO_MAP[e.id]; if(!d) return "";
-    return `<button class="hl-row${i>=3?" more":""}" data-a="showExoInfo" data-id="${d.id}" aria-label="${esc(d.n)}, ${esc(e.dose)} : voir la fiche">${exoIcon(d)}<span class="hl-txt"><span class="t">${esc(d.n)}</span><span class="s">${esc(e.dose)}</span></span></button>`; }).join("");
+    return `<button class="hl-row${i>=3?" more":""}" data-a="showExoInfo" data-id="${d.id}" aria-label="${esc(d.n)}, ${esc(e.dose)} : voir la fiche">${exoIcon(d)}<span class="hl-txt"><span class="t">${esc(d.n)}</span><span class="s">${esc(e.dose)}</span>${e.why ? `<span class="w">${esc(e.why)}</span>` : ""}</span></button>`; }).join("");
   const n = entries.length;
   return `<div class="hero-list${heroAll ? " all" : ""}">${rows}${n>3 ? `<button class="hl-toggle" data-a="heroMore" aria-expanded="${heroAll}">${heroAll ? "Voir moins" : `Voir les ${n} exercices`}</button>` : ""}</div>`;
 }
@@ -136,7 +136,7 @@ function heroHTML(mode, draft, force){
       <div class="hero-hd"><span class="hero-title">Compose ta séance</span></div>
       ${pend ? `<span class="hero-sub">Pour le ${pendingDaysLabel()}</span>` : ""}
       <button class="hero-go" data-a="customAddOpen">Choisir mes exercices</button>
-      <div class="hero-alts">${appPicksOn() ? `<button class="hero-alt" data-a="todayMode" data-v="proposal">Ou laisse l'app choisir</button>` : S.templates.length ? `<button class="hero-alt" data-a="chooseSession">Choisir une autre séance</button>` : ""}${tailorBtnHTML()}</div>
+      <div class="hero-alts">${appPicksOn() ? `<button class="hero-alt" data-a="todayMode" data-v="proposal">Ou laisse l'app choisir</button>` : `<button class="hero-alt" data-a="chooseSession">Choisir une autre séance</button>`}</div>
     </div>`;
   }
   let tag = "", title, meta, entries, act, mod = "";
@@ -158,7 +158,7 @@ function heroHTML(mode, draft, force){
     const t = SESSION_TYPE_MAP[draft.type]||SESSION_TYPES[0], rt = SESSION_TYPE_MAP[draft.resolvedType];
     tag = draft.source==="imported" ? "Programme importé" : draft.tailored ? tailorTag(draft.tailored) : "Proposée par l'app";
     title = draft.source==="imported" || draft.tailored ? esc(draft.name||"Séance importée") : draft.type==="auto" && rt ? rt.n : t.n;
-    entries = draft.exos.map(ex=>({ id:ex.exoId, dose:propDose(ex) }));
+    entries = draft.exos.map(ex=>({ id:ex.exoId, dose:propDose(ex), why:draft.tailored && ex.why }));
     meta = [nb(mainExos(draft).length, "exercice"), nb(mainExos(draft).reduce((t,e)=>t+e.sets.length,0), "série"), `≈ ${estimateMinutes(draft)} min`];
     act = `data-a="startSession"`;
     mod = `<button class="hero-mod" data-a="propAdjust" aria-expanded="false">Ajuster</button>`;
@@ -174,7 +174,7 @@ function heroHTML(mode, draft, force){
     <span class="hero-meta">${tag ? `<span class="hero-tag">${tag}</span>` : ""}${meta.map(m=>`<span>${m}</span>`).join("")}</span>
     ${editing ? "" : `${heroListHTML(entries)}
     <button class="hero-go" ${act}>Commencer</button>
-    <div class="hero-alts"><button class="hero-alt" data-a="chooseSession">Choisir une autre séance</button>${tailorBtnHTML()}</div>`}
+    <div class="hero-alts"><button class="hero-alt" data-a="chooseSession">Choisir une autre séance</button></div>`}
   </div>`;
 }
 // Un seul rappel à la fois, en bas de l'accueil : la sauvegarde d'abord, sinon le Rewind du mois écoulé
@@ -1401,17 +1401,19 @@ Object.assign(ACT, {
     const app = [];
     if(prop && draft.source!=="imported") app.push(row("csRegen", sfIcon("sparkles", "orange"), "Autre proposition"));
     else if(appPicksOn() && !prop) app.push(row("csApp", sfIcon("sparkles", "orange"), "Laisse l'app choisir"));
+    app.push(row("csTailor", sfIcon("ruler", "purple"), "Séance sur mesure", "Type, zone, durée : l'app compose"));
     const now = [row("csExpress", sfIcon("stopwatch", "green"), "Séance express", "10 min · tout le corps"),
       row("csCompose", sfIcon("pencil", "blue"), "Composer moi-même")];
     const sec = (h, rows)=>rows.length ? `<h2 class="sh">${h}</h2><div class="group">${rows.join("")}</div>` : "";
     openSheet(`<div class="sheet-hd"><span class="t" id="ovTitle">Choisir une séance</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
-      <div class="sheet-body cs-body">${sec("Mes séances", mine)}${sec("Proposée par l'app", app)}${sec("Sur le moment", now)}</div>`);
+      <div class="sheet-body cs-body">${sec("Mes séances", mine)}${sec("Composée par l'app", app)}${sec("Sur le moment", now)}</div>`);
   },
   csTemplate(d){ ACT.loadTemplate({ id:d.id }); },
   csMine(){ closeSheet(); ACT.todayMode({ v:"custom" }); },
   csRegen(){ closeSheet(); ACT.regenSession(); },
   csApp(){ closeSheet(); ACT.todayMode({ v:"proposal" }); },
   csExpress(){ closeSheet(); ACT.startExpress(); },
+  csTailor(){ ACT.tailorOpen({ child:true }); },
   csCompose(){ closeSheet(); customEdit = false; heroSnap = null; S.custom = { exos:[] }; S.settings.todayTab = "custom"; save(); renderTodaySoft(); ACT.customAddOpen(); },
   // la séance proposée : réglages fins dépliés ou repliés, sur place
   propAdjust(){
