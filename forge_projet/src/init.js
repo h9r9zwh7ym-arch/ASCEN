@@ -1,5 +1,5 @@
 // ================= INITIALISATION =================
-const APP_VERSION = "2.9.1";
+const APP_VERSION = "2.9.2";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 // séance en sombre (réglage, actif par défaut) : pendant la séance, l'écran passe en sombre quel que
@@ -56,6 +56,25 @@ function syncStatusBarNow(nudge){
     if(m.content!==hex) m.content = hex;
   }catch(e){}
 }
+// iOS 26 (app installée, barre fondue) : la page peut s'arrêter avant le bas de l'écran. On mesure un
+// calque fixe plein écran face à la hauteur de l'écran ; l'écart (au plus 80 px) est rattrapé en CSS.
+function syncVGap(){
+  try{
+    let g = 0;
+    if(window.navigator.standalone===true && !(typeof legacyStatusBar==="function" && legacyStatusBar())){
+      const p = document.createElement("div");
+      p.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;visibility:hidden;pointer-events:none";
+      document.body.appendChild(p); const h = p.getBoundingClientRect().bottom; p.remove();
+      const portrait = innerHeight>=innerWidth, sh = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+      g = Math.round(sh - h); if(g<2 || g>80) g = 0;
+    }
+    const r = document.documentElement;
+    if(r.style.getPropertyValue("--vgap")!==g+"px"){ r.style.setProperty("--vgap", g+"px"); r.classList.toggle("vgap", g>0); }
+  }catch(e){}
+}
+window.addEventListener("resize", ()=>requestAnimationFrame(syncVGap));
+window.addEventListener("orientationchange", ()=>setTimeout(syncVGap, 300));
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) setTimeout(syncVGap, 200); });
 function hexRGB(h){ const m = /^#([0-9a-f]{6})$/i.exec(h||""); return m ? [0,2,4].map(i=>parseInt(m[1].slice(i,i+2),16)) : null; }
 if(window.matchMedia) try{ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ()=>syncStatusBar()); }catch(e){}
 
@@ -69,6 +88,7 @@ function startApp(recovered){
   }
   // iOS relit la couleur de la barre d'état au premier changement en haut de la page
   requestAnimationFrame(()=>requestAnimationFrame(()=>syncStatusBar(undefined, true)));
+  syncVGap(); setTimeout(syncVGap, 600);
   // ancienne icône (barre d'état pleine) : on le dit une fois, la marche à suivre est dans Profil
   setTimeout(()=>{ try{ if(typeof legacyStatusBar==="function" && legacyStatusBar() && !S.meta.sbHint){ S.meta.sbHint = 1; save(); toast("Barre d'état : remets l'icône à jour (Profil)", "info"); } }catch(e){} }, 2500);
 }

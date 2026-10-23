@@ -3508,3 +3508,10 @@ body.live-focus #restbar.island{bottom:auto}
 .tl-fly .xico{position:absolute;margin:0;transform-origin:0 0}
 @media (max-height:620px){ .tl-stage{width:190px;height:190px} .tl-ic{transform:rotate(var(--a)) translateY(-72px) rotate(calc(-1 * var(--a)))} .tl-think{gap:16px} .tl-steps{gap:8px} }
 @media (prefers-reduced-motion:reduce){ .tl-core,.tl-core i,.tl-ring,.tl-ic,.tl-ic .xico,.tl-title,.tl-steps li,.tl-steps li.on .tl-dot{animation:none!important} }
+
+/* iOS 26, app installée : la zone de la page peut s'arrêter au-dessus de la barre d'accueil (bug d'iOS,
+   un bandeau vide sous la barre d'onglets). L'écart est mesuré (syncVGap, init.js) : les calques plein
+   écran et la barre d'onglets descendent jusqu'en bas, et leur marge basse le compte */
+:root{--vgap:0px}
+html.vgap :is(#app,#overlay,.launch,#rewind,.t3d-full,.tl-host,#mo,#moBack){bottom:calc(-1 * var(--vgap));height:auto;--sab:calc(env(safe-area-inset-bottom,0px) + var(--vgap))}
+html.vgap .tabbar{bottom:calc(-1 * var(--vgap));padding-bottom:calc(env(safe-area-inset-bottom,0px) + var(--vgap))}

@@ -76,6 +76,22 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   if (orb.n !== 3 || !orb.anim.every(a => /tlBlob/.test(a)) || !orb.on || !(orb.sbz > 2100)) fail('orbe liquide, heure lisible au-dessus');
   if (after.on || after.host) fail('fin de l\'animation : tout est rangé');
 
+  // 6. iOS 26 installée : la page s'arrête 34 px avant le bas de l'écran → la barre d'onglets et les calques
+  //    plein écran descendent jusqu'en bas (écart mesuré), la marge basse le compte
+  const c2 = await browser.newContext({ viewport: { width: 390, height: 810 }, screen: { width: 390, height: 844 } });
+  await c2.addInitScript(() => { Object.defineProperty(navigator, 'standalone', { get: () => true });
+    localStorage.setItem('forge.v1', JSON.stringify({ meta: { onboarded: true } })); });
+  const p2 = await c2.newPage(); p2.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
+  await p2.goto(APP); await p2.waitForTimeout(800);
+  const vg = await p2.evaluate(() => { legacyStatusBar = () => false; syncVGap();
+    const tb = document.querySelector('.tabbar').getBoundingClientRect(), app = document.querySelector('#app').getBoundingClientRect();
+    return { cls: document.documentElement.classList.contains('vgap'), gap: getComputedStyle(document.documentElement).getPropertyValue('--vgap').trim(), tb: Math.round(tb.bottom), app: Math.round(app.bottom), pad: parseFloat(getComputedStyle(document.querySelector('.tabbar')).paddingBottom) }; });
+  log('Viewport gap:', JSON.stringify(vg));
+  if (!vg.cls || vg.gap !== '34px' || vg.tb !== 844 || vg.app !== 844 || vg.pad < 34) fail('bandeau vide sous la barre d\'onglets (iOS 26)');
+  const vg0 = await page.evaluate(() => ({ cls: document.documentElement.classList.contains('vgap') }));
+  if (vg0.cls) fail('pas de compensation hors app installée');
+  await c2.close();
+
   await browser.close();
   if (errors.length) { errors.forEach(e => log(e)); log(`ERRORS: ${errors.length}`); process.exit(1); }
   log('=== NO ERRORS ===');
