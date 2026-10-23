@@ -550,6 +550,16 @@ const ABOUT_PAGES = {
       <div class="row"><div class="grow"><div class="t">Voies et refuges</div><div class="s wrap">© contributeurs OpenStreetMap (ODbL)</div></div></div></div>`],
   health:["Avertissement santé", ()=>`<div class="group about-txt"><p>Les consignes d'exécution sont des repères techniques généraux.</p><p>Elles ne remplacent pas l'avis d'un professionnel de santé ou d'un coach pour toute question médicale ou en cas de douleur.</p></div>`],
 };
+// mesures d'écran (pour comprendre un affichage décalé sur un appareil précis)
+function screenDiag(){
+  try{
+    const p = document.createElement("div");
+    p.style.cssText = "position:fixed;left:0;top:0;width:1px;height:env(safe-area-inset-top,0px);border-bottom:solid 0 transparent;border-bottom-width:env(safe-area-inset-bottom,0px);visibility:hidden";
+    document.body.appendChild(p); const t = p.clientHeight, b = p.offsetHeight - p.clientHeight; p.remove();
+    const vg = getComputedStyle(document.documentElement).getPropertyValue("--vgap").trim() || "0px";
+    return `${window.navigator.standalone===true ? "installée" : "web"} · page ${innerHeight} / écran ${screen.height} · haut ${t} · bas ${b} · écart ${vg}`;
+  }catch(e){ return ""; }
+}
 function openAbout(){
   const row = (a, t, val, extra)=>`<${a ? "button" : "div"} class="row${a ? " tap" : ""}"${a ? ` style="width:100%" data-a="${a}"${extra||""}` : ""}><div class="grow"><div class="t">${t}</div></div>${val ? `<span class="val">${val}</span>` : ""}${a ? `<span class="chev">${icon("chev")}</span>` : ""}</${a ? "button" : "div"}>`;
   openSheet(`<div class="sheet-hd"><span class="t">À propos</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
@@ -562,6 +572,7 @@ function openAbout(){
     <h2 class="sh">Mentions</h2>
     <div class="group">${row("aboutPage", "Avertissement santé", "", ' data-k="health"')}</div>
     <p class="about-ft">${COPYRIGHT}</p>
+    <p class="about-diag">${esc(screenDiag())}</p>
     </div>`, { restore:openAbout });
 }
 

@@ -3515,3 +3515,9 @@ body.live-focus #restbar.island{bottom:auto}
 :root{--vgap:0px}
 html.vgap :is(#app,#overlay,.launch,#rewind,.t3d-full,.tl-host,#mo,#moBack){bottom:calc(-1 * var(--vgap));height:auto;--sab:calc(env(safe-area-inset-bottom,0px) + var(--vgap))}
 html.vgap .tabbar{bottom:calc(-1 * var(--vgap));padding-bottom:calc(env(safe-area-inset-bottom,0px) + var(--vgap))}
+/* filet de sécurité, sans mesure : la barre d'onglets et les feuilles peignent leur fond au-delà de leur
+   bord bas. Si iOS arrête la page avant le bas de l'écran, ce prolongement remplit le bandeau ; sinon il
+   est hors de l'écran et ne se voit pas */
+.tabbar::after{content:"";position:absolute;left:0;right:0;top:100%;height:160px;background:var(--bar);-webkit-backdrop-filter:inherit;backdrop-filter:inherit;pointer-events:none}
+.sheet{box-shadow:0 160px 0 0 var(--bg)}
+.about-diag{margin:-16px 16px 8px;text-align:center;font-size:var(--fs-cap2);color:var(--label3);font-variant-numeric:tabular-nums}
