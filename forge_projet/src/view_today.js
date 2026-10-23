@@ -1586,6 +1586,8 @@ Object.assign(ACT, {
     const cur = EXO_MAP[S.draft.exos[idx].exoId];
     // un étirement se remplace par un autre étirement (tous muscles), un exercice par un exercice du même muscle
     openPicker({ title:"Remplacer "+cur.n, muscle:isStretch(cur) ? null : cur.muscles[0], cat:isStretch(cur) ? "stretch" : null, exclude:new Set(S.draft.exos.map(e=>e.exoId)), onDone:ids=>{
+      // une proposition de l'app remplacée : retenu (après deux fois, l'app le propose moins)
+      if(S.draft.source==="engine"){ const sw = S.prefs.swapped || (S.prefs.swapped = {}); sw[cur.id] = Math.min(9, (sw[cur.id] || 0) + 1); }
       S.draft.exos[idx] = entryAt(S.draft.exos, EXO_MAP[ids[0]], idx);
       closeSheet(); changed();
     }});

@@ -92,7 +92,7 @@ function tailorExoScore(spec, e, ctx){
   }
   const n = ctx.done[e.id]||0;
   s += n>=2 ? .8 : n ? .4 : .25;
-  return s;
+  return s + exoAffinity(e.id);   // souvent sauté ou remplacé : l'app l'évite
 }
 // tirage glouton pondéré : à chaque emplacement du plan, un exercice parmi les meilleurs, au hasard selon
 // leur score (les combinaisons varient d'un essai à l'autre, les bons exercices reviennent plus souvent)
@@ -121,21 +121,26 @@ function tailorDraw(spec, pool, n, ctx, base){
   }
   return out;
 }
-// séries de départ : le débutant reste à 3 ; le cardio se fait en tours
+// séries de départ : le cardio se fait en tours ; le renforcement suit ton profil (ce qui manque cette
+// semaine à chaque muscle, ta fréquence, ton niveau, ton âge : profileBase, coach.js)
 function tailorSets(spec, e){
   if(spec.kind==="mobilite") return isStretch(e) ? 1 : 2;
   if(spec.kind==="cardio" || (spec.kind==="mix" && isCardioEx(e))) return spec.len==="long" ? 4 : 3;
-  const n = spec.len==="court" ? Math.min(3, e.sets) : e.sets;
-  return S.goals.level==="debutant" ? Math.min(3, n) : n;
+  return profileBase([e])[0];
+}
+function tailorBase(spec, exos){
+  const str = exos.map(e=>!(spec.kind==="mobilite" || spec.kind==="cardio" || (spec.kind==="mix" && isCardioEx(e))));
+  const pb = profileBase(exos.filter((_, i)=>str[i]));
+  let j = 0; return exos.map((e, i)=>str[i] ? pb[j++] : tailorSets(spec, e));
 }
 const tailorSec = (e, n)=>n*(40 + e.restSec);
 // la durée visée tenue en jouant sur les séries : on retire d'abord sur les exercices d'appoint (fin de
 // séance), on ajoute d'abord sur les gros mouvements (début de séance), entre 2 et 5 séries
 function tailorFit(spec, exos){
-  const sets = exos.map(e=>tailorSets(spec, e)), goal = TAILOR_MIN[spec.len]*60;
+  const sets = tailorBase(spec, exos), goal = TAILOR_MIN[spec.len]*60;
   if(spec.kind==="mobilite") return sets;
   const tot = ()=>exos.reduce((t,e,i)=>t + tailorSec(e, sets[i]), 0);
-  const cap = S.goals.level==="debutant" ? 4 : 5;
+  const cap = S.goals.level==="debutant" || S.goals.senior ? 4 : 5;
   for(let k=0; k<30 && tot()>goal*1.06; k++){
     let i = exos.length-1; while(i>=0 && sets[i]<=2) i--; if(i<0) break;
     // le dernier exercice qui a encore le plus de séries
@@ -160,7 +165,7 @@ function tailorScore(spec, exos, ctx){
   const fams = exos.length - new Set(exos.map(e=>tailorFams(e).join("|"))).size;
   const sets = tailorFit(spec, exos), sec = exos.reduce((t,e,i)=>t + tailorSec(e, sets[i]), 0);
   // séries tirées loin de l'habitude pour tenir la durée : mieux vaut un exercice de plus
-  const stretch = exos.reduce((t,e,i)=>t + Math.abs(sets[i] - tailorSets(spec, e)), 0);
+  const base = tailorBase(spec, exos), stretch = exos.reduce((t,e,i)=>t + Math.abs(sets[i] - base[i]), 0);
   const min = Math.round(sec/60), gap = Math.abs(min - TAILOR_MIN[spec.len]);
   const multi = exos.slice(0, 3).filter(e=>e.muscles.length>=3).length;                                  // polyarticulaires en tête
   // équilibre : autant de poussées que de tirages ; tout le corps = haut ET bas
@@ -323,7 +328,7 @@ function tailorFootHTML(){
 function tailorThinkHTML(spec){
   const steps = ["Je regarde ta semaine", "J'essaie des combinaisons", "J'affine la meilleure", "Je règle charges et répétitions"];
   return `<div class="tl-bg"></div><div class="tl-think" role="status" aria-live="polite" aria-label="L'app compose ta séance">
-    <div class="tl-stage"><div class="tl-core"></div><div class="tl-ring">${Array.from({ length:8 }, (_, i)=>`<span class="tl-ic" style="--a:${i*45}deg;--d:${i*40}ms"></span>`).join("")}</div></div>
+    <div class="tl-stage"><div class="tl-core"><i></i><i></i><i></i></div><div class="tl-ring">${Array.from({ length:8 }, (_, i)=>`<span class="tl-ic" style="--a:${i*45}deg;--d:${i*40}ms"></span>`).join("")}</div></div>
     <div class="tl-title">${esc(tailorName(spec))}</div>
     <ol class="tl-steps">${steps.map((t, i)=>`<li data-i="${i}" style="--d:${i*60}ms"><span class="tl-dot"></span><span class="tl-t">${t}<small></small></span></li>`).join("")}</ol>
   </div>`;
@@ -406,6 +411,7 @@ Object.assign(ACT, {
     if(tailorSummary(spec).warn){ tailorBusy = false; toast("Pas assez d'exercices pour ces critères avec ton matériel", "info"); return; }
     const btn = qs('#overlay .sheet-ft [data-a="tailorGo"]');
     const host = document.createElement("div"); host.className = "tl-host" + (fast ? " fast" : ""); host.innerHTML = tailorThinkHTML(spec); document.body.appendChild(host);
+    document.body.classList.add("tl-on");   // l'heure et la batterie restent lisibles au-dessus de l'animation
     sfx("go"); haptic(10);
     // les vignettes : de vrais candidats de la sélection ; pendant les combinaisons, elles changent
     const pool = tailorPool(spec), ics = qsa(".tl-ic", host);
@@ -429,7 +435,7 @@ Object.assign(ACT, {
     catch(e){ if(typeof reportError==="function") reportError("tailor", e); }
     if(spin) clearInterval(spin);
     if(!session || !session.exos.length){
-      host.classList.add("gone"); setTimeout(()=>host.remove(), 320); tailorBusy = false;
+      host.classList.add("gone"); setTimeout(()=>{ host.remove(); document.body.classList.remove("tl-on"); }, 320); tailorBusy = false;
       toast("Pas assez d'exercices pour ces critères avec ton matériel", "info"); return;
     }
     // les exercices retenus prennent place dans l'anneau
@@ -442,7 +448,7 @@ Object.assign(ACT, {
     S.draft = session; S.settings.todayTab = "proposal"; propAdjust = false; heroAll = false; save();
     if(currentTab!=="today") switchTab("today");
     scrollTodayTop(); renderView("today");
-    if(fast){ host.remove(); tailorBusy = false; return; }
-    try{ await tailorLand(host); } finally{ host.remove(); tailorBusy = false; }
+    if(fast){ host.remove(); document.body.classList.remove("tl-on"); tailorBusy = false; return; }
+    try{ await tailorLand(host); } finally{ host.remove(); document.body.classList.remove("tl-on"); tailorBusy = false; }
   },
 });

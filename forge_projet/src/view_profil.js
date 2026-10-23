@@ -111,6 +111,11 @@ function dataMoreHTML(){
         ${sfIcon("download","green")}
         <div class="grow"><div class="t">Sauvegarder mes données</div><div class="s">${backupStatusText()}</div></div>
       </button>
+      ${legacyStatusBar() ? `<button class="row tap" style="width:100%" data-a="openReinstall">
+        ${sfIcon("phone","blue")}
+        <div class="grow"><div class="t">Barre d'état fondue</div><div class="s">Remettre l'icône à jour</div></div>
+        <span class="chev">${icon("chev")}</span>
+      </button>` : ""}
       ${isStandalone() ? "" : `<button class="row tap" style="width:100%" data-a="openInstall">
         ${sfIcon("phone","blue")}
         <div class="grow"><div class="t">Installer sur l'écran d'accueil</div></div>
@@ -335,6 +340,35 @@ function openInstall(){
         <div class="row"><span class="step-n">3</span><div class="grow"><div class="t">Ouvre ASCEN depuis son icône</div><div class="s wrap">Tes séances actuelles ne sont pas transférées automatiquement : fais d'abord une sauvegarde, puis restaure-la dans l'app installée</div></div></div>
       </div>
       <div class="btnrow"><button class="btn secondary" data-a="backupData">${icon("bookmark")} Faire une sauvegarde d'abord</button></div>
+    </div>`);
+}
+
+// Icône ajoutée avant la barre d'état fondue : iOS fige le style de la barre d'état au moment de l'ajout
+// à l'écran d'accueil. L'ancienne icône s'ouvre donc avec une barre pleine (marge haute nulle, alors
+// qu'une barre fondue laisse l'app passer dessous). Seul remède : réinstaller l'icône, en gardant ses données.
+let legacySB = null;
+function legacyStatusBar(){
+  if(legacySB!==null) return legacySB;
+  try{
+    if(window.navigator.standalone!==true){ legacySB = false; return false; }
+    const p = document.createElement("div");
+    p.style.cssText = "position:fixed;top:0;left:0;width:1px;height:env(safe-area-inset-top,0px);visibility:hidden;pointer-events:none";
+    document.body.appendChild(p); const h = p.offsetHeight; p.remove();
+    legacySB = h===0;
+  }catch(e){ legacySB = false; }
+  return legacySB;
+}
+function openReinstall(){
+  openSheet(`<div class="sheet-hd"><span class="t">Barre d'état fondue</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
+    <div class="sheet-body">
+      <p class="body" style="margin:0 20px 14px">Ton icône ASCEN a été ajoutée avant ce réglage : iOS garde l'ancienne barre d'état, pleine. Pour que l'app passe dessous, il faut remettre l'icône. Tes données suivent grâce à la sauvegarde.</p>
+      <div class="group install-steps">
+        <div class="row"><span class="step-n">1</span><div class="grow"><div class="t">Fais une sauvegarde</div><div class="s wrap">Garde le fichier dans Fichiers ou iCloud</div></div></div>
+        <div class="row"><span class="step-n">2</span><div class="grow"><div class="t">Supprime l'icône ASCEN</div><div class="s wrap">Appui long sur l'icône › Supprimer l'app</div></div></div>
+        <div class="row"><span class="step-n">3</span><div class="grow"><div class="t">Rouvre ASCEN dans Safari</div><div class="s wrap">Partager › Sur l'écran d'accueil</div></div></div>
+        <div class="row"><span class="step-n">4</span><div class="grow"><div class="t">Restaure ta sauvegarde</div><div class="s wrap">Profil › Restaurer, dans la nouvelle icône</div></div></div>
+      </div>
+      <div class="btnrow"><button class="btn secondary" data-a="backupData">${icon("bookmark")} Faire la sauvegarde</button></div>
     </div>`);
 }
 
@@ -584,7 +618,7 @@ Object.assign(ACT, {
   saveWhy(){ S.settings.why = ((qs("#whyInput")||{}).value||"").trim().slice(0,120); closeSheet(); save(); changed(); if(whyFrom==="motiv") ACT.openMotivation(); whyFrom = null; },
   saveName(){ S.settings.name = ((qs("#nameInput")||{}).value||"").trim(); closeSheet(); save(); changed(); },
   openEquip, openGoals, openExoPrefs, openExportImport, openAppearance, openAbout,
-  backupData(){ backupData(); }, exportCSV(){ exportCSV(); }, restoreData(){ restoreData(); }, openInstall(){ openInstall(); },
+  backupData(){ backupData(); }, exportCSV(){ exportCSV(); }, restoreData(){ restoreData(); }, openInstall(){ openInstall(); }, openReinstall(){ openReinstall(); },
   backupLater(){ S.meta.backupSnooze = todayISO(); save(); const c = qs(".backup-nudge"); if(c){ c.classList.add("leaving"); setTimeout(()=>changed(), 250); } else changed(); },
   toggleEquip(d){ S.equipment.owned[d.id] = !S.equipment.owned[d.id]; save(); refreshEquip(); regenerateDraftIfIdle(); },
   addWeight(d){

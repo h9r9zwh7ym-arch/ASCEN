@@ -56,7 +56,9 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.evaluate(() => refreshFocusRegion()); const again = await page.evaluate(() => !!document.querySelector('.sx-saved.fresh'));
   log('Check:', JSON.stringify(ck), '| fresh after re-render:', again);
   if (!ck.fresh || ck.anim !== 'ckDraw' || ck.dot !== 'ckPop' || again) fail('coche franche, une fois');
-  if (ck.hap.length !== 1 || !(ck.hap[0] === 18 || Array.isArray(ck.hap[0]))) fail('une seule vibration à la validation : ' + JSON.stringify(ck.hap));
+  // (un camp d'ascension franchi au même moment vibre aussi, [20,40,30] : selon la date, ce n'est pas la validation)
+  const hv = ck.hap.filter(h => JSON.stringify(h) !== '[20,40,30]');
+  if (hv.length !== 1 || !(hv[0] === 18 || Array.isArray(hv[0]))) fail('une seule vibration à la validation : ' + JSON.stringify(ck.hap));
 
   // 3. le grimpeur : terminer la séance, la carte attend que la fin de séance soit fermée, puis avance
   const before = await page.evaluate(() => wkSeen && wkSeen.alt);

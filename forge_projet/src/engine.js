@@ -108,15 +108,19 @@ function scoreExo(exo){
   else if(lv==="avance") score += exo.level===3 ? 1 : exo.level===1 ? -1 : 0;
   score -= recencyPenalty(exo.id);
   score += (goalValue(exo)-1)*2.5;   // ce qui sert l'objectif passe devant (cardio : −1,6 pour prendre du muscle)
+  score += exoAffinity(exo.id);      // tes habitudes : fait souvent, ou au contraire sauté / remplacé
   return score;
 }
 
 // fourchette de l'objectif ; sur les exercices chargés, elle suit tes répétitions habituelles si tu
 // travailles nettement plus lourd ou plus léger (coach.js)
 function repRangeForGoal(exo){
-  const [a, b] = goalRange(exo), p = coachProfile(), k = p.repShift && kgType(exo) && !isTimed(exo) ? p.repShift : 0;
+  let [a, b] = goalRange(exo); const p = coachProfile(), k = p.repShift && kgType(exo) && !isTimed(exo) ? p.repShift : 0;
+  // débutant ou 65 ans et plus : jamais de séries très lourdes (6 répétitions au moins, en technique propre)
+  const floor = (S.goals.level==="debutant" || S.goals.senior) && kgType(exo) && !isTimed(exo) ? 6 : 3;
+  if(a<floor){ b = Math.max(b, floor+2); a = floor; }
   if(!k) return [a, b];
-  const a2 = Math.max(3, a+k); return [a2, Math.max(a2+2, b+k)];
+  const a2 = Math.max(floor, a+k); return [a2, Math.max(a2+2, b+k)];
 }
 
 function loadableTypeOf(exo){
@@ -185,12 +189,17 @@ const START_KG = {
   kettlebell:{ small:8, press:12, pull:12, legs:16, core:8 },
   barbell:{ small:20, press:30, pull:30, legs:40, core:20 },
 };
+function startKind(exo){
+  const m = exo.muscles[0];
+  return ["biceps","triceps","avantbras","mollets"].includes(m) || /elevations|oiseau|ecarte|pull_over|face_pull|shrug/.test(exo.id) ? "small"
+    : ["squat","hinge","lunge"].includes(exo.pattern) ? "legs" : exo.pattern==="pull" ? "pull" : exo.pattern==="core" ? "core" : "press";
+}
 function startWeight(exo, type){
   const tbl = START_KG[type]; if(!tbl) return null;
-  const m = exo.muscles[0];
-  const kind = ["biceps","triceps","avantbras","mollets"].includes(m) || /elevations|oiseau|ecarte|pull_over|face_pull|shrug/.test(exo.id) ? "small"
-    : ["squat","hinge","lunge"].includes(exo.pattern) ? "legs" : exo.pattern==="pull" ? "pull" : exo.pattern==="core" ? "core" : "press";
-  const lv = S.goals.level==="debutant" ? .8 : S.goals.level==="avance" ? 1.3 : 1;
+  const kind = startKind(exo);
+  // ta force réelle d'abord (tes autres exercices chargés, même type de mouvement), sinon le niveau déclaré
+  const pf = typeof strengthFactor==="function" ? strengthFactor(kind) : null;
+  const lv = pf || (S.goals.level==="debutant" ? .8 : S.goals.level==="avance" ? 1.3 : 1)*(S.goals.senior ? .85 : 1);
   const target = tbl[kind]*lv;
   const owned = (S.equipment.weights[type]||[]).slice().sort((a,b)=>a-b);
   if(!owned.length) return type==="barbell" ? Math.max(20, Math.round(target/5)*5) : Math.max(1, Math.round(target));
@@ -454,7 +463,7 @@ function generateEngineSession(typeId, avoid){
   const session = {
     id: uid(), date: todayISO(), source:"engine", type:typeId, resolvedType:resolved, reason, stim:stim.length ? stimTargetsText(stim) : null,
     startedAt:null, completedAt:null,
-    exos: entriesInOrder(exos.map(exo=>[exo]))
+    exos: entriesInOrder((sets=>exos.map((exo, i)=>[exo, sets[i]]))(profileSets(exos)))
   };
   if(S.settings.stretching) session.exos.push(...stretchBlock(session));
   return session;

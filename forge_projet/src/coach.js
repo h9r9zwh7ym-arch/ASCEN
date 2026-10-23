@@ -152,3 +152,105 @@ function beatTired(def, st, ref, fN){
   const fR = ref.f || 1; if(!(fN<fR-.04)) return 0;
   return beatCmp(def, { reps:(st.reps||0)/fN, weight:st.weight }, Object.assign({}, ref, { reps:ref.reps/fR })) > 0 ? 1 : 0;
 }
+
+// ================= PROFIL D'ENTRAÎNEMENT =================
+// Ce que l'app sait de toi au-delà des réglages, pour choisir les exercices, les séries et les charges :
+// tes habitudes (exercices faits, sautés, remplacés), ta force réelle (première charge d'un exercice
+// nouveau) et le volume visé par muscle selon ton objectif, ton niveau, ton âge et ta fréquence.
+
+// habitudes sur 90 jours : séances où l'exercice a été fait, ou laissé sans aucune série (sauté)
+function exoHabits(){
+  return memoHist("habits", ()=>{
+    const from = addDaysISO(todayISO(), -90), out = {};
+    S.sessions.forEach(s=>{
+      if(s.date<from || !s.exos.some(ex=>ex.sets.some(st=>st.done))) return;
+      s.exos.forEach(ex=>{ const o = out[ex.exoId] || (out[ex.exoId] = { done:0, skip:0 }); if(ex.sets.some(st=>st.done)) o.done++; else o.skip++; });
+    });
+    return out;
+  });
+}
+// bonus d'un exercice fait souvent (tu connais les charges), malus d'un exercice souvent sauté ou
+// remplacé dans les propositions : l'app finit par comprendre ce que tu n'aimes pas
+function exoAffinity(id){
+  const a = exoHabits()[id], sw = ((S.prefs && S.prefs.swapped) || {})[id] || 0;
+  let s = 0;
+  if(a){
+    if(a.done>=3) s += .6;
+    if(a.skip>=2) s -= a.skip>=a.done ? 2.5 : 1;
+  }
+  if(sw>=2) s -= Math.min(3, sw*.8);
+  return s;
+}
+// force réelle : tes meilleures séries récentes (1RM estimé) face au point de départ d'un pratiquant
+// moyen (START_KG), par type de mouvement ; 1 = moyen. Au moins deux exercices pour un repère global.
+function strengthFactor(kind){
+  const r = memoHist("sfac", ()=>{
+    const by = {}, all = [], seen = new Set(), from = addDaysISO(todayISO(), -180);
+    for(let i=S.sessions.length-1; i>=0; i--){
+      const s = S.sessions[i]; if(s.date<from) break;
+      s.exos.forEach(ex=>{
+        if(seen.has(ex.exoId)) return;
+        const def = EXO_MAP[ex.exoId], t = def && kgType(def); if(!t || isTimed(def) || !START_KG[t]) return;
+        const d = ex.sets.filter(st=>st.done && st.weight>0 && st.reps>0); if(!d.length) return;
+        seen.add(ex.exoId);
+        const k = startKind(def), mid = Math.round((def.repsMin+def.repsMax)/2);
+        const f = Math.max(...d.map(st=>estimated1RM(st.weight, st.reps)))/estimated1RM(START_KG[t][k], mid);
+        (by[k] = by[k] || []).push(f); all.push(f);
+      });
+    }
+    const out = { all:all.length>=2 ? median(all) : null };
+    Object.keys(by).forEach(k=>{ out[k] = median(by[k]); });
+    return out;
+  });
+  const f = r[kind] ?? r.all;
+  return f ? Math.max(.4, Math.min(3, f)) : null;
+}
+// séries visées par muscle et par semaine (repères : ~10 pour prendre du muscle, moins pour débuter,
+// plus pour un avancé ; Schoenfeld 2017, Pelland 2024), selon tes priorités par muscle
+function weeklySetTarget(m){
+  const g = S.goals, base = g.overall==="hypertrophie" ? 10 : 8;
+  const e = (g.emphasis || {})[m];
+  return base*(g.level==="debutant" ? .7 : g.level==="avance" ? 1.3 : 1)*(g.senior ? .85 : 1)*(e==="prioriser" ? 1.3 : e==="eviter" ? .5 : 1);
+}
+const SESSION_MIN = { court:25, moyen:40, long:60 };
+// séries de chaque exercice d'une séance : ce qui manque cette semaine à son muscle, réparti sur les
+// séances qui restent (ta fréquence) et sur les exercices du même muscle ; 2 à 5 séries (4 pour un
+// débutant, après 65 ans ou en isolation) ; puis la durée de séance choisie est tenue
+function profileSets(exos, minutes){
+  const cap = S.goals.level==="debutant" || S.goals.senior ? 4 : 5;
+  return fitSetsToTime(exos, profileBase(exos), (minutes || SESSION_MIN[S.goals.sessionLength] || 40)*60, cap, isoExo);
+}
+const isoExo = e=>["biceps","triceps","avantbras","mollets"].includes(e.muscles[0]) || e.pattern==="core";
+function profileBase(exos){
+  const vol = {}; try{ muscleVolume(7).forEach(r=>{ vol[r.id] = r.sets; }); }catch(e){}
+  const d = Math.max(1, Math.min(7, S.goals.daysPerWeek || 3)), today = todayISO();
+  const done7 = S.sessions.filter(s=>daysBetween(s.date, today)<7 && s.exos.some(ex=>ex.sets.some(st=>st.done))).length;
+  const left = Math.max(1, d - done7), k = {};
+  exos.forEach(e=>{ k[e.muscles[0]] = (k[e.muscles[0]] || 0) + 1; });
+  const cap = S.goals.level==="debutant" || S.goals.senior ? 4 : 5, iso = isoExo;
+  return exos.map(e=>{
+    if(isStretch(e) || e.muscles[0]==="cardio") return e.sets;
+    const m = e.muscles[0], t = weeklySetTarget(m), per = t/d;
+    const want = Math.max(per*.6, Math.min(per*1.5, Math.max(0, t - (vol[m] || 0))/left));
+    return Math.max(2, Math.min(iso(e) ? Math.min(cap, 4) : cap, Math.round(want/k[m])));
+  });
+}
+// tenir une durée : on retire d'abord sur la fin de séance (exercices d'appoint), on ajoute d'abord sur
+// les gros mouvements du début (une série de plus au plus que ce que vise ton profil) ; seulement si
+// l'écart est net (±15 %)
+function fitSetsToTime(exos, sets, goalSec, cap, iso){
+  const base = sets; sets = sets.slice();
+  const sec = ()=>exos.reduce((t,e,i)=>t + sets[i]*(40 + e.restSec), 0), free = i=>!isStretch(exos[i]);
+  if(sec()>goalSec*1.15){
+    for(let n=0; n<40 && sec()>goalSec*1.05; n++){
+      let b = -1; for(let j=exos.length-1; j>=0; j--) if(free(j) && sets[j]>2 && (b<0 || sets[j]>sets[b])) b = j;
+      if(b<0) break; sets[b]--;
+    }
+  } else if(sec()<goalSec*.85){
+    for(let n=0; n<40 && sec()<goalSec*.95; n++){
+      let b = -1; for(let j=0; j<exos.length; j++) if(free(j) && sets[j]<Math.min(base[j]+1, iso && iso(exos[j]) ? Math.min(cap, 4) : cap) && (b<0 || sets[j]<sets[b])) b = j;
+      if(b<0) break; sets[b]++;
+    }
+  }
+  return sets;
+}

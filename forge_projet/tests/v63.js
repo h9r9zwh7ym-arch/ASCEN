@@ -68,7 +68,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const cs = await page.evaluate(() => [...document.querySelectorAll('.cs-body .sh')].map(h => h.textContent + ':' + [...h.nextElementSibling.querySelectorAll('.cs-row .t')].map(t => t.textContent).join(',')));
   const sub = await page.evaluate(() => (document.querySelector('.cs-row .s') || {}).textContent);
   log('Choose:', JSON.stringify(cs), sub); await shot('03_choose');
-  if (cs.join('|') !== "Mes séances:Jambes|Proposée par l'app:Laisse l'app choisir|Sur le moment:Séance express,Composer moi-même" || !/exercices · ≈ \d+ min/.test(sub || '')) fail('« Choisir une séance » en trois familles');
+  if (cs.join('|') !== "Mes séances:Jambes|Composée par l'app:Laisse l'app choisir,Séance sur mesure|Sur le moment:Séance express,Composer moi-même" || !/exercices · ≈ \d+ min/.test(sub || '')) fail('« Choisir une séance » en trois familles');
   await page.evaluate(() => closeSheet()); await wait(500);
 
   // 4. éditeur de séance : plus de note de planning ni de répartition ; « Ordre » remplacé par le glissement ; l'avertissement de jour pris reste

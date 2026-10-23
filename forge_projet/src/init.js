@@ -1,5 +1,5 @@
 // ================= INITIALISATION =================
-const APP_VERSION = "2.9.0";
+const APP_VERSION = "2.9.1";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 // séance en sombre (réglage, actif par défaut) : pendant la séance, l'écran passe en sombre quel que
@@ -45,7 +45,9 @@ function syncStatusBarNow(nudge){
       const b = getComputedStyle(document.documentElement).getPropertyValue("--bar").match(/[\d.]+/g);
       if(b && b.length>=4) rgb = rgb.map((x,i)=>+b[i]*+b[3] + x*(1-+b[3]));
     }
-    const k = statusDim ? .6 : 1, hex = "#"+rgb.map(x=>Math.round(x*k).toString(16).padStart(2,"0")).join("");
+    // jamais assombrie : si iOS affiche une barre pleine (ancienne icône), elle garde la couleur de la page
+    // (assombrie sous une feuille, elle restait grise une fois la feuille fermée)
+    const k = 1, hex = "#"+rgb.map(x=>Math.round(x*k).toString(16).padStart(2,"0")).join("");
     let bar = document.getElementById("sbar");
     if(!bar){ bar = document.createElement("div"); bar.id = "sbar"; bar.setAttribute("aria-hidden","true"); document.body.appendChild(bar); }
     // le bandeau n'a plus de couleur pleine : l'app passe sous la barre d'état (voile et flou en CSS)
@@ -67,6 +69,8 @@ function startApp(recovered){
   }
   // iOS relit la couleur de la barre d'état au premier changement en haut de la page
   requestAnimationFrame(()=>requestAnimationFrame(()=>syncStatusBar(undefined, true)));
+  // ancienne icône (barre d'état pleine) : on le dit une fois, la marche à suivre est dans Profil
+  setTimeout(()=>{ try{ if(typeof legacyStatusBar==="function" && legacyStatusBar() && !S.meta.sbHint){ S.meta.sbHint = 1; save(); toast("Barre d'état : remets l'icône à jour (Profil)", "info"); } }catch(e){} }, 2500);
 }
 
 // iOS ferme parfois l'app en arrière-plan pour libérer de la mémoire (après la musique, l'appareil photo…) :

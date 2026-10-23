@@ -12,7 +12,7 @@ function defaultState(){
   return {
     v:1,
     equipment: defaultEquipment(),
-    prefs: { excluded:[], included:[] },
+    prefs: { excluded:[], included:[], swapped:{} },
     goals: { overall:"hypertrophie", emphasis:{}, daysPerWeek:3, sessionLength:"moyen", level:"intermediaire", exoCount:0, senior:false },
     sessions: [],
     draft: null,
@@ -300,6 +300,7 @@ function normalizeState(parsed){
     Object.entries(obj(parsed.medals)).forEach(([k, m])=>{ if(m && typeof m==="object" && Number.isInteger(m.t) && m.t>=0 && m.t<=4) merged.medals[k] = Object.assign({}, m, { d:obj(m.d) }); });
     merged.prefs.excluded = Array.isArray(merged.prefs.excluded) ? merged.prefs.excluded.filter(id=>EXO_MAP[id]) : [];
     merged.prefs.included = Array.isArray(merged.prefs.included) ? merged.prefs.included.filter(id=>EXO_MAP[id]) : [];
+    { const sw = merged.prefs.swapped, o = {}; if(sw && typeof sw==="object" && !Array.isArray(sw)) Object.keys(sw).forEach(id=>{ const n = +sw[id]; if(EXO_MAP[id] && n>0) o[id] = Math.min(9, Math.round(n)); }); merged.prefs.swapped = o; }
     merged.importedProgram = cleanImportedProgram(parsed.importedProgram);
     merged.challenges = (Array.isArray(parsed.challenges)?parsed.challenges:[]).filter(c=>c && typeof c.id==="string" && /^\d{4}-\d{2}-\d{2}$/.test(c.start));
     merged.targets = (Array.isArray(parsed.targets)?parsed.targets:[]).filter(t=>t && t.id && EXO_MAP[t.exoId] && ["reps","kg","sec"].includes(t.kind) && t.value>0);
