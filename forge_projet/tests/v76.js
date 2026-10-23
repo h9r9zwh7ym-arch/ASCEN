@@ -73,8 +73,25 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.waitForTimeout(3600);
   const after = await page.evaluate(() => ({ on: document.body.classList.contains('tl-on'), host: !!document.querySelector('.tl-host') }));
   log('Orb:', JSON.stringify(orb), JSON.stringify(after));
-  if (orb.n !== 3 || !orb.anim.every(a => /tlBlob/.test(a)) || !orb.on || !(orb.sbz > 2100)) fail('orbe liquide, heure lisible au-dessus');
+  if (orb.n !== 3 || orb.anim.join() !== 'tlRipple,tlBlob,tlRipple' || !orb.on || !(orb.sbz > 2100)) fail('cœur (teinte, ondes), heure lisible au-dessus');
   if (after.on || after.host) fail('fin de l\'animation : tout est rangé');
+
+  // 5b. 2.9.6 : prédictions — muscles de la séance prévue demain laissés au repos, durée à ton rythme réel,
+  //     un jour sans ne fait pas baisser la charge ; voile de la barre d'état limité à sa hauteur
+  const pr = await page.evaluate(() => { const t = todayISO(), out = {}, wd = weekdayIdx(addDaysISO(t, 1));
+    const pecs = () => { let n = 0; for (let k = 0; k < 6; k++) n += generateEngineSession('full').exos.filter(e => EXO_MAP[e.exoId].muscles[0] === 'pect').length; return n; };
+    S.templates = [{ id: 'tp', n: 'Pectoraux', days: [wd], exos: [{ exoId: 'dc_haltere', sets: 3 }] }]; save(); out.pect = pecs(); S.templates = []; save(); out.pect0 = pecs();
+    S.sessions = [1, 2, 3, 4].map(k => { const st = new Date(Date.now() - k * 864e5 * 2), exos = [{ exoId: 'dc_haltere', sets: [1, 2, 3, 4].map(() => ({ reps: 10, weight: 20, done: true })) }];
+      const est = exos.reduce((a, ex) => a + ex.sets.length * (40 + EXO_MAP[ex.exoId].restSec), 0); return { id: 's' + k, date: addDaysISO(t, -k * 2), startedAt: st.toISOString(), completedAt: new Date(st.getTime() + est * 1400).toISOString(), exos }; });
+    sessionTouched(); save(); out.pace = paceFactor();
+    S.sessions = [{ id: 'a', date: addDaysISO(t, -6), exos: [{ exoId: 'dc_haltere', targetReps: [8, 12], sets: [1, 2, 3].map(() => ({ reps: 10, weight: 20, done: true, effort: 2 })) }] },
+      { id: 'b', date: addDaysISO(t, -3), exos: [{ exoId: 'dc_haltere', targetReps: [8, 12], sets: [1, 2, 3].map(() => ({ reps: 6, weight: 20, done: true, effort: 3 })) }] }]; sessionTouched(); save();
+    out.off = suggestForExo(EXO_MAP.dc_haltere, 3).weight; S.sessions = []; sessionTouched(); save();
+    const sb = document.querySelector('#sbar'); out.sbH = sb ? getComputedStyle(sb).height : ''; return out; });
+  log('Predictions:', JSON.stringify(pr));
+  if (!(pr.pect0 > 0 && pr.pect === 0)) fail('muscles de la séance de demain laissés au repos');
+  if (Math.abs(pr.pace - 1.4) > .01) fail('rythme réel appris');
+  if (pr.off !== 20) fail('jour sans : charge gardée');
 
   // 6. iOS 26 installée : la page s'arrête 34 px avant le bas de l'écran → la barre d'onglets et les calques
   //    plein écran descendent jusqu'en bas (écart mesuré), la marge basse le compte

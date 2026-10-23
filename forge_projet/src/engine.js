@@ -84,6 +84,7 @@ function muscleScore(muscleId){
   let w = emph==="prioriser" ? 1.6 : emph==="eviter" ? 0.25 : 1;
   let score = (Math.min(days,10) + 4*stimDeficit(muscleId)) * w;
   if(days<2) score *= 0.2; // récupération : fortement déprioritisé si travaillé hier ou aujourd'hui
+  if(typeof plannedSoonMuscles==="function" && plannedSoonMuscles().has(muscleId)) score *= 0.45;   // prévu demain
   return score;
 }
 
@@ -238,6 +239,10 @@ function suggestForExo(exo, setsN, deload, pre){
   const missed = done.some(st=>fresh(st, fL) < bottom-.25);
   const tiredMiss = rawMissed && !missed;
   const prevMissed = prev && prev.exo.sets.filter(st=>st.done).some(st=>fresh(st, fOf(prev)) < (prev.exo.targetReps ? prev.exo.targetReps[0] : rMin)-.25);
+  // jour sans : la dernière fois nettement sous la précédente (force estimée −7 % ou plus, fatigue
+  // comprise) alors que la précédente était réussie. Un mauvais jour ne fait pas baisser la charge.
+  const bestE = (p, f)=>Math.max(0, ...p.exo.sets.filter(st=>st.done && st.reps>0).map(st=>estimated1RM(st.weight||0, (st.reps||0)/f)));
+  const offDay = !!(type && kgType(exo) && prev && !prevMissed && bestE(prev, fOf(prev))>0 && bestE(last, fL) < .93*bestE(prev, fOf(prev)));
   const lo = Math.max(1, Math.round(rMin*fT));
   // rythme appris : plus vite si tu montes souvent la charge toi-même, plus lentement si tu la gardes plus légère
   const goUp = (hitTop && effort!==3) || (effort===1 && nearTop) || (prof.pace>0 && nearTop && effort!==3);
@@ -260,6 +265,9 @@ function suggestForExo(exo, setsN, deload, pre){
         reps = reps.map((_,i)=>Math.min(rMax+4, lastReps(i)+1));
         note = type==="bands" ? "Tu utilises ton élastique le plus résistant : ajoute une répétition ou ralentis la descente (3 s)." : "Tu es à ta charge maximale : ajoute une répétition ou ralentis la descente (3 s).";
       }
+    } else if(missed && offDay){
+      reps = new Array(n).fill(lo);
+      note = "La dernière fois ressemblait à un jour sans : on garde la charge, tu retrouveras ta forme habituelle.";
     } else if(missed && (effort===3 || prevMissed)){
       const lw = lowerWeight(exo, lastW);
       weight = lw; reps = new Array(n).fill(lo);
@@ -423,8 +431,10 @@ function pickExosForSession(n, pool, avoid, typeId){
   };
   const take = e=>{ chosen.push(e); used.add(e.id); muscleN[e.muscles[0]] = (muscleN[e.muscles[0]]||0)+1; patN[e.pattern] = (patN[e.pattern]||0)+1; };
   const plan = SESSION_PLANS[typeId] || SESSION_PLANS.full;
+  const soon = typeof plannedSoonMuscles==="function" ? plannedSoonMuscles() : new Set();
   plan.forEach((slot, i)=>{
     if(chosen.length>=n) return;
+    if(slot.m && slot.m.every(m=>soon.has(m))) return;   // muscles de la séance prévue demain : on les laisse reposer
     const cand = pool.filter(e=>!used.has(e.id) && (!slot.p || slot.p.includes(e.pattern)) && (!slot.m || slot.m.includes(e.muscles[0])));
     if(!cand.length) return;
     take(cand.reduce((b,x)=>adj(x,i)>adj(b,i)?x:b));
@@ -513,7 +523,9 @@ function estimateMinutes(session){
     const def = EXO_MAP[ex.exoId]; if(!def) return t;
     return t + ex.sets.length*(40+def.restSec);
   },0);
-  return Math.max(5, Math.round(sec/60/5)*5);
+  // ton rythme réel (pauses, transitions) : la durée affichée suit tes dernières séances
+  const k = typeof paceFactor==="function" ? paceFactor() : 1;
+  return Math.max(5, Math.round(sec*k/60/5)*5);
 }
 function focusMuscles(session){
   const count = {};

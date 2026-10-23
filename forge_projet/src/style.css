@@ -1867,10 +1867,12 @@ body.live-focus #restbar{bottom:calc(14px + var(--sab))}
 /* barre d'état fondue dans l'écran (black-translucent : l'app passe dessous, heure et batterie en blanc).
    Écrans clairs : un voile sombre très doux, flouté, juste derrière l'heure, qui s'efface vers le bas.
    Sombre et séance : seulement le flou. Hauteur nulle hors iPhone (pas de zone de barre d'état). */
-#sbar{position:fixed;top:0;left:0;right:0;height:calc(var(--sat) * 1.7);z-index:45;pointer-events:none;
-  background:linear-gradient(rgba(0,0,0,.36),rgba(0,0,0,.28) 22%,rgba(0,0,0,.15) 45%,rgba(0,0,0,.05) 70%,rgba(0,0,0,0));
-  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
-  -webkit-mask-image:linear-gradient(#000 40%,transparent);mask-image:linear-gradient(#000 40%,transparent)}
+/* limité à la hauteur de la barre d'état : plus haut, il floutait les titres juste dessous (« Aujourd'hui »,
+   nom de la séance) ; flou léger, le voile sombre suffit à garder l'heure lisible */
+#sbar{position:fixed;top:0;left:0;right:0;height:var(--sat);z-index:45;pointer-events:none;
+  background:linear-gradient(rgba(0,0,0,.32),rgba(0,0,0,.2) 45%,rgba(0,0,0,.06) 80%,rgba(0,0,0,0));
+  -webkit-backdrop-filter:blur(2.5px);backdrop-filter:blur(2.5px);
+  -webkit-mask-image:linear-gradient(#000 55%,transparent);mask-image:linear-gradient(#000 55%,transparent)}
 :root[data-theme="dark"] #sbar{background:linear-gradient(rgba(0,0,0,.25),rgba(0,0,0,0))}
 @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) #sbar{background:linear-gradient(rgba(0,0,0,.25),rgba(0,0,0,0))} }
 body.mo-on #sbar{z-index:2001}
@@ -3457,26 +3459,26 @@ body.live-focus #restbar.island{bottom:auto}
 /* le cœur : une orbe liquide (trois nappes de la teinte qui ondulent et tournent à des rythmes différents,
    un halo qui respire, un reflet) ; elle se resserre en cercle net quand la séance est trouvée */
 .tl-core{position:absolute;left:50%;top:50%;width:76px;height:76px;margin:-38px 0 0 -38px;transition:opacity .25s;isolation:isolate;animation:tlBreath 3.2s ease-in-out infinite}
-.tl-core i{position:absolute;inset:0;border-radius:50%;will-change:transform,border-radius}
-.tl-core i:nth-child(1){inset:-22px;z-index:-1;opacity:.55;filter:blur(16px);
-  background:radial-gradient(circle,color-mix(in srgb,var(--tint) 70%,transparent),transparent 70%);animation:tlBlob 5.2s ease-in-out infinite reverse}
-.tl-core i:nth-child(2){box-shadow:inset 0 -10px 18px color-mix(in srgb,var(--tint) 60%,#000),inset 0 6px 14px color-mix(in srgb,var(--tint) 40%,#fff);
-  background:radial-gradient(circle at 28% 30%,color-mix(in srgb,var(--tint) 45%,#fff) 0,transparent 52%),
-    radial-gradient(circle at 78% 40%,color-mix(in srgb,var(--tint) 70%,#ff9a6b) 0,transparent 50%),
-    radial-gradient(circle at 50% 88%,color-mix(in srgb,var(--tint) 85%,#000) 0,transparent 58%),var(--tint);
-  animation:tlBlob 6.5s ease-in-out infinite,tlSpin 12s linear infinite}
-.tl-core i:nth-child(3){opacity:.55;mix-blend-mode:screen;filter:blur(3px);
-  background:radial-gradient(circle at 34% 26%,rgba(255,255,255,.9) 0,rgba(255,255,255,0) 40%),radial-gradient(circle at 70% 70%,color-mix(in srgb,var(--tint) 50%,#ffb08a) 0,transparent 45%);
-  animation:tlBlob 4.8s ease-in-out infinite reverse,tlSpin 9s linear infinite reverse}
+/* le cœur, dans le langage de l'app : la teinte unie du bouton « Générer » (dont il naît), son étoile
+   blanche au centre, une forme qui ondule à peine, et deux ondes fines qui s'élargissent */
+.tl-core i{position:absolute;inset:0;border-radius:50%}
+.tl-core i:nth-child(1),.tl-core i:nth-child(3){box-shadow:inset 0 0 0 1.5px var(--tint);opacity:0;animation:tlRipple 2.6s cubic-bezier(.2,.6,.35,1) infinite}
+.tl-core i:nth-child(3){animation-delay:1.3s}
+.tl-core i:nth-child(2){background:linear-gradient(160deg,color-mix(in srgb,var(--tint) 80%,#fff),var(--tint) 55%,color-mix(in srgb,var(--tint) 88%,#000));
+  box-shadow:0 12px 28px -10px color-mix(in srgb,var(--tint) 70%,transparent),inset 0 1px 0 rgba(255,255,255,.28);
+  animation:tlBlob 6s ease-in-out infinite;will-change:border-radius}
+.tl-core .tl-spk{position:absolute;left:50%;top:50%;width:30px;height:30px;margin:-15px 0 0 -15px;color:var(--on-tint);animation:tlTwinkle 2.6s ease-in-out infinite}
+@keyframes tlRipple{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.85);opacity:0}}
+@keyframes tlTwinkle{0%,100%{transform:scale(1) rotate(0)}50%{transform:scale(.86) rotate(12deg)}}
 @keyframes tlBlob{
-  0%,100%{border-radius:50% 50% 50% 50% / 50% 50% 50% 50%}
-  25%{border-radius:58% 42% 52% 48% / 46% 56% 44% 54%}
-  50%{border-radius:45% 55% 42% 58% / 56% 44% 58% 42%}
-  75%{border-radius:54% 46% 58% 42% / 42% 58% 46% 54%}}
-@keyframes tlSpin{to{transform:rotate(360deg)}}
-.tl-host:not(.ready) .tl-core,.tl-host:not(.ready) .tl-core i{opacity:0;animation:none}
+  0%,100%{border-radius:50%}
+  33%{border-radius:53% 47% 51% 49% / 48% 53% 47% 52%}
+  66%{border-radius:47% 53% 48% 52% / 52% 47% 53% 48%}}
+.tl-host.found .tl-core i:nth-child(1),.tl-host.found .tl-core i:nth-child(3){animation-iteration-count:1}
+.tl-host.found .tl-core .tl-spk{animation:tlPop .6s cubic-bezier(.32,1.5,.4,1) both}
+.tl-host:not(.ready) .tl-core,.tl-host:not(.ready) .tl-core i,.tl-host:not(.ready) .tl-core .tl-spk{opacity:0;animation:none}
 .tl-host.found .tl-core{animation:tlPop .6s cubic-bezier(.32,1.5,.4,1) both}
-@keyframes tlBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes tlBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
 @keyframes tlPop{0%{transform:scale(1.04)}45%{transform:scale(1.2)}100%{transform:scale(1)}}
 .tl-ring{position:absolute;inset:0;animation:tlTurn 9s linear infinite}
 .tl-host.found .tl-ring{animation-play-state:paused}
@@ -3507,7 +3509,7 @@ body.live-focus #restbar.island{bottom:auto}
 .tl-fly{position:fixed;inset:0;z-index:2102;pointer-events:none}
 .tl-fly .xico{position:absolute;margin:0;transform-origin:0 0}
 @media (max-height:620px){ .tl-stage{width:190px;height:190px} .tl-ic{transform:rotate(var(--a)) translateY(-72px) rotate(calc(-1 * var(--a)))} .tl-think{gap:16px} .tl-steps{gap:8px} }
-@media (prefers-reduced-motion:reduce){ .tl-core,.tl-core i,.tl-ring,.tl-ic,.tl-ic .xico,.tl-title,.tl-steps li,.tl-steps li.on .tl-dot{animation:none!important} }
+@media (prefers-reduced-motion:reduce){ .tl-core,.tl-core i,.tl-core .tl-spk,.tl-ring,.tl-ic,.tl-ic .xico,.tl-title,.tl-steps li,.tl-steps li.on .tl-dot{animation:none!important} }
 
 /* iOS 26, app installée : la zone de la page peut s'arrêter au-dessus de la barre d'accueil (bug d'iOS,
    un bandeau vide sous la barre d'onglets). L'écart est mesuré (syncVGap, init.js) : les calques plein

@@ -218,7 +218,7 @@ const SESSION_MIN = { court:25, moyen:40, long:60 };
 // débutant, après 65 ans ou en isolation) ; puis la durée de séance choisie est tenue
 function profileSets(exos, minutes){
   const cap = S.goals.level==="debutant" || S.goals.senior ? 4 : 5;
-  return fitSetsToTime(exos, profileBase(exos), (minutes || SESSION_MIN[S.goals.sessionLength] || 40)*60, cap, isoExo);
+  return fitSetsToTime(exos, profileBase(exos), (minutes || SESSION_MIN[S.goals.sessionLength] || 40)*60/paceFactor(), cap, isoExo);
 }
 const isoExo = e=>["biceps","triceps","avantbras","mollets"].includes(e.muscles[0]) || e.pattern==="core";
 function profileBase(exos){
@@ -253,4 +253,29 @@ function fitSetsToTime(exos, sets, goalSec, cap, iso){
     }
   }
   return sets;
+}
+
+// muscles de la séance prévue demain (Mes séances, jour fixe) : l'app les ménage aujourd'hui pour qu'ils
+// arrivent frais à leur séance
+function plannedSoonMuscles(){
+  return memo("psm"+todayISO(), ()=>{
+    const set = new Set(), t = typeof plannedTemplate==="function" ? plannedTemplate(addDaysISO(todayISO(), 1)) : null;
+    if(t) t.exos.forEach(e=>{ const d = EXO_MAP[e.exoId]; if(d && !isStretch(d)) set.add(d.muscles[0]); });
+    return set;
+  });
+}
+// ton rythme réel : durée de tes dernières séances face à l'estimation (séries × (40 s + repos)) ; les
+// durées affichées (≈ 35 min) s'y ajustent. Au moins 3 séances complètes, entre ×0,7 et ×1,5.
+function paceFactor(){
+  return memoHist("pace", ()=>{
+    const r = [];
+    S.sessions.slice(-12).forEach(s=>{
+      const a = Date.parse(s.startedAt), b = Date.parse(s.completedAt); if(!a || !b) return;
+      const min = (b - a)/60000; let est = 0, n = 0;
+      s.exos.forEach(ex=>{ const d = EXO_MAP[ex.exoId]; if(!d) return; const k = ex.sets.filter(st=>st.done).length; n += k; est += k*(40 + d.restSec); });
+      if(n<4 || min<5 || min>240 || est<=0) return;
+      r.push(min/(est/60));
+    });
+    return r.length>=3 ? Math.max(.7, Math.min(1.5, median(r))) : 1;
+  });
 }

@@ -70,7 +70,7 @@ function tailorContext(){
     const s = S.sessions[i]; if(daysBetween(s.date, today)>60) break;
     s.exos.forEach(ex=>{ if(ex.sets.some(st=>st.done)) done[ex.exoId] = (done[ex.exoId]||0) + 1; });
   }
-  return { vol, rec, low, tired, high, done, fresh:!S.sessions.length };
+  return { vol, rec, low, tired, high, done, fresh:!S.sessions.length, soon:plannedSoonMuscles() };
 }
 const mName = m=>((MUSCLE_MAP[m]||{ n:m }).n).toLowerCase();
 // (personne n'est « en retard » avant sa première séance)
@@ -89,6 +89,7 @@ function tailorExoScore(spec, e, ctx){
     s += 1.6*tailorDeficit(ctx, m);
     if(ctx.rec[m]<2) s -= 2.5;
     if(ctx.high.has(m)) s -= 1.5;
+    if(ctx.soon.has(m)) s -= 1.5;   // prévu demain dans Mes séances
   }
   const n = ctx.done[e.id]||0;
   s += n>=2 ? .8 : n ? .4 : .25;
@@ -137,7 +138,7 @@ const tailorSec = (e, n)=>n*(40 + e.restSec);
 // la durée visée tenue en jouant sur les séries : on retire d'abord sur les exercices d'appoint (fin de
 // séance), on ajoute d'abord sur les gros mouvements (début de séance), entre 2 et 5 séries
 function tailorFit(spec, exos){
-  const sets = tailorBase(spec, exos), goal = TAILOR_MIN[spec.len]*60;
+  const sets = tailorBase(spec, exos), goal = TAILOR_MIN[spec.len]*60/paceFactor();   // à ton rythme réel
   if(spec.kind==="mobilite") return sets;
   const tot = ()=>exos.reduce((t,e,i)=>t + tailorSec(e, sets[i]), 0);
   const cap = S.goals.level==="debutant" || S.goals.senior ? 4 : 5;
@@ -166,7 +167,7 @@ function tailorScore(spec, exos, ctx){
   const sets = tailorFit(spec, exos), sec = exos.reduce((t,e,i)=>t + tailorSec(e, sets[i]), 0);
   // séries tirées loin de l'habitude pour tenir la durée : mieux vaut un exercice de plus
   const base = tailorBase(spec, exos), stretch = exos.reduce((t,e,i)=>t + Math.abs(sets[i] - base[i]), 0);
-  const min = Math.round(sec/60), gap = Math.abs(min - TAILOR_MIN[spec.len]);
+  const min = Math.round(sec*paceFactor()/60), gap = Math.abs(min - TAILOR_MIN[spec.len]);
   const multi = exos.slice(0, 3).filter(e=>e.muscles.length>=3).length;                                  // polyarticulaires en tête
   // équilibre : autant de poussées que de tirages ; tout le corps = haut ET bas
   let bal = 0;
@@ -239,6 +240,8 @@ async function tailorGenerate(spec, onStep, opts){
     if(!want && ctx.low.length) facts.push(`${ctx.low.slice(0,2).map(r=>r.n.toLowerCase()).join(" et ")} en retard`);
     const yest = ctx.tired.filter(m=>MUSCLE_MAP[m]).slice(0, 1);
     if(!want && yest.length) facts.push(`${mName(yest[0])} à ménager`);
+    const tm = typeof plannedTemplate==="function" && plannedTemplate(addDaysISO(todayISO(), 1));
+    if(!want && tm && ctx.soon.size) facts.push(`« ${tm.n} » demain`);
     if(!facts.length) facts.push("semaine équilibrée");
   }
   await step(0, facts.join(" · ").replace(/^./, c=>c.toUpperCase()), 560);
@@ -260,7 +263,7 @@ async function tailorGenerate(spec, onStep, opts){
   const ref = tailorRefine(spec, pool, tries[0], ctx, base);
   const best = { exos:ref.exos, s:tailorScore(spec, ref.exos, ctx) };
   const exos = tailorOrder(spec, best.exos), sets = tailorFit(spec, exos);
-  const min = Math.round(exos.reduce((t,e,i)=>t + tailorSec(e, sets[i]), 0)/60);
+  const min = Math.round(exos.reduce((t,e,i)=>t + tailorSec(e, sets[i]), 0)*paceFactor()/60);
   await step(2, `${ref.tested} échanges testés${ref.kept ? `, ${ref.kept} gardé${ref.kept>1 ? "s" : ""}` : ""} · ${exos.length} exercices, ≈ ${min} min`, 620);
   // 4. charges et répétitions (fatigue selon la place, ta manière de faire)
   const entries = entriesInOrder(exos.map((e, i)=>[e, sets[i]]));
@@ -328,7 +331,7 @@ function tailorFootHTML(){
 function tailorThinkHTML(spec){
   const steps = ["Je regarde ta semaine", "J'essaie des combinaisons", "J'affine la meilleure", "Je règle charges et répétitions"];
   return `<div class="tl-bg"></div><div class="tl-think" role="status" aria-live="polite" aria-label="L'app compose ta séance">
-    <div class="tl-stage"><div class="tl-core"><i></i><i></i><i></i></div><div class="tl-ring">${Array.from({ length:8 }, (_, i)=>`<span class="tl-ic" style="--a:${i*45}deg;--d:${i*40}ms"></span>`).join("")}</div></div>
+    <div class="tl-stage"><div class="tl-core"><i></i><i></i><i></i>${ii("sparkle", "tl-spk")}</div><div class="tl-ring">${Array.from({ length:8 }, (_, i)=>`<span class="tl-ic" style="--a:${i*45}deg;--d:${i*40}ms"></span>`).join("")}</div></div>
     <div class="tl-title">${esc(tailorName(spec))}</div>
     <ol class="tl-steps">${steps.map((t, i)=>`<li data-i="${i}" style="--d:${i*60}ms"><span class="tl-dot"></span><span class="tl-t">${t}<small></small></span></li>`).join("")}</ol>
   </div>`;
