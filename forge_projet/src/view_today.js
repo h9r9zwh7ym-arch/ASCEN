@@ -1399,7 +1399,7 @@ Object.assign(ACT, {
       return row("csTemplate", d ? exoIcon(d) : sfIcon("bookmarkG", "indigo"), esc(t.n), `${(t.days||[]).length ? daysLabel(t.days)+" · " : ""}${nb(t.exos.length, "exercice")} · ≈ ${tplMinutes(t)} min`, ` data-id="${t.id}"`); });
     if(prop && (S.custom.exos.length || plannedTemplate())) mine.unshift(row("csMine", sfIcon("bookmarkG", "indigo"), `Revenir à « ${esc(S.custom.exos.length ? (S.custom.name||"Ma séance") : plannedTemplate().n)} »`, ""));
     const app = [];
-    if(prop && draft.source!=="imported") app.push(row("csRegen", sfIcon("sparkles", "orange"), "Autre proposition"));
+    if(prop && draft.source!=="imported") app.push(row("csRegen", sfIcon("sparkles", "orange"), draft.tailored ? "Autre séance sur mesure" : "Autre proposition", draft.tailored ? "Mêmes critères, d'autres exercices" : ""));
     else if(appPicksOn() && !prop) app.push(row("csApp", sfIcon("sparkles", "orange"), "Laisse l'app choisir"));
     app.push(row("csTailor", sfIcon("ruler", "purple"), "Séance sur mesure", "Type, zone, durée : l'app compose"));
     const now = [row("csExpress", sfIcon("stopwatch", "green"), "Séance express", "10 min · tout le corps"),
@@ -1534,7 +1534,10 @@ Object.assign(ACT, {
   warmGo(){ const W = S.draft && S.draft.warm; if(!W || W.end) return; W.end = Date.now() + W.moves[W.i][1]*1000; save(); sfx("go"); refreshFocusRegion(); },
   warmSkip(){ warmFinish(); sfx("swipe"); },
   startSession(){ if(!S.draft.exos.length) return; const mc = typeof moStartCapture==="function" ? moStartCapture() : null; S.draft.startedAt = new Date().toISOString(); warmStart(S.draft); liveFocusIdx = 0; completeShown = false; save(); const draw = ()=>{ scrollTodayTop(); renderViewAnimated("today"); }; if(!(mc && moStart(mc, draw))){ draw(); showLaunch(S.draft); } },
-  regenSession(){ regenerateDraft(); renderTodaySoft(); toast("Nouvelle proposition");
+  regenSession(){
+    // séance sur mesure : on relance la vraie réflexion avec les mêmes critères (et d'autres exercices)
+    if(S.draft && S.draft.tailored && !S.draft.startedAt){ ACT.tailorGo({ spec:S.draft.tailored, avoid:new Set(S.draft.exos.map(e=>e.exoId)) }); return; }
+    regenerateDraft(); renderTodaySoft(); toast("Nouvelle proposition");
     // l'icône du bouton fait un tour : on voit que c'est bien une autre proposition
     const ic = qs('#v-today [data-a="regenSession"] svg');
     if(ic && ic.animate && !reducedMotion()) try{ ic.animate([{ transform:"rotate(-360deg)" }, { transform:"none" }], { duration:600, easing:"cubic-bezier(.32,.72,0,1)" }); }catch(e){}

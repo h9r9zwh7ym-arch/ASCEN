@@ -231,7 +231,10 @@ const tailorWait = ms=>new Promise(r=>setTimeout(r, ms));
 // la réflexion, en vrai et par étapes (onStep(i, texte) à chaque étape, pour l'animation) ; renvoie la séance
 async function tailorGenerate(spec, onStep, opts){
   opts = opts || {}; const pace = opts.fast ? 0 : 1, t0 = performance.now();
-  const step = async (i, txt, ms)=>{ if(onStep) onStep(i, txt); if(pace) await tailorWait(ms); };
+  // temps de calcul réel (hors pauses d'affichage) : il est montré à la fin, en toute transparence
+  let cpu = 0, c0 = performance.now();
+  const pause = async ms=>{ cpu += performance.now() - c0; if(pace) await tailorWait(ms); c0 = performance.now(); };
+  const step = async (i, txt, ms)=>{ if(onStep) onStep(i, txt); await pause(ms); };
   const want = tailorWant(spec);
   // 1. ta semaine : ce qui est en retard, ce qui doit récupérer
   const ctx = tailorContext(), facts = [];
@@ -246,7 +249,8 @@ async function tailorGenerate(spec, onStep, opts){
   }
   await step(0, facts.join(" · ").replace(/^./, c=>c.toUpperCase()), 560);
   // 2. combinaisons tirées au sort parmi les meilleures, notées une à une
-  const pool = tailorPool(spec), base = new Map(pool.map(e=>[e, tailorExoScore(spec, e, ctx)]));
+  // « Autre séance sur mesure » : les exercices de la séance précédente passent derrière
+  const pool = tailorPool(spec), base = new Map(pool.map(e=>[e, tailorExoScore(spec, e, ctx) - (opts.avoid && opts.avoid.has(e.id) ? 3 : 0)]));
   const n = tailorCount(spec), tries = [];
   for(let batch=0; batch<8; batch++){
     for(let k=0;k<10;k++){
@@ -255,7 +259,7 @@ async function tailorGenerate(spec, onStep, opts){
       tries.push({ exos, s:tailorScore(spec, exos, ctx) });
     }
     if(onStep) onStep(1, `${tries.length} combinaisons · ${pool.length} exercices possibles`);
-    if(pace) await tailorWait(95);
+    await pause(95);
   }
   // 3. la meilleure, affinée exercice par exercice
   tries.sort((a,b)=>b.s.v - a.s.v);
@@ -267,11 +271,16 @@ async function tailorGenerate(spec, onStep, opts){
   await step(2, `${ref.tested} échanges testés${ref.kept ? `, ${ref.kept} gardé${ref.kept>1 ? "s" : ""}` : ""} · ${exos.length} exercices, ≈ ${min} min`, 620);
   // 4. charges et répétitions (fatigue selon la place, ta manière de faire)
   const entries = entriesInOrder(exos.map((e, i)=>[e, sets[i]]));
-  entries.forEach((x, i)=>{ x.why = tailorWhy(spec, exos[i], i, exos, ctx); });
+  // une raison par exercice, sans répéter la même : sinon on dit ce qu'il cible
+  const usedWhy = new Set();
+  entries.forEach((x, i)=>{ let w = tailorWhy(spec, exos[i], i, exos, ctx);
+    if(usedWhy.has(w)) w = isStretch(exos[i]) || isCardioEx(exos[i]) ? w : `Cible les ${mName(exos[i].muscles[0])}`;
+    usedWhy.add(w); x.why = w; });
   const shown = entries.find(x=>x.sets[0] && x.sets[0].weight) || entries[0];
   const sd = shown && EXO_MAP[shown.exoId];
   await step(3, sd && typeof propDose==="function" ? `${sd.n} : ${propDose(shown)}` : "charges et répétitions réglées", 520);
   // au moins 2 s de réflexion visible (moins si l'animation est réduite)
+  cpu += performance.now() - c0;
   if(pace){ const left = (opts.minMs ?? 2100) - (performance.now() - t0); if(left>0) await tailorWait(left); }
   const why = [];
   if(!want && best.s.need>0.5 && ctx.low.length) why.push(`priorité : ${ctx.low.slice(0,2).map(r=>r.n.toLowerCase()).join(" et ")}`);
@@ -279,7 +288,7 @@ async function tailorGenerate(spec, onStep, opts){
   if(!want && S.goals.overall!=="endurance" && best.s.value<.8) why.push("ce type de séance compte moins pour ton objectif");
   return { id:uid(), date:todayISO(), source:"engine", type:"tailored", tailored:spec, name:tailorName(spec),
     reason:why.length ? why.join(" ; ").replace(/^./, c=>c.toUpperCase())+"." : null, stim:null, startedAt:null, completedAt:null,
-    exos:entries, tries:tries.length, refined:ref.tested };
+    exos:entries, tries:tries.length, refined:ref.tested, cpuMs:Math.max(1, Math.round(cpu)) };
 }
 
 // ---------- interface ----------
@@ -379,7 +388,43 @@ function tailorMorph(host, btn){
   qs(".tl-bg", host).animate([{ opacity:0 }, { opacity:1 }], { duration:440, delay:60, easing:"ease-out", fill:"forwards" });
   return a.finished.catch(()=>{}).then(()=>{ host.classList.add("ready"); m.animate([{ opacity:1 }, { opacity:0 }], { duration:260, fill:"forwards" }).finished.catch(()=>{}).then(()=>m.remove()); });
 }
-// les exercices retenus volent de l'anneau à leur ligne sur la carte du jour pendant que le fond s'efface
+// le grand plan : la roue s'efface, les exercices retenus s'affichent en grand, un par un, avec la raison de
+// leur choix et le vrai temps de calcul ; puis chacun glisse à sa ligne sur la carte du jour
+function tailorRevealHTML(session){
+  const N = 6, rows = session.exos.slice(0, N).map((x, i)=>{ const d = EXO_MAP[x.exoId]; if(!d) return "";
+    return `<div class="tl-rv" style="--i:${i}">${exoIcon(d)}<span class="tl-rv-t"><b>${esc(d.n)}</b><small>${esc(propDose(x))}</small>${x.why ? `<small class="w">${esc(x.why)}</small>` : ""}</span></div>`; }).join("");
+  const more = session.exos.length>N ? `<div class="tl-rv-more" style="--i:${N}">+ ${nb(session.exos.length - N, "exercice")}</div>` : "";
+  const calc = session.tries ? `${session.tries} combinaisons et ${session.refined||0} échanges comparés en ${session.cpuMs||1} ms` : "";
+  return `<div class="tl-reveal" aria-hidden="true"><div class="tl-rv-h"><b>${esc(session.name)}</b><small>${nb(session.exos.length, "exercice")} · ≈ ${estimateMinutes(session)} min${calc ? ` · ${calc}` : ""}</small></div>${rows}${more}</div>`;
+}
+async function tailorReveal(host, session){
+  host.insertAdjacentHTML("beforeend", tailorRevealHTML(session));
+  host.classList.add("reveal");
+  const n = Math.min(6, session.exos.length);
+  await tailorWait(520 + n*90 + 900);   // apparition échelonnée, puis le temps de lire
+}
+// chaque exercice du grand plan glisse à sa ligne de la carte du jour pendant que le fond s'efface
+function tailorLandRows(host){
+  const targets = qsa("#v-today .hero .hl-row:not(.more)").filter(t=>{ const b = t.getBoundingClientRect(); return b.top>0 && b.bottom<innerHeight; });
+  const rows = qsa(".tl-rv", host);
+  const layer = document.createElement("div"); layer.className = "tl-fly"; document.body.appendChild(layer);
+  const ease = "cubic-bezier(.32,.72,0,1)", runs = [];
+  rows.forEach((r, i)=>{
+    const t = targets[i];
+    if(!t){ r.animate([{ opacity:1 }, { opacity:0, transform:"translateY(12px) scale(.96)" }], { duration:260, delay:i*30, easing:"ease-in", fill:"forwards" }); return; }
+    const s = r.getBoundingClientRect(), tb = t.getBoundingClientRect(), cl = r.cloneNode(true);
+    cl.style.animation = "none";
+    Object.assign(cl.style, { left:s.left+"px", top:s.top+"px", width:s.width+"px", height:s.height+"px" });
+    layer.appendChild(cl); r.style.visibility = "hidden"; t.style.visibility = "hidden";
+    const k = tb.width/s.width;
+    runs.push(cl.animate([{ transform:"none" }, { transform:`translate(${tb.left-s.left}px,${tb.top-s.top}px) scale(${k})` }],
+      { duration:620, delay:i*70, easing:ease, fill:"forwards" }).finished.catch(()=>{}).then(()=>{ t.style.visibility = ""; }));
+  });
+  qsa(".tl-rv-h, .tl-rv-more", host).forEach(el=>el.animate([{ opacity:1 }, { opacity:0 }], { duration:240, easing:"ease-out", fill:"forwards" }));
+  runs.push(qs(".tl-bg", host).animate([{ opacity:1 }, { opacity:0 }], { duration:520, delay:120, easing:"ease-in-out", fill:"forwards" }).finished.catch(()=>{}));
+  return Promise.all(runs).then(()=>{ layer.remove(); targets.forEach(t=>{ t.style.visibility = ""; }); });
+}
+// (ancien atterrissage, depuis l'anneau : gardé pour l'animation réduite)
 function tailorLand(host){
   const targets = qsa("#v-today .hero .hl-row:not(.more) .xico").filter(t=>{ const b = t.getBoundingClientRect(); return b.top>0 && b.bottom<innerHeight; });
   const srcs = qsa(".tl-ic.keep .xico", host).slice(0, targets.length);
@@ -408,9 +453,11 @@ Object.assign(ACT, {
   tailorSet(d){ tailorSave(d.k, d.v); },
   tailorEquip(d){ tailorSave("equip", d.v); },
   tailorLen(d){ tailorSave("len", d.v); },
-  async tailorGo(){
+  // d.spec : relancer la réflexion sur les mêmes critères (« Autre séance sur mesure »), d.avoid : exercices à
+  // laisser de côté (ceux de la séance précédente)
+  async tailorGo(d){
     if(tailorBusy) return; tailorBusy = true;
-    const spec = tailorSpec(), fast = reducedMotion();
+    const spec = d && d.spec && typeof d.spec==="object" ? d.spec : tailorSpec(), fast = reducedMotion();
     if(tailorSummary(spec).warn){ tailorBusy = false; toast("Pas assez d'exercices pour ces critères avec ton matériel", "info"); return; }
     const btn = qs('#overlay .sheet-ft [data-a="tailorGo"]');
     const host = document.createElement("div"); host.className = "tl-host" + (fast ? " fast" : ""); host.innerHTML = tailorThinkHTML(spec); document.body.appendChild(host);
@@ -434,7 +481,7 @@ Object.assign(ACT, {
     };
     if(!fast) await tailorWait(380);   // les vignettes sortent du cœur avant la première étape
     let session;
-    try{ session = await tailorGenerate(spec, onStep, { fast, minMs:1900 }); }
+    try{ session = await tailorGenerate(spec, onStep, { fast, minMs:1900, avoid:d && d.avoid }); }
     catch(e){ if(typeof reportError==="function") reportError("tailor", e); }
     if(spin) clearInterval(spin);
     if(!session || !session.exos.length){
@@ -446,12 +493,14 @@ Object.assign(ACT, {
     const chosen = session.exos.map(x=>EXO_MAP[x.exoId]).filter(Boolean);
     ics.forEach((el, i)=>{ const e = chosen[i]; el.classList.toggle("keep", !!e); if(e) tailorIc(el, e); });
     host.classList.add("found"); sfx("set"); haptic(16);
-    if(!fast) await tailorWait(700);
-    // la carte du jour se construit sous le voile (sans animation d'entrée), puis les exercices y volent
+    if(!fast) await tailorWait(600);
+    // grand plan des exercices retenus
+    if(!fast){ await tailorReveal(host, session); sfx("swipe"); }
+    // la carte du jour se construit sous le voile (sans animation d'entrée), puis les exercices y glissent
     S.draft = session; S.settings.todayTab = "proposal"; propAdjust = false; heroAll = false; save();
     if(currentTab!=="today") switchTab("today");
     scrollTodayTop(); renderView("today");
     if(fast){ host.remove(); document.body.classList.remove("tl-on"); tailorBusy = false; return; }
-    try{ await tailorLand(host); } finally{ host.remove(); document.body.classList.remove("tl-on"); tailorBusy = false; }
+    try{ await tailorLandRows(host); } finally{ host.remove(); document.body.classList.remove("tl-on"); tailorBusy = false; }
   },
 });

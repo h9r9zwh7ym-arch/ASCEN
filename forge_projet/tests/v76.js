@@ -70,7 +70,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const orb = await page.evaluate(() => { const c = document.querySelector('.tl-core'), is = c ? [...c.querySelectorAll('i')] : [];
     return { n: is.length, anim: is.map(i => getComputedStyle(i).animationName), on: document.body.classList.contains('tl-on'), sbz: +getComputedStyle(document.querySelector('#sbar')).zIndex }; });
   await page.screenshot({ path: path.join(OUT, '01_orb.png') });
-  await page.waitForTimeout(3600);
+  await page.waitForFunction(() => !document.querySelector('.tl-host'), null, { timeout: 15000 }).catch(() => {}); await page.waitForTimeout(200);
   const after = await page.evaluate(() => ({ on: document.body.classList.contains('tl-on'), host: !!document.querySelector('.tl-host') }));
   log('Orb:', JSON.stringify(orb), JSON.stringify(after));
   if (orb.n !== 3 || orb.anim.join() !== 'tlRipple,tlBlob,tlRipple' || !orb.on || !(orb.sbz > 2100)) fail('cœur (teinte, ondes), heure lisible au-dessus');

@@ -97,7 +97,12 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     const noOver = st.bottom <= ti.top + 1 && ti.bottom <= sp.top + 1 && lis.every((r, i) => !i || lis[i - 1].bottom <= r.top + 1) && sp.bottom <= innerHeight && st.top >= 0;
     return { host: true, steps: host.querySelectorAll('.tl-steps li.done, .tl-steps li.on').length, ics: host.querySelectorAll('.tl-ic .xico').length, noOver, morph: !!host.querySelector('.tl-morph') }; });
   await page.screenshot({ path: path.join(OUT, '01_think.png') });
-  await page.waitForTimeout(3600);
+  // 2.9.7 : grand plan des exercices retenus (avec leur raison et le vrai temps de calcul) avant la carte
+  const rv = await page.waitForSelector('.tl-reveal .tl-rv', { timeout: 8000 }).then(() => page.evaluate(() => ({ n: document.querySelectorAll('.tl-rv').length, h: (document.querySelector('.tl-rv-h small') || {}).textContent || '' }))).catch(() => null);
+  await page.waitForTimeout(500); await page.screenshot({ path: path.join(OUT, '01b_reveal.png') });
+  log('Reveal:', JSON.stringify(rv));
+  if (!rv || rv.n < 3 || !/comparés en \d+ ms/.test(rv.h)) fail('grand plan des exercices retenus, temps de calcul réel');
+  await page.waitForFunction(() => !document.querySelector('.tl-host'), null, { timeout: 15000 }).catch(() => {}); await page.waitForTimeout(200);
   const end = await page.evaluate(() => ({ host: !!document.querySelector('.tl-host'), tailored: !!(S.draft && S.draft.tailored), tab: S.settings.todayTab,
     title: (document.querySelector('#v-today .hero-title') || {}).textContent, tag: (document.querySelector('#v-today .hero-tag') || {}).textContent, adjust: !!document.querySelector('#v-today [data-a="propAdjust"]') }));
   await page.screenshot({ path: path.join(OUT, '02_result.png') });
@@ -111,6 +116,14 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   // garde la séance sur mesure quand les réglages changent
   const kept = await page.evaluate(() => { regenerateDraftIfIdle(); return !!S.draft.tailored; });
   if (!kept) fail('séance sur mesure gardée');
+  // « Autre proposition » sur une séance sur mesure : nouvelle réflexion, mêmes critères, autres exercices
+  const before = await page.evaluate(() => S.draft.exos.map(e => e.exoId));
+  await page.evaluate(() => ACT.regenSession()); await page.waitForTimeout(300);
+  const again = await page.evaluate(() => !!document.querySelector('.tl-host'));
+  await page.waitForFunction(() => !document.querySelector('.tl-host'), null, { timeout: 15000 }).catch(() => {});
+  const re = await page.evaluate(b => ({ t: !!(S.draft && S.draft.tailored), zone: S.draft.tailored && S.draft.tailored.zone, same: S.draft.exos.filter(e => b.includes(e.exoId)).length, n: S.draft.exos.length, cpu: S.draft.cpuMs }), before);
+  log('Regen:', again, JSON.stringify(re));
+  if (!again || !re.t || re.zone !== 'bas' || re.same > Math.ceil(re.n / 2) || !(re.cpu > 0)) fail('autre séance sur mesure : vraie réflexion, mêmes critères, autres exercices');
 
   await browser.close();
   if (errors.length) { errors.forEach(e => log(e)); log(`ERRORS: ${errors.length}`); process.exit(1); }
