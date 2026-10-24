@@ -73,6 +73,8 @@ function tailorContext(){
   return { vol, rec, low, tired, high, done, fresh:!S.sessions.length, soon:plannedSoonMuscles() };
 }
 const mName = m=>((MUSCLE_MAP[m]||{ n:m }).n).toLowerCase();
+// « le dos », « les pectoraux » : l'article qui va avec le muscle
+const leMuscle = m=>(m==="dos" ? "le " : "les ")+mName(m);
 // (personne n'est « en retard » avant sa première séance)
 const tailorDeficit = (ctx, m)=>{ const r = !ctx.fresh && ctx.vol[m]; return r ? Math.max(0, STIM.min - r.sets)/STIM.min : 0; };
 
@@ -179,8 +181,34 @@ function tailorScore(spec, exos, ctx){
   // tes habitudes : des exercices connus (charges justes), au plus deux nouveaux
   const fresh = exos.filter(e=>!ctx.done[e.id]).length, known = exos.length - fresh;
   const habit = ctx.fresh ? 0 : Math.min(known, 4)*.3 - Math.max(0, fresh - 2);
-  const v = value*6 + need*1.2 - tired*2.2 - over*1.2 + distinct*.7 - fams*2.5 - gap/4 + multi*.4 + bal + habit - stretch*.5;
-  return { v, value, need, tired, over, distinct, min, sets, bal, fresh };
+  // bas du corps complet : un mouvement « genou » (squat, fente) ET un mouvement « hanche » (charnière)
+  let legs = 0;
+  if(!want && (spec.zone==="full" || spec.zone==="bas")){
+    const knee = exos.some(e=>e.pattern==="squat" || e.pattern==="lunge"), hip = exos.some(e=>e.pattern==="hinge");
+    legs = knee && hip ? .8 : knee || hip ? -.4 : 0;
+  }
+  // à la maison : peu de changements de matériel d'un exercice à l'autre (dans l'ordre de la séance)
+  const ord = tailorOrder(spec, exos); let gear = 0;
+  for(let i=1; i<ord.length; i++) if(gearOf(ord[i])!==gearOf(ord[i-1])) gear++;
+  // exercices à laisser de côté (« Autre proposition ») : la séance doit vraiment changer
+  const av = ctx.avoid ? exos.filter(e=>ctx.avoid.has(e.id)).length : 0;
+  const v = value*6 + need*1.2 - tired*2.2 - over*1.2 + distinct*.7 - fams*2.5 - gap/4 + multi*.4 + bal + habit - stretch*.5 + legs - gear*.2 - av*2.5;
+  return { v, value, need, tired, over, distinct, min, sets, bal, fresh, gear };
+}
+// le matériel à installer pour un exercice (haltères, kettlebell, barre, élastique ; banc en plus)
+function gearOf(e){ return (loadableTypeOf(e) || (e.equip.find(q=>q!=="bodyweight" && q!=="mat") || "pdc")) + (e.equip.includes("bench") ? "+banc" : ""); }
+// ordre fin, par paliers (gros mouvements, isolations, gainage/mollets, cardio) : dans un palier, on évite
+// deux exercices de suite pour le même muscle (il récupère pendant l'autre), puis on garde le même
+// matériel quand c'est possible (moins d'installation), sinon l'ordre d'importance
+function smoothOrder(list, tier){
+  const out = [], rest = list.slice();
+  while(rest.length){
+    const prev = out[out.length-1], t = Math.min(...rest.map(tier)), same = rest.filter(e=>tier(e)===t);
+    const okM = e=>!prev || e.muscles[0]!==prev.muscles[0], okG = e=>prev && gearOf(e)===gearOf(prev);
+    const pick = same.find(e=>okM(e) && okG(e) && same.indexOf(e)<=1) || same.find(okM) || same[0];
+    out.push(pick); rest.splice(rest.indexOf(pick), 1);
+  }
+  return out;
 }
 // ordre : gros mouvements d'abord, gainage, mollets et cardio à la fin (étirements tout à la fin)
 function tailorOrder(spec, exos){
@@ -189,7 +217,8 @@ function tailorOrder(spec, exos){
   const late = e=>(isCardioEx(e) && spec.kind!=="mix" ? 3 : 0) + (PATTERN_LATE[e.pattern]||0);
   // les isolations (bras) passent après les polyarticulaires, quel que soit le nombre de muscles listés
   const iso = e=>["biceps","triceps","avantbras"].includes(e.muscles[0]) ? 50 : 0;
-  return exos.map((e,i)=>({ e, k:late(e)*100 + iso(e) - e.muscles.length + i*.01 })).sort((a,b)=>a.k-b.k).map(x=>x.e);
+  const sorted = exos.map((e,i)=>({ e, k:late(e)*100 + iso(e) - e.muscles.length + i*.01 })).sort((a,b)=>a.k-b.k).map(x=>x.e);
+  return smoothOrder(sorted, e=>late(e)*2 + (iso(e) ? 1 : 0));
 }
 // affiner : chaque exercice est confronté aux meilleurs remplaçants du même rôle (même mouvement ou même
 // muscle, même nature : cardio, étirement) ; un échange n'est gardé que s'il améliore la note
@@ -216,7 +245,7 @@ function tailorRefine(spec, pool, best, ctx, base){
 // la raison du choix, en quelques mots (affichée sous l'exercice dans la séance du jour)
 function tailorWhy(spec, e, i, exos, ctx){
   const m = e.muscles[0], n = ctx.done[e.id]||0;
-  if(spec.kind==="mobilite") return isStretch(e) ? `Étire ${(MUSCLE_MAP[m] ? "les "+mName(m) : "en douceur")}` : "Gainage doux, au sol";
+  if(spec.kind==="mobilite") return isStretch(e) ? `Étire ${(MUSCLE_MAP[m] ? leMuscle(m) : "en douceur")}` : "Gainage doux, au sol";
   if(spec.kind==="cardio") return i===0 ? "Pour monter en rythme" : "Fait travailler le souffle";
   if(spec.kind==="mix" && isCardioEx(e)) return "Garde le cœur haut entre deux blocs";
   if(tailorDeficit(ctx, m)>=.5) return `${MUSCLE_MAP[m] ? MUSCLE_MAP[m].n : m} en retard cette semaine`;
@@ -225,7 +254,7 @@ function tailorWhy(spec, e, i, exos, ctx){
   if(n>=2) return "Ton habituel : charges connues";
   if(!n && !ctx.fresh) return "Nouveau pour toi";
   if(goalValue(e)>=1 && S.goals.overall!=="endurance") return "Chargé : compte pleinement";
-  return `Cible les ${mName(m)}`;
+  return `Cible ${leMuscle(m)}`;
 }
 const tailorWait = ms=>new Promise(r=>setTimeout(r, ms));
 // la réflexion, en vrai et par étapes (onStep(i, texte) à chaque étape, pour l'animation) ; renvoie la séance
@@ -274,7 +303,7 @@ async function tailorGenerate(spec, onStep, opts){
   // une raison par exercice, sans répéter la même : sinon on dit ce qu'il cible
   const usedWhy = new Set();
   entries.forEach((x, i)=>{ let w = tailorWhy(spec, exos[i], i, exos, ctx);
-    if(usedWhy.has(w)) w = isStretch(exos[i]) || isCardioEx(exos[i]) ? w : `Cible les ${mName(exos[i].muscles[0])}`;
+    if(usedWhy.has(w)) w = isStretch(exos[i]) || isCardioEx(exos[i]) ? w : `Cible ${leMuscle(exos[i].muscles[0])}`;
     usedWhy.add(w); x.why = w; });
   const shown = entries.find(x=>x.sets[0] && x.sets[0].weight) || entries[0];
   const sd = shown && EXO_MAP[shown.exoId];

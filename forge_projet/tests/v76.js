@@ -93,6 +93,16 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   if (Math.abs(pr.pace - 1.4) > .01) fail('rythme réel appris');
   if (pr.off !== 20) fail('jour sans : charge gardée');
 
+  // 5c. 2.10.0 : moteur unifié — la séance du jour compare des dizaines de combinaisons, affine la meilleure,
+  //     explique chaque choix ; « Autre proposition » change vraiment la séance
+  const un = await page.evaluate(() => { const s = generateEngineSession('full'), ids = s.exos.map(e => e.exoId);
+    const t = generateEngineSession('full', new Set(ids)), same = t.exos.filter(e => ids.includes(e.exoId)).length;
+    return { tries: s.tries, ref: s.refined, ms: s.cpuMs, why: s.exos.every(e => typeof e.why === 'string' && e.why.length > 3), same, n: t.exos.length,
+      dup: new Set(s.exos.map(e => e.why)).size === s.exos.length, art: !s.exos.some(e => /les dos/.test(e.why)) }; });
+  log('Unified engine:', JSON.stringify(un));
+  if (!(un.tries >= 30 && un.ref > 0 && un.ms < 400 && un.why && un.dup && un.art)) fail('moteur unifié : combinaisons, affinage, raisons');
+  if (un.same > Math.ceil(un.n / 3)) fail('autre proposition : vraiment différente');
+
   // 6. iOS 26 installée : la page s'arrête 34 px avant le bas de l'écran → la barre d'onglets et les calques
   //    plein écran descendent jusqu'en bas (écart mesuré), la marge basse le compte
   const c2 = await browser.newContext({ viewport: { width: 390, height: 810 }, screen: { width: 390, height: 844 } });

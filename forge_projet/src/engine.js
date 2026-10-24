@@ -413,12 +413,12 @@ const PATTERN_LATE = { core:2, calf:1 };
 
 // avoid : exercices de la proposition précédente, fortement pénalisés pour que
 // « Autre proposition » change vraiment. Le léger aléa départage les ex æquo.
-function pickExosForSession(n, pool, avoid, typeId){
+function pickExosForSession(n, pool, avoid, typeId, scores){
   pool = pool || engineExos();
   avoid = avoid || new Set();
   const base = {};
   pool.forEach(e=>{
-    let sc = scoreExo(e) + Math.random()*1.2 - (avoid.has(e.id)?6:0);
+    let sc = (scores ? scores.get(e.id) : scoreExo(e)) + Math.random()*1.2 - (avoid.has(e.id)?6:0);
     base[e.id] = sc;
   });
   const chosen = [], used = new Set(), muscleN = {}, patN = {};
@@ -451,6 +451,30 @@ function pickExosForSession(n, pool, avoid, typeId){
   return chosen.map((e,i)=>({ e, k:(PATTERN_LATE[e.pattern]||0)*100 + i })).sort((a,b)=>a.k-b.k).map(x=>x.e);
 }
 
+// Le moteur des propositions (séance du jour, « Autre proposition ») réfléchit comme la séance sur mesure :
+// chaque exercice est noté (ta semaine, ta récupération, ton objectif, tes habitudes, la séance prévue
+// demain), le plan de séance est tiré des dizaines de fois, chaque séance est notée en entier (équilibre
+// poussée/tirage et genou/hanche, muscles déjà servis, doublons, changements de matériel, durée), et la
+// meilleure est affinée exercice par exercice. Pilates : l'ordre du plan compte, un seul tirage.
+const ENGINE_TRIES = 36;
+function engineSpec(typeId){
+  const zone = ["full","haut","bas","bras","push","pull","core"].includes(typeId) ? typeId : "full";
+  return { kind:"renfo", zone, equip:"all", len:["court","moyen","long"].includes(S.goals.sessionLength) ? S.goals.sessionLength : "moyen" };
+}
+function engineSearch(n, pool, avoid, typeId){
+  avoid = avoid || new Set();
+  if(typeId==="pilates" || typeof tailorScore!=="function" || pool.length<=n) return { exos:pickExosForSession(n, pool, avoid, typeId), tries:1, refined:0, ms:0 };
+  const t0 = performance.now(), spec = engineSpec(typeId), ctx = tailorContext(); ctx.avoid = avoid;
+  const scores = new Map(pool.map(e=>[e.id, scoreExo(e)]));
+  let best = null;
+  for(let k=0; k<ENGINE_TRIES; k++){
+    const exos = pickExosForSession(n, pool, avoid, typeId, scores), sc = tailorScore(spec, exos, ctx);
+    if(!best || sc.v>best.s.v) best = { exos, s:sc };
+  }
+  const base = new Map(pool.map(e=>[e, scores.get(e.id) - (avoid.has(e.id) ? 6 : 0)]));
+  const ref = tailorRefine(spec, pool, best, ctx, base);
+  return { exos:tailorOrder(spec, ref.exos), tries:ENGINE_TRIES, refined:ref.tested, ms:Math.max(1, Math.round(performance.now() - t0)), spec, ctx };
+}
 function sessionEntryFor(exo, setsN, pre){
   // semaine allégée : environ 40 % de séries en moins (3 → 2, 5 → 3), jamais moins de 2
   const dl = typeof deloadActive==="function" && deloadActive() && !isStretch(exo);
@@ -468,13 +492,17 @@ function generateEngineSession(typeId, avoid){
   let resolved = typeId, reason = null;
   if(typeId==="auto"){ const r = resolveAutoType(); resolved = r.type; reason = r.reason; }
   const n = sessionSize();
-  const exos = pickExosForSession(resolved==="core" ? Math.min(n,5) : n, poolForType(resolved), avoid, resolved);
+  const found = engineSearch(resolved==="core" ? Math.min(n,5) : n, poolForType(resolved), avoid, resolved), exos = found.exos;
   const stim = stimTargets(exos);
   const session = {
     id: uid(), date: todayISO(), source:"engine", type:typeId, resolvedType:resolved, reason, stim:stim.length ? stimTargetsText(stim) : null,
     startedAt:null, completedAt:null,
-    exos: entriesInOrder((sets=>exos.map((exo, i)=>[exo, sets[i]]))(profileSets(exos)))
+    exos: entriesInOrder((sets=>exos.map((exo, i)=>[exo, sets[i]]))(profileSets(exos))),
+    tries:found.tries, refined:found.refined, cpuMs:found.ms
   };
+  // la raison de chaque choix, comme pour la séance sur mesure
+  if(found.ctx && typeof tailorWhy==="function"){ const used = new Set();
+    session.exos.forEach((x, i)=>{ let w = tailorWhy(found.spec, exos[i], i, exos, found.ctx); if(used.has(w)) w = `Cible ${leMuscle(exos[i].muscles[0])}`; used.add(w); x.why = w; }); }
   if(S.settings.stretching) session.exos.push(...stretchBlock(session));
   return session;
 }

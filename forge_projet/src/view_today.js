@@ -158,7 +158,7 @@ function heroHTML(mode, draft, force){
     const t = SESSION_TYPE_MAP[draft.type]||SESSION_TYPES[0], rt = SESSION_TYPE_MAP[draft.resolvedType];
     tag = draft.source==="imported" ? "Programme importé" : draft.tailored ? tailorTag(draft.tailored) : "Proposée par l'app";
     title = draft.source==="imported" || draft.tailored ? esc(draft.name||"Séance importée") : draft.type==="auto" && rt ? rt.n : t.n;
-    entries = draft.exos.map(ex=>({ id:ex.exoId, dose:propDose(ex), why:draft.tailored && ex.why }));
+    entries = draft.exos.map(ex=>({ id:ex.exoId, dose:propDose(ex), why:ex.why }));
     meta = [nb(mainExos(draft).length, "exercice"), nb(mainExos(draft).reduce((t,e)=>t+e.sets.length,0), "série"), `≈ ${estimateMinutes(draft)} min`];
     act = `data-a="startSession"`;
     mod = `<button class="hero-mod" data-a="propAdjust" aria-expanded="false">Ajuster</button>`;
@@ -1537,7 +1537,8 @@ Object.assign(ACT, {
   regenSession(){
     // séance sur mesure : on relance la vraie réflexion avec les mêmes critères (et d'autres exercices)
     if(S.draft && S.draft.tailored && !S.draft.startedAt){ ACT.tailorGo({ spec:S.draft.tailored, avoid:new Set(S.draft.exos.map(e=>e.exoId)) }); return; }
-    regenerateDraft(); renderTodaySoft(); toast("Nouvelle proposition");
+    regenerateDraft(); renderTodaySoft();
+    toast(S.draft && S.draft.tries>1 ? `Nouvelle proposition · ${S.draft.tries} combinaisons comparées` : "Nouvelle proposition");
     // l'icône du bouton fait un tour : on voit que c'est bien une autre proposition
     const ic = qs('#v-today [data-a="regenSession"] svg');
     if(ic && ic.animate && !reducedMotion()) try{ ic.animate([{ transform:"rotate(-360deg)" }, { transform:"none" }], { duration:600, easing:"cubic-bezier(.32,.72,0,1)" }); }catch(e){}
