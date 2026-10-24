@@ -132,12 +132,11 @@ function ascBuildScene(host, k){
   const sc = window.ASC_SCENES && ASC_SCENES[k]; if(!sc || !host) return null;
   const D = ASC_DATA[k], mode = ascDark() ? "night" : "day", night = mode==="night", P = ASC_PAL[D.pal][mode], W = sc.W, H = sc.H, VH = Math.min(H, D.vh || H), r = ascRng(ASC_ORDER.indexOf(k)+7);
   const fills = Array.from({ length:27 }, (_,i)=>`.ak${i}{fill:${ascClassColor(D.pal, mode, i)}}`).join("");
-  let stars = ""; if(night) for(let i=0;i<60;i++) stars += `<circle class="asc-star" cx="${ascP1(r()*W)}" cy="${ascP1(r()*H*.5)}" r="${(1+r()*1.8).toFixed(2)}" fill="#fff" style="animation-delay:${(r()*3).toFixed(2)}s"/>`;
+  let stars = ""; if(night) for(let i=0;i<60;i++) stars += `<circle class="asc-star" cx="${ascP1(r()*W)}" cy="${ascP1(r()*H*.5)}" r="${(1+r()*1.8).toFixed(2)}" fill="#fff" opacity="${(.35+r()*.6).toFixed(2)}"/>`;
   const ox = W*.8, oy = H*.3;
   const orb = night ? `<circle cx="${ox}" cy="${oy}" r="120" fill="url(#asGlow)"/><circle cx="${ox}" cy="${oy}" r="28" fill="#EEF2FA"/><circle cx="${ox+11}" cy="${oy-8}" r="25" fill="${P.sky[0]}" opacity=".9"/>`
                     : `<circle cx="${ox}" cy="${oy}" r="160" fill="url(#asGlow)"/><circle cx="${ox}" cy="${oy}" r="36" fill="#FFF6DD"/>`;
   const cl = night ? "rgba(150,168,205,.12)" : "rgba(255,255,255,.75)";
-  const cloud = (x, y, s, dur, del)=>`<g class="asc-cloud" style="animation-duration:${dur}s;animation-delay:-${del}s"><g transform="translate(${x} ${y}) scale(${s})" fill="${cl}"><ellipse cx="0" cy="0" rx="68" ry="22"/><ellipse cx="-28" cy="-14" rx="32" ry="22"/><ellipse cx="18" cy="-20" rx="36" ry="26"/><ellipse cx="52" cy="-6" rx="26" ry="16"/></g></g>`;
   const terrain = sc.paths.map(([c, d])=>`<path class="ak${c}" d="${d}"/>`).join("");
   const land = sc.land.map(d=>`<path d="${d}"/>`).join("");
   const pts = sc.route, len = [0]; for(let i=1;i<pts.length;i++) len.push(len[i-1]+Math.hypot(pts[i][0]-pts[i-1][0], pts[i][1]-pts[i-1][1]));
@@ -150,35 +149,42 @@ function ascBuildScene(host, k){
   // La scène est en plans superposés (ciel, sommets lointains, montagne, brume) qui bougent chacun à leur
   // vitesse (ascParallax) : effet de profondeur au doigt, au mouvement du téléphone, et une respiration lente.
   const vb = `viewBox="0 0 ${W} ${VH}" preserveAspectRatio="xMidYMid slice" aria-hidden="true"`;
-  // oiseaux le jour, étoile filante la nuit : un peu de vie dans le ciel
-  const life = night ? `<path class="asc-shoot" d="M${ascP1(W*.18)} ${ascP1(H*.08)}l120 46" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>`
-    : [0, 1, 2].map(i=>`<g class="asc-bird" style="animation-delay:-${(i*7+r()*5).toFixed(1)}s;--by:${ascP1(H*(.14+i*.05))}px"><path d="M-9 0q4.5-6 9 0q4.5-6 9 0" fill="none" stroke="rgba(30,40,60,.5)" stroke-width="2.2" stroke-linecap="round"/></g>`).join("");
-  const sky = `<svg class="asc-lay asc-l-sky" ${vb}><defs>
+  // Ciel : dessin fixe (dégradé, étoiles, astre) ; tout ce qui bouge (nuages, oiseaux, étoiles qui scintillent,
+  // étoile filante) est en éléments HTML animés par le compositeur : le dessin n'est jamais repeint.
+  const pct = (v, t)=>(v/t*100).toFixed(2)+"%";
+  const cloudSVG = `<svg viewBox="-100 -50 200 80" aria-hidden="true"><g fill="${cl}"><ellipse cx="0" cy="0" rx="68" ry="22"/><ellipse cx="-28" cy="-14" rx="32" ry="22"/><ellipse cx="18" cy="-20" rx="36" ry="26"/><ellipse cx="52" cy="-6" rx="26" ry="16"/></g></svg>`;
+  const clouds = [[H*.42, 1, 110, 20], [H*.36, .75, 140, 80]].map(([y, sc2, dur, del])=>`<i class="asc-cl" style="top:${pct(y-40*sc2, VH)};width:${(26*sc2).toFixed(1)}%;animation-duration:${dur}s;animation-delay:-${del}s">${cloudSVG}</i>`).join("");
+  const fx = night
+    ? Array.from({ length:10 }, ()=>`<i class="asc-tw" style="left:${(r()*96+2).toFixed(1)}%;top:${(r()*42+2).toFixed(1)}%;animation-delay:-${(r()*3).toFixed(2)}s"></i>`).join("") + `<i class="asc-sh"></i>`
+    : [0, 1, 2].map(i=>`<i class="asc-bd" style="top:${(13+i*5+r()*3).toFixed(1)}%;animation-delay:-${(i*7+r()*5).toFixed(1)}s"><b></b></i>`).join("");
+  const sky = `<div class="asc-lay asc-l-sky"><svg ${vb}><defs>
       <linearGradient id="asSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.sky[0]}"/><stop offset=".62" stop-color="${P.sky[1]}"/><stop offset="1" stop-color="${night ? "#2A2F52" : "#F3DEC4"}"/></linearGradient>
       <radialGradient id="asGlow"><stop offset="0" stop-color="${night ? "rgba(170,195,240,.35)" : "rgba(255,224,160,.6)"}"/><stop offset="1" stop-color="${night ? "rgba(170,195,240,0)" : "rgba(255,224,160,0)"}"/></radialGradient></defs>
-    <rect width="${W}" height="${H}" fill="url(#asSky)"/>${stars}${orb}${life}
-    <g opacity=".95">${cloud(80, H*.42, 1, 110, 20)}${cloud(500, H*.36, .75, 140, 80)}</g></svg>`;
+    <rect width="${W}" height="${H}" fill="url(#asSky)"/>${stars}${orb}</svg><div class="asc-sky-fx" aria-hidden="true">${clouds}${fx}</div></div>`;
   // sommets lointains : la silhouette de la montagne, retournée et réduite, fondue dans la brume du ciel
   const farC = night ? "rgba(120,138,190,.32)" : "rgba(150,175,205,.42)", farC2 = night ? "rgba(90,105,150,.42)" : "rgba(120,148,182,.5)";
   const far = `<svg class="asc-lay asc-l-far" ${vb}>
     <g transform="translate(${ascP1(W*1.14)} ${ascP1(VH*.08)}) scale(-1.28 .7)" fill="${farC}">${land}</g>
     <g transform="translate(${ascP1(-W*.32)} ${ascP1(VH*.16)}) scale(1.34 .6)" fill="${farC2}">${land}</g></svg>`;
-  const svg = `<svg class="asc-svg asc-lay asc-l-main" ${vb}><defs>
+  // Montagne en deux dessins superposés : le relief (fixe, flouté, le plus coûteux, peint une seule fois) et
+  // les repères (voie parcourue, camps, drapeau, grimpeur) dont les petites animations ne repeignent qu'eux
+  const svg = `<svg class="asc-lay asc-l-main asc-terrain" ${vb}><defs>
       <linearGradient id="asHazeG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgb(${P.haze})" stop-opacity="${night ? .5 : .55}"/><stop offset=".55" stop-color="rgb(${P.haze})" stop-opacity="0"/></linearGradient>
       <linearGradient id="asFore" x1="0" y1="0" x2="0" y2="1"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="${night ? .38 : .26}"/></linearGradient>
       <radialGradient id="asWash" cx="${(ox/W).toFixed(3)}" cy="${(oy/VH).toFixed(3)}" r=".75"><stop offset="0" stop-color="${night ? "#B8C8F0" : "#FFE2B0"}" stop-opacity="${night ? .28 : .42}"/><stop offset="1" stop-color="${night ? "#B8C8F0" : "#FFE2B0"}" stop-opacity="0"/></radialGradient>
       <filter id="asSoft" x="-2%" y="-2%" width="104%" height="104%"><feGaussianBlur stdDeviation="1.3"/></filter>
-      <radialGradient id="asMe"><stop offset="0" stop-color="#E07A55" stop-opacity=".6"/><stop offset="1" stop-color="#E07A55" stop-opacity="0"/></radialGradient>
-      <radialGradient id="asLamp"><stop offset="0" stop-color="#FFE2B8" stop-opacity=".4"/><stop offset="1" stop-color="#FFE2B8" stop-opacity="0"/></radialGradient>
-      <clipPath id="asLand">${land}</clipPath>
-      <mask id="asHid" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><rect width="${W}" height="${H}" fill="#fff"/><path d="${rp.hid}" fill="none" stroke="#5a5a5a" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/></mask></defs>
+      <clipPath id="asLand">${land}</clipPath></defs>
     <style>${fills}</style>
     <g clip-path="url(#asLand)"><g filter="url(#asSoft)">${terrain}</g>
       <rect width="${W}" height="${VH}" fill="url(#asHazeG)"/><rect width="${W}" height="${VH}" fill="url(#asWash)"/><rect width="${W}" height="${VH}" fill="url(#asFore)"/></g>
     <g fill="none" stroke="${night ? "#C9D6F5" : "#FFF4DE"}" stroke-opacity="${night ? .35 : .6}" stroke-width="2.4" stroke-linejoin="round" filter="url(#asSoft)">${land}</g>
     ${rp.hid ? `<path d="${rp.hid}" fill="none" stroke="${ghost}" stroke-width="2.2" stroke-dasharray="1.5 8" stroke-linecap="round" stroke-linejoin="round"/>` : ""}
     <path d="${rp.vis}" fill="none" stroke="rgba(0,0,0,.22)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="${rp.vis}" fill="none" stroke="${route}" stroke-width="3.2" stroke-dasharray="3 9" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="${rp.vis}" fill="none" stroke="${route}" stroke-width="3.2" stroke-dasharray="3 9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg class="asc-svg asc-lay asc-l-main asc-marks" ${vb}><defs>
+      <radialGradient id="asMe"><stop offset="0" stop-color="#E07A55" stop-opacity=".6"/><stop offset="1" stop-color="#E07A55" stop-opacity="0"/></radialGradient>
+      <radialGradient id="asLamp"><stop offset="0" stop-color="#FFE2B8" stop-opacity=".4"/><stop offset="1" stop-color="#FFE2B8" stop-opacity="0"/></radialGradient>
+      <mask id="asHid" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><rect width="${W}" height="${H}" fill="#fff"/><path d="${rp.hid}" fill="none" stroke="#5a5a5a" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/></mask></defs>
     <path class="asc-done" d="${rd}" fill="none" stroke="#E07A55" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" mask="url(#asHid)"/>
     <g class="asc-camps"></g>
     <g transform="translate(${sc.summit[0]} ${sc.summit[1]})"><g class="asc-flag"><line x1="0" y1="0" x2="0" y2="-46" stroke="${hud}" stroke-width="3" stroke-linecap="round"/><path class="asc-cloth" d="M0 -46h30l-7 9 7 9H0Z" fill="#E07A55"/></g></g>
@@ -241,41 +247,52 @@ function ascBuildScene(host, k){
 // Transformations CSS seulement (plans déjà peints, rien n'est redessiné) ; la boucle s'arrête hors écran.
 const ASC_DEPTH = { "asc-l-sky":.25, "asc-l-far":.5, "asc-l-main":1, "asc-l-fog":1.3 };
 let ascTilt = null;   // { x, y } du gyroscope (−1…1), null sans autorisation
+let ascParHost = null;
+// Économe : au repos, la respiration est une animation CSS (compositeur seul, aucun calcul par image) ; la
+// boucle JS ne tourne que pendant un glissé, un mouvement du téléphone ou le retour en place, puis
+// s'arrête. Scène hors écran : toutes ses animations sont en pause.
 function ascParallax(host){
-  if(host._par){ host._par.layers = [...host.querySelectorAll(".asc-lay, .asc-l-fog")]; return; }
-  const P = host._par = { tx:0, ty:0, x:0, y:0, vx:0, vy:0, drag:null, dragged:false, raf:0, t0:performance.now(), layers:[...host.querySelectorAll(".asc-lay, .asc-l-fog")] };
-  const still = reducedMotion();
+  const layers = [...host.querySelectorAll(".asc-lay, .asc-l-fog")];
+  layers.forEach(l=>{ const d = ASC_DEPTH[[...l.classList].find(c=>ASC_DEPTH[c])] || 1; l.style.setProperty("--d", d); l.style.setProperty("--s", (1.05 + d*.045).toFixed(3)); });
+  ascParHost = host;
+  if(host._par){ host._par.layers = layers; return; }
+  const P = host._par = { tx:0, ty:0, x:0, y:0, vx:0, vy:0, drag:null, dragged:false, raf:0, layers };
+  host.classList.add("idle");
+  if(reducedMotion()) return;
   const apply = ()=>{
-    P.layers.forEach(l=>{ const d = ASC_DEPTH[[...l.classList].find(c=>ASC_DEPTH[c])] || 1, s = 1.05 + d*.045;   // plus proche = plus grand (marge pour bouger)
-      l.style.transform = `perspective(900px) rotateX(${(-P.y*3).toFixed(2)}deg) rotateY(${(P.x*4.5).toFixed(2)}deg) translate3d(${(P.x*d*14).toFixed(2)}px,${(P.y*d*10).toFixed(2)}px,0) scale(${s.toFixed(3)})`; });
+    const rx = (-P.y*3).toFixed(2), ry = (P.x*4.5).toFixed(2);
+    P.layers.forEach(l=>{ const d = +l.style.getPropertyValue("--d") || 1;
+      l.style.transform = `perspective(900px) rotateX(${rx}deg) rotateY(${ry}deg) translate3d(${(P.x*d*14).toFixed(2)}px,${(P.y*d*10).toFixed(2)}px,0) scale(${l.style.getPropertyValue("--s")})`; });
   };
-  const loop = now=>{
+  const loop = ()=>{
     P.raf = 0;
-    if(!host.isConnected){ return; }
-    if(!document.hidden){
-      // cible : le doigt, sinon le téléphone, sinon une respiration lente (Lissajous)
-      let tx, ty;
-      if(P.drag){ tx = P.tx; ty = P.ty; }
-      else if(ascTilt){ tx = ascTilt.x; ty = ascTilt.y; }
-      else if(host.classList.contains("playing") || qs(".asc-bub", host)){ tx = 0; ty = 0; }
-      else { const t = (now - P.t0)/1000; tx = Math.sin(t/4.2)*.22; ty = Math.cos(t/5.3)*.14; }
-      // ressort amorti
-      P.vx = (P.vx + (tx - P.x)*.06)*.8; P.vy = (P.vy + (ty - P.y)*.06)*.8; P.x += P.vx; P.y += P.vy;
-      apply();
+    if(!host.isConnected || host.classList.contains("off")) return;
+    const gyro = S.settings.ascGyro && ascTilt;
+    const tx = P.drag ? P.tx : gyro ? ascTilt.x : 0, ty = P.drag ? P.ty : gyro ? ascTilt.y : 0;
+    P.vx = (P.vx + (tx - P.x)*.06)*.8; P.vy = (P.vy + (ty - P.y)*.06)*.8; P.x += P.vx; P.y += P.vy;
+    apply();
+    // arrivé et plus rien ne pousse : la boucle s'arrête (au repos, la respiration CSS reprend)
+    if(!P.drag && Math.abs(tx - P.x)<.002 && Math.abs(ty - P.y)<.002 && Math.abs(P.vx)<.001 && Math.abs(P.vy)<.001){
+      if(Math.abs(tx)<.002 && Math.abs(ty)<.002){ P.x = P.y = P.vx = P.vy = 0; P.layers.forEach(l=>{ l.style.transform = ""; }); host.classList.add("idle"); }
+      return;
     }
     P.raf = requestAnimationFrame(loop);
   };
-  if(still){ apply(); return; }
+  P.kick = ()=>{ if(P.raf || host.classList.contains("off")) return; host.classList.remove("idle"); P.raf = requestAnimationFrame(loop); };
   // le doigt : glisser à l'horizontale incline la scène (le défilement vertical reste libre)
-  host.addEventListener("pointerdown", e=>{ if(e.button>0) return; P.drag = { x:e.clientX, y:e.clientY, w:host.clientWidth, h:host.clientHeight }; P.dragged = false; }, { passive:true });
+  host.addEventListener("pointerdown", e=>{ if(e.button>0) return; P.drag = { x:e.clientX, y:e.clientY, w:host.clientWidth, h:host.clientHeight }; P.dragged = false; P.tx = P.x; P.ty = P.y; }, { passive:true });
   host.addEventListener("pointermove", e=>{ if(!P.drag) return;
     const dx = (e.clientX - P.drag.x)/P.drag.w, dy = (e.clientY - P.drag.y)/P.drag.h;
-    if(Math.abs(dx)>.03 || Math.abs(dy)>.03) P.dragged = true;
+    if(Math.abs(dx)>.03 || Math.abs(dy)>.03){ P.dragged = true; P.kick(); }
     P.tx = Math.max(-1, Math.min(1, dx*2.6)); P.ty = Math.max(-1, Math.min(1, dy*2.2)); }, { passive:true });
-  const up = ()=>{ P.drag = null; setTimeout(()=>{ P.dragged = false; }, 60); };
+  const up = ()=>{ if(!P.drag) return; P.drag = null; if(P.dragged) P.kick(); setTimeout(()=>{ P.dragged = false; }, 60); };
   ["pointerup", "pointercancel", "pointerleave"].forEach(ev=>host.addEventListener(ev, up, { passive:true }));
-  P.raf = requestAnimationFrame(loop);
-  // le téléphone : déjà autorisé (ou sans autorisation à demander) → on écoute
+  // hors écran (défilé, feuille fermée) : tout s'arrête, y compris les animations CSS du ciel
+  if("IntersectionObserver" in window){
+    const io = new IntersectionObserver(([en])=>{ if(!host.isConnected){ io.disconnect(); return; }
+      host.classList.toggle("off", !en.isIntersecting); if(en.isIntersecting && !host.classList.contains("idle")) P.kick(); });
+    io.observe(host);
+  }
   if(S.settings.ascGyro) ascGyroOn(false).then(ok=>{ if(!ok) host.addEventListener("click", ()=>{ if(S.settings.ascGyro) ascGyroOn(true); }, { once:true }); });
 }
 // mouvement du téléphone : iOS demande l'autorisation (au toucher du bouton) ; position de départ = repos
@@ -288,8 +305,11 @@ async function ascGyroOn(ask){
       window.addEventListener("deviceorientation", e=>{
         if(!S.settings.ascGyro || e.beta==null) return;
         if(!ascGyroBase) ascGyroBase = { b:e.beta, g:e.gamma };
-        const k = v=>Math.max(-1, Math.min(1, v));
-        ascTilt = { x:k((e.gamma - ascGyroBase.g)/18), y:k((e.beta - ascGyroBase.b)/22) };
+        const k = v=>Math.max(-1, Math.min(1, v)), nx = k((e.gamma - ascGyroBase.g)/18), ny = k((e.beta - ascGyroBase.b)/22);
+        // la boucle n'est relancée que si le téléphone bouge vraiment (pas pour un tremblement)
+        const moved = !ascTilt || Math.abs(nx - ascTilt.x)>.015 || Math.abs(ny - ascTilt.y)>.015;
+        ascTilt = { x:nx, y:ny };
+        if(moved && ascParHost && ascParHost.isConnected && ascParHost._par && ascParHost._par.kick) ascParHost._par.kick();
         // le repos suit lentement la façon de tenir le téléphone
         ascGyroBase.b += (e.beta - ascGyroBase.b)*.004; ascGyroBase.g += (e.gamma - ascGyroBase.g)*.004;
       });
@@ -1211,7 +1231,7 @@ Object.assign(ACT, {
   ascRewatch(){ ascRewatch(); },
   // la montagne suit le mouvement du téléphone (iOS demande l'autorisation une fois par lancement)
   async ascGyro(d, el){
-    if(S.settings.ascGyro){ S.settings.ascGyro = false; ascTilt = null; save(); if(el){ el.classList.remove("on"); el.setAttribute("aria-pressed", "false"); } haptic(6); return; }
+    if(S.settings.ascGyro){ S.settings.ascGyro = false; ascTilt = null; save(); if(ascParHost && ascParHost._par && ascParHost._par.kick) ascParHost._par.kick(); if(el){ el.classList.remove("on"); el.setAttribute("aria-pressed", "false"); } haptic(6); return; }
     const ok = await ascGyroOn(true);
     if(!ok){ toast("Mouvement du téléphone non autorisé"); return; }
     S.settings.ascGyro = true; ascGyroBase = null; save(); haptic(10); sfx("toggle");

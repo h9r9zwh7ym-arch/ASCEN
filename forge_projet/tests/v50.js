@@ -128,7 +128,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.waitForSelector('#ascScene .asc-svg', { timeout: 8000 });
   await wait(wk ? 3500 : 3000);
   const sheet = await page.evaluate(() => { const a = ascent(), h = document.querySelector('#ascScene'), svg = h.querySelector('.asc-svg');
-    return { ready: h.classList.contains('ready'), paths: svg.querySelectorAll('path[class^="ak"]').length, camps: svg.querySelectorAll('.asc-camp').length, exp: ascCamps(a.key).length,
+    return { ready: h.classList.contains('ready'), paths: h.querySelectorAll('path[class^="ak"]').length, camps: svg.querySelectorAll('.asc-camp').length, exp: ascCamps(a.key).length,
       hud: h.querySelector('.hud-n').textContent, name: ASC_DATA[a.key].n, cards: [...document.querySelectorAll('.asc-body .asc-row .t')].map(x => x.textContent).join('|'),
       week: !!document.querySelector('#ascWeek .aw-msg'), next: (document.querySelector('#ascSteps .an-row') || {}).textContent || '', steps: document.querySelectorAll('#ascSteps .exp-track').length, rowsH: Math.round(document.querySelector('.asc-rows').getBoundingClientRect().height),
       folded: document.querySelectorAll('.asc-body .stops li').length, me: !!svg.querySelector('.asc-me[transform]'), seen: S.ascent.seen && S.ascent.seen.key === a.key,
