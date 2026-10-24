@@ -33,6 +33,7 @@ function ascDark(when){
 const ascP1 = n=>n.toFixed(1);
 function ascRng(seed){ let a = seed>>>0; return ()=>{ a = a+0x6D2B79F5|0; let t = Math.imul(a^a>>>15, 1|a); t = t+Math.imul(t^t>>>7, 61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 const ASC_IC = {
+  tilt:'<path d="M8 3h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M2.5 9.5C1.5 11 1.5 13 2.5 14.5M21.5 9.5c1 1.5 1 3.5 0 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   tent:'<path d="M3 20 12 4l9 16Z" fill="currentColor"/>',
   hut:'<path d="M4 20v-9l8-7 8 7v9Z" fill="currentColor"/>',
   flag:'<path d="M5 21V4m0 1h11l-2.5 4L16 13H5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
@@ -146,20 +147,32 @@ function ascBuildScene(host, k){
   host.style.setProperty("--hud", hud); host.style.setProperty("--hud2", night || D.pal==="hima" ? "rgba(244,246,250,.74)" : "rgba(15,27,40,.7)");
   host.style.setProperty("--pill", night ? "rgba(17,23,38,.86)" : "rgba(255,255,255,.9)"); host.style.setProperty("--pill-ink", night ? "#F2F4F8" : "#13202A");
   // vue recadrée sous le point le plus bas de la voie (D.vh) : moins de premier plan vide, la carte des étapes remonte
-  const svg = `<svg class="asc-svg" viewBox="0 0 ${W} ${VH}" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs>
+  // La scène est en plans superposés (ciel, sommets lointains, montagne, brume) qui bougent chacun à leur
+  // vitesse (ascParallax) : effet de profondeur au doigt, au mouvement du téléphone, et une respiration lente.
+  const vb = `viewBox="0 0 ${W} ${VH}" preserveAspectRatio="xMidYMid slice" aria-hidden="true"`;
+  // oiseaux le jour, étoile filante la nuit : un peu de vie dans le ciel
+  const life = night ? `<path class="asc-shoot" d="M${ascP1(W*.18)} ${ascP1(H*.08)}l120 46" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>`
+    : [0, 1, 2].map(i=>`<g class="asc-bird" style="animation-delay:-${(i*7+r()*5).toFixed(1)}s;--by:${ascP1(H*(.14+i*.05))}px"><path d="M-9 0q4.5-6 9 0q4.5-6 9 0" fill="none" stroke="rgba(30,40,60,.5)" stroke-width="2.2" stroke-linecap="round"/></g>`).join("");
+  const sky = `<svg class="asc-lay asc-l-sky" ${vb}><defs>
       <linearGradient id="asSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.sky[0]}"/><stop offset=".62" stop-color="${P.sky[1]}"/><stop offset="1" stop-color="${night ? "#2A2F52" : "#F3DEC4"}"/></linearGradient>
+      <radialGradient id="asGlow"><stop offset="0" stop-color="${night ? "rgba(170,195,240,.35)" : "rgba(255,224,160,.6)"}"/><stop offset="1" stop-color="${night ? "rgba(170,195,240,0)" : "rgba(255,224,160,0)"}"/></radialGradient></defs>
+    <rect width="${W}" height="${H}" fill="url(#asSky)"/>${stars}${orb}${life}
+    <g opacity=".95">${cloud(80, H*.42, 1, 110, 20)}${cloud(500, H*.36, .75, 140, 80)}</g></svg>`;
+  // sommets lointains : la silhouette de la montagne, retournée et réduite, fondue dans la brume du ciel
+  const farC = night ? "rgba(120,138,190,.32)" : "rgba(150,175,205,.42)", farC2 = night ? "rgba(90,105,150,.42)" : "rgba(120,148,182,.5)";
+  const far = `<svg class="asc-lay asc-l-far" ${vb}>
+    <g transform="translate(${ascP1(W*1.14)} ${ascP1(VH*.08)}) scale(-1.28 .7)" fill="${farC}">${land}</g>
+    <g transform="translate(${ascP1(-W*.32)} ${ascP1(VH*.16)}) scale(1.34 .6)" fill="${farC2}">${land}</g></svg>`;
+  const svg = `<svg class="asc-svg asc-lay asc-l-main" ${vb}><defs>
       <linearGradient id="asHazeG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgb(${P.haze})" stop-opacity="${night ? .5 : .55}"/><stop offset=".55" stop-color="rgb(${P.haze})" stop-opacity="0"/></linearGradient>
       <linearGradient id="asFore" x1="0" y1="0" x2="0" y2="1"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="${night ? .38 : .26}"/></linearGradient>
       <radialGradient id="asWash" cx="${(ox/W).toFixed(3)}" cy="${(oy/VH).toFixed(3)}" r=".75"><stop offset="0" stop-color="${night ? "#B8C8F0" : "#FFE2B0"}" stop-opacity="${night ? .28 : .42}"/><stop offset="1" stop-color="${night ? "#B8C8F0" : "#FFE2B0"}" stop-opacity="0"/></radialGradient>
       <filter id="asSoft" x="-2%" y="-2%" width="104%" height="104%"><feGaussianBlur stdDeviation="1.3"/></filter>
-      <radialGradient id="asGlow"><stop offset="0" stop-color="${night ? "rgba(170,195,240,.35)" : "rgba(255,224,160,.6)"}"/><stop offset="1" stop-color="${night ? "rgba(170,195,240,0)" : "rgba(255,224,160,0)"}"/></radialGradient>
       <radialGradient id="asMe"><stop offset="0" stop-color="#E07A55" stop-opacity=".6"/><stop offset="1" stop-color="#E07A55" stop-opacity="0"/></radialGradient>
       <radialGradient id="asLamp"><stop offset="0" stop-color="#FFE2B8" stop-opacity=".4"/><stop offset="1" stop-color="#FFE2B8" stop-opacity="0"/></radialGradient>
       <clipPath id="asLand">${land}</clipPath>
       <mask id="asHid" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><rect width="${W}" height="${H}" fill="#fff"/><path d="${rp.hid}" fill="none" stroke="#5a5a5a" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/></mask></defs>
     <style>${fills}</style>
-    <rect width="${W}" height="${H}" fill="url(#asSky)"/>${stars}${orb}
-    <g opacity=".95">${cloud(80, H*.42, 1, 110, 20)}${cloud(500, H*.36, .75, 140, 80)}</g>
     <g clip-path="url(#asLand)"><g filter="url(#asSoft)">${terrain}</g>
       <rect width="${W}" height="${VH}" fill="url(#asHazeG)"/><rect width="${W}" height="${VH}" fill="url(#asWash)"/><rect width="${W}" height="${VH}" fill="url(#asFore)"/></g>
     <g fill="none" stroke="${night ? "#C9D6F5" : "#FFF4DE"}" stroke-opacity="${night ? .35 : .6}" stroke-width="2.4" stroke-linejoin="round" filter="url(#asSoft)">${land}</g>
@@ -171,9 +184,12 @@ function ascBuildScene(host, k){
     <g transform="translate(${sc.summit[0]} ${sc.summit[1]})"><g class="asc-flag"><line x1="0" y1="0" x2="0" y2="-46" stroke="${hud}" stroke-width="3" stroke-linecap="round"/><path class="asc-cloth" d="M0 -46h30l-7 9 7 9H0Z" fill="#E07A55"/></g></g>
     <g class="asc-me">${night ? `<circle r="80" fill="url(#asLamp)"/>` : ""}<circle r="34" fill="url(#asMe)"/><circle class="asc-ring" r="11" fill="none" stroke="#E07A55" stroke-width="3.5"/><circle r="11" fill="#E07A55" stroke="#fff" stroke-width="4"/></g>
     <g class="asc-sel"></g><g class="asc-next"></g></svg>`;
-  const old = host.querySelector(".asc-svg"); if(old) old.remove();
-  host.insertAdjacentHTML("afterbegin", svg);
+  host.querySelectorAll(".asc-lay, .asc-l-fog").forEach(x=>x.remove());
+  const fog = `<div class="asc-l-fog" aria-hidden="true"><i></i><i></i></div>`;
+  host.insertAdjacentHTML("afterbegin", sky + far + svg + fog);
+  host.classList.toggle("night", night);
   const el = host.querySelector(".asc-svg"), rt = { pts, len }, total = len[len.length-1];
+  ascParallax(host);
   const G = { k, rt, total, el, done:el.querySelector(".asc-done"), me:el.querySelector(".asc-me"), flag:el.querySelector(".asc-flag"), next:el.querySelector(".asc-next"), sel:el.querySelector(".asc-sel"), camps:[], night, W };
   const cg = el.querySelector(".asc-camps");
   // camps : refuges en icône, étapes en petits jalons ; le prochain a un halo qui pulse (dans .asc-next)
@@ -207,6 +223,7 @@ function ascBuildScene(host, k){
   };
   // toucher la montagne : le camp (ou le sommet, ou soi) le plus proche ouvre sa bulle
   el.addEventListener("click", e=>{
+    if(host._par && host._par.dragged){ host._par.dragged = false; return; }   // c'était un glissé (profondeur), pas un toucher
     if(G.playing){ e.stopPropagation(); G.stop = true; return; }
     const m = el.getScreenCTM(); if(!m) return;
     const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
@@ -216,6 +233,69 @@ function ascBuildScene(host, k){
     if(best){ e.stopPropagation(); ascBubble(best); } else ascBubbleHide();
   });
   return G;
+}
+// ---------- profondeur : plans qui bougent à des vitesses différentes ----------
+// Chaque plan (ciel 0,25, sommets lointains 0,5, montagne 1, brume 1,6) suit une cible avec un ressort ;
+// la scène entière s'incline légèrement en 3D, comme une maquette. Cibles : le doigt qui glisse sur la
+// scène (revient en place au relâcher), le mouvement du téléphone si autorisé, sinon une respiration lente.
+// Transformations CSS seulement (plans déjà peints, rien n'est redessiné) ; la boucle s'arrête hors écran.
+const ASC_DEPTH = { "asc-l-sky":.25, "asc-l-far":.5, "asc-l-main":1, "asc-l-fog":1.3 };
+let ascTilt = null;   // { x, y } du gyroscope (−1…1), null sans autorisation
+function ascParallax(host){
+  if(host._par){ host._par.layers = [...host.querySelectorAll(".asc-lay, .asc-l-fog")]; return; }
+  const P = host._par = { tx:0, ty:0, x:0, y:0, vx:0, vy:0, drag:null, dragged:false, raf:0, t0:performance.now(), layers:[...host.querySelectorAll(".asc-lay, .asc-l-fog")] };
+  const still = reducedMotion();
+  const apply = ()=>{
+    P.layers.forEach(l=>{ const d = ASC_DEPTH[[...l.classList].find(c=>ASC_DEPTH[c])] || 1, s = 1.05 + d*.045;   // plus proche = plus grand (marge pour bouger)
+      l.style.transform = `perspective(900px) rotateX(${(-P.y*3).toFixed(2)}deg) rotateY(${(P.x*4.5).toFixed(2)}deg) translate3d(${(P.x*d*14).toFixed(2)}px,${(P.y*d*10).toFixed(2)}px,0) scale(${s.toFixed(3)})`; });
+  };
+  const loop = now=>{
+    P.raf = 0;
+    if(!host.isConnected){ return; }
+    if(!document.hidden){
+      // cible : le doigt, sinon le téléphone, sinon une respiration lente (Lissajous)
+      let tx, ty;
+      if(P.drag){ tx = P.tx; ty = P.ty; }
+      else if(ascTilt){ tx = ascTilt.x; ty = ascTilt.y; }
+      else if(host.classList.contains("playing") || qs(".asc-bub", host)){ tx = 0; ty = 0; }
+      else { const t = (now - P.t0)/1000; tx = Math.sin(t/4.2)*.22; ty = Math.cos(t/5.3)*.14; }
+      // ressort amorti
+      P.vx = (P.vx + (tx - P.x)*.06)*.8; P.vy = (P.vy + (ty - P.y)*.06)*.8; P.x += P.vx; P.y += P.vy;
+      apply();
+    }
+    P.raf = requestAnimationFrame(loop);
+  };
+  if(still){ apply(); return; }
+  // le doigt : glisser à l'horizontale incline la scène (le défilement vertical reste libre)
+  host.addEventListener("pointerdown", e=>{ if(e.button>0) return; P.drag = { x:e.clientX, y:e.clientY, w:host.clientWidth, h:host.clientHeight }; P.dragged = false; }, { passive:true });
+  host.addEventListener("pointermove", e=>{ if(!P.drag) return;
+    const dx = (e.clientX - P.drag.x)/P.drag.w, dy = (e.clientY - P.drag.y)/P.drag.h;
+    if(Math.abs(dx)>.03 || Math.abs(dy)>.03) P.dragged = true;
+    P.tx = Math.max(-1, Math.min(1, dx*2.6)); P.ty = Math.max(-1, Math.min(1, dy*2.2)); }, { passive:true });
+  const up = ()=>{ P.drag = null; setTimeout(()=>{ P.dragged = false; }, 60); };
+  ["pointerup", "pointercancel", "pointerleave"].forEach(ev=>host.addEventListener(ev, up, { passive:true }));
+  P.raf = requestAnimationFrame(loop);
+  // le téléphone : déjà autorisé (ou sans autorisation à demander) → on écoute
+  if(S.settings.ascGyro) ascGyroOn(false).then(ok=>{ if(!ok) host.addEventListener("click", ()=>{ if(S.settings.ascGyro) ascGyroOn(true); }, { once:true }); });
+}
+// mouvement du téléphone : iOS demande l'autorisation (au toucher du bouton) ; position de départ = repos
+let ascGyroBase = null, ascGyroBound = false;
+async function ascGyroOn(ask){
+  try{
+    const DOE = window.DeviceOrientationEvent; if(!DOE) return false;
+    if(typeof DOE.requestPermission==="function"){ if(!ask) return false; if(await DOE.requestPermission()!=="granted") return false; }
+    if(!ascGyroBound){ ascGyroBound = true;
+      window.addEventListener("deviceorientation", e=>{
+        if(!S.settings.ascGyro || e.beta==null) return;
+        if(!ascGyroBase) ascGyroBase = { b:e.beta, g:e.gamma };
+        const k = v=>Math.max(-1, Math.min(1, v));
+        ascTilt = { x:k((e.gamma - ascGyroBase.g)/18), y:k((e.beta - ascGyroBase.b)/22) };
+        // le repos suit lentement la façon de tenir le téléphone
+        ascGyroBase.b += (e.beta - ascGyroBase.b)*.004; ascGyroBase.g += (e.gamma - ascGyroBase.g)*.004;
+      });
+    }
+    return true;
+  }catch(e){ return false; }
 }
 // éclat quand un camp est franchi : anneau qui s'ouvre et étincelles (animé image par image, sans CSS dans le SVG)
 function ascBurst(G, c){
@@ -769,6 +849,7 @@ function ascBodyHTML(a){
       ${ascHudHTML(a)}
       <div class="asc-toast" role="status" aria-live="polite"></div>
       ${a.wait || a.alt>D.start+20 ? `<button class="asc-replay" data-a="ascRewatch">${ascIc("play")}Revoir</button>` : ""}
+      ${window.DeviceOrientationEvent && !reducedMotion() ? `<button class="asc-gyro${S.settings.ascGyro ? " on" : ""}" data-a="ascGyro" aria-pressed="${!!S.settings.ascGyro}" aria-label="Bouger la montagne avec le téléphone">${ascIc("tilt")}</button>` : ""}
     </section>
     ${ascNextHTML(a)}
     ${S.sessions.length ? ascWeekHTML(a) : `<section class="asc-week"><div class="card asc-card"><p class="aw-msg">Chaque séance te fait monter. Commence par ta première.</p></div></section>`}
@@ -1128,6 +1209,15 @@ Object.assign(ACT, {
   openAscent(){ ascBubOn = null; ascCarnetOpen = new Set(); openAscent(); },
   ascSub(d){ ascOpenSub(d.k); },
   ascRewatch(){ ascRewatch(); },
+  // la montagne suit le mouvement du téléphone (iOS demande l'autorisation une fois par lancement)
+  async ascGyro(d, el){
+    if(S.settings.ascGyro){ S.settings.ascGyro = false; ascTilt = null; save(); if(el){ el.classList.remove("on"); el.setAttribute("aria-pressed", "false"); } haptic(6); return; }
+    const ok = await ascGyroOn(true);
+    if(!ok){ toast("Mouvement du téléphone non autorisé"); return; }
+    S.settings.ascGyro = true; ascGyroBase = null; save(); haptic(10); sfx("toggle");
+    if(el){ el.classList.add("on"); el.setAttribute("aria-pressed", "true"); }
+    toast("Incline le téléphone : la montagne suit");
+  },
   // fiche d'une montagne gravie (depuis l'itinéraire) : stats, trophées de matière, « Regravir »
   ascMount(d){
     const k = d.k; if(!ASC_DATA[k]) return;

@@ -72,6 +72,20 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     if (!au.ok || !au.json) fail('sauvegarde automatique');
   }
 
+  // 5. 2.12.0 : montagne en profondeur — plans séparés, le glissé incline la scène (sans ouvrir de bulle),
+  //    plans déplacés à des vitesses différentes, bouton « mouvement du téléphone »
+  await page.evaluate(() => { const t = todayISO(); S.sessions = [2, 4, 6].map(k => ({ id: 'p' + k, date: addDaysISO(t, -k), exos: [{ exoId: 'pompes', sets: [1, 2, 3].map(() => ({ reps: 12, done: true })) }] })); sessionTouched(); save(); ACT.openAscent(); });
+  await page.waitForSelector('#ascScene.ready .asc-l-main', { timeout: 8000 }); await page.waitForTimeout(2600);
+  const b0 = await page.evaluate(() => { const r = document.querySelector('#ascScene').getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height,
+    layers: ['asc-l-sky', 'asc-l-far', 'asc-l-main', 'asc-l-fog'].map(c => !!document.querySelector('#ascScene .' + c)), gyro: !!document.querySelector('#ascScene .asc-gyro') }; });
+  await page.mouse.move(b0.x + b0.w * .25, b0.y + b0.h * .55); await page.mouse.down(); await page.mouse.move(b0.x + b0.w * .8, b0.y + b0.h * .55, { steps: 8 }); await page.waitForTimeout(500);
+  const mv = await page.evaluate(() => { const tx = c => { const m = new DOMMatrix(getComputedStyle(document.querySelector('#ascScene .' + c)).transform); return m.m41; };
+    return { sky: tx('asc-l-sky'), main: tx('asc-l-main') }; });
+  await page.mouse.up(); await page.waitForTimeout(200);
+  const bub = await page.evaluate(() => !!document.querySelector('#ascScene .asc-bub.on, #ascScene .asc-bub:not([hidden])'));
+  log('Depth:', JSON.stringify(b0.layers), 'gyro', b0.gyro, JSON.stringify(mv), 'bubble after drag', bub);
+  if (!b0.layers.every(Boolean) || !(mv.main > mv.sky + 2) || !(mv.main > 3)) fail('montagne en profondeur : plans et glissé');
+
   await browser.close();
   if (errors.length) { errors.forEach(e => log(e)); log(`ERRORS: ${errors.length}`); process.exit(1); }
   log('=== NO ERRORS ===');

@@ -133,7 +133,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
       week: !!document.querySelector('#ascWeek .aw-msg'), next: (document.querySelector('#ascSteps .an-row') || {}).textContent || '', steps: document.querySelectorAll('#ascSteps .exp-track').length, rowsH: Math.round(document.querySelector('.asc-rows').getBoundingClientRect().height),
       folded: document.querySelectorAll('.asc-body .stops li').length, me: !!svg.querySelector('.asc-me[transform]'), seen: S.ascent.seen && S.ascent.seen.key === a.key,
       aspect: Math.round(780 / (h.getBoundingClientRect().width / h.getBoundingClientRect().height)), vh: ASC_DATA[a.key].vh,
-      day: svg.innerHTML.includes('#78A8D6') || svg.innerHTML.includes('#6EA2D2') || svg.innerHTML.includes('#5A8CCD') || svg.innerHTML.includes('#2F62B4'), dark: ascDark() }; });
+      day: (sk => sk.includes('#78A8D6') || sk.includes('#6EA2D2') || sk.includes('#5A8CCD') || sk.includes('#2F62B4'))(h.querySelector('.asc-l-sky').innerHTML), dark: ascDark() }; });
   log('Sheet:', JSON.stringify(sheet));
   if (!sheet.ready || sheet.paths < 20 || sheet.camps !== sheet.exp || sheet.hud !== sheet.name || !sheet.me || !sheet.seen || sheet.day === sheet.dark) fail('écran Mon ascension : scène, camps, HUD (ciel selon l\'heure)');
   // lisibilité : le prochain objectif (nom, distance, barre), cette semaine, puis une liste dont chaque ligne ouvre son écran
@@ -228,7 +228,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   // 5. nuit : la scène passe en palette de nuit
   await page.emulateMedia({ colorScheme: 'dark' }); await page.evaluate(() => { S.settings.theme = 'auto'; save(); applyTheme(); });
   await page.evaluate(() => ACT.openAscent()); await page.waitForSelector('#ascScene .asc-svg', { timeout: 8000 }); await wait(2500);
-  const night = await page.evaluate(() => { const svg = document.querySelector('#ascScene .asc-svg'); return { night: /#0[0-9A-F]{5}/.test(svg.querySelector('#asSky stop').getAttribute('stop-color')), stars: svg.querySelectorAll('.asc-star').length, dark: ascDark() }; });
+  const night = await page.evaluate(() => { const svg = document.querySelector('#ascScene .asc-l-sky'); return { night: /#0[0-9A-F]{5}/.test(svg.querySelector('#asSky stop').getAttribute('stop-color')), stars: svg.querySelectorAll('.asc-star').length, dark: ascDark() }; });
   log('Night:', JSON.stringify(night)); if (night.dark ? (!night.night || night.stars < 20) : (night.night || night.stars)) fail('scène : ciel selon l\'heure');
   await shot('06_sheet_dark');
   await page.evaluate(() => closeSheet()); await wait(400);
