@@ -243,6 +243,31 @@ function exosPaneHTML(){
   }).join("")}</div>`;
 }
 
+// records d'un exercice, sobrement : la meilleure série, la plus lourde, la meilleure à chaque charge (les
+// 4 plus lourdes), et la prochaine cible (ce que la prochaine séance proposera)
+function exoRecordsHTML(def, loaded, pts){
+  const all = []; pts.forEach(p=>p.done.forEach(st=>all.push({ st, d:p.s.date })));
+  if(!all.length) return "";
+  const row = (t, sub, val, cls)=>`<div class="row rec-row${cls ? " "+cls : ""}"><div class="grow"><div class="t">${t}</div>${sub ? `<div class="s">${sub}</div>` : ""}</div><span class="val">${val}</span></div>`;
+  const u = isTimed(def) ? " s" : " rép.", rows = [];
+  if(loaded){
+    const e1 = x=>estimated1RM(x.st.weight||0, x.st.reps||0);
+    const best = all.reduce((a,b)=>e1(b)>e1(a) ? b : a), heavy = all.reduce((a,b)=>(b.st.weight||0)>(a.st.weight||0) || ((b.st.weight||0)===(a.st.weight||0) && (b.st.reps||0)>(a.st.reps||0)) ? b : a);
+    rows.push(row("Meilleure série", `${fmtDate(best.d)} · 1RM estimé ${fmtDec(round1(e1(best)))} kg`, `${best.st.reps} × ${fmtLoad(def, best.st.weight)}`));
+    if(heavy!==best) rows.push(row("La plus lourde", fmtDate(heavy.d), `${heavy.st.reps} × ${fmtLoad(def, heavy.st.weight)}`));
+    const byW = {}; all.forEach(x=>{ const w = x.st.weight||0; if(!w) return; if(!byW[w] || (x.st.reps||0)>(byW[w].st.reps||0)) byW[w] = x; });
+    const ws = Object.keys(byW).map(Number).sort((a,b)=>b-a).slice(0, 4);
+    if(ws.length>1) rows.push(`<div class="rec-tiers">${ws.map(w=>`<span><b>${byW[w].st.reps}${u}</b>${fmtLoad(def, w)}</span>`).join("")}</div>`);
+  } else {
+    const best = all.reduce((a,b)=>(b.st.reps||0)>(a.st.reps||0) ? b : a);
+    rows.push(row("Meilleure série", fmtDate(best.d), `${best.st.reps}${u}`));
+  }
+  try{
+    const sg = suggestForExo(def, def.sets), r = sg.reps && sg.reps[0];
+    if(r) rows.push(row("Prochaine cible", "ce que te proposera la prochaine séance", `${r}${loaded ? " × "+fmtLoad(def, sg.weight) : u}`, "next"));
+  }catch(e){}
+  return `<h2 class="sh">Records</h2><div class="group exo-rec">${rows.join("")}</div>`;
+}
 function exoChartSheet(id){
   const { def, loaded, pts } = exoSeries(id);
   const pr = exoPRs(id);
@@ -264,6 +289,7 @@ function exoChartSheet(id){
       :`<div class="stat-box"><div class="num">${Math.max(...pts.map(p=>p.best))}${isTimed(def)?" s":""}</div><div class="lbl">meilleure série</div></div>
       <div class="stat-box"><div class="num">${isTimed(def) ? fmtDuration(pts.reduce((t,p)=>t+p.reps,0)) : fmtNum(pts.reduce((t,p)=>t+p.reps,0))}</div><div class="lbl">${isTimed(def)?"tenus au total":"reps au total"}</div></div>`}
     </div>
+    ${exoRecordsHTML(def, loaded, pts)}
     <div class="chart-card">
       <div class="cc-h"><div class="cc-t">${loaded?"1RM estimé":"Meilleure série"}</div><div class="cc-s">${loaded?"formule d'Epley, meilleure série de chaque séance":(isTimed(def) ? "secondes tenues sur ta meilleure série" : "répétitions de ta meilleure série")}</div></div>
       ${main}

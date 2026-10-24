@@ -111,6 +111,11 @@ function dataMoreHTML(){
         ${sfIcon("download","green")}
         <div class="grow"><div class="t">Sauvegarder mes données</div><div class="s">${backupStatusText()}</div></div>
       </button>
+      ${canAutoBackup() ? `<div class="row">${sfIcon("repeat","green")}<div class="grow"><div class="t">Sauvegarde automatique</div><div class="s wrap">${S.settings.autoBackup ? "Le fichier choisi est réécrit après chaque séance" : "Choisis un fichier une fois, il est réécrit après chaque séance"}</div></div>
+        <button class="switch ${S.settings.autoBackup ? "on" : ""}" role="switch" aria-checked="${!!S.settings.autoBackup}" aria-label="Sauvegarde automatique" data-a="toggleAutoBackup"></button></div>` : ""}
+    </div>
+    ${canAutoBackup() ? "" : `<p class="sh-sub" style="margin:8px 20px 0">Même nom à chaque fois (ASCEN-sauvegarde.json) : enregistrée dans le même dossier de Fichiers, la sauvegarde remplace la précédente.</p>`}
+    ${legacyStatusBar() || !isStandalone() ? `<div class="group" style="margin-top:14px">
       ${legacyStatusBar() ? `<button class="row tap" style="width:100%" data-a="openReinstall">
         ${sfIcon("phone","blue")}
         <div class="grow"><div class="t">Barre d'état fondue</div><div class="s">Remettre l'icône à jour</div></div>
@@ -121,7 +126,7 @@ function dataMoreHTML(){
         <div class="grow"><div class="t">Installer sur l'écran d'accueil</div></div>
         <span class="chev">${icon("chev")}</span>
       </button>`}
-    </div>
+    </div>` : ""}
     <div class="group" style="margin-top:14px">
       <button class="row tap" style="width:100%" data-a="restoreData">
         ${sfIcon("restore","teal")}
@@ -248,10 +253,12 @@ function backupStatusText(){
   return `Dernière : ${n===0?"aujourd'hui":n===1?"hier":`il y a ${n} jours`}${since>0?` · ${since} séance${since>1?"s":""} depuis`:""}`;
 }
 function backupDue(){
-  if(S.sessions.length<5) return false;
-  if(S.meta.backupSnooze && daysBetween(S.meta.backupSnooze, todayISO())<14) return false;
+  if(S.sessions.length<3) return false;
+  if(S.settings.autoBackup && canAutoBackup()) return false;   // déjà faite toute seule
+  if(S.meta.backupSnooze && daysBetween(S.meta.backupSnooze, todayISO())<7) return false;
   if(!S.meta.lastBackup) return true;
-  return daysBetween(S.meta.lastBackup, todayISO())>=21 && S.sessions.length-(S.meta.backupSessions||0)>=6;
+  // une semaine et trois séances depuis la dernière : on le rappelle (un toucher, sur l'accueil)
+  return daysBetween(S.meta.lastBackup, todayISO())>=7 && S.sessions.length-(S.meta.backupSessions||0)>=3;
 }
 // fichier partagé (Fichiers, iCloud, AirDrop…) ou, à défaut, téléchargé
 async function shareOrDownload(payload, name, type, title){
@@ -286,10 +293,43 @@ async function exportCSV(){
   const ok = await shareOrDownload(historyCSV(), `ascen-historique-${todayISO()}.csv`, "text/csv", "Historique ASCEN");
   if(ok){ sfx("set"); toast(`Historique exporté : ${S.sessions.length} séance${S.sessions.length>1?"s":""}`, "check"); }
 }
+// ---------- sauvegarde automatique ----------
+// Toujours le même nom de fichier : enregistrée dans le même dossier de Fichiers, la nouvelle sauvegarde
+// remplace l'ancienne (iOS demande de confirmer). Là où le navigateur sait écrire dans un fichier choisi
+// une fois (Chrome, Edge sur ordinateur), l'app garde ce fichier et le réécrit seule après chaque séance.
+// Safari sur iPhone ne le permet pas : il faut un geste à chaque fois (un seul toucher, rappel discret).
+const BACKUP_NAME = "ASCEN-sauvegarde.json";
+const canAutoBackup = ()=>typeof window.showSaveFilePicker==="function";
+function backupPayload(){ return JSON.stringify({ app:"ASCEN", format:1, version:APP_VERSION, exportedAt:new Date().toISOString(), data:S }); }
+function fsDB(){ return new Promise((ok, ko)=>{ try{ const r = indexedDB.open("ascen-files", 1); r.onupgradeneeded = ()=>r.result.createObjectStore("h"); r.onsuccess = ()=>ok(r.result); r.onerror = ()=>ko(r.error); }catch(e){ ko(e); } }); }
+async function fsHandle(set){
+  const db = await fsDB();
+  return new Promise((ok, ko)=>{ const tx = db.transaction("h", set===undefined ? "readonly" : "readwrite"), st = tx.objectStore("h");
+    const r = set===undefined ? st.get("backup") : set===null ? st.delete("backup") : st.put(set, "backup");
+    r.onsuccess = ()=>ok(set===undefined ? r.result : null); r.onerror = ()=>ko(r.error); });
+}
+async function writeBackupTo(h){
+  const w = await h.createWritable(); await w.write(backupPayload()); await w.close();
+  S.meta.lastBackup = todayISO(); S.meta.backupSessions = S.sessions.length; delete S.meta.backupSnooze; save();
+}
+// après une séance : réécrit le fichier choisi, sans rien demander (si le navigateur a gardé l'autorisation)
+async function autoBackup(){
+  try{
+    if(!S.settings.autoBackup || !canAutoBackup()) return false;
+    const h = await fsHandle(); if(!h) return false;
+    if(h.queryPermission && await h.queryPermission({ mode:"readwrite" })!=="granted") return false;
+    persistNow(); await writeBackupTo(h); return true;
+  }catch(e){ return false; }
+}
 async function backupData(){
   persistNow();
-  const payload = JSON.stringify({ app:"ASCEN", format:1, version:APP_VERSION, exportedAt:new Date().toISOString(), data:S });
-  const name = `ascen-sauvegarde-${todayISO()}.json`;
+  // fichier choisi pour la sauvegarde automatique : on le réécrit directement
+  if(S.settings.autoBackup && canAutoBackup()){
+    try{ const h = await fsHandle();
+      if(h && (!h.requestPermission || await h.requestPermission({ mode:"readwrite" })==="granted")){ await writeBackupTo(h); changed(); sfx("set"); toast("Sauvegarde mise à jour", "check"); return; } }catch(e){}
+  }
+  const payload = backupPayload();
+  const name = BACKUP_NAME;
   let shared = false;
   try{
     const file = new File([payload], name, { type:"application/json" });
@@ -302,7 +342,7 @@ async function backupData(){
     setTimeout(()=>URL.revokeObjectURL(url), 5000);
   }
   S.meta.lastBackup = todayISO(); S.meta.backupSessions = S.sessions.length; delete S.meta.backupSnooze;
-  save(); changed(); sfx("set"); toast("Sauvegarde créée. Garde le fichier dans Fichiers ou iCloud", "check");
+  save(); changed(); sfx("set"); toast("Sauvegarde créée. Même dossier que la dernière fois : elle la remplace", "check");
 }
 function restoreData(){
   const inp = document.createElement("input");
@@ -630,6 +670,15 @@ Object.assign(ACT, {
   saveName(){ S.settings.name = ((qs("#nameInput")||{}).value||"").trim(); closeSheet(); save(); changed(); },
   openEquip, openGoals, openExoPrefs, openExportImport, openAppearance, openAbout,
   backupData(){ backupData(); }, exportCSV(){ exportCSV(); }, restoreData(){ restoreData(); }, openInstall(){ openInstall(); }, openReinstall(){ openReinstall(); },
+  async toggleAutoBackup(){
+    if(S.settings.autoBackup){ S.settings.autoBackup = false; save(); try{ await fsHandle(null); }catch(e){} toast("Sauvegarde automatique désactivée"); ACT.openData(); return; }
+    try{
+      const h = await window.showSaveFilePicker({ suggestedName:BACKUP_NAME, types:[{ description:"Sauvegarde ASCEN", accept:{ "application/json":[".json"] } }] });
+      await fsHandle(h); S.settings.autoBackup = true; persistNow(); await writeBackupTo(h);
+      sfx("set"); toast("Sauvegarde automatique activée", "check");
+    }catch(e){ if(!(e && e.name==="AbortError")) toast("Ce navigateur n'a pas permis l'écriture du fichier"); }
+    ACT.openData();
+  },
   backupLater(){ S.meta.backupSnooze = todayISO(); save(); const c = qs(".backup-nudge"); if(c){ c.classList.add("leaving"); setTimeout(()=>changed(), 250); } else changed(); },
   toggleEquip(d){ S.equipment.owned[d.id] = !S.equipment.owned[d.id]; save(); refreshEquip(); regenerateDraftIfIdle(); },
   addWeight(d){

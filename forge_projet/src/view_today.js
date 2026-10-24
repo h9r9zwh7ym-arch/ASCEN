@@ -559,7 +559,10 @@ function pickerListHTML(){
   // d'abord parmi quelques exercices connus, le catalogue complet reste en dessous)
   const ids = new Set(pool.map(e=>e.id)), hab = q || picker.cat ? [] : habitualExos().filter(id=>ids.has(id) && !isIncluded(id)).slice(0, 6).map(id=>EXO_MAP[id]);
   const habBlock = hab.length ? `<div class="pick-h hab">${sfIcon("history","blue","sm")} Habituels <span class="pick-n">${hab.length}</span></div><div class="group">${hab.map(e=>pickRowHTML(e)).join("")}</div>` : "";
-  return favBlock + habBlock + EXO_CATS.map(c=>{
+  // remplacement : les meilleurs équivalents en tête, avec la dose déjà calculée (charge convertie)
+  const sug = !q && !picker.cat && picker.suggest ? picker.suggest.filter(x=>ids.has(x.e.id)) : [];
+  const sugBlock = sug.length ? `<div class="pick-h sug">${sfIcon("sparkles","orange","sm")} Suggestions <span class="pick-n">${sug.length}</span></div><div class="group">${sug.map(x=>pickRowHTML(x.e, `<b class="dose">${esc(x.dose)}</b> · ${esc(x.why)}`)).join("")}</div>` : "";
+  return sugBlock + favBlock + habBlock + EXO_CATS.map(c=>{
     const list = pool.filter(e=>exoCategory(e)===c.id).sort((a,b)=>muscleOrder[a.muscles[0]]-muscleOrder[b.muscles[0]] || a.n.localeCompare(b.n,"fr"));
     if(!list.length) return "";
     let lastM = null;
@@ -569,6 +572,39 @@ function pickerListHTML(){
     }).join("")}</div>`;
   }).join("");
 }
+// ---------- remplacement intelligent ----------
+// Les meilleurs équivalents d'un exercice de la séance : même muscle principal, de préférence même mouvement
+// et même nature (chargé, poids du corps…), une autre famille (s'il est remplacé, c'est souvent que le
+// matériel est pris ou que le mouvement gêne), ton matériel, tes habitudes ; la note du moteur départage.
+function smartReplacements(draft, idx, n){
+  const cur = EXO_MAP[draft.exos[idx].exoId]; if(!cur) return [];
+  const inS = new Set(draft.exos.map(e=>e.exoId));
+  const pool = availableExos().filter(e=>!inS.has(e.id) && isStretch(e)===isStretch(cur) && (isStretch(cur) || e.muscles[0]===cur.muscles[0]));
+  const scored = pool.map(e=>{
+    let sc = (isStretch(e) ? 0 : scoreExo(e)) + (e.pattern===cur.pattern ? 2.5 : 0) + (exoKind(e)===exoKind(cur) ? 2.5 : 0) + (gearOf(e)===gearOf(cur) ? .5 : 0)
+      - (exoFamily(e)===exoFamily(cur) ? 1.5 : 0) + (levelOK(e) ? 0 : -3);
+    return { e, sc };
+  }).sort((a,b)=>b.sc - a.sc).slice(0, n || 3);
+  return scored.map(({ e })=>{
+    const x = replacementEntry(draft, idx, e);
+    const why = e.pattern===cur.pattern && exoKind(e)===exoKind(cur) ? "même mouvement" : e.pattern===cur.pattern ? "même mouvement, autre matériel" : exoKind(e)===exoKind(cur) ? "même muscle, même matériel" : "même muscle";
+    const hab = (exoHabits()[e.id] || {}).done>=2 ? " · ton habituel" : "";
+    return { e, dose:propDose(x), why:why + hab };
+  });
+}
+// l'entrée du remplaçant : charge et répétitions comme d'habitude ; jamais fait et la charge du remplacé
+// connue : charge convertie (même effort relatif, d'après les repères de départ des deux mouvements)
+function replacementEntry(draft, idx, e){
+  const x = entryAt(draft.exos, e, idx), old = draft.exos[idx], cur = EXO_MAP[old.exoId];
+  const w0 = old.pw || (old.sets[0] && old.sets[0].weight), t0 = cur && kgType(cur), t1 = kgType(e);
+  if(w0 && t0 && t1 && START_KG[t0] && START_KG[t1] && !recentPerformances(e.id, 1).length){
+    const target = w0 * START_KG[t1][startKind(e)] / START_KG[t0][startKind(cur)];
+    const owned = (S.equipment.weights[t1] || []).slice().sort((a,b)=>a-b), below = owned.filter(w=>w<=target+.001);
+    const w = owned.length ? (below.length ? below[below.length-1] : owned[0]) : t1==="barbell" ? Math.max(20, Math.round(target/2.5)*2.5) : Math.max(1, Math.round(target));
+    x.sets.forEach(st=>{ if(!st.done) st.weight = w; }); x.pw = w;
+  }
+  return x;
+}
 // exercices les plus faits sur les 60 derniers jours (au moins 2 séances), du plus fréquent au moins fréquent
 function habitualExos(){
   return memo("habitual:"+todayISO(), ()=>{
@@ -577,12 +613,12 @@ function habitualExos(){
     return Object.keys(c).filter(id=>c[id]>=2 && EXO_MAP[id]).sort((a, b)=>c[b]-c[a]);
   });
 }
-function pickRowHTML(e){
+function pickRowHTML(e, sub){
   const on = picker.selected.includes(e.id), fav = isIncluded(e.id);
   return `<div class="row pick-row ${on?"on":""}" data-id="${e.id}">
     <button class="row-main" data-a="pickerTap" data-id="${e.id}">
       ${exoIcon(e)}
-      <div class="grow"><div class="t">${fav?`<span class="fav-mark" aria-label="Favori">${ii("star")}</span>`:""}${esc(e.n)}</div><div class="s"><b class="dose">${exoDose(e)}</b> · ${musclesLabel(e)}</div></div>
+      <div class="grow"><div class="t">${fav?`<span class="fav-mark" aria-label="Favori">${ii("star")}</span>`:""}${esc(e.n)}</div><div class="s">${sub || `<b class="dose">${exoDose(e)}</b> · ${musclesLabel(e)}`}</div></div>
     </button>
     <button class="info-btn" aria-label="Fiche de ${esc(e.n)}" data-a="pickerInfo" data-id="${e.id}">i</button>
     ${picker.multi?`<button class="pick-check" aria-label="Sélectionner" data-a="pickerTap" data-id="${e.id}">${on?icon("check"):""}</button>`:""}
@@ -1194,6 +1230,7 @@ function finalizeSession(){
     if(!draft.exos.length && !draft.name) draft.name = "Étirements";
   }
   S.sessions.push(markStored(compactSession(clone(draft))));
+  setTimeout(()=>{ if(typeof autoBackup==="function") autoBackup(); }, 1500);   // fichier de sauvegarde réécrit (si choisi)
   if(draft.source==="imported" && S.importedProgram.length) S.importedProgram.shift();
   S.draft = null;
   liveFocusIdx = 0;
@@ -1588,11 +1625,13 @@ Object.assign(ACT, {
   swapExoOpen(d){
     const idx = +d.idx;
     const cur = EXO_MAP[S.draft.exos[idx].exoId];
-    // un étirement se remplace par un autre étirement (tous muscles), un exercice par un exercice du même muscle
-    openPicker({ title:"Remplacer "+cur.n, muscle:isStretch(cur) ? null : cur.muscles[0], cat:isStretch(cur) ? "stretch" : null, exclude:new Set(S.draft.exos.map(e=>e.exoId)), onDone:ids=>{
+    // un étirement se remplace par un autre étirement (tous muscles), un exercice par un exercice du même muscle ;
+    // en tête, les meilleurs équivalents (même mouvement, ton matériel, tes habitudes) avec leur dose
+    openPicker({ title:"Remplacer "+cur.n, muscle:isStretch(cur) ? null : cur.muscles[0], cat:isStretch(cur) ? "stretch" : null, exclude:new Set(S.draft.exos.map(e=>e.exoId)),
+      suggest:smartReplacements(S.draft, idx), onDone:ids=>{
       // une proposition de l'app remplacée : retenu (après deux fois, l'app le propose moins)
       if(S.draft.source==="engine"){ const sw = S.prefs.swapped || (S.prefs.swapped = {}); sw[cur.id] = Math.min(9, (sw[cur.id] || 0) + 1); }
-      S.draft.exos[idx] = entryAt(S.draft.exos, EXO_MAP[ids[0]], idx);
+      S.draft.exos[idx] = replacementEntry(S.draft, idx, EXO_MAP[ids[0]]);
       closeSheet(); changed();
     }});
   },
