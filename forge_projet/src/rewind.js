@@ -210,7 +210,7 @@ function openRewind(kind, key){
   document.body.appendChild(el);
   rw = { kind, key, slides, i:-1, t:0, last:0, paused:false, raf:0, el };
   requestAnimationFrame(()=>el.classList.add("show"));
-  if(kind==="month") { S.meta.recapSeen = key; save(); }
+  recapMarkSeen(kind, key); save();
   rwGo(0);
   rw.raf = requestAnimationFrame(rwTick);
   bindRewindGestures(el);

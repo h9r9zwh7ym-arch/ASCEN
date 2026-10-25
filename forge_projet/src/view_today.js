@@ -177,11 +177,16 @@ function heroHTML(mode, draft, force){
     <div class="hero-alts"><button class="hero-alt" data-a="chooseSession">Choisir une autre séance</button></div>`}
   </div>`;
 }
-// Un seul rappel à la fois, en bas de l'accueil : la sauvegarde d'abord, sinon le Rewind du mois écoulé
+// Le Rewind prêt (mois ou année écoulés) : juste sous la séance du jour, pour ne pas passer inaperçu
+function rewindNudgeHTML(){
+  const r = recapNudge(); if(!r) return "";
+  const what = r.kind==="year" ? `${r.key}` : deMois(MOIS_LONG[parseISO(r.key+"-01").getMonth()]);
+  return `<div class="backup-nudge rc-nudge stagger" style="--i:3">${sfIcon("sparkles","orange")}<div class="grow"><div class="t">Ton Rewind ${what} est prêt</div><div class="s">Revis ${r.kind==="year" ? "ton année" : "ton mois"} en une minute.</div></div><div class="bn-act"><button data-a="openRewind" data-kind="${r.kind}" data-key="${r.key}">Lancer</button><button class="later" data-a="recapLater">Plus tard</button></div></div>`;
+}
+// Un seul rappel à la fois : pendant que le Rewind est proposé, la sauvegarde attend (en bas de l'accueil)
 function nudgeHTML(){
+  if(recapNudge()) return "";
   if(backupDue()) return `<div class="backup-nudge stagger" style="--i:7">${sfIcon("download","green")}<div class="grow"><div class="t">Sauvegarde conseillée</div><div class="s">${S.sessions.length} séances sont stockées uniquement sur ce téléphone.</div></div><div class="bn-act"><button data-a="backupData">Sauvegarder</button><button class="later" data-a="backupLater">Plus tard</button></div></div>`;
-  const rk = recapNudgeKey();
-  if(rk) return `<div class="backup-nudge rc-nudge stagger" style="--i:7">${sfIcon("sparkles","orange")}<div class="grow"><div class="t">Ton Rewind ${deMois(MOIS_LONG[parseISO(rk+"-01").getMonth()])} est prêt</div><div class="s">Revis ton mois en une minute.</div></div><div class="bn-act"><button data-a="openRewind" data-kind="month" data-key="${rk}">Lancer</button><button class="later" data-a="recapLater">Plus tard</button></div></div>`;
   return "";
 }
 
@@ -197,6 +202,7 @@ function renderTodayPreview(draft){
     ${whyReminder() && !sessionsToday().length ? `<div class="why-card stagger" style="--i:2"><div class="why-k">${ii("flame")} Ton pourquoi</div><div class="why-t">« ${esc(whyReminder())} »</div><div class="why-s">${daysSinceLastSession()} jours sans séance : une seule suffit pour reprendre le fil.</div><button class="btn secondary sm why-go" data-a="startExpress">${icon("timer")} Séance express · 10 min</button></div>` : ""}
     ${sessionsToday().length ? doneCardHTML() : ""}
     <div class="seg-pane ${mode} ${paneDir?"from-"+paneDir:""}">${sessionsToday().length ? "" : heroHTML(mode, draft)}${mode==="custom" ? customPaneHTML() : proposalPaneHTML(draft)}</div>
+    ${rewindNudgeHTML()}
     ${weekCardHTML()}
     ${templatesHTML()}
     ${nudgeHTML()}

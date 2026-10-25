@@ -190,7 +190,7 @@ function paintRecap(){
 }
 function openRecap(kind, key){
   recap = { kind: kind||"month", key: key || recapDefault(kind||"month") };
-  if(recap.kind==="month") S.meta.recapSeen = recap.key; // la suggestion de l'accueil disparaît
+  recapMarkSeen(recap.kind, recap.key); // la suggestion de l'accueil disparaît
   save();
   openSheet(`<div class="sheet-hd"><span class="t">Rewind</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
     <div class="sheet-body" id="rcBody">${recapBodyHTML()}</div>`,
@@ -199,18 +199,30 @@ function openRecap(kind, key){
   requestAnimationFrame(paintRecap);
 }
 function refreshRecap(){ const b = qs("#rcBody"); if(b){ b.innerHTML = recapBodyHTML(); settleSegs(b); paintRecap(); } }
-// suggestion discrète sur l'accueil pendant la première semaine d'un nouveau mois
-function recapNudgeKey(){
-  const t = todayISO(); if(+t.slice(8)>7) return null;
+// Rewind proposé sur l'accueil : celui de l'année écoulée pendant les deux premières semaines de janvier
+// (au moins 6 séances dans l'année), sinon celui du mois écoulé pendant les 10 premiers jours du mois
+// (au moins 2 séances). Il disparaît une fois lancé ou écarté (« Plus tard »).
+const RECAP_DAYS = { month:10, year:14 };
+function recapNudge(){
+  const t = todayISO(), day = +t.slice(8);
+  if(t.slice(5,7)==="01" && day<=RECAP_DAYS.year){
+    const y = String(+t.slice(0,4) - 1);
+    if(S.meta.recapSeenY!==y && S.sessions.filter(s=>s.date.startsWith(y)).length>=6) return { kind:"year", key:y };
+  }
+  if(day>RECAP_DAYS.month) return null;
   const prev = recapPrevKey("month", t.slice(0,7));
   if(S.meta.recapSeen===prev || S.sessions.filter(s=>s.date.startsWith(prev)).length<2) return null;
-  return prev;
+  return { kind:"month", key:prev };
 }
+function recapNudgeKey(){ const r = recapNudge(); return r && r.kind==="month" ? r.key : null; }
+// lancé ou écarté : la suggestion de l'accueil disparaît
+function recapMarkSeen(kind, key){ if(kind==="year") S.meta.recapSeenY = key; else S.meta.recapSeen = key; }
 Object.assign(ACT, {
   openRecap(d){ openRecap(d && d.kind, d && d.key); },
   recapKind(d){ if(recap.kind===d.v) return; recap = { kind:d.v, key:recapDefault(d.v) }; refreshRecap(); },
   recapStep(d){ recap.key = +d.d>0 ? recapNextKey(recap.kind, recap.key) : recapPrevKey(recap.kind, recap.key); refreshRecap(); sfx("seg"); },
-  recapLater(){ S.meta.recapSeen = recapNudgeKey(); changed(); },
+  recapLater(){ const r = recapNudge(); if(r) recapMarkSeen(r.kind, r.key); save();
+    const c = qs(".rc-nudge"); if(c){ c.classList.add("leaving"); setTimeout(()=>changed(), 250); } else changed(); },
   async recapShare(){
     const cv = drawRecap(recap.kind, recap.key);
     const name = `ascen-bilan-${recap.key}.png`;
