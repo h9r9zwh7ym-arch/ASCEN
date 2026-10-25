@@ -109,7 +109,7 @@ function overviewPaneHTML(){
   if(!S.sessions.length){
     return emptyHTML("chart", "Tes progrès commencent ici", "Force, muscles travaillés, records : tout s'affiche après ta première séance.", EMPTY_GO);
   }
-  return `${forceSumHTML()}${muscleSumHTML()}${recordsSumHTML()}${thenNowListHTML()}${coachCardHTML()}${progLinksHTML()}`;
+  return `${forceSumHTML()}${muscleSumHTML()}${recordsSumHTML()}${thenNowListHTML()}${progLinksHTML()}`;
 }
 // « Ta force » : le chiffre et sa courbe depuis tes débuts ; le détail (statut, régions, projections) est un toucher plus loin
 function forceSumHTML(){

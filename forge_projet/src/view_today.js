@@ -408,7 +408,7 @@ function templatesHTML(){
       <div class="tpl-empty">
         <div class="te-ico">${sfIcon("calPlan","red","lg")}</div>
         <div class="te-t">Mes séances</div>
-        <div class="te-s">Ajoute une séance à Mes séances et choisis ses jours : elle t'attendra ici le jour venu.</div>
+        <div class="te-s">Planifie une séance dans Mes séances : elle t'attendra ici.</div>
         ${appPicksOn() ? `<button class="btn secondary sm" data-a="weekWizard"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Programme de la semaine</button>` : ""}
       </div>
     </div>`;

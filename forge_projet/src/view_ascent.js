@@ -768,11 +768,11 @@ function ascSecBody(k, a){
       : `Plus de séries difficiles ou un record de plus par séance : c'est ce qui fait encore monter plus vite.`;
     const L = a.last, near = !a.wait && a.index!=null && a.alt > a.pushFrom - .1*(a.top - a.start), death = a.top>ASC_DEATH;
     return `<div class="sp-hero"><b class="num">+${ascM(tot)}</b><span>par séance, en ce moment</span></div>
-      <p class="sp-lead">Une séance comme les tiennes te fait monter de ${ascM(tot)}${a.comeback ? " (compte double : retour en force)" : ""}. Voici d'où ils viennent :</p>
+      ${a.comeback ? `<p class="sp-lead">Chaque séance compte double : retour en force.</p>` : ""}
       <div class="card asc-card sp-card"><div class="sp-bar" aria-hidden="true">${pos.map(q=>`<i class="c-${q[3]}" style="flex:${(q[2]/sum).toFixed(3)}"></i>`).join("")}</div>
         ${parts.map(q=>`<div class="sp-r"><i class="c-${q[3]}"></i><span>${q[0]}<small>${esc(q[1])}</small></span><b class="num">${q===parts[0] ? ascM(q[2]) : sm(q[2])}</b></div>`).join("")}</div>
       <div class="sp-tip">${ascIc("bolt")}<p><b>Pour monter plus vite</b><br>${tip}</p></div>
-      ${L && L.waiting ? `<p class="note">Ta dernière séance n'a pas fait monter : l'expédition suivante attend ta série. Tu peux regravir une montagne en attendant (Itinéraire).</p>` : ""}
+      ${L && L.waiting ? `<p class="note">Ta dernière séance n'a pas fait monter : l'expédition suivante attend ta série.</p>` : ""}
       ${near ? `<div class="wx ${a.pushOK ? "" : "warn"}">${ascIc("pulse", a.pushOK ? "" : "warn")}<span><b>${death ? `Zone de la mort (au-dessus de ${fmtNum(ASC_DEATH)} m)` : "Dernière ligne droite"} : ${a.pushOK ? "pleine vitesse" : "mi-vitesse"}</b><span>Ta force est à ${Math.round(a.form*100)} % de ton meilleur niveau récent${a.pushOK ? "." : ` (il faut ${Math.round(ASC_FORM_OK*100)} %).`}</span></span></div>` : ""}
       <h2 class="sh">Régularité</h2>
       ${ascRegHTML(a)}`;

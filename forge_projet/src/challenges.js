@@ -72,7 +72,7 @@ function openChallengesSheet(){
       ${act.has(c.id) ? `<span class="ch-on">en cours</span>` : `<button class="btn secondary sm" data-a="startChallenge" data-id="${c.id}" ${act.size>=CHAL_MAX?"disabled":""}>Lancer</button>`}
     </div>`).join("");
   openSheet(`<div class="sheet-hd"><span class="t">Défis</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
-    <div class="sheet-body"><p class="body" style="margin:0 20px 12px">Un défi commence aujourd'hui ; ta progression se calcule toute seule à partir de tes séances. ${CHAL_MAX} défis au plus en même temps.</p>
+    <div class="sheet-body"><p class="body" style="margin:0 20px 12px">${CHAL_MAX} défis au plus en même temps.</p>
     <div class="group">${rows}</div></div>`, { tall:true });
 }
 Object.assign(ACT, {

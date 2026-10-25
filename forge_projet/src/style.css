@@ -3377,12 +3377,6 @@ body.live-focus #restbar.island{bottom:auto}
 .asc-replay:active{transform:scale(.96)}
 .asc-scene:not(.ready) .asc-replay,.asc-scene.playing .asc-replay,.asc-toast.on + .asc-replay{opacity:0;pointer-events:none}
 /* « Ce que l'app a compris » (Progrès) : quelques lignes sobres, icône teintée */
-.coach-card{margin-top:16px;display:flex;flex-direction:column;gap:10px}
-.coach-card .co-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
-.coach-card .co-h .t{font-weight:700;font-size:var(--fs-head,17px)}
-.coach-card .co-goal{flex:none;max-width:45%;font-size:var(--fs-foot,13px);color:var(--label2);text-align:right}
-.coach-card .co-l{display:flex;gap:10px;align-items:flex-start;font-size:var(--fs-sub,15px);line-height:1.35;color:var(--label)}
-.coach-card .co-l .ii,.coach-card .co-l svg{flex:none;width:18px;height:18px;margin-top:1px;color:var(--tint)}
 /* carte du jour : l'étiquette (« Proposée par l'app ») sur sa ligne, le détail dessous sans « · » orphelin */
 .hero .hero-meta .hero-tag{flex-basis:100%}
 .hero .hero-meta .hero-tag+span::before{content:none}

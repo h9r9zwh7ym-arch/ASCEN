@@ -111,22 +111,16 @@ function dataMoreHTML(){
         ${sfIcon("download","green")}
         <div class="grow"><div class="t">Sauvegarder mes données</div><div class="s">${backupStatusText()}</div></div>
       </button>
-      ${canAutoBackup() ? `<div class="row">${sfIcon("repeat","green")}<div class="grow"><div class="t">Sauvegarde automatique</div><div class="s wrap">${S.settings.autoBackup ? "Le fichier choisi est réécrit après chaque séance" : "Choisis un fichier une fois, il est réécrit après chaque séance"}</div></div>
+      ${canAutoBackup() ? `<div class="row">${sfIcon("repeat","green")}<div class="grow"><div class="t">Sauvegarde automatique</div><div class="s wrap">${S.settings.autoBackup ? "Réécrite après chaque séance" : "Choisis un fichier, il sera réécrit après chaque séance"}</div></div>
         <button class="switch ${S.settings.autoBackup ? "on" : ""}" role="switch" aria-checked="${!!S.settings.autoBackup}" aria-label="Sauvegarde automatique" data-a="toggleAutoBackup"></button></div>` : ""}
     </div>
-    ${canAutoBackup() ? "" : `<p class="sh-sub" style="margin:8px 20px 0">Même nom à chaque fois (ASCEN-sauvegarde.json) : enregistrée dans le même dossier de Fichiers, la sauvegarde remplace la précédente.</p>`}
-    ${legacyStatusBar() || !isStandalone() ? `<div class="group" style="margin-top:14px">
-      ${legacyStatusBar() ? `<button class="row tap" style="width:100%" data-a="openReinstall">
-        ${sfIcon("phone","blue")}
-        <div class="grow"><div class="t">Barre d'état fondue</div><div class="s">Remettre l'icône à jour</div></div>
-        <span class="chev">${icon("chev")}</span>
-      </button>` : ""}
-      ${isStandalone() ? "" : `<button class="row tap" style="width:100%" data-a="openInstall">
+    ${isStandalone() ? "" : `<div class="group" style="margin-top:14px">
+      <button class="row tap" style="width:100%" data-a="openInstall">
         ${sfIcon("phone","blue")}
         <div class="grow"><div class="t">Installer sur l'écran d'accueil</div></div>
         <span class="chev">${icon("chev")}</span>
-      </button>`}
-    </div>` : ""}
+      </button>
+    </div>`}
     <div class="group" style="margin-top:14px">
       <button class="row tap" style="width:100%" data-a="restoreData">
         ${sfIcon("restore","teal")}
@@ -398,20 +392,6 @@ function legacyStatusBar(){
   }catch(e){ legacySB = false; }
   return legacySB;
 }
-function openReinstall(){
-  openSheet(`<div class="sheet-hd"><span class="t">Barre d'état fondue</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
-    <div class="sheet-body">
-      <p class="body" style="margin:0 20px 14px">Ton icône ASCEN a été ajoutée avant ce réglage : iOS garde l'ancienne barre d'état, pleine. Pour que l'app passe dessous, il faut remettre l'icône. Tes données suivent grâce à la sauvegarde.</p>
-      <div class="group install-steps">
-        <div class="row"><span class="step-n">1</span><div class="grow"><div class="t">Fais une sauvegarde</div><div class="s wrap">Garde le fichier dans Fichiers ou iCloud</div></div></div>
-        <div class="row"><span class="step-n">2</span><div class="grow"><div class="t">Supprime l'icône ASCEN</div><div class="s wrap">Appui long sur l'icône › Supprimer l'app</div></div></div>
-        <div class="row"><span class="step-n">3</span><div class="grow"><div class="t">Rouvre ASCEN dans Safari</div><div class="s wrap">Partager › Sur l'écran d'accueil</div></div></div>
-        <div class="row"><span class="step-n">4</span><div class="grow"><div class="t">Restaure ta sauvegarde</div><div class="s wrap">Profil › Restaurer, dans la nouvelle icône</div></div></div>
-      </div>
-      <div class="btnrow"><button class="btn secondary" data-a="backupData">${icon("bookmark")} Faire la sauvegarde</button></div>
-    </div>`);
-}
-
 // ---------- Matériel ----------
 const EQUIP_GLYPH = { stretch:"leaf", dumbbells:"dumbbell", barbell:"barbell", kettlebell:"kettlebell", bench:"bench", bench_incline:"benchIncline", bench_press:"benchPress", rack:"rack", pullup_bar:"bar", dip_bars:"dips", suspension:"straps", ab_roller:"wheel", bands:"band", jump_rope:"rope", mat:"mat", bodyweight:"person" };
 function equipBodyHTML(){
@@ -548,7 +528,7 @@ function refreshExoPrefs(){
 // ---------- Export / import IA ----------
 function exportImportBodyHTML(){
   const importedRows = S.importedProgram.map((s,i)=>`<div class="row"><div class="grow t">${esc(s.nom||("Séance "+(i+1)))}</div>${i===0?'<span class="chip on">Prochaine</span>':""}</div>`).join("");
-  return `<p class="body">Copie cette demande dans l'IA de ton choix : elle y trouvera ton matériel, tes objectifs et ton historique, et te renverra un fichier de programme à importer ici.</p>
+  return `<p class="body">Copie cette demande dans une IA : elle te renverra un programme à importer ici.</p>
     <div class="btnrow" style="margin-top:16px"><button class="btn" data-a="copyPrompt">Copier la demande</button></div>
     <div class="field" style="margin-top:12px"><textarea readonly rows="6" style="width:100%;border:0;background:transparent;font-size:calc(13rem/17);padding:10px 0;resize:vertical">${esc(buildExportPrompt())}</textarea></div>
     <div class="btnrow"><button class="btn secondary" data-a="triggerImport">Importer le fichier reçu</button></div>
@@ -669,7 +649,7 @@ Object.assign(ACT, {
   saveWhy(){ S.settings.why = ((qs("#whyInput")||{}).value||"").trim().slice(0,120); closeSheet(); save(); changed(); if(whyFrom==="motiv") ACT.openMotivation(); whyFrom = null; },
   saveName(){ S.settings.name = ((qs("#nameInput")||{}).value||"").trim(); closeSheet(); save(); changed(); },
   openEquip, openGoals, openExoPrefs, openExportImport, openAppearance, openAbout,
-  backupData(){ backupData(); }, exportCSV(){ exportCSV(); }, restoreData(){ restoreData(); }, openInstall(){ openInstall(); }, openReinstall(){ openReinstall(); },
+  backupData(){ backupData(); }, exportCSV(){ exportCSV(); }, restoreData(){ restoreData(); }, openInstall(){ openInstall(); },
   async toggleAutoBackup(){
     if(S.settings.autoBackup){ S.settings.autoBackup = false; save(); try{ await fsHandle(null); }catch(e){} toast("Sauvegarde automatique désactivée"); ACT.openData(); return; }
     try{
@@ -799,8 +779,7 @@ function bodyBodyHTML(){
   const pts = S.body.filter(e=>e.d>addDaysISO(todayISO(),-365)).map(e=>{ const d = parseISO(e.d); return { label:`${d.getDate()} ${MOIS[d.getMonth()]}`, v:e.kg, tip:`${fmtDate(e.d)} : ${fmtDec(e.kg)} kg` }; });
   const tr = bodyTrend();
   const recent = S.body.slice(-6).reverse();
-  return `<p class="body" style="margin-bottom:14px">Une pesée par semaine, le matin à jeun, suffit : seule la tendance compte.</p>
-    <div class="body-add"><div class="num-field"><input id="bodyIn" type="text" inputmode="decimal" maxlength="6" enterkeyhint="done" placeholder="${l?fmtDec(l.kg):"Ex. 72,5"}" aria-label="Poids en kg"><span>kg</span></div>
+  return `<div class="body-add"><div class="num-field"><input id="bodyIn" type="text" inputmode="decimal" maxlength="6" enterkeyhint="done" placeholder="${l?fmtDec(l.kg):"Ex. 72,5"}" aria-label="Poids en kg"><span>kg</span></div>
     <button class="btn" data-a="bodyAdd">Ajouter</button></div>
     ${pts.length ? `<div class="chart-card" style="margin-top:14px">
       <div class="cc-h"><div class="cc-t">12 derniers mois</div>${tr!=null?`<div class="cc-s">${tr>0?"+":tr<0?"−":"±"}${fmtDec(Math.abs(tr))} kg en 1 mois</div>`:""}</div>

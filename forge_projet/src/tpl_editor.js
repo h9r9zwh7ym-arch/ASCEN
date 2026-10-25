@@ -90,8 +90,7 @@ function wzSub(name, type){ return name.toLowerCase().startsWith(type.toLowerCas
 function weekWizardBody(){
   const split = WEEK_SPLITS[wizardN];
   const clash = S.templates.filter(t=>(t.days||[]).some(d=>split.some(s=>s[2]===d)));
-  return `<p class="body" style="margin:0 4px 14px">ASCEN crée tes séances à partir de ton matériel et de tes objectifs, puis les place dans la semaine. Tu pourras tout modifier ensuite.</p>
-    <div class="te-sec">Jours d'entraînement par semaine</div>
+  return `<div class="te-sec">Jours d'entraînement par semaine</div>
     <div class="wz-n">${[2,3,4,5,6].map(n=>`<button class="${n===wizardN?"on":""}" data-a="wizardN" data-v="${n}">${n}</button>`).join("")}</div>
     <div class="te-sec">Ta semaine</div>
     <div class="group wz-list">${split.map(([type,name,day],i)=>{

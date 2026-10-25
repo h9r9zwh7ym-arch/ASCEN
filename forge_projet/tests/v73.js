@@ -85,9 +85,8 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   log('Profile:', JSON.stringify(prof));
   if (!prof.failure || prof.pace !== 1) fail('profil : va au bout de ses séries, monte plus vite que proposé');
   if (!(prof.w > 20)) fail('« à fond » habituel ne bloque plus la progression');
-  if (!/Ce que l'app a compris/.test(prof.card) || !/au bout de tes séries/.test(prof.card)) fail('carte « Ce que l\'app a compris »');
-  await page.evaluate(() => document.querySelector('#v-progress .coach-card').scrollIntoView({ block: 'center' })); await page.waitForTimeout(300);
-  await page.screenshot({ path: path.join(OUT, '01_coach.png') });
+  // 2.12.3 : l'app s'adapte sans le raconter (plus de carte « Ce que l'app a compris » dans Progrès)
+  if (prof.card) fail('plus de carte « Ce que l\'app a compris »');
 
   await browser.close();
   if (errors.length) { errors.forEach(e => log(e)); log(`ERRORS: ${errors.length}`); process.exit(1); }

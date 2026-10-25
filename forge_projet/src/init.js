@@ -1,5 +1,5 @@
 // ================= INITIALISATION =================
-const APP_VERSION = "2.12.2";
+const APP_VERSION = "2.12.3";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 // séance en sombre (réglage, actif par défaut) : pendant la séance, l'écran passe en sombre quel que
@@ -105,7 +105,6 @@ function startApp(recovered){
   requestAnimationFrame(()=>requestAnimationFrame(()=>syncStatusBar(undefined, true)));
   syncVGap(); setTimeout(syncVGap, 600);
   // ancienne icône (barre d'état pleine) : on le dit une fois, la marche à suivre est dans Profil
-  setTimeout(()=>{ try{ if(typeof legacyStatusBar==="function" && legacyStatusBar() && !S.meta.sbHint){ S.meta.sbHint = 1; save(); toast("Barre d'état : remets l'icône à jour (Profil)", "info"); } }catch(e){} }, 2500);
 }
 
 // iOS ferme parfois l'app en arrière-plan pour libérer de la mémoire (après la musique, l'appareil photo…) :

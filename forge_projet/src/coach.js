@@ -110,28 +110,6 @@ function coachProfile_raw(){
   return out;
 }
 
-// « Ce que l'app a compris de toi » (Progrès) : seulement ce qui a été appris, en phrases courtes
-function coachLines(){
-  const p = coachProfile(); if(!p || p.n<4) return [];
-  const L = [];
-  if(p.repShift) L.push(["target", p.repShift<0 ? "Tu travailles plus lourd que la fourchette de ton objectif : les répétitions proposées suivent." : "Tu fais plus de répétitions que la fourchette de ton objectif : les répétitions proposées suivent."]);
-  if(p.pace>0) L.push(["trendUp", "Tu montes souvent la charge plus vite que proposé : la progression suit ton rythme."]);
-  else if(p.pace<0) L.push(["leaf", "Tu gardes souvent une charge plus légère que proposé : la progression ralentit d'un cran."]);
-  if(p.failure) L.push(["flame", "Tu vas souvent au bout de tes séries : c'est ta façon de faire, ça ne freine plus la progression."]);
-  const ms = Object.keys(p.learned).sort((a,b)=>p.rates[b]-p.rates[a]).slice(0, 2);
-  if(ms.length) L.push(["repeat", `Fatigue en fin de séance : ${ms.map(m=>`−${Math.round(p.rates[m]*100)} % de répétitions par série déjà faite pour ${musclePoss(m)}`).join(", ")}. L'app en tient compte.`]);
-  else if(p.n>=4) L.push(["repeat", "Les répétitions en moins en fin de séance sont comptées comme de la fatigue, pas comme un manque de force."]);
-  return L;
-}
-function coachCardHTML(){
-  const L = coachLines(); if(!L.length) return "";
-  const g = typeof GOAL_LABELS!=="undefined" ? GOAL_LABELS[S.goals.overall] : "";
-  return `<section class="card coach-card" aria-label="Ce que l'app a compris de toi">
-    <div class="co-h"><span class="t">Ce que l'app a compris</span>${g ? `<span class="co-goal">${esc(g)}</span>` : ""}</div>
-    ${L.map(([ic, t])=>`<div class="co-l">${ii(ic)}<span>${esc(t)}</span></div>`).join("")}
-  </section>`;
-}
-
 // ---------- séances construites dans l'ordre : chaque exercice connaît la fatigue de ceux d'avant ----------
 // list : [[exo, séries?]]
 function entriesInOrder(list){
