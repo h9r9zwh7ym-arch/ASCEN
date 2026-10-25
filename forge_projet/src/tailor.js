@@ -31,15 +31,23 @@ function tailorName(spec){
   return spec.kind==="renfo" ? tailorOpt("zone", spec.zone)[1] : spec.kind==="mix" ? tailorOpt("zone", spec.zone)[1]+" + cardio" : tailorOpt("kind", spec.kind)[1];
 }
 function tailorTag(spec){ return "Sur mesure" + (spec.equip==="none" ? " · sans matériel" : spec.equip==="loaded" ? " · charges" : ""); }
-function tailorCount(spec){ return Math.max(3, Math.min(spec.kind==="mobilite" ? 14 : 10, Math.round(TAILOR_MIN[spec.len]/(spec.kind==="mobilite" ? 3.2 : 7)))); }
+// nombre d'exercices visé : la durée (à ton rythme réel) divisée par ce que prend un exercice bien dosé
+// (≈ 3 à 4 séries de 40 s + repos) ; le temps se remplit avec des exercices, pas avec des séries en trop
+function tailorCount(spec){
+  if(spec.kind==="mobilite") return Math.max(3, Math.min(14, Math.round(TAILOR_MIN[spec.len]/3.2)));
+  const per = (spec.kind==="cardio" ? 3.5 : 3.3)*105, pace = typeof paceFactor==="function" ? paceFactor() : 1;
+  return Math.max(3, Math.min(10, Math.round(TAILOR_MIN[spec.len]*60/pace/per)));
+}
 const isCardioEx = e=>e.muscles.includes("cardio");
 const PUSH_P = new Set(["push"]), PULL_P = new Set(["pull"]), LOW_P = new Set(["squat","lunge","hinge","calf"]);
 
 // ---------- les exercices possibles ----------
+const tailorZoneM = spec=>spec.zone==="full" ? null : spec.zone==="core" ? ["abdos"] : SESSION_TYPE_MAP[spec.zone] ? SESSION_TYPE_MAP[spec.zone].muscles : null;
+const tailorZoneHas = (spec, m)=>{ const z = tailorZoneM(spec); return !z || z.includes(m); };
 function tailorPool(spec){
   let base = availableExos().filter(levelOK);
   if(spec.equip==="none") base = base.filter(e=>e.equip.every(q=>q==="bodyweight"));
-  const zoneM = spec.zone==="full" ? null : spec.zone==="core" ? ["abdos"] : SESSION_TYPE_MAP[spec.zone] ? SESSION_TYPE_MAP[spec.zone].muscles : null;
+  const zoneM = tailorZoneM(spec);
   const inZone = e=>!zoneM || zoneM.includes(e.muscles[0]) || (spec.zone==="core" && e.pattern==="core");
   if(spec.kind==="mobilite"){
     // étirements et Pilates (sol, au poids du corps) des zones demandées
@@ -53,7 +61,15 @@ function tailorPool(spec){
   let renfo = base.filter(e=>e.muscles[0]!=="cardio");
   if(spec.equip==="loaded"){ const l = renfo.filter(e=>exoKind(e)==="loaded"); if(l.length>=3) renfo = l.concat(renfo.filter(e=>e.pattern==="core" && exoKind(e)!=="cardio").slice(0,3)); }
   const z = renfo.filter(inZone);
-  const pool = z.length>=3 ? z : renfo.filter(e=>!zoneM || e.muscles.some(m=>zoneM.includes(m)));
+  let pool = z.length>=3 ? z : renfo.filter(e=>!zoneM || e.muscles.some(m=>zoneM.includes(m)));
+  // trop peu d'exercices pour la durée (ex. « Dos » sans matériel) : on ajoute ceux qui sollicitent la zone
+  // en second, puis du gainage, plutôt que de gonfler les séries ou de rendre une séance de 10 min
+  const need = tailorCount(spec) + 1;
+  if(zoneM && pool.length<need){
+    const add = (list)=>list.forEach(e=>{ if(pool.length<need + 2 && !pool.includes(e)) pool.push(e); });
+    add(renfo.filter(e=>e.muscles.some(m=>zoneM.includes(m))));
+    if(spec.zone!=="bas") add(renfo.filter(e=>e.pattern==="core" && !isCardioEx(e)));
+  }
   return spec.kind==="mix" ? pool.concat(cardio.filter(e=>!pool.includes(e))) : pool;
 }
 
@@ -138,12 +154,14 @@ function tailorBase(spec, exos){
 }
 const tailorSec = (e, n)=>n*(40 + e.restSec);
 // la durée visée tenue en jouant sur les séries : on retire d'abord sur les exercices d'appoint (fin de
-// séance), on ajoute d'abord sur les gros mouvements (début de séance), entre 2 et 5 séries
+// séance), on ajoute d'abord sur les gros mouvements (début de séance), entre 2 séries et le plafond de
+// chaque exercice (setCap) et de chaque muscle ; le cardio se fait en 3 à 5 tours
 function tailorFit(spec, exos){
   const sets = tailorBase(spec, exos), goal = TAILOR_MIN[spec.len]*60/paceFactor();   // à ton rythme réel
   if(spec.kind==="mobilite") return sets;
   const tot = ()=>exos.reduce((t,e,i)=>t + tailorSec(e, sets[i]), 0);
-  const cap = S.goals.level==="debutant" || S.goals.senior ? 4 : 5;
+  const rounds = e=>spec.kind==="cardio" || (spec.kind==="mix" && isCardioEx(e));
+  const room = j=>rounds(exos[j]) ? sets[j] < (spec.len==="long" ? 5 : 4) : setRoom(exos, sets, j);
   for(let k=0; k<30 && tot()>goal*1.06; k++){
     let i = exos.length-1; while(i>=0 && sets[i]<=2) i--; if(i<0) break;
     // le dernier exercice qui a encore le plus de séries
@@ -151,7 +169,7 @@ function tailorFit(spec, exos){
     sets[best]--;
   }
   for(let k=0; k<30 && tot()<goal*.94; k++){
-    let best = -1; for(let j=0; j<exos.length; j++) if(sets[j]<cap && (best<0 || sets[j]<sets[best])) best = j;
+    let best = -1; for(let j=0; j<exos.length; j++) if(room(j) && (best<0 || sets[j]<sets[best])) best = j;
     if(best<0) break; sets[best]++;
   }
   return sets;
@@ -192,7 +210,10 @@ function tailorScore(spec, exos, ctx){
   for(let i=1; i<ord.length; i++) if(gearOf(ord[i])!==gearOf(ord[i-1])) gear++;
   // exercices à laisser de côté (« Autre proposition ») : la séance doit vraiment changer
   const av = ctx.avoid ? exos.filter(e=>ctx.avoid.has(e.id)).length : 0;
-  const v = value*6 + need*1.2 - tired*2.2 - over*1.2 + distinct*.7 - fams*2.5 - gap/4 + multi*.4 + bal + habit - stretch*.5 + legs - gear*.2 - av*2.5;
+  // trop de mouvements quasi identiques (cinq variantes de pompes) : au-delà de deux par geste et muscle
+  const sim = {}; exos.forEach(e=>{ if(isStretch(e)) return; const k = e.pattern+"|"+e.muscles[0]; sim[k] = (sim[k]||0) + 1; });
+  const same = Object.values(sim).reduce((t, c)=>t + Math.max(0, c - 2), 0);
+  const v = value*6 + need*1.2 - tired*2.2 - over*1.2 + distinct*.7 - fams*2.5 - gap/4 + multi*.4 + bal + habit - stretch*.5 + legs - gear*.2 - av*2.5 - same*1.6;
   return { v, value, need, tired, over, distinct, min, sets, bal, fresh, gear };
 }
 // le matériel à installer pour un exercice (haltères, kettlebell, barre, élastique ; banc en plus)
@@ -269,8 +290,9 @@ async function tailorGenerate(spec, onStep, opts){
   const ctx = tailorContext(), facts = [];
   if(ctx.fresh) facts.push("première séance : on reste simple");
   else {
-    if(!want && ctx.low.length) facts.push(`${ctx.low.slice(0,2).map(r=>r.n.toLowerCase()).join(" et ")} en retard`);
-    const yest = ctx.tired.filter(m=>MUSCLE_MAP[m]).slice(0, 1);
+    const zoneLow = ctx.low.filter(r=>tailorZoneHas(spec, r.id));
+    if(!want && zoneLow.length) facts.push(`${zoneLow.slice(0,2).map(r=>r.n.toLowerCase()).join(" et ")} en retard`);
+    const yest = ctx.tired.filter(m=>MUSCLE_MAP[m] && tailorZoneHas(spec, m)).slice(0, 1);
     if(!want && yest.length) facts.push(`${mName(yest[0])} à ménager`);
     const tm = typeof plannedTemplate==="function" && plannedTemplate(addDaysISO(todayISO(), 1));
     if(!want && tm && ctx.soon.size) facts.push(`« ${tm.n} » demain`);
@@ -284,7 +306,7 @@ async function tailorGenerate(spec, onStep, opts){
   for(let batch=0; batch<8; batch++){
     for(let k=0;k<10;k++){
       // la taille varie un peu autour de la cible : la durée visée départage
-      const exos = tailorDraw(spec, pool, Math.max(2, n + (k%3) - 1), ctx, base);
+      const exos = tailorDraw(spec, pool, Math.max(Math.min(3, pool.length), n + (k%3) - 1), ctx, base);   // jamais moins de 3 exercices (si possible)
       tries.push({ exos, s:tailorScore(spec, exos, ctx) });
     }
     if(onStep) onStep(1, `${tries.length} combinaisons · ${pool.length} exercices possibles`);
@@ -312,9 +334,16 @@ async function tailorGenerate(spec, onStep, opts){
   cpu += performance.now() - c0;
   if(pace){ const left = (opts.minMs ?? 2100) - (performance.now() - t0); if(left>0) await tailorWait(left); }
   const why = [];
-  if(!want && best.s.need>0.5 && ctx.low.length) why.push(`priorité : ${ctx.low.slice(0,2).map(r=>r.n.toLowerCase()).join(" et ")}`);
-  if(!want && ctx.tired.length) why.push(`on ménage ${ctx.tired.slice(0,2).map(mName).join(" et ")} (travaillés il y a moins de 48 h)`);
+  // on ne parle que des muscles que cette séance travaille vraiment (pas des pectoraux dans une séance jambes)
+  const prim = new Set(exos.map(e=>e.muscles[0]));
+  const lowHere = ctx.low.filter(r=>prim.has(r.id)), tiredHere = ctx.tired.filter(m=>prim.has(m) && MUSCLE_MAP[m]);
+  if(!want && best.s.need>0.5 && lowHere.length) why.push(`priorité : ${lowHere.slice(0,2).map(r=>r.n.toLowerCase()).join(" et ")}`);
+  if(!want && tiredHere.length) why.push(`${tiredHere.slice(0,2).map(mName).join(" et ")} travaillés il y a moins de 48 h : une série de moins`);
   if(!want && S.goals.overall!=="endurance" && best.s.value<.8) why.push("ce type de séance compte moins pour ton objectif");
+  // situations délicates, dites franchement plutôt que masquées par des séries en trop
+  const cb = !want && comebackDays();
+  if(cb) why.push(`reprise après ${cb} jours : une série de moins, on remonte vite`);
+  if(min < TAILOR_MIN[spec.len]*.75) why.push(`peu d'exercices possibles avec ces critères : ≈ ${min} min plutôt que ${TAILOR_MIN[spec.len]}`);
   return { id:uid(), date:todayISO(), source:"engine", type:"tailored", tailored:spec, name:tailorName(spec),
     reason:why.length ? why.join(" ; ").replace(/^./, c=>c.toUpperCase())+"." : null, stim:null, startedAt:null, completedAt:null,
     exos:entries, tries:tries.length, refined:ref.tested, cpuMs:Math.max(1, Math.round(cpu)) };
@@ -488,7 +517,9 @@ Object.assign(ACT, {
     if(tailorBusy) return; tailorBusy = true;
     const spec = d && d.spec && typeof d.spec==="object" ? d.spec : tailorSpec(), fast = reducedMotion();
     if(tailorSummary(spec).warn){ tailorBusy = false; toast("Pas assez d'exercices pour ces critères avec ton matériel", "info"); return; }
-    const btn = qs('#overlay .sheet-ft [data-a="tailorGo"]');
+    // le bouton d'où part l'animation : « Générer » de la feuille, ou « Autre proposition » sur la carte
+    const from = d && d.from && d.from.isConnected && !d.from.closest("#overlay") ? d.from : null;
+    const btn = from || qs('#overlay .sheet-ft [data-a="tailorGo"]');
     const host = document.createElement("div"); host.className = "tl-host" + (fast ? " fast" : ""); host.innerHTML = tailorThinkHTML(spec); document.body.appendChild(host);
     document.body.classList.add("tl-on");   // l'heure et la batterie restent lisibles au-dessus de l'animation
     sfx("go"); haptic(10);
@@ -496,7 +527,10 @@ Object.assign(ACT, {
     const pool = tailorPool(spec), ics = qsa(".tl-ic", host);
     ics.forEach((el, i)=>{ const e = pool[i % Math.max(1, pool.length)]; if(e) el.innerHTML = exoIcon(e); });
     // le bouton se détache de la feuille qui descend, et devient le cœur
-    const morph = btn && !fast && btn.getBoundingClientRect().width ? tailorMorph(host, btn) : (host.classList.add("ready"), null);
+    const morph = btn && !fast && btn.getBoundingClientRect().width ? tailorMorph(host, btn) : null;
+    // sans bouton visible (relance depuis « Choisir une autre séance », dont la feuille se ferme) : le
+    // voile couvre d'abord l'écran, sinon la carte du jour resterait visible sous l'animation
+    if(!morph){ if(!fast) qs(".tl-bg", host).animate([{ opacity:0 }, { opacity:1 }], { duration:320, easing:"ease-out", fill:"forwards" }); host.classList.add("ready"); }
     closeSheet();
     if(morph) await morph;
     const shuffle = ()=>ics.forEach(el=>{ if(Math.random()<.4){ const e = pool[(Math.random()*pool.length)|0]; if(e) tailorIc(el, e, true); } });
@@ -530,6 +564,6 @@ Object.assign(ACT, {
     if(currentTab!=="today") switchTab("today");
     scrollTodayTop(); renderView("today");
     if(fast){ host.remove(); document.body.classList.remove("tl-on"); tailorBusy = false; return; }
-    try{ await tailorLandRows(host); } finally{ host.remove(); document.body.classList.remove("tl-on"); tailorBusy = false; }
+    try{ await tailorLandRows(host); } finally{ host.remove(); document.body.classList.remove("tl-on"); tailorBusy = false; if(btn) btn.style.visibility = ""; }
   },
 });

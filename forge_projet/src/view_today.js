@@ -1571,9 +1571,9 @@ Object.assign(ACT, {
   warmGo(){ const W = S.draft && S.draft.warm; if(!W || W.end) return; W.end = Date.now() + W.moves[W.i][1]*1000; save(); sfx("go"); refreshFocusRegion(); },
   warmSkip(){ warmFinish(); sfx("swipe"); },
   startSession(){ if(!S.draft.exos.length) return; const mc = typeof moStartCapture==="function" ? moStartCapture() : null; S.draft.startedAt = new Date().toISOString(); warmStart(S.draft); liveFocusIdx = 0; completeShown = false; save(); const draw = ()=>{ scrollTodayTop(); renderViewAnimated("today"); }; if(!(mc && moStart(mc, draw))){ draw(); showLaunch(S.draft); } },
-  regenSession(){
+  regenSession(d, el){
     // séance sur mesure : on relance la vraie réflexion avec les mêmes critères (et d'autres exercices)
-    if(S.draft && S.draft.tailored && !S.draft.startedAt){ ACT.tailorGo({ spec:S.draft.tailored, avoid:new Set(S.draft.exos.map(e=>e.exoId)) }); return; }
+    if(S.draft && S.draft.tailored && !S.draft.startedAt){ ACT.tailorGo({ spec:S.draft.tailored, avoid:new Set(S.draft.exos.map(e=>e.exoId)), from:el && el.closest && el.closest("button") }); return; }
     regenerateDraft(); renderTodaySoft();
     toast(S.draft && S.draft.tries>1 ? `Nouvelle proposition · ${S.draft.tries} combinaisons comparées` : "Nouvelle proposition");
     // l'icône du bouton fait un tour : on voit que c'est bien une autre proposition

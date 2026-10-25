@@ -213,12 +213,31 @@ function weeklySetTarget(m){
   return base*(g.level==="debutant" ? .7 : g.level==="avance" ? 1.3 : 1)*(g.senior ? .85 : 1)*(e==="prioriser" ? 1.3 : e==="eviter" ? .5 : 1);
 }
 const SESSION_MIN = { court:25, moyen:40, long:60 };
+// Combien de séries un exercice mérite au plus dans UNE séance. Au-delà de 3-4 séries d'un même exercice,
+// la fatigue l'emporte sur le gain : mieux vaut un exercice de plus (Schoenfeld 2017 ; Baz-Valle 2022 ;
+// ~6 à 10 séries utiles par muscle et par séance). Débutant, après 65 ans ou pendant les premières
+// séances : 3. Intermédiaire : 4 sur un gros mouvement, 3 en isolation. Avancé : 4 (5 sur un gros
+// mouvement chargé si l'objectif est la force). Muscle travaillé il y a moins de 48 h, ou reprise après deux
+// semaines sans séance : une série de moins (jamais moins de 2).
+const BIG_P = new Set(["squat","hinge","lunge","push","pull"]);
+const isBigExo = e=>!isoExo(e) && (BIG_P.has(e.pattern) || e.muscles.length>=3);
+function comebackDays(){ const g = typeof daysSinceLastSession==="function" ? daysSinceLastSession() : null; return g!=null && g>=14 ? g : 0; }
+function setCap(e){
+  if(!e || isStretch(e) || e.muscles[0]==="cardio") return 5;
+  const g = S.goals, novice = g.level==="debutant" || g.senior, done = S.sessions.length;
+  let c = novice ? 3 : g.level==="avance" ? (isBigExo(e) && g.overall==="force" && kgType(e) ? 5 : 4) : isBigExo(e) ? 4 : 3;
+  if(done<4 && g.level!=="avance") c = Math.min(c, 3);   // premières séances : on apprend tes charges
+  if(done && daysSinceTrained(e.muscles[0])<2) c--;
+  if(comebackDays()) c--;
+  return Math.max(2, c);
+}
+// séries d'un même muscle dans une séance (tous exercices confondus)
+function muscleSessionCap(){ const g = S.goals; return g.level==="debutant" || g.senior ? 6 : g.level==="avance" ? 10 : 8; }
 // séries de chaque exercice d'une séance : ce qui manque cette semaine à son muscle, réparti sur les
-// séances qui restent (ta fréquence) et sur les exercices du même muscle ; 2 à 5 séries (4 pour un
-// débutant, après 65 ans ou en isolation) ; puis la durée de séance choisie est tenue
+// séances qui restent (ta fréquence) et sur les exercices du même muscle, dans la limite de setCap ; puis
+// la durée de séance choisie est tenue
 function profileSets(exos, minutes){
-  const cap = S.goals.level==="debutant" || S.goals.senior ? 4 : 5;
-  return fitSetsToTime(exos, profileBase(exos), (minutes || SESSION_MIN[S.goals.sessionLength] || 40)*60/paceFactor(), cap, isoExo);
+  return fitSetsToTime(exos, profileBase(exos), (minutes || SESSION_MIN[S.goals.sessionLength] || 40)*60/paceFactor());
 }
 const isoExo = e=>["biceps","triceps","avantbras","mollets"].includes(e.muscles[0]) || e.pattern==="core";
 function profileBase(exos){
@@ -227,18 +246,27 @@ function profileBase(exos){
   const done7 = S.sessions.filter(s=>daysBetween(s.date, today)<7 && s.exos.some(ex=>ex.sets.some(st=>st.done))).length;
   const left = Math.max(1, d - done7), k = {};
   exos.forEach(e=>{ k[e.muscles[0]] = (k[e.muscles[0]] || 0) + 1; });
-  const cap = S.goals.level==="debutant" || S.goals.senior ? 4 : 5, iso = isoExo;
+  const mCap = muscleSessionCap();
   return exos.map(e=>{
     if(isStretch(e) || e.muscles[0]==="cardio") return e.sets;
     const m = e.muscles[0], t = weeklySetTarget(m), per = t/d;
-    const want = Math.max(per*.6, Math.min(per*1.5, Math.max(0, t - (vol[m] || 0))/left));
-    return Math.max(2, Math.min(iso(e) ? Math.min(cap, 4) : cap, Math.round(want/k[m])));
+    const want = Math.min(mCap, Math.max(per*.6, Math.min(per*1.5, Math.max(0, t - (vol[m] || 0))/left)));
+    return Math.max(2, Math.min(setCap(e), Math.round(want/k[m])));
   });
 }
+// une série de plus sur l'exercice i reste-t-elle raisonnable ? (son plafond, et celui de son muscle)
+function setRoom(exos, sets, i, extra){
+  const e = exos[i]; if(isStretch(e)) return false;
+  if(sets[i] >= Math.min(setCap(e), extra==null ? 99 : extra)) return false;
+  if(e.muscles[0]==="cardio") return true;
+  const m = e.muscles[0], sum = exos.reduce((t, x, j)=>t + (x.muscles[0]===m ? sets[j] : 0), 0);
+  return sum < muscleSessionCap();
+}
 // tenir une durée : on retire d'abord sur la fin de séance (exercices d'appoint), on ajoute d'abord sur
-// les gros mouvements du début (une série de plus au plus que ce que vise ton profil) ; seulement si
-// l'écart est net (±15 %)
-function fitSetsToTime(exos, sets, goalSec, cap, iso){
+// les gros mouvements du début (une série de plus au plus que ce que vise ton profil, jamais au-delà des
+// plafonds) ; seulement si l'écart est net (±15 %). Une séance trop courte reste courte : c'est au choix des
+// exercices (un de plus) de remplir le temps, pas à des séries en trop.
+function fitSetsToTime(exos, sets, goalSec){
   const base = sets; sets = sets.slice();
   const sec = ()=>exos.reduce((t,e,i)=>t + sets[i]*(40 + e.restSec), 0), free = i=>!isStretch(exos[i]);
   if(sec()>goalSec*1.15){
@@ -248,7 +276,7 @@ function fitSetsToTime(exos, sets, goalSec, cap, iso){
     }
   } else if(sec()<goalSec*.85){
     for(let n=0; n<40 && sec()<goalSec*.95; n++){
-      let b = -1; for(let j=0; j<exos.length; j++) if(free(j) && sets[j]<Math.min(base[j]+1, iso && iso(exos[j]) ? Math.min(cap, 4) : cap) && (b<0 || sets[j]<sets[b])) b = j;
+      let b = -1; for(let j=0; j<exos.length; j++) if(setRoom(exos, sets, j, base[j]+1) && (b<0 || sets[j]<sets[b])) b = j;
       if(b<0) break; sets[b]++;
     }
   }
