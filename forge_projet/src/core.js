@@ -527,12 +527,15 @@ function fmtRelative(iso){
 // « 1 série », « 2 séries » (en français, 0 et 1 sont au singulier)
 function nb(n, w){ return `${n} ${w}${Math.abs(n)>=2?"s":""}`; }
 // fr-FR et pas fr-CH : Safari iOS écrit « 0.5 » en fr-CH, on veut la virgule partout
-function fmtNum(n){ return Math.round(n).toLocaleString("fr-FR"); }
-function fmtDec(n){ return round1(n).toLocaleString("fr-FR"); }
+// formateurs créés une fois : toLocaleString en recrée un à chaque appel (plus de la moitié du temps d'affichage
+// de Progrès sur un long historique) ; même résultat (« 1 234 », « 12,5 »)
+const NF0 = new Intl.NumberFormat("fr-FR", { maximumFractionDigits:0 }), NF1 = new Intl.NumberFormat("fr-FR", { maximumFractionDigits:1 }), NF2 = new Intl.NumberFormat("fr-FR", { maximumFractionDigits:2 });
+function fmtNum(n){ return NF0.format(Math.round(n)); }
+function fmtDec(n){ return NF1.format(round1(n)); }
 // charge d'un matériel (11,25 kg garde ses deux décimales)
-function fmtW(w){ return (+w).toLocaleString("fr-FR", { maximumFractionDigits:2 }); }
+function fmtW(w){ return NF2.format(+w); }
 function fmtKg(kg){
-  if(kg>=10000) return `${round1(kg/1000).toLocaleString("fr-FR")} t`;
+  if(kg>=10000) return `${fmtDec(kg/1000)} t`;
   return `${fmtNum(kg)} kg`;
 }
 
@@ -575,15 +578,6 @@ function beatCmp(def, st, ref){
   if(same || !loadableTypeOf(def)) return byReps;
   if(kgType(def)){ const a = estimated1RM(w,r), b = estimated1RM(ref.weight, ref.reps); return a>b+0.01 ? 1 : Math.abs(a-b)<=0.01 ? 0 : -1; }
   return w>ref.weight ? (r>=ref.reps ? 1 : 0) : (byReps>0 ? 0 : -1);
-}
-// répétitions (ou secondes) à faire, à la charge choisie, pour battre la référence ; null si hors de portée
-function beatTarget(def, w, ref){
-  w = w||0;
-  if(kgType(def) && w && Math.abs(w-ref.weight)>=0.01){
-    const r = Math.floor(30*((estimated1RM(ref.weight, ref.reps)+0.011)/w - 1))+1;
-    return r>40 ? null : Math.max(1, r);
-  }
-  return ref.reps+1;
 }
 function daysSinceTrained(muscleId){ return memo("dst:"+muscleId+todayISO(), ()=>daysSinceTrained_raw(muscleId)); }
 function daysSinceTrained_raw(muscleId){
@@ -653,15 +647,6 @@ function distinctExosCount_raw(){
   S.sessions.forEach(s=>sessionSummary(s).exos.forEach(id=>ids.add(id)));
   return ids.size;
 }
-function distinctMusclesCount(){ return memo("distinctMusclesCount", distinctMusclesCount_raw); }
-function distinctMusclesCount_raw(){
-  const ms = new Set();
-  S.sessions.forEach(s=>sessionSummary(s).exos.forEach(id=>{
-    const def = EXO_MAP[id];
-    if(def) def.muscles.forEach(m=>{ if(m!=="cardio") ms.add(m); });
-  }));
-  return ms.size;
-}
 // heure de début (heure locale) : l'analyse d'une date ISO complète coûte, on la garde par séance
 const HOUR_CACHE = new WeakMap();
 function startHour(s){
@@ -670,13 +655,35 @@ function startHour(s){
   const h = new Date(s.startedAt).getHours(); HOUR_CACHE.set(s, { a:s.startedAt, h }); return h;
 }
 
+// 1RM estimé : la même formule partout (records, charges proposées, indice de force) : moyenne d'Epley
+// et de Brzycki jusqu'à 10 répétitions, Epley au-delà, la charge elle-même pour 1 répétition (e1rmOf,
+// strength.js). Sans répétitions : la charge seule.
 function estimated1RM(weight,reps){
   if(!weight||!reps) return weight||0;
-  return weight*(1+reps/30); // formule d'Epley
+  return e1rmOf(weight, reps);
+}
+// ---------- records ----------
+// Une seule règle, en direct comme après coup :
+// · charge en kg : une charge plus lourde, ou un 1RM estimé plus haut (plus de répétitions à la même charge) ;
+// · élastique : un élastique plus résistant, ou plus de répétitions avec le plus résistant ;
+// · poids du corps et exercice tenu : plus de répétitions, ou plus de secondes.
+// (Avant 2.13, seuls les exercices chargés en kg pouvaient faire un record : 20 pompes après 15 n'en étaient pas.)
+function prState(){ return { w:0, e:0, reps:{} }; }
+function prAdd(def, b, w, r){
+  b.w = Math.max(b.w, w);
+  if(w && kgType(def)) b.e = Math.max(b.e, estimated1RM(w, r));
+  b.reps[w] = Math.max(b.reps[w]||0, r);
+}
+function prBeats(def, b, w, r){
+  if(!def || isStretch(def) || !(w || r)) return false;
+  if(w && kgType(def)) return w>b.w || estimated1RM(w, r)>b.e+0.01;
+  if(w) return w>b.w || (w===b.w && r>(b.reps[w]||0));
+  return r>(b.reps[0]||0);
 }
 function exoPRs(exoId){ return memo("pr:"+exoId, ()=>exoPRs_raw(exoId)); }
 function exoPRs_raw(exoId){
-  let maxWeight=0, maxVolumeSession=0, best1rm=0, count=0;
+  const def = EXO_MAP[exoId], b = prState();
+  let maxVolumeSession=0, count=0;
   S.sessions.forEach(s=>{
     const ex = s.exos.find(x=>x.exoId===exoId);
     if(!ex || !ex.sets.some(st=>st.done)) return;
@@ -685,21 +692,35 @@ function exoPRs_raw(exoId){
     ex.sets.forEach(st=>{
       if(!st.done) return;
       vol += (st.reps||0)*(st.weight||0);
-      if((st.weight||0)>maxWeight) maxWeight=st.weight;
-      const e = estimated1RM(st.weight,st.reps);
-      if(e>best1rm) best1rm=e;
+      if(def) prAdd(def, b, st.weight||0, st.reps||0);
     });
     if(vol>maxVolumeSession) maxVolumeSession=vol;
   });
   // best1rm arrondi pour l'affichage ; e1rm exact pour comparer (sinon 10 × 10 kg « battait » 10 × 10 kg : 13,33 > 13,3)
-  return { maxWeight, maxVolumeSession, best1rm:round1(best1rm), e1rm:best1rm, count };
+  return { maxWeight:b.w, maxVolumeSession, best1rm:round1(b.e), e1rm:b.e, count, b };
 }
 function isNewPR(exoId, weight, reps){
   const pr = exoPRs(exoId);
   if(!pr.count) return false; // la toute première fois n'est pas un « record battu »
-  return weight>pr.maxWeight || estimated1RM(weight,reps)>pr.e1rm+0.01;
+  return prBeats(EXO_MAP[exoId], pr.b, weight||0, reps||0);
+}
+// record en séance : meilleur que tout ce qui précède, historique et séries déjà validées aujourd'hui réunis
+// (la même comparaison que recomputePRFlags). Avant : comparé à l'historique sur un critère et aux séries
+// du jour sur un autre, 20 kg × 10 après 20 kg × 9 comptait comme record alors qu'il n'en battait aucun.
+function isLivePR(def, doneToday, weight, reps){
+  const pr = exoPRs(def.id); if(!pr.count) return false;   // la toute première fois n'est pas un « record battu »
+  const t = { w:pr.b.w, e:pr.b.e, reps:{ ...pr.b.reps } };
+  doneToday.forEach(s=>prAdd(def, t, s.weight||0, s.reps||0));
+  return prBeats(def, t, weight||0, reps||0);
 }
 
+// historique enregistré avant la règle commune (2.13) : records recalculés une fois, au calme
+function upgradeRecords(){
+  if((S.meta.prRule||0)>=2) return false;
+  S.meta.prRule = 2;
+  if(!S.sessions.length) return false;   // rien à recalculer : pas d'écriture au démarrage
+  recomputePRFlags(); return true;
+}
 // Records recalculés après la modification d'une séance passée : même règle qu'en direct
 // (battre l'historique ET les séries précédentes de la séance, jamais à la 1re fois).
 function recomputePRFlags(){
@@ -707,15 +728,17 @@ function recomputePRFlags(){
   S.sessions.forEach(s=>{
     const cur = {};
     s.exos.forEach(ex=>{
-      const b = best[ex.exoId], c = cur[ex.exoId] || (cur[ex.exoId] = { w:b?b.w:0, r:b?b.r:0 });
+      const def = EXO_MAP[ex.exoId]; if(!def) return;
+      const b = best[ex.exoId];
+      // état de la séance : l'historique d'avant, puis chaque série validée
+      const c = cur[ex.exoId] || (cur[ex.exoId] = b ? { w:b.w, e:b.e, reps:{ ...b.reps } } : prState());
       ex.sets.forEach(st=>{
         if(!st.done) return;
         if(st.pr) before++;
-        const w = st.weight||0, r = st.reps||0, e = estimated1RM(w,r);
-        const was = !!st.pr;
-        if(b && (w||r) && (w>c.w || e>c.r+0.01)){ st.pr = true; after++; } else delete st.pr;
+        const w = st.weight||0, r = st.reps||0, was = !!st.pr;
+        if(b && prBeats(def, c, w, r)){ st.pr = true; after++; } else delete st.pr;
         if(was!==!!st.pr) sessionTouched(s);
-        c.w = Math.max(c.w,w); c.r = Math.max(c.r,e);
+        prAdd(def, c, w, r);
       });
     });
     Object.keys(cur).forEach(id=>{ best[id] = cur[id]; });
@@ -784,15 +807,6 @@ function weeklyAverage(weeks){
 function appPicksOn(){ return S.settings.appPicks!==false; }
 function sessionsToday(){ return S.sessions.filter(s=>s.date===todayISO()); }
 
-function dayMap(){ return memo("dayMap", dayMap_raw); }
-function dayMap_raw(){
-  const m = {};
-  S.sessions.forEach(s=>{
-    const e = m[s.date] || (m[s.date]={sessions:0,volume:0,sets:0});
-    e.sessions++; e.volume += sessionVolume(s); e.sets += sessionSetCount(s);
-  });
-  return m;
-}
 
 // (le niveau XP des versions ≤ 4.0 est remplacé par l'ascension : ascent.js)
 

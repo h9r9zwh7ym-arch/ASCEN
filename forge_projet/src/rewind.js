@@ -47,7 +47,7 @@ const JOURS_PLURIEL = ["dimanches","lundis","mardis","mercredis","jeudis","vendr
 
 // ---------- écrans ----------
 function rwSlides(kind, key){
-  const d = rewindData(kind, key), per = kind==="year" ? "cette année" : "ce mois-ci";
+  const d = rewindData(kind, key);
   const prevLbl = kind==="year" ? `${+key-1}` : MOIS_LONG[parseISO(recapPrevKey("month", key)+"-01").getMonth()];
   const slides = [];
   slides.push({ bg:"ember", html:`<div class="rw-kicker">ASCEN Rewind</div>
@@ -198,7 +198,7 @@ function rwSlideSounds(sl, n){
 
 // ---------- lecteur ----------
 function openRewind(kind, key){
-  kind = kind||"month"; key = key||recapDefault(kind);
+  kind = kind==="year" ? "year" : "month"; key = recapKeyOK(kind, key) ? key : recapDefault(kind);
   closeSheet();
   const { slides } = rwSlides(kind, key);
   let el = qs("#rewind"); if(el) el.remove();
@@ -321,7 +321,12 @@ document.addEventListener("keydown", e=>{
   else if(e.key==="ArrowLeft") rwGo(rw.i-1);
 });
 Object.assign(ACT, {
-  openRewind(d){ openRewind((d && d.kind) || (typeof recap!=="undefined" && recap ? recap.kind : "month"), (d && d.key) || (typeof recap!=="undefined" && recap ? recap.key : undefined)); },
+  // la période vient du bouton, sinon du bilan ouvert ; une clé ne sert que pour sa propre période
+  // (avant : « mois » + la clé d'un bilan annuel ouvert juste avant faisait planter le lecteur)
+  openRewind(d){
+    const r = typeof recap!=="undefined" && recap ? recap : null, kind = (d && d.kind) || (r ? r.kind : "month");
+    openRewind(kind, (d && d.key) || (r && r.kind===kind ? r.key : undefined));
+  },
   rwClose(){ closeRewind(); },
   rwReplay(){ if(rw) rwGo(0); },
   rwShare(){ if(!rw) return; recap = { kind:rw.kind, key:rw.key }; ACT.recapShare(); },

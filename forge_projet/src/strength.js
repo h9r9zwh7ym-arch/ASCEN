@@ -207,7 +207,7 @@ function trainingStatus(){
 function detrainAlerts(){
   const st = strengthAt(todayISO()); if(!st) return [];
   return st.muscles.filter(m=>m.days!=null && m.days>=14).sort((a,b)=>b.days-a.days)
-    .map(m=>({ m, label:MUSCLE_MAP[m.id].n, losing:m.days>DETRAIN.grace, left:DETRAIN.grace-m.days, pct:Math.round((1-m.f)*100) }));
+    .map(m=>({ m, label:(MUSCLE_MAP[m.id]||{ n:m.id }).n, losing:m.days>DETRAIN.grace, left:DETRAIN.grace-m.days, pct:Math.round((1-m.f)*100) }));
 }
 
 // l'indice vaut 100 au départ (rapport ×100) ; affiché en % de progression : 0 % au départ
@@ -246,7 +246,7 @@ function strengthCardHTML(){
   return `<div class="chart-card trend-card stagger" style="--i:1">${head}
     <div class="tr-hero"><span class="tr-v" ${(()=>{ const p = Math.round(last.v-100); return `data-count="${Math.abs(p)}" data-pre="${p>0?"+":p<0?"−":""}" data-unit="%" data-thin="1"`; })()}>${pctTxt(last.v)}</span>${wk>0 ? `<span class="tr-d ${d>0?"up":d<0?"down":""}">${d>0?"+":d<0?"−":"±"}${nb(Math.abs(d), "point")} en ${nb(wk,"semaine")}</span>` : ""}</div>
     <button class="tr-status st-${status.c}" data-a="strengthHow" aria-label="Statut : ${status.n}. Voir comment il est calculé"><span class="tr-dot"></span><span><b>${status.n}</b> · ${nb(Math.round(L.acute), "série")} difficile${Math.round(L.acute)>=2?"s":""} sur 7 jours (d'habitude : ${Math.round(L.chronic)})</span></button>
-    ${lineChart(pts.map(p=>({ label:fmtDate(p.wk), v:p.v-100, tip:`Semaine du ${fmtDate(p.wk)} : ${pctTxt(p.v)} (${nb(p.n,"muscle")})` })), { aria:"Progression de force par semaine", fmt:v=>pctTxt(v+100), tickFmt:v=>(v>0?"+":v<0?"−":"")+Math.abs(v)+"\u202f%" })}
+    ${lineChart(pts.map(p=>({ label:fmtDate(p.wk), v:p.v-100, tip:`Semaine du ${fmtDate(p.wk)} : ${pctTxt(p.v)} (${nb(p.n,"muscle")})` })), { aria:"Progression de force par semaine", fmt:v=>pctTxt(v+100), tickFmt:v=>(v>0?"+":v<0?"−":"")+fmtDec(Math.abs(v))+"\u202f%" })}
     ${regions ? `<div class="tr-regs">${regions}</div>` : ""}
     ${lines.map(l=>`<div class="tr-line">${l}</div>`).join("")}
   </div>`;

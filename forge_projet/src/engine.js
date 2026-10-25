@@ -249,13 +249,21 @@ function suggestForExo(exo, setsN, deload, pre){
   const slowOK = prof.pace>=0 || effort===1 || (prev && hitTopOf(prev, fOf(prev), prev.exo.targetReps ? prev.exo.targetReps[1] : rMax));
 
   const gap = daysBetween(last.session.date, todayISO());
+  // Longue pause sur CET exercice : la force ne baisse que si le MUSCLE lui-même n'a pas travaillé depuis
+  // 3 semaines (McMaster 2013, Bosquet 2013 ; même règle que l'indice de force). S'il a travaillé avec
+  // d'autres exercices entre-temps, on garde la charge et on reprend en bas de la fourchette. Avant : un
+  // exercice fait de temps en temps perdait un cran à chaque fois (10 → 8 → 6 kg en pleine forme).
+  const idle = gap>=21, detrained = idle && daysSinceTrained(m)>=21;
   if(type){
     const lastW = Math.max(0, ...done.map(st=>st.weight||0)) || weight;
     weight = lastW;
-    if(gap>=21){
-      // après 3 semaines sans cet exercice : on repart un cran plus léger, sans pression
+    if(detrained){
+      // après 3 semaines sans travailler ce muscle : on repart un cran plus léger, sans pression
       weight = lowerWeight(exo, lastW); reps = new Array(n).fill(mid);
       note = `Reprise après ${gap} jours : charge un peu allégée pour retrouver tes sensations.`;
+    } else if(idle){
+      reps = new Array(n).fill(lo);
+      note = `Pas fait depuis ${gap} jours : même charge, reprends en bas de la fourchette (${lo} répétitions).`;
     } else if(goUp && slowOK){
       const nw = nextWeight(exo, lastW);
       if(nw>lastW+0.001){
@@ -285,12 +293,14 @@ function suggestForExo(exo, setsN, deload, pre){
     // poids du corps et exercices chronométrés : progression par les répétitions / les secondes
     // exercice tenu : on repropose la dernière durée telle quelle (l'app s'en souvient), sauf après une longue pause
     const step = timed ? 5 : 1, cap = timed ? 600 : rMax+6;
-    const add = gap>=21 ? -step : timed || effort===3 ? 0 : effort===1 ? step*2 : step;
+    const add = detrained ? -step : idle ? 0 : timed || effort===3 ? 0 : effort===1 ? step*2 : step;
     reps = reps.map((_,i)=>Math.max(lo, Math.min(cap, lastReps(i)+add)));
     // exercice tenu arrêté avant la fin la dernière fois : on repart du temps réellement tenu (au cran de 5 s, 15 s minimum)
     if(timed && done.some(st=>st.goal>(st.reps||0))) reps = reps.map((_,i)=>{ const d = done[Math.min(i, done.length-1)]||{}; return d.goal>(d.reps||0) ? Math.max(15, Math.floor((d.reps||0)/5)*5) : lastReps(i); });
-    if(gap>=21){
+    if(detrained){
       note = `Reprise après ${gap} jours : un peu moins que la dernière fois, on remonte vite.`;
+    } else if(idle){
+      note = timed ? `Pas fait depuis ${gap} jours : même durée que la dernière fois.` : `Pas fait depuis ${gap} jours : autant que la dernière fois.`;
     } else if(hitTop && effort!==3){
       const h = harderVariant(exo);
       if(h){ harder = h.id; note = `Tu maîtrises cet exercice : passe à « ${h.n} » pour continuer à progresser.`; }

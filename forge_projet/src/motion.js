@@ -62,7 +62,7 @@ function moClear(){ const l = document.getElementById("mo"); if(l) l.querySelect
 function moBlobRender(b){
   const x = b.get("x"), y = b.get("y"), w = Math.max(0, b.get("w")), h = Math.max(0, b.get("h")), vx = b.s.x.vel, vy = b.s.y.vel, st = b.stretch ?? 1;
   const sx = 1 + st*moClamp(Math.abs(vx)/9000 - Math.abs(vy)/18000, -.12, .18), sy = 1 + st*moClamp(Math.abs(vy)/9000 - Math.abs(vx)/18000, -.12, .18);
-  if(b.round){ const d = Math.max(0, b.get("w")); b.s.h.v = b.s.w.v; b.s.h.t = b.s.w.t; b.s.h.vel = b.s.w.vel; }
+  if(b.round){ b.s.h.v = b.s.w.v; b.s.h.t = b.s.w.t; b.s.h.vel = b.s.w.vel; }
   const e = b.el.style; b.el._g = { l:x-w/2, t:y-h/2, w, h }; e.width = w+"px"; e.height = h+"px";
   e.borderRadius = Math.max(0, Math.min(b.get("r"), w/2, h/2))+"px"; e.transform = `scale(${sx.toFixed(3)},${sy.toFixed(3)})`;
   if(b.colors) e.background = moMix(b.colors[0], b.colors[1], moClamp(b.get("p"), 0, 1));
@@ -216,7 +216,7 @@ async function moDrip(mo, tile, T, rx, green, card){
   const tb = MO.tileBlob; MO.tileBlob = null;
   if(tb){ if(!tb.s.o) tb.s.o = { v:1, t:1, vel:0, ...moParams(.3, 1) }; tb.push("h", 120); setTimeout(()=>tb.to({ o:0 }, { response:.25 }), 160); }
   if(!ring) return;
-  const R = moRect(ring), size = Math.min(R.w, R.h);
+  const R = moRect(ring);
   // la goutte : la forme arrivée dans la case (MO.carry) se resserre, s'étire vers le bas et se détache
   let drop = MO.carry; MO.carry = null;
   if(drop && drop.el.isConnected){ drop.colors = [green, moVar("--tint") || "#BC5736"]; drop.s.p.v = drop.s.p.t = 0; drop.to({ w:26, h:34, r:13, y:T.y+22 }, { response:.26, damping:.82 }); }

@@ -14,7 +14,8 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await ctx.addInitScript(() => { if (localStorage.getItem('__seeded')) return; localStorage.setItem('__seeded', '1');
     const d = n => { const x = new Date(); x.setDate(x.getDate() - n); return x.toLocaleDateString('sv'); };
     localStorage.setItem('forge.v1', JSON.stringify({ meta: { onboarded: true }, equipment: { owned: { dumbbells: true } },
-      sessions: [{ id: 'a', date: d(3), exos: [{ exoId: 'curl_biceps', sets: [{ reps: 10, weight: 10, done: true }, { reps: 10, weight: 10, done: true }] }, { exoId: 'pompes', sets: [{ reps: 10, done: true }] }] }] })); });
+      // un ancien record de pompes (12) : 11 pompes battront la dernière fois (10) sans être un record
+      sessions: [{ id: 'o', date: d(12), exos: [{ exoId: 'pompes', sets: [{ reps: 12, done: true }] }] }, { id: 'a', date: d(3), exos: [{ exoId: 'curl_biceps', sets: [{ reps: 10, weight: 10, done: true }, { reps: 10, weight: 10, done: true }] }, { exoId: 'pompes', sets: [{ reps: 10, done: true }] }] }] })); });
   const page = await ctx.newPage(); page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
   await page.goto(APP); await page.waitForTimeout(600);
 

@@ -1,5 +1,5 @@
 // ================= INITIALISATION =================
-const APP_VERSION = "2.12.4";
+const APP_VERSION = "2.13.0";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 // séance en sombre (réglage, actif par défaut) : pendant la séance, l'écran passe en sombre quel que
@@ -130,6 +130,8 @@ function resumeScroll(){
   const v = qs("#v-"+currentTab); if(v) requestAnimationFrame(()=>{ v.scrollTop = r.st; });
 }
 function init(){
+  // historique d'avant 2.13 : records recalculés une fois, avant le premier affichage (quelques ms)
+  if(upgradeRecords()) save();
   buildShell();
   applyTheme();
   applyPlannedSession(); // la séance prévue aujourd'hui s'affiche directement
@@ -157,7 +159,7 @@ function init(){
   // la réverbération des sons, calculée au calme (le premier toucher n'a plus à le faire)
   (window.requestIdleCallback || (f=>setTimeout(f, 3000)))(()=>{ if(soundOn()) reverbData(48000); }, { timeout:6000 });
   // ascension : une semaine sans séance a fait redescendre d'un camp ; dit une fois, après le lancement
-  setTimeout(()=>{ try{ if(!LOAD_SKIPPED && !(S.draft && S.draft.startedAt)) ascDescentNotice(); }catch(e){ reportError("ascent", e); } }, 2100);
+  setTimeout(()=>{ try{ if(!LOAD_SKIPPED && !(S.draft && S.draft.startedAt)) ascDescentNotice(); }catch(e){ appError("ascent", e); } }, 2100);
   if(LOAD_SKIPPED) setTimeout(()=>toast(`${LOAD_SKIPPED} séance${LOAD_SKIPPED>1?"s":""} illisible${LOAD_SKIPPED>1?"s":""} mise${LOAD_SKIPPED>1?"s":""} de côté, le reste de l'historique est intact`), 1800);
   cleanupStorage();
   // demander un stockage persistant (le navigateur ne l'effacera pas pour libérer de la place)

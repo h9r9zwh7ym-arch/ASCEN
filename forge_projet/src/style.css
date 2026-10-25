@@ -151,7 +151,6 @@ p.body{margin:0 20px;color:var(--label2);font-size:var(--fs-sub)}
 #restbar .rt-label{flex:1;font-weight:600;font-size:var(--fs-sub)}
 #restbar button{background:rgba(255,255,255,.22);border-radius:10px;padding:7px 12px;font-weight:600;font-size:var(--fs-foot);color:var(--on-tint)}
 
-
 /* celebration */
 @keyframes pop{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.08);opacity:1}100%{transform:scale(1)}}
 
@@ -198,7 +197,6 @@ p.body{margin:0 20px;color:var(--label2);font-size:var(--fs-sub)}
 .fc-name{font-family:var(--display);font-weight:700;font-size:var(--fs-t2);letter-spacing:-.01em;line-height:1.15;margin-bottom:3px}
 .fc-phase{font-size:var(--fs-cap);font-weight:700;color:var(--tint-ink);letter-spacing:0;text-transform:none;margin-bottom:12px}
 
-
 .big-stepper{flex:1;max-width:152px;background:var(--fill2);border-radius:18px;padding:12px 8px 14px}
 .big-stepper button{width:34px;height:34px;border-radius:17px;background:var(--bg2);color:var(--tint-ink);font-size:19px;font-weight:700;display:grid;place-items:center;transition:transform .12s,background .12s,color .12s;flex:none}
 .big-stepper button:active{background:var(--tint);color:var(--on-tint);transform:scale(.9)}
@@ -209,7 +207,6 @@ p.body{margin:0 20px;color:var(--label2);font-size:var(--fs-sub)}
 .fc-quiet{display:flex;gap:16px;justify-content:center;margin-top:2px}
 .fc-quiet button{font-size:var(--fs-foot);font-weight:600;color:var(--label2)}
 .fc-quiet button:active{opacity:.5}
-
 
 /* anneau de repos (grand, dans la carte focus) */
 .ring-wrap{width:172px;height:172px;margin:0 auto 18px;position:relative}
@@ -363,22 +360,6 @@ h2.sh button.more{font-size:var(--fs-sub);font-weight:500;color:var(--tint-ink)}
 .spark circle{fill:var(--tint-ink)}
 
 /* calendrier de régularité */
-.heatmap{--c:14px;--g:3px;overflow-x:auto}
-.hm-months{display:grid;grid-template-columns:repeat(var(--w),var(--c));gap:var(--g);margin-left:18px;font-size:10px;color:var(--label2);height:14px}
-.hm-months span{white-space:nowrap;overflow:visible}
-.hm-body{display:flex;gap:4px}
-.hm-days{display:grid;grid-template-rows:repeat(7,var(--c));gap:var(--g);width:14px;font-size:9px;color:var(--label2);line-height:var(--c)}
-.hm-grid{display:grid;grid-template-rows:repeat(7,var(--c));grid-auto-flow:column;grid-auto-columns:var(--c);gap:var(--g)}
-.hm-c{display:inline-block;width:var(--c);height:var(--c);border-radius:4px;background:var(--fill)}
-.hm-c.l1{background:var(--tint);opacity:.35}
-.hm-c.l2{background:var(--tint);opacity:.65}
-.hm-c.l3{background:var(--tint)}
-.hm-c.fut{background:transparent}
-.hm-c.today{box-shadow:0 0 0 1.5px var(--label2)}
-.hm-c.tip-on{box-shadow:0 0 0 2px var(--label)}
-.hm-legend{display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-top:10px;font-size:10.5px;color:var(--label2)}
-.hm-legend .hm-c{width:11px;height:11px;border-radius:3px}
-.enter .hm-grid{animation:fadeUp .6s cubic-bezier(.2,.8,.2,1) .2s both}
 
 /* barres horizontales */
 @keyframes hbGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
@@ -797,7 +778,7 @@ button.sec-h:active{background:var(--fill2)}
 .ov-row .ls-ring>span{width:27px;height:27px}
 .float-txt.big{font-size:var(--fs-t2);color:var(--tint-ink)}
 @media (prefers-reduced-motion:reduce){
-  .ring-wrap.ending,.focus-card.resting .ring-wrap::before,.validate.ready,.validate.ready::after,.bs-val.roll-up,.bs-val.roll-down,.up-next,.cc-rays,.complete-card.fresh .cc-trophy,.complete-card.fresh .cc-stats>div,.enter .lp-seg i{animation:none!important}
+  .ring-wrap.ending,.focus-card.resting .ring-wrap::before,.validate.ready,.validate.ready::after,.up-next,.cc-rays,.complete-card.fresh .cc-trophy,.complete-card.fresh .cc-stats>div,.enter .lp-seg i{animation:none!important}
 }
 
 /* ================= v1.6 : simplification ================= */
@@ -832,7 +813,7 @@ button.sec-h:active{background:var(--fill2)}
 .validate:active{transform:scale(.96)}
 .row.tap,.row-main{transition:background .15s}
 .row.tap:active{background:var(--fill2)}
-@media (prefers-reduced-motion:reduce){.lp-seg.grew,.lh-pct b.bump{animation:none!important}}
+@media (prefers-reduced-motion:reduce){.lp-seg.grew{animation:none!important}}
 .info-btn{color:var(--label2)!important;background:var(--fill2)!important}
 .info-btn:active{color:var(--tint-ink)!important;transform:scale(.9)}
 .fc-info{color:var(--label2)}
@@ -926,7 +907,7 @@ h2.sh .more.strong{font-weight:700}
 .tc-more>span{min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:2px}
 .tpl-section .tc-picts{max-width:100px}
 .tpl-section .tc-head>.sec-chev{max-width:22px;overflow:hidden;transition:transform .25s cubic-bezier(.32,.72,0,1)}
-@media (prefers-reduced-motion:reduce){.wp-t,.wp-day,.wp-extra{transition:none!important}}
+
 @media (prefers-reduced-motion:reduce){.wz-row,.tpl-card2.flash,.te-days button.on b{animation:none!important}}
 .pd-cur{display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:14px;border-radius:16px;background:var(--bg2);box-shadow:var(--shadow)}
 .pd-k{font-size:var(--fs-cap);font-weight:700;color:var(--label2);text-transform:none;letter-spacing:0}
@@ -999,7 +980,7 @@ h2.sh .more.strong{font-weight:700}
 .enter .sfi{animation:sfiIn .45s cubic-bezier(.32,1.5,.4,1) both}
 @keyframes sfiIn{from{transform:scale(.5) rotate(-12deg);opacity:0}to{transform:none;opacity:1}}
 .enter .hist-kpi b{animation:fadeUp .5s cubic-bezier(.2,.8,.2,1) .15s both}
-@media (prefers-reduced-motion:reduce){.hero-go .hg-ico::after,.validate.ready,.lp-seg.grew,.tpl-card2.flash,.tpl-card2.flash::after,.enter .sfi,.enter .hist-kpi b{animation:none!important}}
+@media (prefers-reduced-motion:reduce){.validate.ready,.lp-seg.grew,.tpl-card2.flash,.tpl-card2.flash::after,.enter .sfi,.enter .hist-kpi b{animation:none!important}}
 .hist-kpi{margin-bottom:22px}
 .ph-person{width:44px;height:44px;color:var(--label3)}
 
@@ -1592,8 +1573,7 @@ h2.sh .more{font-family:var(--sans);font-size:var(--fs-sub);font-weight:500;lett
 .chip-scroll .chip.cat{font-weight:500}.chip-scroll .chip.cat.on{font-weight:600}
 .stat-box .num{font-size:var(--fs-t2);line-height:1.1;overflow-wrap:anywhere}
 /* animation d'exercice : le muscle principal ressort (segment plus épais, plus foncé) */
-.exo-anim .ea-focus{fill:none;stroke:color-mix(in srgb,var(--rc,var(--tint)) 45%,var(--label));stroke-width:2.3;stroke-linecap:round;opacity:.95}
-.rw-stage .exo-anim .ea-focus{stroke:#FFD2BF}
+
 /* fiche 3D d'un trophée : encre ASCEN,lumière neutre (plus de halo brun « forge ») */
 .t3d-panel{background:radial-gradient(110% 55% at 50% 0%,rgba(255,255,255,.1),transparent 62%),linear-gradient(180deg,#1F1D1B,#000000 58%)}
 .t3d-panel[data-tier="4"]{background:radial-gradient(110% 55% at 50% 0%,rgba(190,225,255,.2),transparent 62%),linear-gradient(180deg,#1A1E24,#0A0B0D 58%)}
@@ -1666,7 +1646,7 @@ h2.sh .more{font-family:var(--sans);font-size:var(--fs-sub);font-weight:500;lett
 /* pendant l'effort : boutons − / + plus grands */
 .big-stepper button{width:40px;height:40px;border-radius:20px}
 /* graphiques : 11 px minimum */
-.cc-gl span,.cc-goal span,.cc-x span,.hm-months,.hm-days,.hm-legend{font-size:11px}
+.cc-gl span,.cc-goal span,.cc-x span{font-size:11px}
 .lc-tick{font-size:11px}
 :where(.later,.bn-act button,.ph-name,.fc-menu,.fc-info,.ring-adjust button){position:relative}
 .later::before,.bn-act button::before,.ph-name::before,.fc-menu::before,.fc-info::before,.ring-adjust button::before{
@@ -1683,8 +1663,7 @@ body.live-focus .tabbar{transform:translateY(105%);opacity:0;pointer-events:none
 body.live-focus #v-today{padding-bottom:calc(var(--sab) + 48px)}
 body.live-focus #restbar{bottom:calc(14px + var(--sab))}
 /* fin de séance : progrès concrets depuis un mois */
-.cel-prog{display:flex;align-items:flex-start;gap:8px;margin-top:8px;padding:9px 12px;border-radius:12px;background:var(--fill2);color:var(--label);font-size:var(--fs-sub);font-weight:600;text-align:left;line-height:1.3;animation:noteIn .4s calc(var(--i)*120ms + .25s) both cubic-bezier(.32,.72,0,1)}
-.cel-prog .ii{flex:none;width:17px;height:17px;margin-top:1px;color:var(--green)}
+
 /* « ton pourquoi » */
 .why-card{margin:0 16px 14px;padding:14px 16px;border-radius:var(--r-card,18px);background:var(--bg2);box-shadow:inset 3px 0 0 var(--tint)}
 .why-k{display:flex;align-items:center;gap:6px;font-size:var(--fs-cap);font-weight:700;letter-spacing:0;text-transform:none;color:var(--tint-ink)}
@@ -1905,7 +1884,7 @@ body:not(.mo-on) #mo,body:not(.mo-on) #moBack{display:none}
 /* Ma semaine : le jour même s'allume une fois, les coches des séances faites apparaissent l'une après l'autre */
 /* progression de force : le chiffre défile jusqu'à sa valeur */
 .tr-v{font-variant-numeric:tabular-nums}
-@media (prefers-reduced-motion:reduce){.sheet.sh-in .sheet-body>*,#toast.show .t-ic,.enter .wp-day.today,.enter .wp-check{animation:none!important}}
+@media (prefers-reduced-motion:reduce){.sheet.sh-in .sheet-body>*,#toast.show .t-ic{animation:none!important}}
 /* proposition : ce que l'app vise en plus (muscles sous le seuil de la semaine) */
 .pc-stim{display:flex;gap:6px;align-items:flex-start;margin-top:6px;font-size:var(--fs-foot);color:var(--label2);line-height:1.4}
 .pc-stim .ii{flex:none;width:14px;height:14px;margin-top:2px;color:var(--green)}
@@ -1930,14 +1909,12 @@ body:not(.mo-on) #mo,body:not(.mo-on) #moBack{display:none}
 .fc-beat.dl,.fc-beat.dl .ii{color:var(--green)}
 @media (prefers-reduced-motion:reduce){.enter .dl-bar i.on{animation:none}}
 /* fin de séance : ce qui a progressé (force estimée, zones atteintes, forme du jour) */
-.cel-win .ii{color:var(--tint)}
-.cel-prog.soft{background:transparent;box-shadow:inset 0 0 0 1px var(--sep);color:var(--label2);font-weight:500}
-.cel-prog.soft .ii{color:var(--label3)}
+
 /* « Toi, il y a 3 mois » : avant → maintenant, en vraies séries */
-.tn-arrow{color:var(--label3)}.tn-arrow svg{width:14px;height:14px}
+
 .tn-pct{margin-left:auto;flex:none;padding:4px 9px;border-radius:999px;background:color-mix(in srgb,var(--green) 15%,transparent);color:var(--green);font-family:var(--num);font-weight:700;font-size:var(--fs-sub)}
 .enter .tn-pct{animation:fadeUp .5s cubic-bezier(.2,.8,.2,1) .45s both}
-@media (prefers-reduced-motion:reduce){.enter .tn-now b,.enter .tn-pct{animation:none}}
+@media (prefers-reduced-motion:reduce){.enter .tn-pct{animation:none}}
 /* passe qualité : en sombre, le curseur des sélecteurs est plus clair que son rail (comme iOS) au
    lieu de reprendre la couleur de la carte, qui le faisait paraître creusé ; « ⓘ » de la carte conseil */
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .seg-ind{background:#636366;box-shadow:0 1px 4px rgba(0,0,0,.35)}}
@@ -1982,11 +1959,7 @@ body:not(.mo-on) #mo,body:not(.mo-on) #moBack{display:none}
 .asc-body .note b{color:var(--label);font-weight:650}
 .asc-body .sub b{color:var(--label);font-weight:650}
 /* Régularité : vitesse actuelle, escalier des paliers (hauteur = vitesse), dernières semaines datées */
-.rg-now{display:flex;align-items:center;gap:12px}
-.rg-now>b{flex:none;min-width:64px;padding:6px 10px;border-radius:12px;background:var(--tint-bg);color:var(--tint-ink);font-size:calc(22rem/17);font-weight:700;text-align:center;letter-spacing:-.01em}
-.rg-now span{display:flex;flex-direction:column;gap:1px;min-width:0}
-.rg-now span b{font-size:var(--fs-sub);font-weight:650}
-.rg-now small{font-size:var(--fs-foot);color:var(--label2)}
+
 .rg-stairs{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;align-items:end;padding-top:4px}
 .rg-step{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}
 .rg-step i{display:block;width:100%;height:calc(10px + var(--h) * 62px);border-radius:6px 6px 3px 3px;background:var(--fill)}
@@ -2031,13 +2004,7 @@ body:not(.mo-on) #mo,body:not(.mo-on) #moBack{display:none}
 .asc-body .cur .node{box-shadow:inset 0 0 0 3px var(--tint)}
 .asc-body .cur .node::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--tint)}
 .asc-body .locked .node{color:var(--label3)}
-.asc-body .stop-t{font-weight:650;font-size:calc(15.5rem/17);min-width:0}
-.asc-body .stop-t small{display:block;font-weight:500;font-size:calc(12.5rem/17);color:var(--label2)}
-.asc-body .locked .stop-t{color:var(--label2)}
-.asc-body .stop-r{text-align:right;font-size:calc(12.5rem/17);color:var(--label2);white-space:nowrap}
-.asc-body .stop-r b{display:block;font-weight:700;font-size:calc(15rem/17);color:var(--label)}
-.asc-body .cur .stop-r{color:var(--tint-ink);font-weight:650}
-.asc-body .locked .stop-r b{color:var(--label2)}
+
 /* récompenses */
 .asc-body .rw-row{display:grid;grid-template-columns:48px 1fr;gap:12px;align-items:center;padding:8px 0;border-bottom:.5px solid var(--sep)}
 .asc-body .rw-row .t{font-weight:650;font-size:calc(15rem/17);display:block}
@@ -2110,13 +2077,13 @@ body:not(.mo-on) #mo,body:not(.mo-on) #moBack{display:none}
 .asc-week .aw-msg b{font-weight:650}
 .asc-body > *{flex-shrink:0}  /* colonne de hauteur fixe : un bloc en overflow:hidden y serait écrasé à 0 */
 .asc-body .asc-rows{margin:0}
-.asc-rows .asc-clp+.asc-row::before{content:"";position:absolute;top:0;right:0;left:var(--inset,16px);height:.5px;background:var(--sep)}
+
 .asc-row{width:100%;text-align:left}
 .asc-row .val{color:var(--label2);font-variant-numeric:tabular-nums;white-space:nowrap}
 .asc-row .chev svg{transition:transform .25s cubic-bezier(.32,.72,0,1)}
 .asc-row.on .chev svg{transform:rotate(90deg)}
 .asc-sec{padding:4px 16px 16px;display:flex;flex-direction:column;gap:12px}
-.asc-row + .asc-clp:not(:empty){box-shadow:inset 0 .5px 0 var(--sep)}
+
 .asc-sec .asc-wk-h{font-size:var(--fs-cap);font-weight:600;letter-spacing:0;text-transform:none;color:var(--label2);margin-top:4px}
 .asc-sec .stage{margin-left:34px}
 /* iPhone : la page elle-même ne défile ni ne rebondit jamais. Un glissement qui s'échappait d'une feuille au
@@ -2239,33 +2206,17 @@ html,body{overscroll-behavior:none}
 .cb-t small{display:block;font-size:calc(11.5rem/17);font-weight:800;letter-spacing:0;text-transform:none;color:#FFB48F}
 .cb-t b{display:block;font-family:var(--display);font-size:calc(21rem/17);font-weight:700;letter-spacing:-.015em;line-height:1.15;margin:1px 0}
 .cb-t > span{display:block;font-size:calc(13rem/17);color:rgba(247,244,238,.74)}
-.ca-next{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:calc(13.5rem/17);line-height:1.35;color:var(--label2)}
-.ca-next .asc-ic{flex:none;width:16px;height:16px;color:var(--tint-ink)}
-.ca-next b{color:var(--label);font-weight:650}
+
 @media (prefers-reduced-motion:reduce){
   .asc-halo,.asc-selc,.asc-steps .exp-tick.next,.st-i.next .st-node::after,.ca-badge.on,.ca-badge.on::after,.ca-badge.on .cb-rays,.cel-asc .ca-tick.hit,.cel-asc .ca-end.r.hit,.cel-asc .ca-me::after{animation:none!important}
   .asc-bub{transition:opacity .15s}
 }
 /* ascension, finalisation : facteurs de vitesse, pause repliée, toutes les étapes, À propos */
 .asc-body .fx{display:flex;flex-direction:column;border-radius:14px;background:var(--fill2);padding:2px 14px}
-.asc-body .fx-r{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:50px;padding:7px 0;border-bottom:.5px solid var(--sep)}
-.asc-body .fx-r:last-child{border-bottom:0}
-.asc-body .fx-r > span{font-size:calc(15rem/17);font-weight:600;line-height:1.25;min-width:0}
-.asc-body .fx-r small{display:block;font-size:calc(12.5rem/17);font-weight:500;color:var(--label2)}
-.asc-body .fx-r b{font-family:var(--num);font-weight:700;font-size:calc(20rem/17);white-space:nowrap}
-.asc-body .fx-r.tot b{font-size:calc(24rem/17);color:var(--tint-ink)}
-.asc-week .aw-pause{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;margin:-4px 0 -8px;padding:0;text-align:left;font-size:var(--fs-foot);font-weight:600;color:var(--label2);border-top:.5px solid var(--sep)}
-.asc-week .aw-pause > span{flex:1;min-width:0}
-.asc-week .aw-pause .asc-ic{width:16px;height:16px;color:var(--label3)}
-.asc-week .aw-pause > svg:last-child{width:14px;height:14px;color:var(--label3);transform:rotate(90deg);transition:transform .25s cubic-bezier(.32,.72,0,1)}
-.asc-week .aw-pause.open > svg:last-child{transform:rotate(-90deg)}
-.asc-week .aw-pause.on,.asc-week .aw-pause.on .asc-ic{color:var(--green)}
+
 .asc-week .asc-pause{display:flex;flex-direction:column;gap:10px;padding-top:12px}
 .asc-week .asc-pause p{margin:0;font-size:calc(13.5rem/17);line-height:1.4;color:var(--label2)}
-.asc-week .asc-pause .ap-b{display:flex;gap:8px}
-.asc-week .asc-pause .ap-b .btn{flex:1 1 0;width:auto;min-width:0;margin:0}
-.asc-week .asc-pause .ap-b .btn.on{color:var(--green)}
-.asc-week .asc-pause .ap-b .btn svg{width:15px;height:15px;vertical-align:-2px}
+
 .asc-steps .st-more{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:44px;margin:-4px 0 -8px;border-top:.5px solid var(--sep);font-size:var(--fs-foot);font-weight:650;color:var(--tint-ink)}
 .asc-steps .st-more svg{width:13px;height:13px;transform:rotate(90deg);transition:transform .25s cubic-bezier(.32,.72,0,1)}
 .asc-steps .st-more[aria-expanded="true"] svg{transform:rotate(-90deg)}
@@ -2321,7 +2272,7 @@ html,body{overscroll-behavior:none}
 .lv-asc.wait{padding-bottom:8px}
 .float-txt.asc{color:var(--tint-ink)}
 @media (prefers-reduced-motion:reduce){.lv-asc.up,.lv-asc.camp{animation:none!important}}
-.asc-body .fx-r.off b{color:var(--label3);text-decoration:line-through;text-decoration-thickness:1.5px}
+
 .cel-asc .ca-bonus{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:4px 10px;border-radius:999px;background:var(--tint-bg);color:var(--tint-ink);font-size:var(--fs-foot);font-weight:600}
 .cel-asc .ca-bonus .ii{width:14px;height:14px}
 .cel-asc .ca-bonus b{font-family:var(--num);font-weight:700}
@@ -2434,11 +2385,10 @@ button.pc-gh.on .chev{transform:rotate(90deg)}
 /* loi de Hick : la carte principale porte une action forte et, au plus, deux voies discrètes */
 .btn.tertiary.strong{font-weight:700}
 .prop-list:not(.adj) .row{padding-right:16px}
-.cel-more{display:block;margin:8px auto 0;min-height:40px;padding:0 14px;font-size:var(--fs-sub);font-weight:650;color:var(--tint-ink)}
+
 .all-medals-g{margin-top:14px}
 .sheet-body.all-medals{padding-bottom:24px}
 .prefs-body{padding-top:4px;padding-bottom:28px}
-.prefs-body .sheet-note,.sheet-note{margin:0 20px 12px;font-size:var(--fs-sub);color:var(--label2);line-height:1.4}
 
 /* ================= Refonte 5.0 : composants communs ================= */
 /* icônes de réglages et de listes : un seul gris, sans pastille de couleur (le dessin suffit) */
@@ -2585,7 +2535,6 @@ body.live-focus #v-today{padding-bottom:0}
 /* le mouvement : une seule couleur, sans zone de muscle plus foncée */
 .exo-anim .ea-body{stroke:var(--tint-ink)}
 .exo-anim .ea-head{fill:var(--tint-ink)}
-.exo-anim .ea-focus{display:none}
 
 /* feuille d'actions (Terminer la séance) */
 .center-modal.action-sheet{left:8px;right:8px;top:auto;bottom:calc(var(--sab) + 8px);width:auto;max-width:560px;max-height:none;margin:0 auto;padding:0;border-radius:0;background:none;overflow:visible;transform:translateY(24px);display:flex;flex-direction:column;gap:8px}
@@ -2799,10 +2748,10 @@ body.live-focus #v-today{padding-bottom:0}
 .cel-asc .ca-gain b{font-family:var(--num);font-size:var(--fs-t2);font-weight:700;color:var(--label)}
 .cel-page .cel-target{margin:0}
 .cel-page .cel-medals{margin:0}
-.cel-page .cel-more{align-self:center;min-height:44px;padding:0 12px;color:var(--tint-ink);font-size:var(--fs-sub);font-weight:600;background:none}
+
 .cel-page .cel-rest{display:flex;flex-direction:column;gap:8px}
 .cel-page .cel-rest[hidden]{display:none}
-.cel-page .cel-prog{margin:0;background:var(--bg2)}
+
 .cel-page .cel-note-btn{align-self:center;margin:0}
 .cel-page .cel-save{margin:0;background:var(--bg2);border-radius:var(--r-hero)}
 .cel-ft{position:sticky;bottom:0;margin:auto calc(-1 * var(--gutter)) 0;padding:12px var(--gutter) calc(var(--sab) + 16px);background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
@@ -2844,7 +2793,7 @@ body.live-focus #v-today{padding-bottom:0}
 .ms-row:nth-child(2) .ms-bar i{animation-delay:.05s}.ms-row:nth-child(3) .ms-bar i{animation-delay:.1s}.ms-row:nth-child(4) .ms-bar i{animation-delay:.15s}
 @keyframes msGrow{from{transform:scaleX(0)}}
 .ms-empty{padding:14px 0;font-size:var(--fs-sub);color:var(--label2)}
-.ms-hint{margin:8px 20px 0;font-size:var(--fs-foot);line-height:18px;color:var(--label2)}
+
 .rec-group .row{min-height:64px}
 .rec-group .row .t{font-weight:600}
 .rec-group .row .s{font-variant-numeric:tabular-nums}
@@ -2934,8 +2883,6 @@ body.live-focus #v-today{padding-bottom:0}
 .tt-opt:active .tt-ph{transform:scale(.96)}
 /* l'accueil : la ligne « à ta portée » / « retour en force » en couleur, la série en jeu */
 .wk-n small.wk-hot{color:var(--tint-ink);font-weight:600;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.wk-risk{display:inline-flex;align-items:center;gap:4px;color:var(--tint-ink);font-weight:600}
-.wk-risk .ii{width:14px;height:14px}
 
 /* ===== Refonte 6 : animations signatures (4, pas plus) =====
    1. les gros chiffres défilent jusqu'à leur valeur (animateCounts, chiffres à chasse fixe : rien ne saute) ;
@@ -3406,7 +3353,7 @@ body.live-focus #restbar.island{bottom:auto}
 /* ---------- séance sur mesure ---------- */
 .hero-alts{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;column-gap:2px;margin-top:8px}
 .hero .hero-alts .hero-alt{align-self:auto;flex:none;margin-top:0;padding:0 8px}
-.ha-dot{color:var(--label3)}
+
 .hl-txt .w{font-size:var(--fs-foot);color:var(--tint-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* la feuille : sections nettes, gros choix en tuiles, petits choix en segments */
 .tl-intro{margin:0 20px;color:var(--label2);font-size:var(--fs-sub);line-height:1.4}

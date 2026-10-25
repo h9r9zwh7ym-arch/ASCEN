@@ -68,10 +68,11 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   if (!b1.win || !b1.pop || !/Ça bat/.test(b1.t)) fail('retour immédiat quand la cible est dépassée');
   if (!b2.win || b2.pop) fail('animation jouée une seule fois');
   await shot('03_beat_win');
-  // cibles calculées : même charge = 1 rep de plus ; charge plus lourde = 1RM estimé
+  // comparaison à la dernière fois : charge plus lourde = 1RM estimé ; même série = égalité ; poids du corps = répétitions
+  // (2.13 : beatTarget, jamais utilisé par l'app, retiré)
   const tg = await page.evaluate(() => { const def = EXO_MAP.dc_haltere, ref = { reps: 10, weight: 12 };
-    return [beatTarget(def, 12, ref), beatTarget(def, 14, ref), beatCmp(def, { reps: 9, weight: 14 }, ref), beatCmp(def, { reps: 10, weight: 12 }, ref), beatCmp(EXO_MAP.pompes, { reps: 12 }, { reps: 11, weight: 0 })]; });
-  log('Targets:', JSON.stringify(tg)); if (tg.join() !== '11,5,1,0,1') fail('calcul de la cible à battre');
+    return [beatCmp(def, { reps: 9, weight: 14 }, ref), beatCmp(def, { reps: 10, weight: 12 }, ref), beatCmp(EXO_MAP.pompes, { reps: 12 }, { reps: 11, weight: 0 })]; });
+  log('Targets:', JSON.stringify(tg)); if (tg.join() !== '1,0,1') fail('comparaison à la dernière fois');
   await page.click('.focus-card [data-a="validateSet"]'); await wait(300);
   const ft = await page.evaluate(() => [...document.querySelectorAll('.float-txt')].map(e => e.textContent).join('|'));
   log('Float after validate:', ft); if (!/Mieux que la dernière fois|Record/.test(ft)) fail('annonce à la validation');

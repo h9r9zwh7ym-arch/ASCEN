@@ -356,7 +356,7 @@ function restoreData(){
       const prev = S;
       S = st;
       S.meta.lastBackup = S.meta.lastBackup || todayISO();
-      save(); persistNow(); applyTheme(); checkMedals(true);
+      upgradeRecords(); save(); persistNow(); applyTheme(); checkMedals(true);
       renderViewAnimated(currentTab);
       // « Annuler » remet les données d'avant (elles restent aussi en copie dans le stockage)
       toast(`Sauvegarde restaurée : ${nb(n, "séance")}`, null, ()=>{ S = prev; save(); persistNow(); applyTheme(); renderViewAnimated(currentTab); toast("Données d'avant remises"); });

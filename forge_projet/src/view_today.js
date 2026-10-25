@@ -7,7 +7,6 @@ let liveFocusIdx = 0;
 let focusAnimDir = null;
 let valRoll = {};       // sens du défilement du chiffre modifié (+/−)
 let restReady = false;  // le repos vient de se terminer
-let stripBump = -1; // pastille du bandeau qui « rebondit » après une série validée
 let justDone = null; // {exi, si} : série qui vient d'être validée (animation du point)
 let savedFresh = false; // repos qui suit une validation : la coche « Série N enregistrée » se dessine une fois
 let customEdit = false; // carte du jour : « Modifier » rend la liste éditable (séries, retrait, ajout, enregistrement)
@@ -305,7 +304,7 @@ function weekCardHTML(){
   const a = ascent(), D = ASC_DATA[a.key], nc = a.nextCamp;
   const c0 = nc ? (a.camps[a.passed-1] || [a.start])[0] : 0;
   const pct = a.wait ? Math.min(1, a.series/Math.max(1, a.nextReq)) : nc ? Math.max(0, Math.min(1, (a.alt-c0)/Math.max(1, nc[0]-c0))) : Math.max(0, Math.min(1, a.done));
-  const goal = S.goals.daysPerWeek||3, done = sessionsThisWeek(), si = streakInfo(), streak = si.n;
+  const goal = S.goals.daysPerWeek||3, done = sessionsThisWeek();
   const today = todayISO(), monday = weekKey(today), doneDays = new Set(S.sessions.map(s=>s.date)), doneToday = sessionsToday().length;
   // la ligne sous le nom : le retour en force (séance qui compte double), sinon ce que la séance du jour peut
   // faire atteindre, sinon la distance au prochain camp (une seule ligne, plus de « Prochain cap » qui la répète)
@@ -314,9 +313,6 @@ function weekCardHTML(){
     : promise ? (a.wait ? `Dès aujourd'hui : ${ASC_DATA[a.next].n}` : promise.summit ? "Sommet à ta portée aujourd'hui" : `${nc[1]} à ta portée aujourd'hui`)
     : !S.sessions.length ? "Ta première séance te met en route"
     : a.wait ? `Au sommet ${ascDu(a.key)}` : nc ? `${nc[1]} dans ${ascM(nc[0]-a.alt)}` : `Sommet dans ${ascM(D.top-a.alt)}`;
-  // la série en jeu : plus de jour de marge pour valider la semaine
-  const left = goal-done, daysLeft = 7-weekdayIdx(today) - (doneToday ? 1 : 0);
-  const risk = streak>=2 && !a.paused && left>0 && left<=daysLeft && daysLeft-left<=1;
   // animation signature n° 3 : de retour sur l'accueil après une séance, la carte part de là où on l'avait
   // laissée (barre et altitude) et le grimpeur avance (wkClimb, une fois la carte visible)
   wkNow = { key:a.key, alt:a.alt, pct, camp:nc ? nc[1] : "" };
@@ -1025,13 +1021,12 @@ setInterval(()=>{
 // la charge puis les répétitions : gros chiffres, gros boutons ; en bas, la série à battre
 function sxStepsHTML(idx, ex, def, si, st){
   const lt = loadableTypeOf(def), bands = lt==="bands", timed = isTimed(def);
-  const roll = f => "";   // le chiffre modifié roule après coup (rollText, motion.js)
   const at = `data-exi="${idx}" data-si="${si}"`;
   const wRow = !lt ? "" : `<div class="big-stepper sx-row">
       <button class="sx-pm" aria-label="${bands?"Élastique plus léger":"Charge plus légère"}" data-a="stepWeight" ${at} data-d="-1">${SX_PM(-1)}</button>
       <div class="sx-val"><small>${bands?"Élastique":"Charge"}</small>${bands
-        ? `<span class="bs-val band-val ${roll("weight")}" aria-live="polite">${st.weight?bandLabel(st.weight):"–"}</span>`
-        : `<div class="bs-val ${roll("weight")}" role="spinbutton" tabindex="0" aria-label="Charge" aria-valuenow="${st.weight||0}" data-f="weight" ${at}><b>${st.weight!=null?fmtDec(st.weight):"–"}</b><span>kg</span></div>`}</div>
+        ? `<span class="bs-val band-val" aria-live="polite">${st.weight?bandLabel(st.weight):"–"}</span>`
+        : `<div class="bs-val" role="spinbutton" tabindex="0" aria-label="Charge" aria-valuenow="${st.weight||0}" data-f="weight" ${at}><b>${st.weight!=null?fmtDec(st.weight):"–"}</b><span>kg</span></div>`}</div>
       <button class="sx-pm" aria-label="${bands?"Élastique plus fort":"Charge plus lourde"}" data-a="stepWeight" ${at} data-d="1">${SX_PM(1)}</button>
     </div>`;
   // exercice tenu : la règle des secondes remplace le − / + ; le chiffre reste en blanc, comme les autres exercices
@@ -1040,7 +1035,7 @@ function sxStepsHTML(idx, ex, def, si, st){
       <div class="dur-dial" tabindex="0" role="slider" aria-label="Durée en secondes" aria-valuemin="${DUR_MIN}" aria-valuemax="${DUR_MAX}" aria-valuenow="${st.reps||30}" data-v="${st.reps||30}" ${at}><canvas></canvas><i></i></div></div>
     </div>` : `<div class="big-stepper sx-row">
       <button class="sx-pm" aria-label="Une répétition de moins" data-a="stepReps" ${at} data-d="-1">${SX_PM(-1)}</button>
-      <div class="sx-val"><small>Répétitions</small><div class="bs-val ${roll("reps")}" role="spinbutton" tabindex="0" aria-label="Répétitions" aria-valuenow="${st.reps||0}" data-f="reps" ${at}><b>${st.reps??"–"}</b></div></div>
+      <div class="sx-val"><small>Répétitions</small><div class="bs-val" role="spinbutton" tabindex="0" aria-label="Répétitions" aria-valuenow="${st.reps||0}" data-f="reps" ${at}><b>${st.reps??"–"}</b></div></div>
       <button class="sx-pm" aria-label="Une répétition de plus" data-a="stepReps" ${at} data-d="1">${SX_PM(1)}</button>
     </div>`;
   const hint = S.settings.beat===false ? lastTimeHTML(ex.exoId, !!ex.note) : beatLineHTML(ex, def, si, st);
@@ -1166,7 +1161,6 @@ function refreshFocusRegion(){
   el.innerHTML = renderFocusRegionInner(S.draft);
   // chaque état (série, repos, exercice terminé) est un écran : il commence en haut
   const v = qs("#v-today"); if(v && v.scrollTop && currentTab==="today") v.scrollTop = 0;
-  stripBump = -1;
   const head = qs("#liveHead");
   if(head){
     // la barre part de l'ancienne valeur pour que le progrès se voie
@@ -1574,6 +1568,9 @@ Object.assign(ACT, {
     sfx("step", dir>0); save(); renderView("today");
   },
   setType(d){ regenerateDraft(d.v); renderTodaySoft(); },
+  // exercice précédent / suivant de la séance en cours
+  focusPrev(){ const n = S.draft ? S.draft.exos.length : 0; if(n>1){ liveFocusIdx = (liveFocusIdx-1+n)%n; focusAnimDir="l"; refreshFocusRegion(); } },
+  focusNext(){ const n = S.draft ? S.draft.exos.length : 0; if(n>1){ liveFocusIdx = (liveFocusIdx+1)%n; focusAnimDir="r"; refreshFocusRegion(); } },
   warmGo(){ const W = S.draft && S.draft.warm; if(!W || W.end) return; W.end = Date.now() + W.moves[W.i][1]*1000; save(); sfx("go"); refreshFocusRegion(); },
   warmSkip(){ warmFinish(); sfx("swipe"); },
   startSession(){ if(!S.draft.exos.length) return; const mc = typeof moStartCapture==="function" ? moStartCapture() : null; S.draft.startedAt = new Date().toISOString(); warmStart(S.draft); liveFocusIdx = 0; completeShown = false; save(); const draw = ()=>{ scrollTodayTop(); renderViewAnimated("today"); }; if(!(mc && moStart(mc, draw))){ draw(); showLaunch(S.draft); } },
@@ -1676,10 +1673,6 @@ Object.assign(ACT, {
       closeSheet(); save(); changed();
     }});
   },
-  heroShowAll(){
-    const g = qs("#v-today .group.builder, #v-today .exo-count + .group, #v-today .exo-count ~ .group");
-    if(g) g.scrollIntoView({ behavior:"smooth", block:"start" });
-  },
   customSets(d){
     const e = S.custom.exos[+d.idx];
     e.sets = Math.max(1, Math.min(10, e.sets+parseInt(d.d,10)));
@@ -1757,8 +1750,6 @@ Object.assign(ACT, {
 
   // --- séance en cours ---
   // navigation en boucle : après le dernier exercice on revient au premier, et inversement
-  focusPrev(){ const n = S.draft ? S.draft.exos.length : 0; if(n>1){ liveFocusIdx = (liveFocusIdx-1+n)%n; focusAnimDir="l"; refreshFocusRegion(); } },
-  focusNext(){ const n = S.draft ? S.draft.exos.length : 0; if(n>1){ liveFocusIdx = (liveFocusIdx+1)%n; focusAnimDir="r"; refreshFocusRegion(); } },
   focusJump(d){ const ni=+d.idx; focusAnimDir = ni>liveFocusIdx?"r":ni<liveFocusIdx?"l":null; liveFocusIdx=ni; refreshFocusRegion(); },
   jumpFromOverview(d){ const ni=+d.idx; focusAnimDir = ni>liveFocusIdx?"r":ni<liveFocusIdx?"l":null; liveFocusIdx=ni; closeSheet(); refreshFocusRegion(); },
 
@@ -1876,12 +1867,8 @@ Object.assign(ACT, {
     const dotsR = (qs(".focus-card .sx-set.cur")||qs(".focus-card .sx-sets")||{getBoundingClientRect:()=>null}).getBoundingClientRect();
     const fx0 = dotsR ? dotsR.left+dotsR.width/2 : bx, fy0 = dotsR ? dotsR.top-8 : by-30;
     // record : meilleur que l'historique ET que les séries déjà validées aujourd'hui
-    const prevToday = ex.sets.filter(s=>s.done);
-    const bestTodayW = Math.max(0,...prevToday.map(s=>s.weight||0));
-    const best1rmToday = Math.max(0,...prevToday.map(s=>estimated1RM(s.weight,s.reps)));
     const w = st.weight||0, r = st.reps||0;
-    const beatsToday = w>bestTodayW || estimated1RM(w,r)>best1rmToday+0.01;
-    if((w||r) && beatsToday && isNewPR(ex.exoId, w, r)){
+    if(isLivePR(def, ex.sets.filter(s=>s.done), w, r)){
       st.pr = true;
       S.meta.prCount = (S.meta.prCount||0)+1;
       confettiBurst(bx, by, 60);
@@ -1901,7 +1888,6 @@ Object.assign(ACT, {
       sfx(st.pr ? "pr" : fin || !rest ? "exo" : beat || tired ? "beat" : "set"); }
     haptic(st.pr ? [25, 40, 25] : 18); // la coche franche : une vibration nette (deux pour un record)
     justDone = { exi, si }; savedFresh = true;
-    stripBump = exi;
     // la scène de validation (motion.js) montre déjà la série qui part dans sa case : pas de bulle en plus
     if(!mo && !st.pr && !beat && !tired && !exoFinished0(ex)) floatText(fx0, fy0, `Série ${si+1}`, "", "check");
     const exoFinished = !ex.sets.some(s=>!s.done);
@@ -2011,7 +1997,6 @@ Object.assign(ACT, {
     if(c.done && !c.left) return finalizeSession();
     finishSheet();
   },
-  abandonSession(){ finishSheet(); },
   // abandon immédiat, mais rattrapable 5 s (« Annuler » dans le message)
   abandonNow(){
     const draft = S.draft, idx = liveFocusIdx; if(!draft) return;
@@ -2031,9 +2016,8 @@ VIEWS.today = renderToday;
 // Répétitions et charge ajustables, ou validation annulée (la série redevient à faire). Le record
 // de la série est recalculé avec la même règle qu'en direct.
 function draftSetIsPR(ex, si){
-  const st = ex.sets[si], w = st.weight||0, r = st.reps||0, prev = ex.sets.filter((s,i)=>s.done && i<si);
-  const beats = w>Math.max(0,...prev.map(s=>s.weight||0)) || estimated1RM(w,r)>Math.max(0,...prev.map(s=>estimated1RM(s.weight||0,s.reps||0)))+0.01;
-  return !!((w||r) && beats && isNewPR(ex.exoId, w, r));
+  const st = ex.sets[si], def = EXO_MAP[ex.exoId];
+  return !!def && isLivePR(def, ex.sets.filter((s,i)=>s.done && i<si), st.weight||0, st.reps||0);
 }
 function setPRFlag(ex, si){
   const st = ex.sets[si], was = !!st.pr, now = st.done && draftSetIsPR(ex, si);

@@ -84,37 +84,6 @@ function sparkline(vals){
   return `<svg class="spark" viewBox="0 0 ${W} ${H}" aria-hidden="true"><path d="${pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ")}"/><circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.6"/></svg>`;
 }
 
-// calendrier de régularité : colonnes = semaines (lundi en haut), intensité = séries du jour
-function heatmap(weeks){
-  const days = dayMap(), today = todayISO();
-  const start = addDaysISO(weekKey(today), -7*(weeks-1));
-  const maxSets = Math.max(1, ...Object.values(days).map(d=>d.sets));
-  const cells = [], months = [];
-  let lastMonth = -1, lastLabel = -9;
-  for(let w=0; w<weeks; w++){
-    const monday = addDaysISO(start, 7*w);
-    const mo = parseISO(monday).getMonth();
-    // un libellé de mois fait ~3 colonnes : on saute ceux qui chevaucheraient le précédent
-    const show = mo!==lastMonth && w-lastLabel>=3 && (w>0 || parseISO(addDaysISO(monday,14)).getMonth()===mo);
-    months.push(`<span>${show ? MOIS[mo] : ""}</span>`);
-    if(show) lastLabel = w;
-    lastMonth = mo;
-    for(let d=0; d<7; d++){
-      const iso = addDaysISO(monday, d);
-      if(iso>today){ cells.push(`<i class="hm-c fut"></i>`); continue; }
-      const e = days[iso];
-      const lvl = !e ? 0 : e.sets/maxSets>0.66 ? 3 : e.sets/maxSets>0.33 ? 2 : 1;
-      const tip = e ? `${fmtDate(iso,"long")} : ${nb(e.sessions,"séance")}, ${nb(e.sets,"série")}` : `${fmtDate(iso,"long")} : repos`;
-      cells.push(`<i class="hm-c l${lvl} ${iso===today?"today":""}" data-tip="${esc(tip)}"></i>`);
-    }
-  }
-  return `<div class="heatmap" style="--w:${weeks}">
-    <div class="hm-months">${months.join("")}</div>
-    <div class="hm-body"><div class="hm-days"><span>L</span><span></span><span>M</span><span></span><span>V</span><span></span><span>D</span></div>
-    <div class="hm-grid">${cells.join("")}</div></div>
-    <div class="hm-legend">Moins <i class="hm-c l0"></i><i class="hm-c l1"></i><i class="hm-c l2"></i><i class="hm-c l3"></i> Plus</div>
-  </div>`;
-}
 
 // tableau équivalent (accessibilité : toute valeur reste lisible sans survol)
 function dataTable(headers, rows){
@@ -145,8 +114,17 @@ function dataTable(headers, rows){
     }
     if(!first && typeof haptic==="function") haptic(3);
   }
+  // le graphique touché ; pendant son apparition (révélé de gauche à droite), la partie encore masquée ne
+  // reçoit pas le doigt : un toucher sur la carte, à hauteur du tracé, le vise quand même
+  function plotAt(e){
+    if(!e.target.closest) return null;
+    const direct = e.target.closest(".colchart .cc-plot, .linechart"); if(direct) return direct;
+    const card = e.target.closest(".chart-card"), p = card && qs(".colchart .cc-plot, .linechart", card); if(!p) return null;
+    const r = p.getBoundingClientRect();
+    return e.clientY>=r.top && e.clientY<=r.bottom && e.clientX>=r.left && e.clientX<=r.right ? p : null;
+  }
   document.addEventListener("pointerdown", e=>{
-    const root = e.target.closest && e.target.closest(".colchart .cc-plot, .linechart");
+    const root = plotAt(e);
     if(!root){ scrub = null; return; }
     scrub = { root, cur:null, id:e.pointerId };
     at(e.clientX);

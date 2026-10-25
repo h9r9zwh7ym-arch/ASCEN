@@ -17,7 +17,9 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     const wd = (new Date().getDay() + 6) % 7, ss = [];
     const add = (k, id) => { const d = new Date(); d.setDate(d.getDate() - k); ss.push({ id, date: d.toLocaleDateString('sv'), durationSec: 2400,
       exos: [{ exoId: 'dc_haltere', sets: [0, 1, 2].map(() => ({ reps: 10, weight: 12, done: true })) }, { exoId: 'pompes', sets: [0, 1, 2].map(() => ({ reps: 12, done: true })) }] }); };
-    add(22, 'a'); add(20, 'b'); add(8, 'c'); add(6, 'd');
+    // calées sur les semaines (lundi) et non sur « il y a N jours » : le résultat ne dépend plus du jour où le
+    // test tourne (avant : échec le dimanche). Semaine −3 : jeudi et samedi ; −2 : vide ; −1 : vendredi et dimanche
+    const wd0 = (new Date().getDay() + 6) % 7; add(wd0 + 17, "a"); add(wd0 + 15, "b"); add(wd0 + 3, "c"); add(wd0 + 1, "d");
     localStorage.setItem('forge.v1', JSON.stringify({ meta: { onboarded: true, backupNudgeAt: Date.now(), lastBackup: new Date().toLocaleDateString('sv') }, settings: { name: 'Yannick' },
       goals: { daysPerWeek: 3 }, equipment: { owned: { dumbbells: true, bench: true } }, sessions: ss,
       templates: [{ id: 'tb', n: 'Bras', days: [(wd + 2) % 7], exos: [{ exoId: 'curl_biceps', sets: 3 }, { exoId: 'pompes', sets: 3 }] },

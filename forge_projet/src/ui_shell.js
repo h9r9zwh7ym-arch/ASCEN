@@ -125,7 +125,6 @@ function emptyHTML(ic, t, s, cta, style){
 // sommet et porte l'orange. ASCEN_MONO = ce A seul (icône d'app, petites tailles).
 const ASCEN_LETTERS = "M4 52L21 12L38 52M69.66 17A10 10 0 1 0 61 32A10 10 0 1 1 52.34 47M118.55 19.79A19 19 0 1 0 118.55 44.21M160 12H132V52H160M132 32H156M171 52V12L199 52V12";
 const ASCEN_BAR = "M8 20H34";
-const ASCEN_MONO = { a:"M15 54L32 11L49 54", bar:"M18 21H46" };
 function ascenMark(cls, withBar){
   return `<svg class="ascen-mark ${cls||""}" viewBox="0 5 206 56" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="ASCEN"><path d="${ASCEN_LETTERS}"/>${withBar===false?"":`<path class="bar" d="${ASCEN_BAR}"/>`}</svg>`;
 }
@@ -242,7 +241,7 @@ function renderView(id){
   // un écran qui échoue (donnée inattendue) ne doit ni rester vide ni bloquer l'app : message
   // sobre et bouton pour réessayer, les autres onglets restent utilisables
   let html;
-  try{ html = VIEWS[id](); }catch(err){ reportError("écran "+id, err); html = viewErrorHTML(id); }
+  try{ html = VIEWS[id](); }catch(err){ appError("écran "+id, err); html = viewErrorHTML(id); }
   el.innerHTML = html;
   if(id==="today") syncLiveChrome();
   el._ver = DATA_VER; el._day = todayISO(); // rendu à jour pour ces données
@@ -250,7 +249,7 @@ function renderView(id){
   // rétablir la position force une mise en page immédiate : inutile en haut de page (cas courant)
   if(scrollTop>0) el.scrollTop = scrollTop;
   settleSegs(el);
-  if(typeof afterRenderView==="function") try{ afterRenderView(id, el); }catch(err){ reportError("après "+id, err); }
+  if(typeof afterRenderView==="function") try{ afterRenderView(id, el); }catch(err){ appError("après "+id, err); }
 }
 function viewErrorHTML(id){
   return `<div class="content"><div class="empty-state view-err"><span class="em">${ii("warn")}</span>
@@ -937,7 +936,6 @@ const ACT = {
   dismisssheet(){ if(Date.now()>suppressSheetClick) dismissSheet(); },
   confirmYes(){ const fn = qs("#overlay")._onYes; closeSheet(); if(fn) fn(); },
   asRun(d){ const ov = qs("#overlay"), act = ov._asActs && ov._asActs[+d.i]; closeSheet(); if(act && act.run) act.run(); },
-  noop(){},
 };
 
 // ---------- exécution des actions ----------
@@ -947,7 +945,7 @@ const ACT = {
 // protégées contre le double appui (une série validée deux fois, une séance terminée deux fois).
 const ERR_LOG = [];
 let errToastAt = 0;
-function reportError(where, err){
+function appError(where, err){
   ERR_LOG.push({ at:new Date().toISOString(), where, msg:String(err && err.message || err).slice(0,200) });
   if(ERR_LOG.length>20) ERR_LOG.shift();
   if(typeof console!=="undefined") console.warn("[ASCEN]", where, err);
@@ -962,12 +960,12 @@ function runAction(name, el, e){
   lastAct = { name, el, t:now };
   try{
     const r = fn.call(ACT, el.dataset, el);
-    if(r && typeof r.catch==="function") r.catch(err=>{ reportError(name, err); recoverView(); });
-  }catch(err){ reportError(name, err); recoverView(); }
+    if(r && typeof r.catch==="function") r.catch(err=>{ appError(name, err); recoverView(); });
+  }catch(err){ appError(name, err); recoverView(); }
 }
 function recoverView(){ try{ if(typeof renderView==="function") renderView(currentTab); }catch(e){} }
-window.addEventListener("error", e=>{ if(e && e.message && !/ResizeObserver|Script error/.test(e.message)) reportError("window", e.error || e.message); });
-window.addEventListener("unhandledrejection", e=>{ const r = e && e.reason; if(r && !/AbortError|NotAllowedError/.test(String(r.name||r))) reportError("promise", r); });
+window.addEventListener("error", e=>{ if(e && e.message && !/ResizeObserver|Script error/.test(e.message)) appError("window", e.error || e.message); });
+window.addEventListener("unhandledrejection", e=>{ const r = e && e.reason; if(r && !/AbortError|NotAllowedError/.test(String(r.name||r))) appError("promise", r); });
 
 document.addEventListener("click", e=>{
   // un glissement de carte ne doit pas déclencher le bouton sous le doigt

@@ -598,7 +598,7 @@ const EXO_ALIAS = {
   crunch_velo:"bicycle crunch obliques", fente_croisee:"curtsy lunge", pompes_mur:"wall push-up debutant", planche_touches:"shoulder taps",
   dead_bug:"pilates", gainage_creux:"hollow pilates", bird_dog:"pilates", flutter_kicks:"pilates scissors", pont_fessier:"glute bridge pilates", superman:"pilates",
   etir_pigeon:"pigeon yoga", etir_papillon:"butterfly adducteurs yoga", etir_chien:"downward dog yoga", etir_livre:"open book thoracique", etir_enfant:"child pose yoga", etir_cobra:"yoga",
-  hip_thrust_haltere:"hip thrust", squat_bulgare_pdc:"bulgarian split squat", mountain_climbers:"grimpeur", gainage_creux:"hollow",
+  hip_thrust_haltere:"hip thrust", squat_bulgare_pdc:"bulgarian split squat", mountain_climbers:"grimpeur",
 };
 // exercices mesurés en secondes plutôt qu'en répétitions (planche, chaise, marche du fermier…)
 function isTimed(def){ return def._timed!==undefined ? def._timed : (def._timed = def.cues.some(c=>/en secondes/.test(c))); }

@@ -968,7 +968,7 @@ function ascPanoSVG(k){
 }
 function ascShowSummit(s){
   if(!s) return;
-  const D = ASC_DATA[s.key], t = ASC_TIERS[ASC_TIER_OF(s.key)], ni = (ASC_ORDER.indexOf(s.key)+1)%13, nk = ASC_ORDER[ni];
+  const t = ASC_TIERS[ASC_TIER_OF(s.key)], ni = (ASC_ORDER.indexOf(s.key)+1)%13, nk = ASC_ORDER[ni];
   const nth = s.nth || 1, prev = ascent().summits.filter(x=>x.key===s.key && x.date<=s.date && x!==s && (x.nth||1)<nth), rec = prev.length ? Math.min(...prev.map(x=>x.sessions||99)) : null;
   if(nth>=2){
     const B = s.back || null, back = B && B.key;

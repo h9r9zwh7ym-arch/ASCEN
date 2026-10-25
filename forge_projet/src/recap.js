@@ -18,6 +18,8 @@ function recapTitle(kind, key){
   const d = parseISO(key+"-01");
   return MOIS_LONG[d.getMonth()].replace(/^./, c=>c.toUpperCase())+" "+d.getFullYear();
 }
+// clé valable pour sa période : « 2026 » pour une année, « 2026-10 » pour un mois
+function recapKeyOK(kind, key){ return typeof key==="string" && (kind==="year" ? /^\d{4}$/ : /^\d{4}-(0[1-9]|1[0-2])$/).test(key); }
 function recapDefault(kind){
   const t = todayISO();
   const cur = kind==="year" ? t.slice(0,4) : t.slice(0,7);
@@ -189,7 +191,8 @@ function paintRecap(){
   img.classList.remove("in"); void img.offsetWidth; img.classList.add("in");
 }
 function openRecap(kind, key){
-  recap = { kind: kind||"month", key: key || recapDefault(kind||"month") };
+  kind = kind==="year" ? "year" : "month";
+  recap = { kind, key: recapKeyOK(kind, key) ? key : recapDefault(kind) };
   recapMarkSeen(recap.kind, recap.key); // la suggestion de l'accueil disparaît
   save();
   openSheet(`<div class="sheet-hd"><span class="t">Rewind</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
@@ -214,7 +217,6 @@ function recapNudge(){
   if(S.meta.recapSeen===prev || S.sessions.filter(s=>s.date.startsWith(prev)).length<2) return null;
   return { kind:"month", key:prev };
 }
-function recapNudgeKey(){ const r = recapNudge(); return r && r.kind==="month" ? r.key : null; }
 // lancé ou écarté : la suggestion de l'accueil disparaît
 function recapMarkSeen(kind, key){ if(kind==="year") S.meta.recapSeenY = key; else S.meta.recapSeen = key; }
 Object.assign(ACT, {

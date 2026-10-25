@@ -62,7 +62,17 @@ const ascMulEff = (tier, n, lap)=>Math.max(ASC_MUL[tier], ascElan(n, lap));
 // séance), une série « mieux que la dernière fois » pour 1 de plus (4 au plus). La vraie progression en
 // force se voit sur la montagne ; une récompense qui varie d'une séance à l'autre.
 const ASC_BONUS = { pr:3, prMax:3, beat:1, beatMax:4 };
-function ascPRs(s){ let n = 0; for(const ex of s.exos){ const def = EXO_MAP[ex.exoId]; if(def && isStretch(def)) continue; for(const st of ex.sets) if(st.done && st.pr) n++; } return n; }
+// Depuis la 2.13 (ASC_PR_FROM), les records au poids du corps, tenus et à l'élastique comptent aussi. Avant,
+// seuls les records chargés en kg comptaient : les séances d'avant gardent cette règle, l'altitude déjà gagnée
+// ne bouge pas quand l'historique est relu.
+const ASC_PR_FROM = "2026-10-25";
+function ascPRs(s){
+  let n = 0; const all = s.date>=ASC_PR_FROM;
+  for(const ex of s.exos){ const def = EXO_MAP[ex.exoId]; if(def && isStretch(def)) continue;
+    const kg = def && kgType(def);
+    for(const st of ex.sets) if(st.done && st.pr && (all || (kg && st.weight))) n++; }
+  return n;
+}
 // Retour en force : après une semaine sans séance (retour au camp précédent), chaque séance compte double
 // jusqu'à retrouver l'altitude perdue. Revenir doit être une récompense, pas une corvée.
 const ASC_BACK = 2;
@@ -162,7 +172,7 @@ function ascent_raw(extra){
   const key = ()=>ASC_ORDER[st.i], nextIdx = ()=>((st.re ? st.saved.i : st.i)+1)%ASC_ORDER.length;
   // choix « regravir » (S.ascent.re) : appliqués juste après la séance qui les précédait (after), sinon avant la
   // première séance d'une date ultérieure ; l'expédition en cours est mise de côté puis reprise au sommet
-  const sids = new Set(S.sessions.map(x=>x.id)), RE = ((S.ascent && S.ascent.re) || []).map(c=>({ ...c }));
+  const RE = ((S.ascent && S.ascent.re) || []).map(c=>({ ...c }));
   const reApply = c=>{
     c.done = true;
     if(c.stop){ if(st.re){ Object.assign(st, st.saved); st.re = null; st.saved = null; } return; }

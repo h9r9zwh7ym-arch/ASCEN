@@ -189,7 +189,7 @@ function habitsHTML(){
     [["star","yellow"],"Exercice le plus fait", fav?`${fav.n}×`:"–", fav?esc(fav.def.n):""],
     [["calendar","red"],"Jour préféré", wd?JOURS[(wd.i+1)%7]:"–", moment?`plutôt ${moment}`:""],
     [["trophy","yellow"],"Meilleure semaine", bw?`${bw.n} séance${bw.n>1?"s":""}`:"–", bw?`semaine du ${fmtDate(bw.wk)}`:""],
-    [["chart","blue"],"Rythme moyen", `${weeklyAverage(8).toLocaleString("fr-FR")} / sem.`, "sur les 8 dernières semaines"],
+    [["chart","blue"],"Rythme moyen", `${fmtDec(weeklyAverage(8))} / sem.`, "sur les 8 dernières semaines"],
     [["dumbbell","orange"],"Exercices pratiqués", distinctExosCount(), `${nb(sessionsInYear(), "séance")} cette année`],
   ];
   return `<h2 class="sh">Tes habitudes</h2>
@@ -284,14 +284,14 @@ function exoChartSheet(id){
     <div class="sheet-body">
     <div class="stat-strip">
       <div class="stat-box"><div class="num">${pts.length}</div><div class="lbl">séances</div></div>
-      ${loaded?`<div class="stat-box"><div class="num">${pr.maxWeight||"–"}</div><div class="lbl">record (kg)</div></div>
+      ${loaded?`<div class="stat-box"><div class="num">${pr.maxWeight ? fmtDec(pr.maxWeight) : "–"}</div><div class="lbl">record (kg)</div></div>
       <div class="stat-box"><div class="num">${pr.best1rm?fmtDec(pr.best1rm):"–"}</div><div class="lbl">1RM estimé</div></div>`
       :`<div class="stat-box"><div class="num">${Math.max(...pts.map(p=>p.best))}${isTimed(def)?" s":""}</div><div class="lbl">meilleure série</div></div>
       <div class="stat-box"><div class="num">${isTimed(def) ? fmtDuration(pts.reduce((t,p)=>t+p.reps,0)) : fmtNum(pts.reduce((t,p)=>t+p.reps,0))}</div><div class="lbl">${isTimed(def)?"tenus au total":"reps au total"}</div></div>`}
     </div>
     ${exoRecordsHTML(def, loaded, pts)}
     <div class="chart-card">
-      <div class="cc-h"><div class="cc-t">${loaded?"1RM estimé":"Meilleure série"}</div><div class="cc-s">${loaded?"formule d'Epley, meilleure série de chaque séance":(isTimed(def) ? "secondes tenues sur ta meilleure série" : "répétitions de ta meilleure série")}</div></div>
+      <div class="cc-h"><div class="cc-t">${loaded?"1RM estimé":"Meilleure série"}</div><div class="cc-s">${loaded?"meilleure série de chaque séance":(isTimed(def) ? "secondes tenues sur ta meilleure série" : "répétitions de ta meilleure série")}</div></div>
       ${main}
     </div>
     <div class="chart-card">

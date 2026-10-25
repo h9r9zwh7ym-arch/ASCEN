@@ -359,11 +359,6 @@ function animPose(def){
   // envOnly : le décor de la variante remplace celui de la base (banc incliné, au sol…)
   return { env:v.envOnly ? v.env : [base.env||FLOOR, v.env].filter(Boolean).join(""), A, B, dur:v.dur, grip:v.grip };
 }
-function animPath(p){
-  const q = k=>(p[k]||p[k.replace("2","")]).map(v=>v.toFixed(2)).join(" ");
-  if(p.S) return `M${q("N")}L${q("P")}M${q("S")}L${q("S2")}M${q("Q")}L${q("Q2")}M${q("Q")}L${q("K")}L${q("F")}M${q("Q2")}L${q("K2")}L${q("F2")}M${q("S")}L${q("E")}L${q("W")}M${q("S2")}L${q("E2")}L${q("W2")}`;
-  return `M${q("N")}L${q("P")}M${q("P")}L${q("K")}L${q("F")}M${q("P")}L${q("K2")}L${q("F2")}M${q("N")}L${q("E")}L${q("W")}M${q("N")}L${q("E2")}L${q("W2")}`;
-}
 // ---------- silhouette (v6) : des calques séparés par un liseré ----------
 // Comme les pictogrammes de signalétique : chaque partie du corps qui passe devant une autre la
 // découpe d'un fin liseré (bras devant le buste ou la tête, jambe devant l'autre), tout est plein,
@@ -421,10 +416,6 @@ function bodyStatic(p, sw, headR, flat, hf){
     : `<path d="${(halo ? haloD : boneD)(p, a, b, x, L.legOff)}" ${halo ? `class="pk pkb" stroke-width="${(+w(x)+g*2).toFixed(2)}"` : `stroke="currentColor" stroke-width="${w(x)}"`}/>`;
   const head = halo=>`<circle cx="${p.H[0].toFixed(2)}" cy="${p.H[1].toFixed(2)}" r="${(headR+(halo ? g : 0)).toFixed(2)}" ${halo ? `class="pkf pkb"` : `fill="currentColor"`}/>`;
   return `<g fill="none" stroke-linecap="round">${L.far.length ? `<g opacity=".5">${L.far.map(one(false)).join("")}</g>` : ""}${L.base.map(one(true)).join("")}${L.base.map(one(false)).join("")}${hf ? head(true) : ""}${head(false)}${L.top.map(one(true)).join("")}${L.top.map(one(false)).join("")}</g>`;
-}
-function focusPath(p, seg){
-  const a = p.S && seg[0]==="N" && seg[1]==="E" ? p.S : p.S && seg[0]==="P" && seg[1]==="K" ? p.Q : p[seg[0]], b = p[seg[1]], at = t=>[(a[0]+(b[0]-a[0])*t).toFixed(2), (a[1]+(b[1]-a[1])*t).toFixed(2)].join(" ");
-  return `M${at(seg[2])}L${at(seg[3])}`;
 }
 // ---------- squelette (v3.5) ----------
 // Les poses A et B décrivent des positions d'articulations ; les animer en faisant glisser ces

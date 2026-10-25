@@ -15,7 +15,6 @@ const TAILOR = {
 const TAILOR_KIND_UI = { renfo:["Muscle et force","dumbbell","orange"], mix:["Circuit qui essouffle","bolt","purple"],
   cardio:["Souffle et endurance","heart","pink"], mobilite:["Étirements, gainage doux","leaf","green"] };
 const TAILOR_MIN = { court:20, moyen:40, long:60 };   // minutes visées
-const TAILOR_LEN_TXT = { court:"≈ 20 min", moyen:"≈ 40 min", long:"≈ 60 min" };
 const tailorOpt = (k, v)=>(TAILOR[k].find(x=>x[0]===v) || TAILOR[k][0]);
 function tailorSpec(){
   const t = S.settings.tailor && typeof S.settings.tailor==="object" ? S.settings.tailor : {}, o = {};
@@ -482,24 +481,6 @@ function tailorLandRows(host){
   runs.push(qs(".tl-bg", host).animate([{ opacity:1 }, { opacity:0 }], { duration:520, delay:120, easing:"ease-in-out", fill:"forwards" }).finished.catch(()=>{}));
   return Promise.all(runs).then(()=>{ layer.remove(); targets.forEach(t=>{ t.style.visibility = ""; }); });
 }
-// (ancien atterrissage, depuis l'anneau : gardé pour l'animation réduite)
-function tailorLand(host){
-  const targets = qsa("#v-today .hero .hl-row:not(.more) .xico").filter(t=>{ const b = t.getBoundingClientRect(); return b.top>0 && b.bottom<innerHeight; });
-  const srcs = qsa(".tl-ic.keep .xico", host).slice(0, targets.length);
-  const layer = document.createElement("div"); layer.className = "tl-fly"; document.body.appendChild(layer);
-  const ease = "cubic-bezier(.32,.72,0,1)", runs = [];
-  srcs.forEach((sx, i)=>{
-    const s = sx.getBoundingClientRect(), t = targets[i].getBoundingClientRect(), cl = sx.cloneNode(true);
-    Object.assign(cl.style, { left:s.left+"px", top:s.top+"px", width:s.width+"px", height:s.height+"px" });
-    layer.appendChild(cl); sx.style.visibility = "hidden"; targets[i].style.visibility = "hidden";
-    const k = t.width/s.width;
-    runs.push(cl.animate([{ transform:"none" }, { transform:`translate(${t.left-s.left}px,${t.top-s.top}px) scale(${k})` }],
-      { duration:560, delay:i*55, easing:ease, fill:"forwards" }).finished.catch(()=>{}).then(()=>{ targets[i].style.visibility = ""; }));
-  });
-  qs(".tl-think", host).animate([{ opacity:1 }, { opacity:0 }], { duration:220, easing:"ease-out", fill:"forwards" });
-  runs.push(qs(".tl-bg", host).animate([{ opacity:1 }, { opacity:0 }], { duration:480, delay:80, easing:"ease-in-out", fill:"forwards" }).finished.catch(()=>{}));
-  return Promise.all(runs).then(()=>{ layer.remove(); targets.forEach(t=>{ t.style.visibility = ""; }); });
-}
 Object.assign(ACT, {
   // ouverte depuis « Choisir une séance » : un sous-écran (« Retour » y ramène)
   tailorOpen(d){
@@ -545,7 +526,7 @@ Object.assign(ACT, {
     if(!fast) await tailorWait(380);   // les vignettes sortent du cœur avant la première étape
     let session;
     try{ session = await tailorGenerate(spec, onStep, { fast, minMs:1900, avoid:d && d.avoid }); }
-    catch(e){ if(typeof reportError==="function") reportError("tailor", e); }
+    catch(e){ if(typeof appError==="function") appError("tailor", e); }
     if(spin) clearInterval(spin);
     if(!session || !session.exos.length){
       host.classList.add("gone"); setTimeout(()=>{ host.remove(); document.body.classList.remove("tl-on"); }, 320); tailorBusy = false;
