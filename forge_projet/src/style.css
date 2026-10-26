@@ -1727,11 +1727,14 @@ body.live-focus #restbar{bottom:calc(14px + var(--sab))}
 .gl-t small{display:block;font-size:var(--fs-cap);font-weight:600;letter-spacing:0;text-transform:none;color:var(--label2);margin-bottom:2px}
 .gl-ring{--p:0;width:28px;height:28px;flex:none;border-radius:50%;background:conic-gradient(var(--tint) calc(var(--p)*1%),var(--fill) 0);-webkit-mask:radial-gradient(circle,transparent 9px,#000 9.5px);mask:radial-gradient(circle,transparent 9px,#000 9.5px)}
 /* Motivation 4.0 : indice de force */
-.tr-hero{display:flex;align-items:baseline;gap:10px;margin:-2px 0 6px}
+.tr-hero{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 10px;margin:2px 0 4px}
+.tr-k{font-size:var(--fs-sub);font-weight:600;color:var(--label2)}
 .tr-v{font-family:var(--num);font-weight:700;font-size:calc(40rem/17);line-height:1;letter-spacing:-.01em;color:var(--label)}
-.tr-d{font-size:var(--fs-foot);font-weight:700;padding:3px 9px;border-radius:999px;background:var(--fill);color:var(--label2)}
+.tr-d{font-size:var(--fs-foot);font-weight:700;padding:3px 9px;border-radius:999px;background:var(--fill);color:var(--label2);white-space:nowrap}
 .tr-d.up{background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--label)}
-.tr-line{display:flex;align-items:flex-start;gap:8px;margin-top:10px;font-size:var(--fs-sub);line-height:1.35;color:var(--label2)}
+.tr-d.down{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--label)}
+.tr-lines{display:flex;flex-direction:column;gap:12px}
+.tr-line{display:flex;align-items:flex-start;gap:10px;font-size:var(--fs-sub);line-height:1.35;color:var(--label2)}
 .tr-line .ii{flex:none;width:17px;height:17px;margin-top:1px;color:var(--tint-ink)}
 .tr-line b{color:var(--label)}
 /* Indice de force 4.0 : statut, régions, méthode */
@@ -1739,16 +1742,20 @@ body.live-focus #restbar{bottom:calc(14px + var(--sab))}
 .tr-how{position:relative;flex:none;width:26px;height:26px;border-radius:50%;background:none;box-shadow:inset 0 0 0 1.5px var(--label3);color:var(--label2);font-family:var(--display);font-style:italic;font-weight:700;font-size:14px;transition:transform .12s}
 .tr-how:active{transform:scale(.9);color:var(--tint-ink);box-shadow:inset 0 0 0 1.5px var(--tint-ink)}
 .tr-how::before{content:"";position:absolute;inset:-8px}
-.tr-status{display:flex;align-items:center;gap:8px;width:100%;margin:2px 0 8px;padding:8px 12px;border-radius:12px;background:var(--fill2);font-size:var(--fs-foot);color:var(--label2);text-align:left}
+.tr-status{display:flex;align-items:center;gap:10px;width:100%;margin:12px 0 0;padding:10px 12px;border-radius:12px;background:var(--fill2);color:var(--label2);text-align:left}
 .tr-status b{color:var(--label);font-weight:700}
+.tr-st{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.tr-st b{font-size:var(--fs-sub)}
+.tr-st small{font-size:var(--fs-foot);line-height:1.3}
+.tr-status .chev{flex:none;color:var(--label3)}
 .tr-dot{width:10px;height:10px;flex:none;border-radius:50%;background:var(--sc,var(--label3))}
 .st-green{--sc:var(--green)} .st-red{--sc:var(--red)} .st-orange{--sc:var(--orange)} .st-blue{--sc:var(--blue)} .st-teal{--sc:#30B0C7} .st-gray{--sc:#8E8E93}
-.tr-regs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px;margin-top:10px}
-.tr-reg{display:flex;align-items:center;gap:7px;font-size:var(--fs-foot);color:var(--label2);min-width:0}
-.tr-reg i{width:10px;height:10px;flex:none;border-radius:3px;background:var(--rc)}
-.tr-reg span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tr-reg b{font-family:var(--num);font-weight:700;color:var(--label)}
-.tr-reg em{display:grid;color:var(--red)} .tr-reg em .ii{width:14px;height:14px}
+.tr-reg .t{display:flex;align-items:center;gap:6px}
+.tr-reg .val{font-family:var(--num);font-weight:700;color:var(--label);min-width:3.4em;text-align:right}
+.tr-reg em{display:grid;color:var(--red)} .tr-reg em .ii{width:15px;height:15px}
+.tr-bar{display:block;height:4px;margin-top:6px;border-radius:2px;background:var(--fill);overflow:hidden}
+.tr-bar i{display:block;height:100%;min-width:3px;border-radius:2px;background:var(--tint)}
+.tr-bar.neg i{background:var(--red)}
 .tr-line .ii[class]{color:var(--tint-ink)}
 .goal-line.warn .gl-ic{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}
 .how-body h3{font-size:var(--fs-callout);font-weight:700;margin:18px 20px 6px}
@@ -2923,7 +2930,7 @@ body.live-focus #v-today{padding-bottom:0}
    Choix exclusifs (puces, nombres, jours) en encre ; éléments cochés d'une liste en orange.
    Champs de texte alignés à gauche, en taille normale ; les grands chiffres centrés restent pour les nombres. */
 .r-push,.r-pull,.r-legs,.r-core{--rc:var(--tint);--ri:#fff}
-.rtag::before,.tr-reg i{display:none}
+.rtag::before{display:none}
 .tpl-daypick button.on{background:var(--label);color:var(--bg2)}
 .tpl-daypick button.on small .ii{color:inherit}
 .num-field.txt input{text-align:left;font-size:var(--fs-body);font-weight:400;height:48px}

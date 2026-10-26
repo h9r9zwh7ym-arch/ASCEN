@@ -55,9 +55,9 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await shot('01_home_alert');
   await page.evaluate(() => { switchTab('progress'); ACT.progressTab({ v: 'force' }); }); await wait(700);   // Progrès › Ta force
   const card = await page.evaluate(() => { const c = document.querySelector('.trend-card');
-    return { status: c.querySelector('.tr-status').textContent.trim(), regs: [...c.querySelectorAll('.tr-reg')].map(e => e.textContent.trim() + (e.querySelector('em') ? '!' : '')), lines: [...c.querySelectorAll('.tr-line')].map(e => e.textContent.trim()) }; });
+    return { status: c.querySelector('.tr-status').textContent.trim(), regs: [...document.querySelectorAll('#v-progress .tr-reg')].map(e => e.textContent.trim() + (e.querySelector('em') ? '!' : '')), lines: [...document.querySelectorAll('#v-progress .tr-line')].map(e => e.textContent.trim()) }; });
   log('Card:', JSON.stringify(card));
-  if (!/^Désentraînement · 0 série difficile sur 7 jours/.test(card.status) || card.regs.length !== 2 || !card.regs.every(r => /!$/.test(r)) || !card.lines.some(l => /sans travail, force estimée −\d+ %/.test(l))) fail('carte : statut, régions et alertes');
+  if (!/^Désentraînement\s*0 série difficile cette semaine/.test(card.status) || card.regs.length !== 2 || !card.regs.every(r => /!$/.test(r)) || !card.lines.some(l => /jours sans travail · −\d+\u202f%/.test(l))) fail('carte : statut, régions et alertes');
   await page.evaluate(() => { const c = document.querySelector('.trend-card'); document.querySelector('#v-progress').scrollTop = c.offsetTop - 70; }); await wait(300); await shot('02_card_detraining');
   // la méthode et ses sources
   await page.click('.trend-card .tr-how'); await wait(600);

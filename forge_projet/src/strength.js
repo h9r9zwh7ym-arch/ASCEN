@@ -227,29 +227,37 @@ function strengthCardHTML(){
     </div></div>`;
   }
   const last = pts[pts.length-1], ref = pts[Math.max(0, pts.length-5)], d = last.v-ref.v, wk = Math.round(daysBetween(ref.wk, last.wk)/7);
-  const status = STATUS[trainingStatus()], L = trainingLoad();
-  const lines = [];
-  detrainAlerts().slice(0,2).forEach(a=>lines.push(a.losing
-    ? `${ii("warn")}<span><b>${esc(a.label)}</b> : ${a.m.days} jours sans travail, force estimée −${a.pct} %. Une séance suffit à arrêter la baisse.</span>`
-    : `${ii("clock")}<span><b>${esc(a.label)}</b> : ${a.m.days} jours sans travail. Encore ${nb(a.left,"jour")} et l'estimation commence à baisser.</span>`));
-  const recent = pts.slice(-8), slope = slopeOf(recent.map((p,i)=>[i, p.v]));
-  if(slope>0.2) lines.push(`${ii("trendUp")}<span>À ce rythme : environ <b>${pctTxt(Math.round(Math.min(last.v+slope*8, last.v*1.15)))}</b> dans 2 mois.</span>`); // estimation prudente : indice ×1,15 au plus
-  else if(!lines.length) lines.push(`${ii("target")}<span>Stable ces dernières semaines : une répétition ou un cran de charge en plus relance la courbe.</span>`);
-  const pj = exoProjection();
-  if(pj && !pj.flat){ const u = v=>kgType(pj.def) ? `${fmtDec(v)} kg` : `${fmtNum(v)}${isTimed(pj.def) ? " s" : " rép."}`;
-    lines.push(`${ii("target")}<span>${esc(pj.def.n)} : de ${u(pj.cur)} à environ <b>${u(pj.proj)}</b> vers le ${fmtDate(pj.date)}, si tu gardes ce rythme.</span>`); }
-  // par région : la moyenne des muscles de la région
+  const status = STATUS[trainingStatus()], L = trainingLoad(), acute = Math.round(L.acute), chronic = Math.round(L.chronic);
+  // 1. le chiffre : progression depuis les débuts, et son évolution sur les dernières semaines
+  const p0 = Math.round(last.v-100);
+  const delta = wk>0 ? `<span class="tr-d ${d>0?"up":d<0?"down":""}">${d ? `${d>0?"+":"−"}${Math.abs(d)}\u202f% en ${wk}\u00a0sem.` : `stable sur ${wk}\u00a0sem.`}</span>` : "";
+  const hero = `<div class="chart-card trend-card stagger" style="--i:1">
+    <div class="tr-h"><span class="tr-k">Depuis tes débuts</span><button class="tr-how" data-a="strengthHow" aria-label="Comment la progression est calculée">i</button></div>
+    <div class="tr-hero"><span class="tr-v" data-count="${Math.abs(p0)}" data-pre="${p0>0?"+":p0<0?"−":""}" data-unit="%" data-thin="1">${pctTxt(last.v)}</span>${delta}</div>
+    ${pts.length>=3 ? lineChart(pts.map(p=>({ label:fmtDate(p.wk), v:p.v-100, tip:`Semaine du ${fmtDate(p.wk)} : ${pctTxt(p.v)}` })), { aria:"Progression de force par semaine", zero:pts.every(p=>p.v>=100), fmt:v=>pctTxt(v+100), tickFmt:v=>(v>0?"+":v<0?"−":"")+fmtDec(Math.abs(v))+"\u202f%" }) : ""}
+    <button class="tr-status st-${status.c}" data-a="strengthHow" aria-label="Statut : ${status.n}. Voir comment il est calculé"><span class="tr-dot"></span><span class="tr-st"><b>${status.n}</b><small>${trainingStatus()==="starting" ? "ton habitude s'établit sur 3 semaines" : `${nb(acute, "série")} difficile${acute>=2?"s":""} cette semaine<br>${chronic} d'habitude`}</small></span><span class="chev">${icon("chev")}</span></button>
+  </div>`;
+  // 2. par zone : chaque région, de la plus forte à la plus faible
   const st = strengthAt(todayISO()), reg = {};
   if(st) st.muscles.forEach(m=>{ const r = REGION_OF_MUSCLE[m.id]||"core"; (reg[r] = reg[r] || []).push(m); });
-  const regions = Object.keys(REGIONS).filter(r=>reg[r]).map(r=>{ const l = reg[r], v = Math.round(100*l.reduce((a,m)=>a+m.ratio,0)/l.length), down = l.some(m=>m.f<1);
-    return `<div class="tr-reg r-${r}"><i></i><span>${r==="core" ? "Gainage" : REGIONS[r].n}</span><b>${pctTxt(v)}</b>${down ? `<em>${ii("warn")}</em>` : ""}</div>`; }).join("");
-  return `<div class="chart-card trend-card stagger" style="--i:1">${head}
-    <div class="tr-hero"><span class="tr-v" ${(()=>{ const p = Math.round(last.v-100); return `data-count="${Math.abs(p)}" data-pre="${p>0?"+":p<0?"−":""}" data-unit="%" data-thin="1"`; })()}>${pctTxt(last.v)}</span>${wk>0 ? `<span class="tr-d ${d>0?"up":d<0?"down":""}">${d>0?"+":d<0?"−":"±"}${nb(Math.abs(d), "point")} en ${nb(wk,"semaine")}</span>` : ""}</div>
-    <button class="tr-status st-${status.c}" data-a="strengthHow" aria-label="Statut : ${status.n}. Voir comment il est calculé"><span class="tr-dot"></span><span><b>${status.n}</b> · ${nb(Math.round(L.acute), "série")} difficile${Math.round(L.acute)>=2?"s":""} sur 7 jours (d'habitude : ${Math.round(L.chronic)})</span></button>
-    ${lineChart(pts.map(p=>({ label:fmtDate(p.wk), v:p.v-100, tip:`Semaine du ${fmtDate(p.wk)} : ${pctTxt(p.v)} (${nb(p.n,"muscle")})` })), { aria:"Progression de force par semaine", fmt:v=>pctTxt(v+100), tickFmt:v=>(v>0?"+":v<0?"−":"")+fmtDec(Math.abs(v))+"\u202f%" })}
-    ${regions ? `<div class="tr-regs">${regions}</div>` : ""}
-    ${lines.map(l=>`<div class="tr-line">${l}</div>`).join("")}
-  </div>`;
+  const rows = Object.keys(REGIONS).filter(r=>reg[r]).map(r=>{ const l = reg[r]; return { r, v:Math.round(100*l.reduce((a,m)=>a+m.ratio,0)/l.length), down:l.some(m=>m.f<1) }; }).sort((a,b)=>b.v-a.v);
+  const maxAbs = Math.max(1, ...rows.map(x=>Math.abs(x.v-100)));
+  const zones = rows.length ? `<h2 class="sh">Par zone</h2><div class="group tr-regs stagger" style="--i:2">${rows.map(x=>`<div class="row tr-reg">
+      <div class="grow"><div class="t">${x.r==="core" ? "Gainage" : REGIONS[x.r].n}${x.down ? `<em aria-label="en baisse">${ii("warn")}</em>` : ""}</div>
+        <span class="tr-bar${x.v<100 ? " neg" : ""}"><i style="width:${(Math.abs(x.v-100)/maxAbs*100).toFixed(0)}%"></i></span></div>
+      <b class="val strong">${pctTxt(x.v)}</b></div>`).join("")}</div>` : "";
+  // 3. à surveiller, puis à venir : seulement ce qui apporte une information (rien sinon)
+  const lines = [];
+  detrainAlerts().slice(0,2).forEach(a=>lines.push(a.losing
+    ? `${ii("warn")}<span><b>${esc(a.label)}</b> : ${a.m.days} jours sans travail · −${a.pct}\u202f%</span>`
+    : `${ii("clock")}<span><b>${esc(a.label)}</b> : ${a.m.days} jours sans travail · baisse dans ${nb(a.left,"jour")}</span>`));
+  const recent = pts.slice(-8), slope = slopeOf(recent.map((p,i)=>[i, p.v]));
+  if(slope>0.2) lines.push(`${ii("trendUp")}<span>À ce rythme : <b>${pctTxt(Math.round(Math.min(last.v+slope*8, last.v*1.15)))}</b> dans 2 mois</span>`); // estimation prudente : indice ×1,15 au plus
+  const pj = exoProjection();
+  if(pj && !pj.flat){ const u = v=>kgType(pj.def) ? `${fmtDec(v)}\u00a0kg` : `${fmtNum(v)}${isTimed(pj.def) ? "\u00a0s" : "\u00a0rép."}`;
+    lines.push(`${ii("target")}<span>${esc(pj.def.n)} : ${u(pj.cur)} → <b>${u(pj.proj)}</b> vers le ${fmtDate(pj.date)}</span>`); }
+  const next = lines.length ? `<h2 class="sh">À venir</h2><div class="card tr-lines stagger" style="--i:3">${lines.map(l=>`<div class="tr-line">${l}</div>`).join("")}</div>` : "";
+  return hero + zones + next;
 }
 // la méthode, en clair, avec ses sources
 const STRENGTH_SOURCES = [

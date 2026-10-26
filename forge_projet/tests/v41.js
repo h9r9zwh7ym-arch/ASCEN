@@ -86,10 +86,10 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   // 3. Progrès › Ta force : indice de force, courbe, projection (le Résumé n'en montre que le chiffre et la forme)
   await page.evaluate(() => { switchTab('progress'); ACT.progressTab({ v: 'force' }); }); await wait(800);
   const tr = await page.evaluate(() => { const c = document.querySelector('.trend-card'); const pts = strengthSeries(12);
-    return c ? { v: c.querySelector('.tr-v') && c.querySelector('.tr-v').textContent, d: (c.querySelector('.tr-d') || {}).textContent, chart: !!c.querySelector('.linechart svg'), lines: [...c.querySelectorAll('.tr-line')].map(e => e.textContent.trim()), pts: pts.length, first: pts[0] && pts[0].v, last: pts[pts.length - 1].v } : null; });
+    return c ? { v: c.querySelector('.tr-v') && c.querySelector('.tr-v').textContent, d: (c.querySelector('.tr-d') || {}).textContent, chart: !!c.querySelector('.linechart svg'), lines: [...document.querySelectorAll('#v-progress .tr-line')].map(e => e.textContent.trim()), pts: pts.length, first: pts[0] && pts[0].v, last: pts[pts.length - 1].v } : null; });
   log('Trend:', JSON.stringify(tr));
-  if (!tr || !tr.chart || !/^\+\d+\u202f%$/.test(tr.v || '') || tr.last <= tr.first || !/\+[\d,]+ points? en/.test(tr.d || '')) fail('progression de force en hausse (en %, 0 au départ)');
-  if (!tr || !tr.lines.some(l => /dans 2 mois/.test(l)) || !tr.lines.some(l => /Développé couché haltères : de \d+ kg à environ \d+(,\d)? kg/.test(l))) fail('projection de l\'indice et d\'un exercice');
+  if (!tr || !tr.chart || !/^\+\d+\u202f%$/.test(tr.v || '') || tr.last <= tr.first || !/^\+\d+\u202f% en \d+\u00a0sem\.$/.test(tr.d || '')) fail('progression de force en hausse (en %, 0 au départ)');
+  if (!tr || !tr.lines.some(l => /dans 2 mois/.test(l)) || !tr.lines.some(l => /Développé couché haltères : \d+\u00a0kg → \d+(,\d)?\u00a0kg vers le/.test(l))) fail('projection de l\'indice et d\'un exercice');
   await page.evaluate(() => { const c = document.querySelector('.trend-card'); document.querySelector('#v-progress').scrollTop = c.offsetTop - 70; }); await wait(300); await shot('05_trend');
 
   // 4. Profil > Motivation : chaque option se coupe et disparaît de l'app
