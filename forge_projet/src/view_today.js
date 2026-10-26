@@ -67,7 +67,7 @@ function nextGoal(){
     if(p.next==null || p.pct<.6 || p.pct>=1) return; if(!best || p.pct>best.p.pct) best = { m, p }; });
   if(best){ const { m, p } = best, rest = p.next - p.v;
     return { ic:"trophy", pct:p.pct, act:`data-a="showMedal" data-id="${m.id}"`,
-      t:`${TIERS[p.t+1].n} « ${m.n} » : plus que ${fmtMedalVal(m, rest)} ${medalUnit(m, rest)}` }; }
+      t:`Trophée « ${m.n} » (${TIERS[p.t+1].n.toLowerCase()}) : encore ${fmtMedalVal(m, rest)} ${medalUnit(m, rest)}` }; }
   return null;
 }
 function nextGoalHTML(){
@@ -185,7 +185,7 @@ function rewindNudgeHTML(){
 // Un seul rappel à la fois : pendant que le Rewind est proposé, la sauvegarde attend (en bas de l'accueil)
 function nudgeHTML(){
   if(recapNudge()) return "";
-  if(backupDue()) return `<div class="backup-nudge stagger" style="--i:7">${sfIcon("download","green")}<div class="grow"><div class="t">Sauvegarde conseillée</div><div class="s">${S.sessions.length} séances sont stockées uniquement sur ce téléphone.</div></div><div class="bn-act"><button data-a="backupData">Sauvegarder</button><button class="later" data-a="backupLater">Plus tard</button></div></div>`;
+  if(backupDue()) return `<div class="backup-nudge stagger" style="--i:7">${sfIcon("download","green")}<div class="grow"><div class="t">Sauvegarde conseillée</div><div class="s">${S.sessions.length} séances sont enregistrées uniquement sur ce téléphone.</div></div><div class="bn-act"><button data-a="backupData">Sauvegarder</button><button class="later" data-a="backupLater">Plus tard</button></div></div>`;
   return "";
 }
 
@@ -253,7 +253,7 @@ function proposalPaneHTML(draft){
   const types = adj && !imported ? `<div class="type-scroll">${typeChips}</div>` : "";
   if(!draft.exos.length){
     return `${types}${hero}
-      ${emptyHTML("toolbox", "Aucun exercice possible", "Pas d'exercice pour ce type de séance avec ton matériel. Essaie un autre type, ou complète ton matériel dans le Profil.")}`;
+      ${emptyHTML("toolbox", "Aucun exercice possible", "Aucun exercice disponible pour ce type de séance avec ton matériel. Choisis un autre type ou complète ton matériel dans Profil.")}`;
   }
   // exercices de force, puis (si le réglage est actif) le bloc d'étirements dans sa propre section
   if(heroShown && !adj) return hero; // « Autre proposition » est dans « Choisir une autre séance »
@@ -311,7 +311,7 @@ function weekCardHTML(){
   const promise = !doneToday ? ascTodayPromise(a) : null;
   const where = a.comeback && !doneToday ? `Retour en force : séance ×${String(ASC_BACK).replace(".", ",")} jusqu'à ${ascM(a.comeback)}`
     : promise ? (a.wait ? `Dès aujourd'hui : ${ASC_DATA[a.next].n}` : promise.summit ? "Sommet à ta portée aujourd'hui" : `${nc[1]} à ta portée aujourd'hui`)
-    : !S.sessions.length ? "Ta première séance te met en route"
+    : !S.sessions.length ? "Ta première séance lance l'ascension"
     : a.wait ? `Au sommet ${ascDu(a.key)}` : nc ? `${nc[1]} dans ${ascM(nc[0]-a.alt)}` : `Sommet dans ${ascM(D.top-a.alt)}`;
   // animation signature n° 3 : de retour sur l'accueil après une séance, la carte part de là où on l'avait
   // laissée (barre et altitude) et le grimpeur avance (wkClimb, une fois la carte visible)
@@ -829,7 +829,7 @@ function effortHTML(){
   const timed = isTimed(EXO_MAP[S.draft.exos[src.exi].exoId]);
   const opts = timed ? [[3,"Difficile"],[2,"Moyen"],[1,"Facile"]] : [[3,"0"],[2,"1–2"],[1,"3 ou +"]];
   return `<div class="effort" role="group" aria-label="Ressenti de la série">
-    <div class="ef-q">${timed?"Comment c'était ?":"Combien de reps en réserve ?"}</div>
+    <div class="ef-q">${timed?"Comment c'était ?":"Répétitions en réserve ?"}</div>
     <div class="ef-opts">${opts.map(([v,l])=>`<button class="${st.effort===v?"on":""}" data-a="setEffort" data-v="${v}" aria-pressed="${st.effort===v}">${l}</button>`).join("")}</div>
   </div>`;
 }
@@ -837,7 +837,7 @@ function effortHTML(){
 function lastTimeHTML(exoId, hasNote){
   const last = lastPerformance(exoId);
   // première fois : le conseil de l'exercice (note) le dit déjà, on ne le répète pas
-  if(!last) return hasNote ? "" : `<div class="fc-last">Première fois : prends tes repères</div>`;
+  if(!last) return hasNote ? "" : `<div class="fc-last">Première séance : prends tes repères</div>`;
   const done = last.exo.sets.filter(s=>s.done);
   const w = done[0] && done[0].weight;
   return `<div class="fc-last">La dernière fois (${fmtRelative(last.session.date)}) : ${done.map(s=>s.reps).join(" · ")}${loadSuffix(EXO_MAP[exoId], w)}</div>`;
@@ -848,7 +848,7 @@ function lastTimeHTML(exoId, hasNote){
 // un toucher dans un menu (modale centrée) le referme ; l'étoile d'une fiche, non
 function closeModalIfMenu(){ const o = qs("#overlay"); if(o && o.dataset.kind==="modal" && qs("#overlay .menu-list")) closeSheet(); }
 // la note « une répétition de plus que la dernière fois » double la ligne « à battre » : une seule suffit
-function noteIsBeat(ex){ return S.settings.beat!==false && (ex.deload || /^Objectif( du jour)? : (une répétition de plus|\+\d+ (s|répétitions?) )/.test(ex.note||"")); }
+function noteIsBeat(ex){ return S.settings.beat!==false && (ex.deload || /^Objectif : /.test(ex.note||"")); }
 let beatWinKey = ""; // série déjà annoncée « mieux » : l'animation ne rejoue pas à chaque +/−
 function beatLineHTML(ex, def, si, st){
   const ref = isStretch(def) ? null : beatRef(ex.exoId, si);
@@ -858,7 +858,7 @@ function beatLineHTML(ex, def, si, st){
   // semaine allégée : pas de record à battre, on garde de la marge
   if(ex.deload) return `<div class="fc-beat dl">${ii("leaf")}<span>Semaine allégée : vise <b>${st.reps}${u}</b>${loadSuffix(def, st.weight)}, sans aller à fond <small>(la dernière fois : ${refTxt})</small></span></div>`;
   // après 3 semaines sans l'exercice, on ne cherche pas à battre : on retrouve son niveau (la force revient vite)
-  if(gap>=21) return `<div class="fc-beat">${ii("repeat")}<span>Reprise après ${gap} jours : retrouve tes sensations <small>(la dernière fois : ${refTxt})</small></span></div>`;
+  if(gap>=21) return `<div class="fc-beat">${ii("repeat")}<span>Reprise après ${gap} jours : vas-y progressivement <small>(la dernière fois : ${refTxt})</small></span></div>`;
   if(beatCmp(def, st, ref)>0){ const pop = beatWinKey!==key; beatWinKey = key; return `<div class="fc-beat win${pop ? " pop" : ""}">${ii("trendUp")}<span>Ça bat la dernière fois <small>(${refTxt})</small></span></div>`; }
   // plus fatigué qu'à la dernière fois : un peu en dessous peut valoir mieux, et on le dit
   const fN = liveFatigue(S.draft, ex);
@@ -1438,7 +1438,7 @@ Object.assign(ACT, {
     const app = [];
     if(prop && draft.source!=="imported") app.push(row("csRegen", sfIcon("sparkles", "orange"), draft.tailored ? "Autre séance sur mesure" : "Autre proposition", draft.tailored ? "Mêmes critères, d'autres exercices" : ""));
     else if(appPicksOn() && !prop) app.push(row("csApp", sfIcon("sparkles", "orange"), "Laisse l'app choisir"));
-    app.push(row("csTailor", sfIcon("ruler", "purple"), "Séance sur mesure", "Type, zone, durée : l'app compose"));
+    app.push(row("csTailor", sfIcon("ruler", "purple"), "Séance sur mesure", "Choisis le type, la zone et la durée"));
     const now = [row("csExpress", sfIcon("stopwatch", "green"), "Séance express", "10 min · tout le corps"),
       row("csCompose", sfIcon("pencil", "blue"), "Composer moi-même")];
     const sec = (h, rows)=>rows.length ? `<h2 class="sh">${h}</h2><div class="group">${rows.join("")}</div>` : "";
@@ -1542,7 +1542,7 @@ Object.assign(ACT, {
     else S.custom.pendingDays = [day];
     S.settings.todayTab = "custom";
     closeSheet(); save(); scrollTodayTop(); renderTodaySoft();
-    toast(`Compose ta séance, puis enregistre-la pour le ${JOURS[(day+1)%7]}`);
+    toast(`Compose ta séance, puis enregistre-la pour ${JOURS[(day+1)%7]}`);
   },
   pickerInfo(d){ const l = qs("#pickerList"); if(picker && l) picker.scroll = l.scrollTop; ACT.showExoInfo({ id:d.id }); },
   swapFromInfo(d){
@@ -1558,7 +1558,7 @@ Object.assign(ACT, {
     if(dir>0){
       if(main.length>=10) return;
       const add = suggestComplement(main.map(e=>e.exoId), 1)[0];
-      if(!add){ toast("Plus d'exercice disponible avec ton matériel"); return; }
+      if(!add){ toast("Aucun autre exercice disponible avec ton matériel"); return; }
       { const at = firstCool<0 ? ex.length : firstCool; ex.splice(at, 0, entryAt(ex, add, at)); } freshIds.add(add.id);
     } else {
       if(main.length<=1) return;
@@ -1724,14 +1724,14 @@ Object.assign(ACT, {
     const t = S.templates.find(x=>x.id===d.id); if(!t) return;
     S.custom = { exos: clone(t.exos), name: t.n, tplId: t.id, planDate: todayISO() };
     S.settings.todayTab = "custom"; t.exos.forEach(e=>freshIds.add(e.exoId));
-    save(); renderTodaySoft(); toast(`« ${t.n} » prête dans Ma séance : en route pour le rattrapage`, "repeat");
+    save(); renderTodaySoft(); toast(`« ${t.n} » est prête dans Ma séance`, "repeat");
   },
   missSkip(d){ S.meta.missSkip = d.iso+":"+d.id; save(); changed(); },
   loadTemplate(d){
     const t = S.templates.find(x=>x.id===d.id); if(!t) return;
     S.custom = { exos: clone(t.exos), name: t.n, tplId: t.id }; S.settings.todayTab = "custom"; customEdit = false; heroAll = false;
     t.exos.forEach(e=>freshIds.add(e.exoId));
-    closeSheet(); save(); renderTodaySoft(); toast(`« ${t.n} » prête dans Ma séance`);
+    closeSheet(); save(); renderTodaySoft(); toast(`« ${t.n} » est prête dans Ma séance`);
     setTimeout(()=>{ const g = qs("#v-today .group.builder"); if(g) g.scrollIntoView({ behavior:"smooth", block:"center" }); }, 260);
   },
   deleteTemplate(d){
@@ -1929,7 +1929,7 @@ Object.assign(ACT, {
         ${pr.count ? `<div class="ef-row"><div><b>${pr.count}</b><span>séance${pr.count>1?"s":""}</span></div>
           <div><b>${pr.maxWeight?fmtLoad(e, pr.maxWeight):"–"}</b><span>record charge</span></div>
           <div><b>${last?fmtRelative(last.session.date):"–"}</b><span>dernière fois</span></div></div>`
-        : `<div class="ef-note">${ii("sparkle")}<span>Première fois : commence léger pour prendre tes repères.</span></div>`}
+        : `<div class="ef-note">${ii("sparkle")}<span>Première séance : commence léger pour trouver la bonne charge.</span></div>`}
       </div>`;
     const similar = availableExos().filter(x=>x.id!==e.id && x.muscles[0]===e.muscles[0]).slice(0,4);
     const liveIdx = live ? S.draft.exos.findIndex(x=>x.exoId===e.id) : -1;

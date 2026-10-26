@@ -14,7 +14,7 @@ const LEN_LABELS = { court:"Courte (≈ 20 min)", moyen:"Moyenne (≈ 35 min)", 
 // niveau dit en durée de pratique : clair, et sans accord à faire
 const LEVEL_LABELS = { debutant:"Moins d'un an", intermediaire:"1 à 3 ans", avance:"Plus de 3 ans" };
 
-const LEVEL_HINTS = { debutant:"Exercices accessibles, la technique d'abord.", intermediaire:"Tous les exercices standard.", avance:"Variantes exigeantes privilégiées." };
+const LEVEL_HINTS = { debutant:"Exercices accessibles, la technique d'abord.", intermediaire:"Tous les exercices courants.", avance:"Variantes exigeantes privilégiées." };
 
 function ownedEquipCount(){ return EQUIP_TYPES.filter(e=>!e.always && S.equipment.owned[e.id]).length; }
 
@@ -58,10 +58,10 @@ function trophiesCardHTML(){
     </button>`;
 }
 // ---------- réglages regroupés (loi de Hick : peu de choix sur l'écran, le détail à un toucher) ----------
-const MOTIV = [["beat","target","orange","Comparer à la dernière fois","Ta série de la dernière fois, en séance"],
-  ["nextGoal","flag","red","Prochain cap sur l'accueil","Le but le plus proche : record à battre, trophée, muscle à reprendre"],
-  ["trend","trendUp","green","Progression de force","Ta courbe depuis tes débuts, ton statut et les alertes de pause"],
-  ["thenNow","chart","blue","Avant et maintenant","Tes séries d'avant face à celles de maintenant"]];
+const MOTIV = [["beat","target","orange","Comparer à la dernière fois","Ta série précédente, affichée pendant la séance"],
+  ["nextGoal","flag","red","Prochain cap sur l'accueil","L'objectif le plus proche : record, trophée ou muscle à reprendre"],
+  ["trend","trendUp","green","Progression de force","Ta progression, ton statut et les alertes de pause"],
+  ["thenNow","chart","blue","Avant et maintenant","Tes séries d'il y a 3 mois comparées à aujourd'hui"]];
 function sessionPrefsHTML(){
   return `<div class="group">
       <div class="row rest-row">
@@ -111,7 +111,7 @@ function dataMoreHTML(){
         ${sfIcon("download","green")}
         <div class="grow"><div class="t">Sauvegarder mes données</div><div class="s">${backupStatusText()}</div></div>
       </button>
-      ${canAutoBackup() ? `<div class="row">${sfIcon("repeat","green")}<div class="grow"><div class="t">Sauvegarde automatique</div><div class="s wrap">${S.settings.autoBackup ? "Réécrite après chaque séance" : "Choisis un fichier, il sera réécrit après chaque séance"}</div></div>
+      ${canAutoBackup() ? `<div class="row">${sfIcon("repeat","green")}<div class="grow"><div class="t">Sauvegarde automatique</div><div class="s wrap">${S.settings.autoBackup ? "Mise à jour après chaque séance" : "Choisis un fichier : il sera mis à jour après chaque séance"}</div></div>
         <button class="switch ${S.settings.autoBackup ? "on" : ""}" role="switch" aria-checked="${!!S.settings.autoBackup}" aria-label="Sauvegarde automatique" data-a="toggleAutoBackup"></button></div>` : ""}
     </div>
     ${isStandalone() ? "" : `<div class="group" style="margin-top:14px">
@@ -336,7 +336,7 @@ async function backupData(){
     setTimeout(()=>URL.revokeObjectURL(url), 5000);
   }
   S.meta.lastBackup = todayISO(); S.meta.backupSessions = S.sessions.length; delete S.meta.backupSnooze;
-  save(); changed(); sfx("set"); toast("Sauvegarde créée. Même dossier que la dernière fois : elle la remplace", "check");
+  save(); changed(); sfx("set"); toast("Sauvegarde créée. Enregistre-la au même endroit pour remplacer la précédente.", "check");
 }
 function restoreData(){
   const inp = document.createElement("input");
@@ -349,9 +349,9 @@ function restoreData(){
     try{ if(f.size>5e7) throw 0; const o = parseUntrusted(await f.text()); data = o && o.data ? o.data : o; }catch(e){ data = null; }
     if(!data || typeof data!=="object" || !(Array.isArray(data.sessions) || Array.isArray(data.zs))){ openModal(`<div style="font-weight:700;color:var(--red)">Fichier non reconnu</div><div class="hr-note" style="margin-top:8px">Choisis un fichier de sauvegarde créé par ASCEN (ascen-sauvegarde-….json).</div><button class="btn secondary" style="margin-top:14px" data-a="closesheet">OK</button>`); return; }
     const n = (Array.isArray(data.sessions) && data.sessions.length ? data.sessions : data.zs || []).length, t = Array.isArray(data.templates) ? data.templates.length : 0;
-    confirmSheet({ title:"Restaurer cette sauvegarde ?", html:`${nb(n, "séance")} dans l'historique${t ? ` et ${t} dans Mes séances` : ""}. Les données actuelles de cet appareil seront remplacées ; tu pourras annuler juste après.`, ok:"Restaurer", danger:true, onOk:()=>{
+    confirmSheet({ title:"Restaurer cette sauvegarde ?", html:`${nb(n, "séance")} dans l'historique${t ? ` et ${t} dans Mes séances` : ""}. Les données actuelles de cet appareil seront remplacées. Tu pourras annuler juste après.`, ok:"Restaurer", danger:true, onOk:()=>{
       try{ localStorage.setItem(STORAGE_KEY+".avant-restauration", JSON.stringify(S)); }catch(e){}
-      let st; try{ st = normalizeState(data); }catch(e){ ERR_LOG.push({ at:new Date().toISOString(), where:"restauration", msg:String(e && e.message || e).slice(0,200) }); toast("Sauvegarde illisible : rien n'a été changé", "warn"); return; }
+      let st; try{ st = normalizeState(data); }catch(e){ ERR_LOG.push({ at:new Date().toISOString(), where:"restauration", msg:String(e && e.message || e).slice(0,200) }); toast("Sauvegarde illisible. Aucune donnée n'a été modifiée.", "warn"); return; }
       if(S.draft) stopRestTimer();
       const prev = S;
       S = st;
@@ -359,7 +359,7 @@ function restoreData(){
       upgradeRecords(); save(); persistNow(); applyTheme(); checkMedals(true);
       renderViewAnimated(currentTab);
       // « Annuler » remet les données d'avant (elles restent aussi en copie dans le stockage)
-      toast(`Sauvegarde restaurée : ${nb(n, "séance")}`, null, ()=>{ S = prev; save(); persistNow(); applyTheme(); renderViewAnimated(currentTab); toast("Données d'avant remises"); });
+      toast(`Sauvegarde restaurée : ${nb(n, "séance")}`, null, ()=>{ S = prev; save(); persistNow(); applyTheme(); renderViewAnimated(currentTab); toast("Données précédentes restaurées"); });
     }});
   });
   inp.click();
@@ -367,11 +367,11 @@ function restoreData(){
 function openInstall(){
   openSheet(`<div class="sheet-hd"><span class="t">Installer ASCEN</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
     <div class="sheet-body">
-      <p class="body" style="margin:0 20px 14px">Installée sur l'écran d'accueil, ASCEN s'ouvre en plein écran, fonctionne sans réseau, et Safari ne peut plus effacer tes données après quelques jours sans visite.</p>
+      <p class="body" style="margin:0 20px 14px">Installée sur l'écran d'accueil, ASCEN s'ouvre en plein écran et fonctionne hors ligne. Safari ne peut plus effacer tes données.</p>
       <div class="group install-steps">
-        <div class="row"><span class="step-n">1</span><div class="grow"><div class="t">Touche le bouton Partager</div><div class="s wrap">Le carré avec une flèche vers le haut, dans la barre de Safari</div></div></div>
-        <div class="row"><span class="step-n">2</span><div class="grow"><div class="t">Choisis « Sur l'écran d'accueil »</div><div class="s wrap">Fais défiler la liste si besoin</div></div></div>
-        <div class="row"><span class="step-n">3</span><div class="grow"><div class="t">Ouvre ASCEN depuis son icône</div><div class="s wrap">Tes séances actuelles ne sont pas transférées automatiquement : fais d'abord une sauvegarde, puis restaure-la dans l'app installée</div></div></div>
+        <div class="row"><span class="step-n">1</span><div class="grow"><div class="t">Touche le bouton Partager</div><div class="s wrap">Le carré avec une flèche, dans la barre de Safari</div></div></div>
+        <div class="row"><span class="step-n">2</span><div class="grow"><div class="t">Choisis « Sur l'écran d'accueil »</div><div class="s wrap">Fais défiler la liste si nécessaire</div></div></div>
+        <div class="row"><span class="step-n">3</span><div class="grow"><div class="t">Ouvre ASCEN depuis son icône</div><div class="s wrap">Tes séances ne sont pas transférées automatiquement. Fais une sauvegarde, puis restaure-la dans l'app installée.</div></div></div>
       </div>
       <div class="btnrow"><button class="btn secondary" data-a="backupData">${icon("bookmark")} Faire une sauvegarde d'abord</button></div>
     </div>`);
@@ -709,7 +709,7 @@ Object.assign(ACT, {
   copyPrompt(){
     const text = buildExportPrompt();
     if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(text).then(()=>toast("Demande copiée")).catch(()=>toast("Copie impossible — sélectionne le texte manuellement"));
+      navigator.clipboard.writeText(text).then(()=>toast("Demande copiée")).catch(()=>toast("Copie impossible. Sélectionne le texte manuellement."));
     } else toast("Sélectionne le texte ci-dessous pour le copier");
   },
   triggerImport(){ const f = qs("#fileImport"); if(f) f.click(); },
@@ -829,7 +829,7 @@ Object.assign(ACT, {
     const el = qs("#stoPersist");
     const setTxt = t=>{ if(el) el.textContent = t; };
     try{
-      if(navigator.storage && navigator.storage.persisted) navigator.storage.persisted().then(p=>setTxt(p ? "Activée" : isStandalone() ? "Standard" : "Installe l'app sur l'écran d'accueil : Safari efface les données des sites non installés après 7 jours sans visite."));
+      if(navigator.storage && navigator.storage.persisted) navigator.storage.persisted().then(p=>setTxt(p ? "Activée" : isStandalone() ? "Standard" : "Installe l'app sur l'écran d'accueil. Sinon, Safari peut effacer tes données après 7 jours sans visite."));
       else setTxt(isStandalone() ? "Standard" : "Installe l'app sur l'écran d'accueil pour protéger tes données.");
     }catch(e){ setTxt("—"); }
   },

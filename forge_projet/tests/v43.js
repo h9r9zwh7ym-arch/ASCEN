@@ -92,7 +92,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     return { heads, wizardIn: !!document.querySelector('.tpl-section [data-a="weekWizard"]') }; });
   log('Home sections:', JSON.stringify(home));
   if (home.heads[0] !== 'Cette semaine' || !/^Mes séances/.test(home.heads[1] || '') || !home.wizardIn) fail('accueil : Cette semaine puis Mes séances');
-  const notes = await page.evaluate(() => [{ note: 'Objectif du jour : une répétition de plus par série que la dernière fois.' }, { note: 'Objectif : +1 répétition par série par rapport à la dernière fois.' }, { note: 'Objectif : +5 s par rapport à la dernière fois.' }, { note: 'Reprise après 30 jours : charge un peu allégée.' }].map(noteIsBeat));
+  const notes = await page.evaluate(() => [{ note: 'Objectif : une répétition de plus par série.' }, { note: 'Objectif : 1 répétition de plus par série.' }, { note: 'Objectif : 5 s de plus par série.' }, { note: 'Reprise après 30 jours : charge légèrement réduite.' }].map(noteIsBeat));
   log('Duplicate notes hidden:', JSON.stringify(notes)); if (notes.join() !== 'true,true,true,false') fail('note de progression en double');
   await page.evaluate(() => { S.custom = { exos: [{ exoId: 'pompes_diamant', sets: 2 }] }; ACT.startCustom(); }); await wait(4400);
   await page.evaluate(() => { const l = document.querySelector('#launch'); if (l) l.click(); }); await wait(500);

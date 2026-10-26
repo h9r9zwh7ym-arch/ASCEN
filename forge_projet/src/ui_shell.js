@@ -949,7 +949,7 @@ function appError(where, err){
   ERR_LOG.push({ at:new Date().toISOString(), where, msg:String(err && err.message || err).slice(0,200) });
   if(ERR_LOG.length>20) ERR_LOG.shift();
   if(typeof console!=="undefined") console.warn("[ASCEN]", where, err);
-  if(Date.now()-errToastAt>5000){ errToastAt = Date.now(); try{ toast("Petit souci, l'écran a été rechargé — rien n'est perdu", "warn"); }catch(e){} }
+  if(Date.now()-errToastAt>5000){ errToastAt = Date.now(); try{ toast("Un problème est survenu. L'écran a été rechargé, aucune donnée n'est perdue.", "warn"); }catch(e){} }
 }
 const ONCE_ACTS = new Set(["startExpress","validateSet","finishSession","startSession","startCustom","startTemplate","pickerDone","infoAdd","addToCustom","tplEdSave","saveTemplate","saveTemplateNew","backupData","obFinish","confirmYes","holdStop","histEditSave"]);
 let lastAct = { name:"", el:null, t:0 };

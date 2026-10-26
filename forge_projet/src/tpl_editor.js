@@ -144,7 +144,7 @@ Object.assign(ACT, {
     if(!add.length){ toast("Aucun exercice disponible avec ton matériel"); return; }
     add.forEach(e=>tplEdit.exos.push({ exoId:e.id, sets:e.sets, fresh:true }));
     tplEdit.dirty = true; sfx("open"); refreshTplEditor();
-    const t = stimTargets(add); if(t.length) toast(`Priorité : ${t.slice(0,2).map(r=>r.n.toLowerCase()).join(" et ")}, en retard cette semaine`, "target");
+    const t = stimTargets(add); if(t.length) toast(`Priorité aux muscles en retard : ${t.slice(0,2).map(r=>r.n.toLowerCase()).join(" et ")}`, "target");
   },
   tplEdCancel(){
     // la feuille d'enregistrement ne perd rien : les exercices restent dans Ma séance
@@ -195,7 +195,7 @@ Object.assign(ACT, {
     // les nouvelles séances apparaissent l'une après l'autre (le reste de l'accueil ne bouge pas)
     made.forEach((id,k)=>{ const c = qs(`#v-today .tpl-card2[data-id="${id}"]`); if(!c) return;
       c.style.setProperty("--k", k); c.classList.add("pop-in"); setTimeout(()=>c.classList.remove("pop-in"), 1200); });
-    toast(`${made.length} séances créées et placées dans ta semaine`, "sparkle");
+    toast(`${made.length} séances créées et planifiées`, "sparkle");
     // depuis l'accueil : on montre la semaine remplie ; au premier lancement, l'accueil reste en haut
     if(!(d && d.first)) setTimeout(()=>{ const w = qs("#v-today .wk-card"); if(w) w.scrollIntoView({ behavior:"smooth", block:"center" }); }, 420);
   },

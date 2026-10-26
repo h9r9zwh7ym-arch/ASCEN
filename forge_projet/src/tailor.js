@@ -266,14 +266,14 @@ function tailorRefine(spec, pool, best, ctx, base){
 function tailorWhy(spec, e, i, exos, ctx){
   const m = e.muscles[0], n = ctx.done[e.id]||0;
   if(spec.kind==="mobilite") return isStretch(e) ? `Étire ${(MUSCLE_MAP[m] ? leMuscle(m) : "en douceur")}` : "Gainage doux, au sol";
-  if(spec.kind==="cardio") return i===0 ? "Pour monter en rythme" : "Fait travailler le souffle";
-  if(spec.kind==="mix" && isCardioEx(e)) return "Garde le cœur haut entre deux blocs";
+  if(spec.kind==="cardio") return i===0 ? "Pour monter en intensité" : "Travaille le cardio";
+  if(spec.kind==="mix" && isCardioEx(e)) return "Maintient le rythme cardiaque";
   if(tailorDeficit(ctx, m)>=.5) return `${MUSCLE_MAP[m] ? MUSCLE_MAP[m].n : m} en retard cette semaine`;
-  if(i===0 && e.muscles.length>=3) return "Gros mouvement, en premier";
+  if(i===0 && e.muscles.length>=3) return "Exercice principal, en premier";
   if((spec.zone==="full" || spec.zone==="haut") && PULL_P.has(e.pattern) && exos.some(x=>PUSH_P.has(x.pattern))) return "Équilibre les poussées";
-  if(n>=2) return "Ton habituel : charges connues";
+  if(n>=2) return "Exercice habituel";
   if(!n && !ctx.fresh) return "Nouveau pour toi";
-  if(goalValue(e)>=1 && S.goals.overall!=="endurance") return "Chargé : compte pleinement";
+  if(goalValue(e)>=1 && S.goals.overall!=="endurance") return "Avec charge, plus efficace";
   return `Cible ${leMuscle(m)}`;
 }
 const tailorWait = ms=>new Promise(r=>setTimeout(r, ms));
@@ -287,7 +287,7 @@ async function tailorGenerate(spec, onStep, opts){
   const want = tailorWant(spec);
   // 1. ta semaine : ce qui est en retard, ce qui doit récupérer
   const ctx = tailorContext(), facts = [];
-  if(ctx.fresh) facts.push("première séance : on reste simple");
+  if(ctx.fresh) facts.push("première séance : programme simple");
   else {
     const zoneLow = ctx.low.filter(r=>tailorZoneHas(spec, r.id));
     if(!want && zoneLow.length) facts.push(`${zoneLow.slice(0,2).map(r=>r.n.toLowerCase()).join(" et ")} en retard`);
@@ -313,7 +313,7 @@ async function tailorGenerate(spec, onStep, opts){
   }
   // 3. la meilleure, affinée exercice par exercice
   tries.sort((a,b)=>b.s.v - a.s.v);
-  if(onStep) onStep(2, "J'échange un exercice à la fois…");
+  if(onStep) onStep(2, "J'ajuste exercice par exercice…");
   const ref = tailorRefine(spec, pool, tries[0], ctx, base);
   const best = { exos:ref.exos, s:tailorScore(spec, ref.exos, ctx) };
   const exos = tailorOrder(spec, best.exos), sets = tailorFit(spec, exos);
@@ -328,7 +328,7 @@ async function tailorGenerate(spec, onStep, opts){
     usedWhy.add(w); x.why = w; });
   const shown = entries.find(x=>x.sets[0] && x.sets[0].weight) || entries[0];
   const sd = shown && EXO_MAP[shown.exoId];
-  await step(3, sd && typeof propDose==="function" ? `${sd.n} : ${propDose(shown)}` : "charges et répétitions réglées", 520);
+  await step(3, sd && typeof propDose==="function" ? `${sd.n} : ${propDose(shown)}` : "charges et répétitions définies", 520);
   // au moins 2 s de réflexion visible (moins si l'animation est réduite)
   cpu += performance.now() - c0;
   if(pace){ const left = (opts.minMs ?? 2100) - (performance.now() - t0); if(left>0) await tailorWait(left); }
@@ -338,11 +338,11 @@ async function tailorGenerate(spec, onStep, opts){
   const lowHere = ctx.low.filter(r=>prim.has(r.id)), tiredHere = ctx.tired.filter(m=>prim.has(m) && MUSCLE_MAP[m]);
   if(!want && best.s.need>0.5 && lowHere.length) why.push(`priorité : ${lowHere.slice(0,2).map(r=>r.n.toLowerCase()).join(" et ")}`);
   if(!want && tiredHere.length) why.push(`${tiredHere.slice(0,2).map(mName).join(" et ")} travaillés il y a moins de 48 h : une série de moins`);
-  if(!want && S.goals.overall!=="endurance" && best.s.value<.8) why.push("ce type de séance compte moins pour ton objectif");
+  if(!want && S.goals.overall!=="endurance" && best.s.value<.8) why.push("ce type de séance contribue moins à ton objectif");
   // situations délicates, dites franchement plutôt que masquées par des séries en trop
   const cb = !want && comebackDays();
-  if(cb) why.push(`reprise après ${cb} jours : une série de moins, on remonte vite`);
-  if(min < TAILOR_MIN[spec.len]*.75) why.push(`peu d'exercices possibles avec ces critères : ≈ ${min} min plutôt que ${TAILOR_MIN[spec.len]}`);
+  if(cb) why.push(`reprise après ${cb} jours : une série de moins par exercice`);
+  if(min < TAILOR_MIN[spec.len]*.75) why.push(`peu d'exercices disponibles : ≈ ${min} min au lieu de ${TAILOR_MIN[spec.len]}`);
   return { id:uid(), date:todayISO(), source:"engine", type:"tailored", tailored:spec, name:tailorName(spec),
     reason:why.length ? why.join(" ; ").replace(/^./, c=>c.toUpperCase())+"." : null, stim:null, startedAt:null, completedAt:null,
     exos:entries, tries:tries.length, refined:ref.tested, cpuMs:Math.max(1, Math.round(cpu)) };
@@ -356,12 +356,12 @@ function tailorSummary(spec){
   const g = S.goals.overall, goalTxt = g==="force" ? "gagner en force" : "prendre du muscle";
   let note = "";
   if(g!=="endurance"){
-    if(spec.kind==="cardio") note = `Bon pour le souffle, compte peu pour ${goalTxt}`;
-    else if(spec.kind==="mobilite") note = "Récupération : ne compte pas dans le stimulus";
+    if(spec.kind==="cardio") note = `Bon pour le cardio, peu utile pour ${goalTxt}`;
+    else if(spec.kind==="mobilite") note = "Séance de récupération, hors stimulus";
     else {
       const vals = pool.filter(e=>!isCardioEx(e)).map(e=>goalValue(e)).sort((a,b)=>b-a).slice(0, n);
       const v = vals.length ? vals.reduce((a,b)=>a+b, 0)/vals.length : 1;
-      if(v<.95) note = `Compte ≈ ${Math.round(v*100)} % pour ${goalTxt} (moins qu'avec charges)`;
+      if(v<.95) note = `Efficacité ≈ ${Math.round(v*100)} % pour ${goalTxt}, moins qu'avec des charges`;
     }
   }
   return { t:`≈ ${n} exercices · ${TAILOR_MIN[spec.len]} min`, note };

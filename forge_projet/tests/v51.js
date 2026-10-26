@@ -63,7 +63,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await wait(2600);
   const s0 = await page.evaluate(() => { const b = document.querySelector('#liveAsc'); return b ? b.textContent.replace(/\s+/g, ' ').trim() : ''; });
   log('Strip at start:', s0);
-  if (!/1\s?516 m/.test(s0) || !/Camp 1 · plus que \d+ séries/.test(s0)) fail('bande d\'altitude au départ : altitude et compte à rebours');
+  if (!/1\s?516 m/.test(s0) || !/Camp 1 · (plus que|encore) \d+ séries/.test(s0)) fail('bande d\'altitude au départ : altitude et compte à rebours');
   await shot('01_live_start');
   const steps = []; let campAt = -1;
   for (let i = 0; i < 10; i++) {

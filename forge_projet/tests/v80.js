@@ -30,7 +30,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     S.sessions = []; sessionTouched(); save();
     return { trained: a.weight, tNote: a.note, idle: b.weight, iNote: b.note }; });
   log('Reprise :', JSON.stringify(rep));
-  if (rep.trained !== 14 || !/Pas fait depuis 30 jours/.test(rep.tNote || '') || !(rep.idle < 14) || !/Reprise après 30 jours/.test(rep.iNote || '')) fail('reprise : selon le muscle, pas seulement l\'exercice');
+  if (rep.trained !== 14 || !/Dernière fois il y a 30 jours/.test(rep.tNote || '') || !(rep.idle < 14) || !/Reprise après 30 jours/.test(rep.iNote || '')) fail('reprise : selon le muscle, pas seulement l\'exercice');
 
   const sim = await page.evaluate(async () => {
     const bad = []; const flag = (m) => { if (bad.length < 40) bad.push(m); };

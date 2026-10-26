@@ -56,7 +56,7 @@ function rwSlides(kind, key){
     <div class="rw-sub rw-d2" id="rwSub">On rembobine…</div>`, intro:true });
   if(!d.n){
     slides.push({ bg:"night", html:`<div class="rw-label">${esc(recapTitle(kind, key))}</div><div class="rw-big">0</div><div class="rw-unit">séance</div>
-      <p class="rw-note rw-d2">Pas de séance sur cette période. La prochaine compte déjà pour le Rewind suivant.</p>` });
+      <p class="rw-note rw-d2">Aucune séance sur cette période.</p>` });
     return { slides, d };
   }
   // séances

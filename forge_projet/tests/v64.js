@@ -59,7 +59,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     else { await page.click('.tabbtn[data-id="profil"]'); await wait(700); texts[k] = await page.evaluate(() => document.querySelector('#v-profil').innerText); }
   }
   const banned = [/Favori : en tête/, /Exclure : jamais/, /Automatique suit/, /Recommandé/, /chiffres se lisent mieux/, /Appliqué à la durée/, /Ajoutés aux séances/, /Laisse l'app choisir/, /Des aides pour garder/,
-    /Fichier de sauvegarde/, /Numbers ou Excel/, /restent stockées localement/, /Ta série de la dernière fois/];
+    /Fichier de sauvegarde/, /Numbers ou Excel/, /restent stockées localement/, /Ta série précédente/];
   const left = banned.filter(r => Object.values(texts).some(t => r.test(t))).map(String);
   log('Phrases restantes:', JSON.stringify(left));
   if (left.length) fail('phrases d\'explication retirées : ' + left.join(' '));

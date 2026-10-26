@@ -10,7 +10,7 @@ function openOnboarding(){ obStep = 0; S.meta.onboarded = true; save(); renderOn
 function obDots(){ return `<div class="ob-dots">${[0,1,2,3].map(i=>`<i class="${i===obStep?"on":""}"></i>`).join("")}</div>`; }
 function obBody(){
   if(obStep===0) return `<div class="ob-hero"><div class="ob-logo">${ascenMark()}</div><div class="ob-t">Bienvenue sur ASCEN</div>
-      <div class="ob-s">Ta musculation à la maison, avec le matériel que tu as vraiment.</div></div>
+      <div class="ob-s">La musculation à la maison, avec ton propre matériel.</div></div>
     <div class="group ob-points">
       <div class="row">${sfIcon("sparkles","gray")}<div class="grow"><div class="t">Une séance prête chaque jour</div><div class="s">Adaptée à ton matériel, à ton objectif et à ta récupération</div></div></div>
       <div class="row">${sfIcon("bolt","gray")}<div class="grow"><div class="t">Une progression guidée</div><div class="s">Répétitions puis charge, au bon moment</div></div></div>
@@ -22,19 +22,19 @@ function obBody(){
     <div class="group ob-list">${OB_EQUIP.map(id=>{ const e = EQUIP_MAP[id]; const on = !!S.equipment.owned[id];
       return `<button class="row tap ob-eq ${on?"on":""}" data-a="obEquip" data-id="${id}" role="checkbox" aria-checked="${on}">${sfIcon(EQUIP_GLYPH[id]||"wrench", "gray")}<div class="grow"><div class="t">${esc(e.n)}</div></div><em class="ob-ck">${icon("check")}</em></button>`; }).join("")}</div>
     ${S.equipment.owned.dumbbells ? obDbHTML() : ""}`;
-  if(obStep===2) return `<div class="ob-t2">Ton objectif</div><div class="ob-s2">Il règle les fourchettes de répétitions et le volume proposé.</div>
+  if(obStep===2) return `<div class="ob-t2">Ton objectif</div><div class="ob-s2">Il définit les répétitions et le volume proposés.</div>
     <div class="group ob-list" role="radiogroup" aria-label="Ton objectif">${checkRows(Object.keys(GOAL_LABELS), GOAL_LABELS, S.goals.overall, "obGoal", GOAL_HINTS)}</div>
-    <div class="te-sec">Depuis combien de temps tu t'entraînes</div>
+    <div class="te-sec">Depuis combien de temps t'entraînes-tu ?</div>
     <div class="cal-alarm">${Object.keys(LEVEL_LABELS).map(k=>`<button class="chip ${(S.goals.level||"intermediaire")===k?"on":""}" data-a="obLevel" data-v="${k}">${LEVEL_LABELS[k]}</button>`).join("")}</div>
     <div class="ob-note" id="obLevelHint">${LEVEL_HINTS[S.goals.level||"intermediaire"]}</div>
     <div class="te-sec">Séances par semaine</div>
     <div class="wz-n">${[2,3,4,5,6].map(n=>`<button class="${n===S.goals.daysPerWeek?"on":""}" data-a="obDays" data-v="${n}">${n}</button>`).join("")}</div>
-    <div class="ob-note">2 à 3 séances suffisent pour progresser nettement : l'important est de tenir dans la durée.</div>
+    <div class="ob-note">2 à 3 séances par semaine suffisent pour progresser. La régularité compte plus que le volume.</div>
     <div class="te-sec">Durée d'une séance</div>
     <div class="cal-alarm">${[["court","≈ 20 min"],["moyen","≈ 35 min"],["long","≈ 50 min"]].map(([k,l])=>`<button class="chip ${S.goals.sessionLength===k?"on":""}" data-a="obLen" data-v="${k}">${l}</button>`).join("")}</div>
-    <div class="te-sec">Pourquoi tu t'entraînes ? <span class="ob-opt">facultatif</span></div>
+    <div class="te-sec">Pourquoi t'entraînes-tu ? <span class="ob-opt">facultatif</span></div>
     <div class="num-field txt"><input id="obWhy" type="text" maxlength="120" enterkeyhint="done" placeholder="Ex. être en forme pour la randonnée d'été" value="${esc(S.settings.why||"")}"></div>
-    <div class="ob-note">ASCEN te le rappellera les jours où la motivation manque.</div>`;
+    <div class="ob-note">ASCEN te le rappellera quand la motivation baisse.</div>`;
   const split = WEEK_SPLITS[Math.min(6, Math.max(2, S.goals.daysPerWeek))];
   return `<div class="ob-t2">Ta semaine</div><div class="ob-s2">ASCEN peut créer tes ${split.length} séances et les placer dans la semaine. Chaque jour prévu, ta séance s'affichera directement.</div>
     <div class="group wz-list">${split.map(([type,name,day],i)=>`<div class="row wz-row" style="--k:${i}"><span class="wz-day">${JOURS_COURTS[day]}</span><div class="grow"><div class="t">${esc(name)}</div>${wzSub(name, SESSION_TYPE_MAP[type].n)}</div></div>`).join("")}</div>
@@ -45,7 +45,7 @@ function renderOnboarding(){
   openSheet(`<div class="sheet-hd ob-hd">${obStep ? `<button class="te-cancel" data-a="obBack">${icon("chev")}<span>Retour</span></button>` : `<span></span>`}${obDots()}<button class="ob-skip" data-a="obSkip">Passer</button></div>
     <div class="sheet-body ob-body" id="obBody">${obBody()}</div>`,
     { tall:true, noGrab:true, footer: last
-      ? `<button class="btn" data-a="obFinish" data-v="plan"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Créer mon programme</button><button class="btn ghost" data-a="obFinish" data-v="free">Plus tard, je commence librement</button>`
+      ? `<button class="btn" data-a="obFinish" data-v="plan"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Créer mon programme</button><button class="btn ghost" data-a="obFinish" data-v="free">Plus tard</button>`
       : `<button class="btn" data-a="obNext">Continuer</button>` });
   const b = qs("#obBody"); if(b){ b.classList.remove("ob-in"); void b.offsetWidth; b.classList.add("ob-in"); }
 }

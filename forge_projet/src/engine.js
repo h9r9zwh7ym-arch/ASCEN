@@ -35,8 +35,8 @@ function goalValue(def, goal){
 // la règle, dite simplement (fiches « Comment c'est calculé »)
 function goalValueText(){
   const g = S.goals.overall, v = GOAL_VALUE[g] || GOAL_VALUE.hypertrophie, f = x=>String(x).replace(".", ",");
-  if(g==="endurance") return "Avec ton objectif (endurance et tonus), toutes les séries comptent pleinement, cardio et gainage compris.";
-  return `Avec ton objectif (${g==="force" ? "gagner en force" : "prendre du muscle"}), une série vaut selon ce qu'elle apporte : charge ${f(v.loaded)}, poids du corps ${f(v.bodyweight)}, élastique ${f(v.band)}, sauts ${f(v.plyo)}, gainage tenu ${f(v.hold)}, cardio ${f(v.cardio)}.`;
+  if(g==="endurance") return "Avec ton objectif d'endurance, toutes les séries comptent pleinement, y compris le cardio et le gainage.";
+  return `Avec ton objectif (${g==="force" ? "force" : "prise de muscle"}), chaque série est pondérée : charge ${f(v.loaded)}, poids du corps ${f(v.bodyweight)}, élastique ${f(v.band)}, sauts ${f(v.plyo)}, gainage ${f(v.hold)}, cardio ${f(v.cardio)}.`;
 }
 // valeur d'une série faite : ½ si elle était facile (3 répétitions ou plus en réserve), × l'objectif
 function setValue(def, st){ return st.done ? (st.effort===1 ? .5 : 1)*goalValue(def) : 0; }
@@ -220,7 +220,7 @@ function suggestForExo(exo, setsN, deload, pre){
   const mid = Math.round((rMin+rMax)/2);
   let reps = new Array(n).fill(timed ? rMin : mid), note = null, harder = null;
   const [last, prev] = recentPerformances(exo.id, 2);
-  if(!last) return { targetReps:[rMin,rMax], weight, reps, note: type ? "Première fois : choisis une charge qui te laisse 2 à 3 répétitions en réserve." : null };
+  if(!last) return { targetReps:[rMin,rMax], weight, reps, note: type ? "Première séance : choisis une charge qui te laisse 2 à 3 répétitions en réserve." : null };
 
   const done = last.exo.sets.filter(st=>st.done);
   // fatigue : la dernière fois et aujourd'hui, selon la place de l'exercice dans la séance. Les répétitions
@@ -260,34 +260,34 @@ function suggestForExo(exo, setsN, deload, pre){
     if(detrained){
       // après 3 semaines sans travailler ce muscle : on repart un cran plus léger, sans pression
       weight = lowerWeight(exo, lastW); reps = new Array(n).fill(mid);
-      note = `Reprise après ${gap} jours : charge un peu allégée pour retrouver tes sensations.`;
+      note = `Reprise après ${gap} jours : charge légèrement réduite.`;
     } else if(idle){
       reps = new Array(n).fill(lo);
-      note = `Pas fait depuis ${gap} jours : même charge, reprends en bas de la fourchette (${lo} répétitions).`;
+      note = `Dernière fois il y a ${gap} jours : même charge, ${lo} répétitions pour commencer.`;
     } else if(goUp && slowOK){
       const nw = nextWeight(exo, lastW);
       if(nw>lastW+0.001){
         weight = nw; reps = new Array(n).fill(lo);
-        note = type==="bands" ? `Passe à l'élastique ${bandLabel(nw).toLowerCase()} : tu as dépassé la fourchette. Reprends en bas (${rMin} répétitions) et remonte.` : `Charge augmentée à ${fmtDec(nw)} kg : tu as dépassé la fourchette. Reprends en bas (${rMin} répétitions) et remonte.`;
+        note = type==="bands" ? `Fourchette dépassée : passe à l'élastique ${bandLabel(nw).toLowerCase()} et reprends à ${rMin} répétitions.` : `Fourchette dépassée : passe à ${fmtDec(nw)} kg et reprends à ${rMin} répétitions.`;
       } else {
         reps = reps.map((_,i)=>Math.min(rMax+4, lastReps(i)+1));
-        note = type==="bands" ? "Tu utilises ton élastique le plus résistant : ajoute une répétition ou ralentis la descente (3 s)." : "Tu es à ta charge maximale : ajoute une répétition ou ralentis la descente (3 s).";
+        note = type==="bands" ? "Élastique le plus résistant atteint : ajoute une répétition ou descends plus lentement (3 s)." : "Charge maximale atteinte : ajoute une répétition ou descends plus lentement (3 s).";
       }
     } else if(missed && offDay){
       reps = new Array(n).fill(lo);
-      note = "La dernière fois ressemblait à un jour sans : on garde la charge, tu retrouveras ta forme habituelle.";
+      note = "La dernière séance était un jour sans. La charge reste la même.";
     } else if(missed && (effort===3 || prevMissed)){
       const lw = lowerWeight(exo, lastW);
       weight = lw; reps = new Array(n).fill(lo);
-      note = lw<lastW ? `Charge allégée (${fmtLoad(exo, lw)}) pour retrouver une exécution propre, puis on remonte.` : "On garde la charge : vise une exécution propre avant tout.";
+      note = lw<lastW ? `Charge réduite à ${fmtLoad(exo, lw)} pour retrouver une exécution propre.` : "Même charge : concentre-toi sur l'exécution.";
     } else if(missed){
       reps = new Array(n).fill(lo);
-      note = "Même charge : consolide les répétitions avant d'aller plus loin.";
+      note = "Même charge : consolide tes répétitions.";
     } else {
       const add = effort===3 ? 0 : 1;
       reps = reps.map((_,i)=>Math.max(lo, Math.min(rMax, lastReps(i)+add)));
-      if(add && reps.some((r,i)=>r>lastReps(i))) note = "Objectif du jour : une répétition de plus par série que la dernière fois.";
-      else if(effort===3) note = "Dernière fois à fond : on refait pareil, en soignant l'exécution.";
+      if(add && reps.some((r,i)=>r>lastReps(i))) note = "Objectif : une répétition de plus par série.";
+      else if(effort===3) note = "Dernière séance à l'échec : même objectif, en soignant l'exécution.";
     }
   } else {
     // poids du corps et exercices chronométrés : progression par les répétitions / les secondes
@@ -298,24 +298,24 @@ function suggestForExo(exo, setsN, deload, pre){
     // exercice tenu arrêté avant la fin la dernière fois : on repart du temps réellement tenu (au cran de 5 s, 15 s minimum)
     if(timed && done.some(st=>st.goal>(st.reps||0))) reps = reps.map((_,i)=>{ const d = done[Math.min(i, done.length-1)]||{}; return d.goal>(d.reps||0) ? Math.max(15, Math.floor((d.reps||0)/5)*5) : lastReps(i); });
     if(detrained){
-      note = `Reprise après ${gap} jours : un peu moins que la dernière fois, on remonte vite.`;
+      note = `Reprise après ${gap} jours : objectif légèrement réduit.`;
     } else if(idle){
-      note = timed ? `Pas fait depuis ${gap} jours : même durée que la dernière fois.` : `Pas fait depuis ${gap} jours : autant que la dernière fois.`;
+      note = timed ? `Dernière fois il y a ${gap} jours : même durée.` : `Dernière fois il y a ${gap} jours : même objectif.`;
     } else if(hitTop && effort!==3){
       const h = harderVariant(exo);
-      if(h){ harder = h.id; note = `Tu maîtrises cet exercice : passe à « ${h.n} » pour continuer à progresser.`; }
+      if(h){ harder = h.id; note = `Exercice maîtrisé : passe à « ${h.n} » pour continuer à progresser.`; }
       else if(add) note = timed ? `Objectif : ${step} secondes de plus par série.` : "Objectif : une répétition de plus par série.";
     } else if(add){
-      note = timed ? `Objectif : +${add} s par rapport à la dernière fois.` : `Objectif : +${add} répétition${add>1?"s":""} par série par rapport à la dernière fois.`;
+      note = timed ? `Objectif : ${add} s de plus par série.` : `Objectif : ${nb(add, "répétition")} de plus par série.`;
     }
   }
   // la fatigue explique l'écart : on le dit simplement (une phrase, la plus utile)
   if(gap<21){
-    const r0 = reps[0], u = timed ? " s" : " répétitions", generic = !note || /^(Objectif du jour|Objectif :|Dernière fois à fond)/.test(note);
-    if(tiredMiss && type && weight>=Math.max(0, ...done.map(st=>st.weight||0)) && !/augmentée|Passe à/.test(note||""))
-      note = `La dernière fois, cet exercice venait après ${nb(Math.round(preL), "série")} pour ${musclePoss(m)} : les répétitions en moins venaient de la fatigue, on garde la charge.`;
-    else if(fT<fL-.06 && generic) note = `Placé après ${nb(Math.round(pre), "série")} pour ${musclePoss(m)} : ${r0}${u} suffisent aujourd'hui.`;
-    else if(fT>fL+.06 && generic) note = `Plus tôt dans la séance que la dernière fois : tu es plus frais, vise ${r0}${u}.`;
+    const r0 = reps[0], u = timed ? " s" : " répétitions", generic = !note || /^(Objectif :|Dernière séance à l'échec)/.test(note);
+    if(tiredMiss && type && weight>=Math.max(0, ...done.map(st=>st.weight||0)) && !/^Fourchette dépassée/.test(note||""))
+      note = `La dernière fois, cet exercice suivait ${nb(Math.round(preL), "série")} pour ${musclePoss(m)}. La baisse venait de la fatigue : même charge.`;
+    else if(fT<fL-.06 && generic) note = `Après ${nb(Math.round(pre), "série")} pour ${musclePoss(m)}, ${r0}${u} suffisent aujourd'hui.`;
+    else if(fT>fL+.06 && generic) note = `Placé plus tôt que la dernière fois : vise ${r0}${u}.`;
   }
   // semaine allégée : même charge (pas de progression), 2 répétitions de moins (10 s pour un exercice
   // tenu), aucune série à fond. On réduit le volume et l'effort, pas la charge (consensus Delphi, Bell 2023)
@@ -323,7 +323,7 @@ function suggestForExo(exo, setsN, deload, pre){
     harder = null;
     if(type && gap<21){ const lw = Math.max(0, ...done.map(st=>st.weight||0)); if(lw) weight = lw; }
     reps = reps.map((_,i)=>Math.max(timed ? rMin : Math.max(1, rMin-2), lastReps(i) - (timed ? 10 : 2)));
-    note = timed ? "Semaine allégée : 10 s de moins que la dernière fois, sans aller au bout." : `Semaine allégée : ${type ? "même charge, " : ""}2 répétitions de moins, aucune série à fond.`;
+    note = timed ? "Semaine allégée : 10 s de moins, sans aller à l'échec." : `Semaine allégée : ${type ? "même charge, " : ""}2 répétitions de moins, sans aller à l'échec.`;
   }
   return { targetReps:[rMin,rMax], weight, reps, note, harder };
 }
@@ -374,10 +374,10 @@ const SESSION_TYPE_MAP = {}; SESSION_TYPES.forEach(t=>SESSION_TYPE_MAP[t.id]=t);
 function resolveAutoType(){
   const recent = ms => ms.some(m=>daysSinceTrained(m)<2);
   const upRecent = recent(UPPER), lowRecent = recent(LOWER);
-  if(lowRecent && !upRecent) return { type:"haut", reason:"Tes jambes ont travaillé récemment : on cible le haut du corps." };
-  if(upRecent && !lowRecent) return { type:"bas", reason:"Le haut du corps a travaillé récemment : on cible les jambes." };
-  if(upRecent && lowRecent) return { type:"core", reason:"Tout le corps a travaillé récemment : séance plus légère de gainage." };
-  return { type:"full", reason:"Ta récupération est bonne : séance corps complet, en priorité les groupes les moins travaillés." };
+  if(lowRecent && !upRecent) return { type:"haut", reason:"Jambes travaillées récemment : séance haut du corps." };
+  if(upRecent && !lowRecent) return { type:"bas", reason:"Haut du corps travaillé récemment : séance jambes." };
+  if(upRecent && lowRecent) return { type:"core", reason:"Tout le corps a travaillé récemment : séance de gainage plus légère." };
+  return { type:"full", reason:"Bonne récupération : séance complète, axée sur les muscles les moins travaillés." };
 }
 
 function poolForType(typeId){
@@ -602,7 +602,7 @@ function buildSessionFromImported(prog){
   const exos = [];
   (prog && Array.isArray(prog.exercices) ? prog.exercices : []).forEach(ref=>{
     const exo = resolveExoRef(ref);
-    if(!exo){ warnings.push(`Exercice ignoré (inconnu d'ASCEN) : « ${ref.nom||ref.id||"?"} »`); return; }
+    if(!exo){ warnings.push(`Exercice inconnu ignoré : « ${ref.nom||ref.id||"?"} »`); return; }
     const setsN = Math.min(10, Math.max(1, parseInt(ref.series, 10) || exo.sets || 3));
     let reps = [exo.repsMin, exo.repsMax];
     if(typeof ref.reps==="string" && ref.reps.includes("-")){
@@ -690,10 +690,10 @@ Le champ "poids" est facultatif (ASCEN peut le calculer automatiquement). Propos
 
 function importProgramJSON(text){
   let data;
-  try{ data = parseUntrusted(text); }catch(e){ return { ok:false, error:"Ce fichier n'est pas un programme lisible. Redemande-le à l'IA au format indiqué." }; }
+  try{ data = parseUntrusted(text); }catch(e){ return { ok:false, error:"Ce fichier n'est pas un programme valide. Demande à l'IA de respecter le format indiqué." }; }
   const sessions = cleanImportedProgram(data && typeof data==="object" ? (Array.isArray(data) ? data : data.sessions) : null);
   if(!sessions.length){
-    return { ok:false, error:"Ce fichier n'est pas un programme lisible. Redemande-le à l'IA au format indiqué." };
+    return { ok:false, error:"Ce fichier n'est pas un programme valide. Demande à l'IA de respecter le format indiqué." };
   }
   const warnings = [];
   sessions.forEach(s=>{

@@ -111,7 +111,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const done = await fiche('dc_haltere'); await shot('05_fiche_done');
   const fresh = await fiche('ecarte_couche'); await shot('06_fiche_new');
   log('Fiche:', JSON.stringify(done), JSON.stringify(fresh));
-  if (done.rows !== 2 || done.first[2] !== '2 côtés' || done.note || done.old || done.cards || fresh.rows !== 1 || !/^Première fois/.test(fresh.note) || fresh.old) fail('fiche : une seule carte à filets');
+  if (done.rows !== 2 || done.first[2] !== '2 côtés' || done.note || done.old || done.cards || fresh.rows !== 1 || !/^Première séance/.test(fresh.note) || fresh.old) fail('fiche : une seule carte à filets');
 
   await browser.close();
   errors.forEach(e => log(e)); log(errors.length ? 'ERRORS: ' + errors.length : '=== NO ERRORS ===');

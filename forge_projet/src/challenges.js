@@ -7,9 +7,9 @@
 const CHAL_MAX = 3;
 const isPushup = def=>def && (pictoKey(def)==="pushup" || /^pompes/.test(def.id));
 const CHALLENGES = [
-  { id:"pompes100", n:"100 pompes", d:"100 répétitions de pompes (toutes variantes) en 7 jours.", days:7, goal:100, unit:"pompes", g:"bolt", c:"orange",
+  { id:"pompes100", n:"100 pompes", d:"100 pompes en 7 jours, toutes variantes confondues.", days:7, goal:100, unit:"pompes", g:"bolt", c:"orange",
     val:ss=>ss.reduce((t,s)=>t+s.exos.reduce((a,ex)=>a+(isPushup(EXO_MAP[ex.exoId]) ? ex.sets.reduce((b,st)=>b+(st.done ? st.reps||0 : 0),0) : 0),0),0) },
-  { id:"gainage10", n:"10 minutes de gainage", d:"10 minutes cumulées sur les exercices tenus (planche, chaise…) en 7 jours.", days:7, goal:10, unit:"min", g:"shield", c:"teal",
+  { id:"gainage10", n:"10 minutes de gainage", d:"10 minutes de gainage en 7 jours (planche, chaise…).", days:7, goal:10, unit:"min", g:"shield", c:"teal",
     val:ss=>ss.reduce((t,s)=>t+sessionSummary(s).holdSec,0)/60 },
   { id:"corps7", n:"Tout le corps", d:"Travailler les 11 groupes musculaires en 7 jours.", days:7, goal:11, unit:"groupes", g:"person", c:"purple",
     val:ss=>{ const m = new Set(); ss.forEach(s=>sessionSummary(s).exos.forEach(id=>{ const d = EXO_MAP[id]; if(d) d.muscles.forEach(x=>{ if(x!=="cardio") m.add(x); }); })); return m.size; } },
@@ -21,7 +21,7 @@ const CHALLENGES = [
     val:ss=>ss.filter(s=>sessionSummary(s).legSets>=3).length },
   { id:"records3", n:"3 records", d:"Battre 3 records personnels en 30 jours.", days:30, goal:3, unit:"records", g:"trendUp", c:"pink",
     val:ss=>ss.reduce((t,s)=>t+sessionSummary(s).prs,0) },
-  { id:"tonnes10", n:"10 tonnes", d:"Soulever 10 000 kg au total (charges) en 14 jours.", days:14, goal:10, unit:"t", g:"mountain", c:"brown", needsLoad:true,
+  { id:"tonnes10", n:"10 tonnes", d:"Soulever 10 000 kg au total en 14 jours.", days:14, goal:10, unit:"t", g:"mountain", c:"brown", needsLoad:true,
     val:ss=>ss.reduce((t,s)=>t+sessionSummary(s).vol,0)/1000 },
 ];
 const CHAL_MAP = {}; CHALLENGES.forEach(c=>CHAL_MAP[c.id] = c);

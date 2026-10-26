@@ -193,7 +193,7 @@ function idbRecover(){
     if(!st.sessions.length && S.sessions.length) return;
     S = st; save(); persistNow();
     if(typeof renderView==="function") renderView(currentTab);
-    if(typeof toast==="function") toast("Données reprises depuis la copie de secours");
+    if(typeof toast==="function") toast("Données restaurées depuis la copie de secours");
   }).catch(()=>{});
 }
 function cleanupStorage(){
@@ -421,7 +421,7 @@ function persistNow(urgent){
   try{ localStorage.setItem(STORAGE_KEY, str); persistFailed = false; try{ localStorage.setItem(STORAGE_KEY+".at", String(savedAt)); }catch(e){} }
   catch(e){
     // localStorage plein ou refusé : la copie IndexedDB prend le relais, on prévient une fois
-    if(!persistFailed && typeof toast==="function") toast("Stockage principal plein : tes données sont gardées dans la copie de secours. Pense à faire une sauvegarde.");
+    if(!persistFailed && typeof toast==="function") toast("Stockage plein : tes données sont conservées dans la copie de secours. Fais une sauvegarde.");
     persistFailed = true;
   }
 }

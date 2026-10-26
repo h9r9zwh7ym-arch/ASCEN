@@ -72,7 +72,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     return { good, low };
   });
   log('Session wins:', JSON.stringify(wins));
-  if (!wins.good.some(t => /^bolt:.*force estimée record \(\+\d+ %\)/.test(t)) || !wins.good.some(t => /^target:Pectoraux : zone de progrès atteinte cette semaine \(5 séries\)/.test(t)) || !wins.low.some(t => /^soft:Un peu en dessous de ta forme habituelle \(−\d+ %\)/.test(t)) || wins.good.some(t => /grande forme/.test(t))) fail('ce qui a progressé en fin de séance');
+  if (!wins.good.some(t => /^bolt:.*force estimée record \(\+\d+ %\)/.test(t)) || !wins.good.some(t => /^target:Pectoraux : zone de progrès atteinte cette semaine \(5 séries\)/.test(t)) || !wins.low.some(t => /^soft:Légèrement en dessous de ton niveau habituel \(−\d+ %\)/.test(t)) || wins.good.some(t => /En forme/.test(t))) fail('ce qui a progressé en fin de séance');
 
   // 5. séance prévue manquée cette semaine : carte de rattrapage ; régularité du mois
   const wd = await page.evaluate(() => weekdayIdx(todayISO()));

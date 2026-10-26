@@ -36,7 +36,7 @@ const OUT = path.join(OUT_ROOT, 'v29'); fs.mkdirSync(OUT, { recursive: true });
   await page.evaluate(() => { ACT.boom = () => { throw new Error('test'); }; const b = document.createElement('button'); b.id = 'boom'; b.dataset.a = 'boom'; b.textContent = 'boom'; b.style.cssText = 'position:fixed;top:100px;left:10px;z-index:99'; document.body.appendChild(b); });
   await page.click('#boom'); await wait(500);
   const toastTxt = await page.$eval('#toast', e => e.textContent); const logged = await page.evaluate(() => ERR_LOG.length);
-  log('After failing action:', JSON.stringify(toastTxt), 'logged:', logged); if (!/rien n'est perdu/.test(toastTxt) || logged < 1) fail('erreur d\'action contenue');
+  log('After failing action:', JSON.stringify(toastTxt), 'logged:', logged); if (!/aucune donnée n'est perdue/.test(toastTxt) || logged < 1) fail('erreur d\'action contenue');
   await page.evaluate(() => { document.getElementById('boom').remove(); switchTab('history'); }); await wait(400);
   const ok = await page.$eval('#v-history .lt', e => e.textContent).catch(() => null); if (ok !== 'Progrès') fail('app utilisable après une erreur');
   // 3. double appui sur « Valider la série » : une seule série validée

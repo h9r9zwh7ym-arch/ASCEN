@@ -716,7 +716,7 @@ function ascWeekHTML(a){
   if(pzThis && !held) msg = "Semaine en pause : rien ne se perd.";
   else if(held) msg = `Objectif tenu : ta série passe à <b>${nb(a.series, "semaine")}</b>.`;
   else if(left>daysLeft) msg = n ? "Objectif hors de portée cette semaine : chaque séance fait quand même monter." : "Fais au moins une séance d'ici dimanche pour ne pas redescendre.";
-  else if(n===0 && !a.wait) msg = `Encore ${nb(left, "séance")} d'ici dimanche. Sans aucune, tu redescends d'un camp.`;
+  else if(n===0 && !a.wait) msg = `Encore ${nb(left, "séance")} d'ici dimanche. Sans séance cette semaine, tu redescends d'un camp.`;
   else msg = `Encore ${nb(left, "séance")} d'ici dimanche pour allonger ta série.`;
   return `<section class="asc-week" id="ascWeek">
     <div class="aw-hd"><h2>Cette semaine</h2><span class="aw-n"><b class="num">${n}</b>/${g}</span></div>
@@ -754,7 +754,7 @@ function ascSecBody(k, a){
     const withReg = raw*a.mul*lapC, withForce = withReg*a.force, tot = withForce*(a.reF || 1)*(a.slF || 1), slope = tot - withForce;
     const elanOn = a.elan>a.reg+.005, parts = [
       ["Effort", `${fmtDec(Math.round(hard*2)/2)} séries difficiles${S.sessions.length>1 ? " par séance" : ""}`, base, "gray"],
-      ["Records", a.bonusAvg>.05 ? "records et séries battues" : "aucun ces dernières séances", bonus, "yellow"],
+      ["Records", a.bonusAvg>.05 ? "et séries mieux que la dernière fois" : "aucun ces dernières séances", bonus, "yellow"],
       [elanOn ? "Élan de départ" : "Régularité", elanOn ? `jusqu'à ta ${ASC_ELAN[1]}ᵉ séance` : a.series ? `${nb(a.series, "semaine")} d'affilée tenue${a.series>1 ? "s" : ""}` : "pas encore de série", withReg - raw, "orange"],
       ["Force", a.index==null ? "pas encore mesurée" : `${a.index>=100 ? "+" : "−"}${Math.abs(Math.round(a.index-100))} % depuis tes débuts`, withForce - withReg, "teal"],
     ];
@@ -765,14 +765,14 @@ function ascSecBody(k, a){
     const p = a.tier, nextP = p<ASC_TH.length-1 ? p+1 : null, gain = nextP==null ? 0 : tot/a.mul*Math.max(a.elan, ASC_MUL[nextP]) - tot;
     const tip = a.re ? `Ta ${ascNth(a.re.nth)} ascension ${ascDu(a.re.k)} est plus raide : chaque mètre demande ${ascX(Math.round(ASC_RE_MUL(a.re.nth)*ascSlope(a.re.k)*100)/100)} d'effort.`
       : nextP!=null && gain>.5 ? `Tiens ton objectif <b class="num">${nb(ASC_TH[nextP]-a.series, "semaine")}</b> de plus : environ <b class="num">+${ascM(tot+gain)}</b> par séance au lieu de ${ascM(tot)}.`
-      : `Plus de séries difficiles ou un record de plus par séance : c'est ce qui fait encore monter plus vite.`;
+      : `Pour monter plus vite : plus de séries difficiles, ou un record de plus par séance.`;
     const L = a.last, near = !a.wait && a.index!=null && a.alt > a.pushFrom - .1*(a.top - a.start), death = a.top>ASC_DEATH;
     return `<div class="sp-hero"><b class="num">+${ascM(tot)}</b><span>par séance, en ce moment</span></div>
       ${a.comeback ? `<p class="sp-lead">Chaque séance compte double : retour en force.</p>` : ""}
       <div class="card asc-card sp-card"><div class="sp-bar" aria-hidden="true">${pos.map(q=>`<i class="c-${q[3]}" style="flex:${(q[2]/sum).toFixed(3)}"></i>`).join("")}</div>
         ${parts.map(q=>`<div class="sp-r"><i class="c-${q[3]}"></i><span>${q[0]}<small>${esc(q[1])}</small></span><b class="num">${q===parts[0] ? ascM(q[2]) : sm(q[2])}</b></div>`).join("")}</div>
       <div class="sp-tip">${ascIc("bolt")}<p><b>Pour monter plus vite</b><br>${tip}</p></div>
-      ${L && L.waiting ? `<p class="note">Ta dernière séance n'a pas fait monter : l'expédition suivante attend ta série.</p>` : ""}
+      ${L && L.waiting ? `<p class="note">Ta dernière séance n'a pas fait monter : la prochaine expédition demande plus de semaines d'affilée.</p>` : ""}
       ${near ? `<div class="wx ${a.pushOK ? "" : "warn"}">${ascIc("pulse", a.pushOK ? "" : "warn")}<span><b>${death ? `Zone de la mort (au-dessus de ${fmtNum(ASC_DEATH)} m)` : "Dernière ligne droite"} : ${a.pushOK ? "pleine vitesse" : "mi-vitesse"}</b><span>Ta force est à ${Math.round(a.form*100)} % de ton meilleur niveau récent${a.pushOK ? "." : ` (il faut ${Math.round(ASC_FORM_OK*100)} %).`}</span></span></div>` : ""}
       <h2 class="sh">Régularité</h2>
       ${ascRegHTML(a)}`;
@@ -840,14 +840,14 @@ function ascHowHTML(){
     <ul class="how-list">
       <li><b>Effort</b> : tes séries difficiles, 20 au plus. Une série faite exprès facile compte moitié. ${goalValueText()}</li>
       <li><b>Régularité</b> : tes semaines d'affilée où tu tiens ton objectif, de ×0,5 au départ à ×3 après 20 semaines.</li>
-      <li><b>Force</b> : ton indice de force. 10 % de force en plus, 6 % de vitesse en plus.</li>
+      <li><b>Force</b> : +10 % de force donne +6 % de vitesse.</li>
       <li><b>Records et progrès</b> : un record compte pour ${ASC_BONUS.pr} séries de plus (${ASC_BONUS.prMax} au plus par séance), une série mieux que la dernière fois pour ${ASC_BONUS.beat} de plus (${ASC_BONUS.beatMax} au plus).</li>
-      <li><b>Élan de départ</b> : tes premières séances montent au moins à ${ascX(ASC_ELAN[0])} ; l'élan s'estompe jusqu'à ta ${ASC_ELAN[1]}ᵉ séance, la régularité prend le relais.</li>
+      <li><b>Élan de départ</b> : tes premières séances comptent jusqu'à ${ascX(ASC_ELAN[0])}. Cet élan diminue jusqu'à ta ${ASC_ELAN[1]}ᵉ séance, puis la régularité prend le relais.</li>
     </ul>
     <h3>Chaque semaine</h3>
     <ul class="how-list">
       <li><b>Objectif tenu</b> : la série avance.</li>
-      <li><b>Raté une fois</b> : la régularité est gelée ; une 2ᵉ fois en 4 semaines, un palier de moins.</li>
+      <li><b>Objectif manqué</b> : la régularité est gelée. Deux fois en 4 semaines : un palier de moins.</li>
       <li><b>Aucune séance</b> : un palier de moins et retour au camp précédent. Les sommets gagnés restent acquis, et la séance suivante compte double jusqu'à l'altitude perdue (retour en force).</li>
       <li><b>Pause ou semaine allégée</b> : rien ne se perd (${ASC_PAUSE_MAX} pauses par trimestre).</li>
     </ul>
@@ -858,7 +858,7 @@ function ascHowHTML(){
     <p>La dernière ligne droite (les 12 derniers %, hachurés sur la barre) se fait à pleine vitesse si ta force est à ${Math.round(ASC_FORM_OK*100)} % de son meilleur niveau des 6 derniers mois, sinon à mi-vitesse. Sur le K2 et l'Everest, cette règle commence dès ${fmtNum(ASC_DEATH)} m : la zone de la mort.</p>
     <p><b>Regravir</b> : une montagne déjà gravie se regravit depuis l'itinéraire, plus raide à chaque fois, pour un trophée Saphir, puis Rubis, puis Diamant.</p>
     <h3>La montagne</h3>
-    <p>La voie tracée est la vraie voie d'ascension ; en pointillé estompé, les passages cachés derrière un relief. Touche un camp, le sommet ou ton grimpeur pour voir son altitude et le temps qu'il te reste.</p>
+    <p>Le tracé suit la vraie voie d'ascension. Les pointillés clairs indiquent les passages cachés par le relief. Touche un camp, le sommet ou ton grimpeur pour voir son altitude et le temps restant.</p>
     <h3>Tout part de ton historique</h3>
     <p>Corriger ou supprimer une séance corrige l'ascension. Sources des montagnes : voir À propos.</p>`;
 }
@@ -1236,7 +1236,7 @@ Object.assign(ACT, {
     if(!ok){ toast("Mouvement du téléphone non autorisé"); return; }
     S.settings.ascGyro = true; ascGyroBase = null; save(); haptic(10); sfx("toggle");
     if(el){ el.classList.add("on"); el.setAttribute("aria-pressed", "true"); }
-    toast("Incline le téléphone : la montagne suit");
+    toast("Incline le téléphone pour faire bouger la montagne");
   },
   // fiche d'une montagne gravie (depuis l'itinéraire) : stats, trophées de matière, « Regravir »
   ascMount(d){
@@ -1249,7 +1249,7 @@ Object.assign(ACT, {
     const k = d.k, a = ascent(); if(!ASC_DATA[k] || a.re || !ascMountStats(a, k).n) return;
     ascChooseRe(k); save(); changed(); sfx("open"); haptic(12);
     closeSheet();
-    setTimeout(()=>{ openAscent(); toast(`Nouvelle ascension ${ascDu(k)} : tes prochaines séances y comptent`, "flag"); }, 320);
+    setTimeout(()=>{ openAscent(); toast(`Nouvelle ascension ${ascDu(k)} : tes prochaines séances comptent pour elle`, "flag"); }, 320);
   },
   ascReStop(){
     const a = ascent(); if(!a.re) return;

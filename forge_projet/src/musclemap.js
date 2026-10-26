@@ -129,18 +129,18 @@ Object.assign(ACT, {
     const rows = weekVolume(), under = rows.filter(r=>r.sets<STIM.min).map(r=>r.n), twice = rows.filter(r=>r.freq>=2).length;
     openSheet(`<div class="sheet-hd"><span class="t">Stimulus par muscle</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body how-body">
       <h3>Ce qui est compté</h3>
-      <p>Chaque série terminée compte pour <b>1</b> pour le muscle principal de l'exercice et pour <b>½</b> pour chaque muscle qui aide (par exemple les triceps au développé couché). Une série facile (3 répétitions ou plus en réserve) compte moitié moins : loin de l'échec, elle stimule moins. ${goalValueText()} Les étirements ne comptent pas. Touche un muscle pour voir aussi ta moyenne par semaine sur les 4 dernières semaines.</p>
+      <p>Chaque série terminée compte <b>1</b> pour le muscle principal et <b>½</b> pour les muscles secondaires, comme les triceps au développé couché. Une série facile, avec 3 répétitions ou plus en réserve, compte moitié moins. ${goalValueText()} Les étirements ne comptent pas.</p><p>Touche un muscle pour voir sa moyenne sur les 4 dernières semaines.</p>
       <h3>Les repères</h3>
-      <p><b>${STIM.min} séries</b> par semaine : le seuil à partir duquel un gain de muscle devient mesurable. <b>${STIM.high} séries</b> et plus : le gain continue, mais de plus en plus lentement. Pour gagner seulement en force, environ 3 séries par semaine suffisent.</p>
+      <p>À partir de <b>${STIM.min} séries</b> par semaine, le gain de muscle devient mesurable. Au-delà de <b>${STIM.high} séries</b>, il continue mais ralentit. Pour la force seule, environ 3 séries par semaine suffisent.</p>
       <h3>Ta semaine</h3>
-      <p>${under.length && under.length<rows.length ? `À renforcer : ${under.slice(0,4).map(n=>esc(n.toLowerCase())).join(", ")}. ` : ""}${twice}/${rows.length} muscles travaillés au moins 2 jours sur 7 : répartir les séries sur 2 jours aide un peu plus qu'une seule grosse séance.</p>
+      <p>${under.length && under.length<rows.length ? `À renforcer : ${under.slice(0,4).map(n=>esc(n.toLowerCase())).join(", ")}. ` : ""}${twice} muscle${twice>1?"s":""} sur ${rows.length} travaillé${twice>1?"s":""} au moins 2 jours cette semaine. Répartir les séries sur 2 jours est légèrement plus efficace.</p>
       <h3>Sources</h3>
       <ul class="how-src">
         <li><a href="https://sportrxiv.org/index.php/server/preprint/view/460" target="_blank" rel="noopener">Pelland et al. 2024 : volume, fréquence et gains de force et de muscle (méta-régression, 67 études)</a></li>
         <li><a href="https://rke.abertay.ac.uk/en/publications/exploring-the-dose-response-relationship-between-estimated-resist/" target="_blank" rel="noopener">Robinson et al. 2024, Sports Medicine : plus on s'arrête loin de l'échec, moins le muscle grossit (méta-régression)</a></li>
         <li><a href="https://pubmed.ncbi.nlm.nih.gov/15947721/" target="_blank" rel="noopener">Hubal et al. 2005, Med Sci Sports Exerc : la réponse à l'entraînement varie beaucoup d'une personne à l'autre</a></li>
       </ul>
-      <p class="hr-note">Ce sont des tendances moyennes, pas des règles : ta réponse peut être plus forte ou plus faible.</p>
+      <p class="hr-note">Ce sont des moyennes. Chaque personne réagit différemment.</p>
     </div>`, { tall:true });
   },
 });

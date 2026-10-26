@@ -61,7 +61,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const thin = await page.evaluate(async () => { const s = await tailorGenerate({ kind: 'renfo', zone: 'pull', equip: 'none', len: 'long' }, null, { fast: true });
     return { n: s.exos.length, max: Math.max(...s.exos.map(x => x.sets.length)), reason: s.reason || '' }; });
   log('Thin pool:', JSON.stringify(thin));
-  if (thin.max > 4 || thin.n < 4 || !/plutôt que 60/.test(thin.reason)) fail('peu d\'exercices : pas de séries gonflées, durée annoncée');
+  if (thin.max > 4 || thin.n < 4 || !/au lieu de 60/.test(thin.reason)) fail('peu d\'exercices : pas de séries gonflées, durée annoncée');
 
   await browser.close();
   if (errors.length) { errors.forEach(e => log(e)); log(`ERRORS: ${errors.length}`); process.exit(1); }

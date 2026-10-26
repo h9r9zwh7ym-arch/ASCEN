@@ -46,7 +46,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     return { first: { reps: first.sets.map(s => s.reps), pw: first.pw }, after: { reps: after.sets.map(s => s.reps), note: after.note } };
   });
   log('Position:', JSON.stringify(pos));
-  if (!(pos.after.reps[0] < pos.first.reps[0]) || !/Placé après 5 séries pour tes pectoraux/.test(pos.after.note || '') || pos.first.pw !== 20) fail('objectif selon la place + charge proposée retenue');
+  if (!(pos.after.reps[0] < pos.first.reps[0]) || !/Après 5 séries pour tes pectoraux/.test(pos.after.note || '') || pos.first.pw !== 20) fail('objectif selon la place + charge proposée retenue');
 
   // 3. en séance : 9 répétitions après 6 séries de pompes battent 10 faites à frais la dernière fois
   const live = await page.evaluate(() => {

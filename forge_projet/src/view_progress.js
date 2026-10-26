@@ -201,7 +201,7 @@ function habitsHTML(){
 }
 // Muscles : la carte de la semaine et le stimulus de chaque muscle (séries pondérées, repères sourcés)
 function musclesPaneHTML(){
-  if(!S.sessions.length) return emptyHTML("person", "Pas encore de muscles travaillés", "Après ta première séance, tu verras ici les muscles travaillés, et s'ils le sont assez.", EMPTY_GO);
+  if(!S.sessions.length) return emptyHTML("person", "Pas encore de muscles travaillés", "Après ta première séance, tu verras ici les muscles travaillés et leur volume.", EMPTY_GO);
   return weekMuscleMapHTML();
 }
 // Objectifs et défis : objectifs chiffrés et défis en cours

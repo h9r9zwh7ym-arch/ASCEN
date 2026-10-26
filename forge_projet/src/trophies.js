@@ -104,7 +104,7 @@ const MEDALS = [
 
   { id:"prs", g:"bolt", c:"orange",      cat:"force", n:"Records", unit:"records personnels battus", one:"record personnel battu", t:[1,15,75,300], val:()=>S.meta.prCount||0 },
   { id:"heavy", g:"barbell", c:"indigo",    cat:"force", n:"Poids lourd", unit:"kg sur une seule série",                       t:[20,60,100,150],  val:heaviestSet },
-  { id:"doubled", g:"trendUp", c:"green",  cat:"force", n:"Force doublée", unit:"ta force de départ",     t:[1.2,1.5,2,2.5], base:1, val:bestStrengthRatio, fmt:v=>v?"×"+round1(v).toLocaleString("fr-FR",{minimumFractionDigits:1}):"–", desc:"Meilleur 1RM estimé d'un exercice chargé, comparé à tes 3 premières séances de cet exercice (pratiqué depuis 90 jours ou plus)." },
+  { id:"doubled", g:"trendUp", c:"green",  cat:"force", n:"Force doublée", unit:"ta force de départ",     t:[1.2,1.5,2,2.5], base:1, val:bestStrengthRatio, fmt:v=>v?"×"+round1(v).toLocaleString("fr-FR",{minimumFractionDigits:1}):"–", desc:"Ton meilleur 1RM estimé sur un exercice avec charge, comparé à tes 3 premières séances. L'exercice doit être pratiqué depuis au moins 90 jours." },
   { id:"mastery", g:"cap", c:"purple",  cat:"force", n:"Maîtrise", unit:"exercices maîtrisés", one:"exercice maîtrisé", t:[1,5,15,30],       val:masteredExosCount, desc:"Un exercice est maîtrisé après 8 séances." },
 
   { id:"volume", g:"mountain", c:"brown",   cat:"volume", n:"Tonnage", unit:"kg soulevés au total",                         t:[1000,25000,250000,1500000], val:totalVolumeAllTime },
@@ -132,7 +132,7 @@ const MEDALS = [
 
   // ---- trophées secrets (v2.4) : cachés jusqu'à leur découverte, un seul palier ----
   { id:"s_newyear",  secret:true, cat:"secret", g:"sparkles", c:"purple", n:"Bonne résolution", hint:"Une date que tout le monde connaît.", unit:"séance le 1er janvier", t:[1], val:countSessions(s=>s.date.slice(5)==="01-01") },
-  { id:"s_birthday", secret:true, cat:"secret", g:"gift", c:"pink", n:"Joyeux anniversaire", hint:"Reviens le même jour, un an plus tard.", unit:"séance le jour anniversaire de ta première", t:[1], val:()=>{ const f = firstSessionDate(); return f ? S.sessions.filter(s=>s.date.slice(5)===f.slice(5) && s.date.slice(0,4)>f.slice(0,4)).length : 0; } },
+  { id:"s_birthday", secret:true, cat:"secret", g:"gift", c:"pink", n:"Joyeux anniversaire", hint:"Reviens le même jour, un an plus tard.", unit:"séance à la date anniversaire de ta première", t:[1], val:()=>{ const f = firstSessionDate(); return f ? S.sessions.filter(s=>s.date.slice(5)===f.slice(5) && s.date.slice(0,4)>f.slice(0,4)).length : 0; } },
   { id:"s_friday13", secret:true, cat:"secret", g:{t:"13"}, c:"gray", n:"Même pas peur", hint:"Certains jours portent malheur… pas à toi.", unit:"séance un vendredi 13", t:[1], val:countSessions(s=>{ const d = parseISO(s.date); return d.getDay()===5 && d.getDate()===13; }) },
   { id:"s_sharp",    secret:true, cat:"secret", g:{t:"60'"}, c:"teal", n:"Pile à l'heure", hint:"Ni une minute de plus, ni une de moins.", unit:"séance d'une heure pile", t:[1], val:countSessions(s=>Math.abs((s.durationSec||0)-3600)<=30) },
   { id:"s_phoenix",  secret:true, cat:"secret", g:"phoenix", c:"orange", n:"Phénix", hint:"Revenir de loin, c'est une victoire.", unit:"reprise après deux mois de pause", t:[1], val:()=>{ const d = Array.from(new Set(S.sessions.map(s=>s.date))).sort(); let n = 0; for(let i=1;i<d.length;i++) if(daysBetween(d[i-1], d[i])>=60) n++; return n; } },
@@ -437,11 +437,11 @@ function sessionWins(session){
     muscleVolume(7).forEach(r=>{ const before = r.sets-(inWeek ? (add[r.id]||0) : 0);
       if(inWeek && add[r.id] && before<STIM.min && r.sets>=STIM.min) out.push({ ic:"target", t:`${r.n} : zone de progrès atteinte cette semaine (${fmtDec(r.sets)} séries)` }); });
   }catch(e){}
-  if(session.exos.some(ex=>ex.deload)) out.push({ ic:"leaf", t:"Semaine allégée : séance faite, c'est exactement ce qu'il fallait." });
+  if(session.exos.some(ex=>ex.deload)) out.push({ ic:"leaf", t:"Semaine allégée : séance terminée." });
   else {
     const f = sessionForm(session);
-    if(f && f.ratio<.92) out.push({ ic:"heart", soft:true, t:`Un peu en dessous de ta forme habituelle (−${Math.round((1-f.ratio)*100)} %) : un jour sans, ça arrive. Ça ne change pas ta progression.` });
-    else if(f && f.ratio>=1.05 && !recs.length) out.push({ ic:"trendUp", t:`En grande forme : +${Math.round((f.ratio-1)*100)} % par rapport à tes dernières séances` });
+    if(f && f.ratio<.92) out.push({ ic:"heart", soft:true, t:`Légèrement en dessous de ton niveau habituel (−${Math.round((1-f.ratio)*100)} %). Un jour sans n'affecte pas ta progression.` });
+    else if(f && f.ratio>=1.05 && !recs.length) out.push({ ic:"trendUp", t:`En forme : +${Math.round((f.ratio-1)*100)} % par rapport à tes dernières séances` });
   }
   return out;
 }
@@ -490,7 +490,7 @@ function celTonnageHTML(session){
   return `<section class="cel-card cel-ton">
     <div class="ct-hd"><h2>${vol ? "Tonnage" : "Répétitions"}</h2>${scope ? `<span>${scope}</span>` : ""}</div>
     <div class="ct-v"><b class="num" data-count="${cur.v}">${val}</b><span>${unit}</span></div>
-    ${chip || (pts.length<2 ? `<div class="ct-delta"><span>${generic ? "Ta courbe commence ici" : `Première « ${esc(title)} » : ta courbe commence ici`}</span></div>` : "")}
+    ${chip || (pts.length<2 ? `<div class="ct-delta"><span>${generic ? "Ta courbe démarre ici" : `Première séance « ${esc(title)} » : ta courbe démarre ici`}</span></div>` : "")}
     ${chart}
   </section>`;
 }

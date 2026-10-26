@@ -15,9 +15,9 @@ const EQUIP_TYPES = [
   { id:"rack",       n:"Rack / supports de squat", hint:"Indispensable pour le squat à la barre en sécurité." },
   { id:"pullup_bar", n:"Barre de traction" },
   { id:"dip_bars",   n:"Barres parallèles (dips)" },
-  { id:"suspension", n:"Sangles de suspension", hint:"Type TRX, fixées à une porte ou une barre." },
+  { id:"suspension", n:"Sangles de suspension", hint:"Type TRX, à fixer à une porte ou une barre." },
   { id:"ab_roller",  n:"Roue abdominale" },
-  { id:"bands",      n:"Élastiques", loadable:true, unit:"niveau", hint:"Coche les résistances que tu possèdes." },
+  { id:"bands",      n:"Élastiques", loadable:true, unit:"niveau", hint:"Coche les élastiques que tu possèdes." },
   { id:"jump_rope",  n:"Corde à sauter" },
   { id:"mat",        n:"Tapis de sol" },
 ];

@@ -246,7 +246,7 @@ Object.assign(ACT, {
     S.settings.todayTab = "custom";
     save(); closeSheet();
     switchTab("today");
-    toast("Séance prête dans Ma séance");
+    toast("Séance ajoutée à Ma séance");
   },
   // feuille d'actions iOS ; « Annuler » revient au détail de la séance (pas à l'écran d'avant)
   deleteSession(d){
@@ -363,7 +363,7 @@ Object.assign(ACT, {
     const a = document.activeElement; if(a && a.dataset && a.dataset.c && ACT[a.dataset.c]) ACT[a.dataset.c](a.dataset, a);
     const e = histEdit, s = e && S.sessions.find(x=>x.id===e.id); if(!s) return closeSheet();
     const exos = e.exos.map(ex=>Object.assign({}, ex, { sets: ex.sets.filter(st=>st.reps>0).map(st=>{ const o = Object.assign({}, st, { done:true }); if(o.pr===undefined) delete o.pr; if(o.effort===undefined) delete o.effort; return o; }) })).filter(ex=>ex.sets.length && EXO_MAP[ex.exoId]);
-    if(!exos.length){ toast("Garde au moins une série, ou supprime la séance"); return; }
+    if(!exos.length){ toast("Garde au moins une série ou supprime la séance"); return; }
     if(e.date!==s.date && s.startedAt){
       // même heure, nouveau jour
       const t = new Date(s.startedAt), n = parseISO(e.date); n.setHours(t.getHours(), t.getMinutes(), 0, 0);

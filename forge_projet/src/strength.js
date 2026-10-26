@@ -180,14 +180,14 @@ function trainingLoad(iso){
 function lastSessionGap(){ const l = S.sessions[S.sessions.length-1]; return l ? daysBetween(l.date, todayISO()) : null; }
 // statut façon Garmin : charge (aiguë / chronique) + tendance de l'indice sur 4 semaines
 const STATUS = {
-  detraining:{ n:"Désentraînement", c:"red",    d:"Tu t'entraînes nettement moins que d'habitude depuis une semaine ou plus. Au-delà de 3 semaines sans travailler un muscle, l'estimation de sa force baisse." },
-  overreach: { n:"Surcharge",       c:"orange", d:"Ta charge des 7 derniers jours dépasse de loin ton habitude. Une séance plus légère aidera à récupérer." },
-  productive:{ n:"Productif",       c:"green",  d:"Ta charge est régulière et ton indice monte : continue comme ça." },
-  maintain:  { n:"Maintien",        c:"blue",   d:"Ta charge suffit à maintenir ta force. Pour progresser : une répétition ou un cran de charge en plus." },
-  recovery:  { n:"Récupération",    c:"teal",   d:"Charge plus légère que d'habitude : utile après des semaines chargées, à condition de reprendre vite." },
-  unproductive:{ n:"Improductif",   c:"orange", d:"Tu t'entraînes autant, mais ton indice baisse : sommeil, récupération ou exercices à varier ?" },
-  fatigue:   { n:"Fatigue",         c:"orange", d:"Tes 3 dernières séances sont en dessous de ta forme habituelle. Sommeil, stress ou charge trop élevée : une semaine plus légère t'aidera à repartir." },
-  starting:  { n:"En calibrage",    c:"gray",   d:"Il faut environ 3 semaines de séances pour établir ta charge habituelle et ton statut." },
+  detraining:{ n:"Désentraînement", c:"red",    d:"Tu t'entraînes beaucoup moins que d'habitude depuis plus d'une semaine. Après 3 semaines sans travailler un muscle, sa force estimée commence à baisser." },
+  overreach: { n:"Surcharge",       c:"orange", d:"Ta charge de la semaine dépasse largement ton habitude. Prévois une séance plus légère pour récupérer." },
+  productive:{ n:"Productif",       c:"green",  d:"Ta charge est régulière et ta force augmente. Continue ainsi." },
+  maintain:  { n:"Maintien",        c:"blue",   d:"Ta charge maintient ta force. Pour progresser, ajoute une répétition ou un peu de charge." },
+  recovery:  { n:"Récupération",    c:"teal",   d:"Ta charge est plus légère que d'habitude. C'est utile après des semaines intenses, à condition de reprendre rapidement." },
+  unproductive:{ n:"Improductif",   c:"orange", d:"Ta charge est stable, mais ta force diminue. Vérifie ton sommeil et ta récupération, ou varie tes exercices." },
+  fatigue:   { n:"Fatigue",         c:"orange", d:"Tes 3 dernières séances sont en dessous de ton niveau habituel. Une semaine plus légère t'aidera à repartir." },
+  starting:  { n:"En calibrage",    c:"gray",   d:"Ton statut sera disponible après environ 3 semaines d'entraînement." },
 };
 function trainingStatus(){
   return memoHist("status"+todayISO(), ()=>{
@@ -278,17 +278,19 @@ Object.assign(ACT, {
     const st = STATUS[trainingStatus()], L = trainingLoad();
     openSheet(`<div class="sheet-hd"><span class="t">Comment c'est calculé</span></div><div class="sheet-body how-body">
       <div class="how-st st-${st.c}"><span class="tr-dot"></span><div><b>${st.n}</b><p>${st.d}</p></div></div>
-      <h3>1. Ta force sur chaque exercice</h3>
-      <p>Le 1RM estimé de ta meilleure série (formules d'Epley et de Brzycki, fiables jusqu'à 10 répétitions). Si tu indiques les répétitions que tu aurais pu faire en plus, elles sont ajoutées. Pour les pompes, la charge est la part du poids du corps qu'elles soulèvent (64 % au sol, 49 % sur les genoux) : ajoute une pesée dans Profil pour qu'elles comptent en kg. Sans pesée, et pour les autres exercices au poids du corps, la même formule s'applique à charge constante : passer de 10 à 20 répétitions compte +25 %, pas +100 %. Pour les gainages, 1 répétition ≈ 3 secondes sous tension.</p>
-      <h3>2. La progression</h3>
-      <p>Pour chaque muscle : ta forme actuelle comparée à celle de tes 2 premières séances. La forme actuelle, c'est ta meilleure performance des 12 dernières semaines, mais un record que tes séances suivantes ne retrouvent pas s'estompe : deux séances en dessous ne comptent pas (un jour sans, ça arrive), puis il perd 1,5 % par séance. Une baisse qui dure finit donc par se voir. Si tu indiques que tu as gardé de la marge (« 3 ou + »), la séance ne compte pas comme une baisse. La progression est la moyenne des muscles : 0 % = ton niveau de départ, +20 % = 20 % plus fort.</p>
-      <h3>3. Quand tu t'arrêtes</h3>
-      <p>Rien ne bouge pendant 21 jours sans travailler un muscle (en principal ou en secondaire) : les études montrent que la force reste quasi intacte pendant 3 à 4 semaines. Ensuite, l'estimation baisse de ${S.goals.senior ? "4,5" : "3"}&nbsp;% par semaine${S.goals.senior ? " (plus vite à partir de 65 ans)" : ""}, jusqu'à −30&nbsp;%. Une séance qui travaille le muscle arrête la baisse, et tes vraies performances remplacent l'estimation : la force revient vite à la reprise.</p>
-      <h3>4. Le statut</h3>
-      <p>Comme sur une montre de sport : ta charge des 7 derniers jours (${nb(Math.round(L.acute), "série")} difficile${Math.round(L.acute)>=2?"s":""}) comparée à ton habitude sur 28 jours (${Math.round(L.chronic)}), et l'évolution de l'indice sur 4 semaines. Ce rapport décrit ta charge ; il ne prédit pas les blessures.</p>
+      <h3>Ta force sur un exercice</h3>
+      <p>On part de ta meilleure série de la séance et on estime ton 1RM, la charge maximale que tu pourrais soulever une fois. Le calcul combine les formules d'Epley et de Brzycki, fiables jusqu'à 10 répétitions. Les répétitions que tu gardes en réserve sont prises en compte.</p>
+      <p>Au poids du corps, seules les répétitions changent. Passer de 10 à 20 pompes représente donc +25 % de force, pas +100 %. Avec ton poids renseigné dans Profil, les pompes sont comptées en kilos. En gainage, 3 secondes valent une répétition.</p>
+      <h3>Ta progression</h3>
+      <p>Pour chaque muscle, on compare ton niveau actuel à celui de tes deux premières séances. Ton niveau actuel correspond à ta meilleure performance des 12 dernières semaines.</p>
+      <p>Une mauvaise séance ne fait pas baisser la courbe. En revanche, un record que tu ne retrouves plus perd 1,5 % par séance à partir de la troisième. Le résultat final est la moyenne de tous tes muscles : 0 % correspond à ton niveau de départ.</p>
+      <h3>Quand tu fais une pause</h3>
+      <p>La force se maintient environ 3 semaines sans entraînement. Au-delà, l'estimation baisse de ${S.goals.senior ? "4,5" : "3"}&nbsp;% par semaine, jusqu'à −30&nbsp;% au maximum. Dès que tu retravailles le muscle, la baisse s'arrête et tes nouvelles performances prennent le relais.</p>
+      <h3>Ton statut</h3>
+      <p>Il compare tes séries difficiles des 7 derniers jours (${Math.round(L.acute)}) à ta moyenne sur 4 semaines (${Math.round(L.chronic)}), en tenant compte de l'évolution de ta force. Il décrit ta charge d'entraînement. Il ne prédit pas les blessures.</p>
       <h3>Sources</h3>
       <ul class="how-src">${STRENGTH_SOURCES.map(([t,u])=>`<li><a href="${u}" target="_blank" rel="noopener">${esc(t)}</a></li>`).join("")}</ul>
-      <p class="hr-note">Ce sont des estimations à partir de tes séances, pas un test de 1RM ni un avis médical.</p>
+      <p class="hr-note">Ces valeurs sont des estimations. Elles ne remplacent ni un test de 1RM ni un avis médical.</p>
     </div>`, { tall:true });
   },
 });
@@ -336,10 +338,10 @@ function deloadAdvice(){
   if(S.meta.deloadSnooze && t<S.meta.deloadSnooze) return null;
   if(last && daysBetween(last, t)<DELOAD.gap) return null;
   const st = trainingStatus(), streak = loadedWeeksStreak();
-  if(st==="overreach" && streak>=3) return { kind:"overreach", txt:"Ta charge des 7 derniers jours dépasse de loin ton habitude." };
-  if(st==="fatigue" && streak>=2) return { kind:"fatigue", txt:"Tes 3 dernières séances sont en dessous de ta forme habituelle." };
-  if(st==="unproductive" && streak>=4) return { kind:"stall", txt:"Tu t'entraînes autant, mais ta force estimée baisse depuis quelques semaines." };
-  if(streak>=DELOAD.every) return { kind:"streak", txt:`${streak} semaines chargées d'affilée, sans semaine plus légère.` };
+  if(st==="overreach" && streak>=3) return { kind:"overreach", txt:"Ta charge de la semaine dépasse largement ton habitude." };
+  if(st==="fatigue" && streak>=2) return { kind:"fatigue", txt:"Tes 3 dernières séances sont en dessous de ton niveau habituel." };
+  if(st==="unproductive" && streak>=4) return { kind:"stall", txt:"Ta force baisse depuis quelques semaines, malgré un entraînement régulier." };
+  if(streak>=DELOAD.every) return { kind:"streak", txt:`${streak} semaines intenses d'affilée.` };
   return null;
 }
 // accueil : conseil, semaine en cours (jour X sur 7) ou mot de reprise
@@ -356,7 +358,7 @@ function deloadCardHTML(){
   }
   if(deloadJustEnded()) return `<div class="dl-card done stagger" style="--i:1">
       <span class="dl-ic">${ii("bolt")}</span>
-      <div class="dl-main"><div class="dl-t">Semaine allégée terminée</div><div class="dl-s">Tes séances reprennent leur volume habituel : bon moment pour viser un record.</div></div>
+      <div class="dl-main"><div class="dl-t">Semaine allégée terminée</div><div class="dl-s">Tes séances retrouvent leur volume habituel. C'est le bon moment pour viser un record.</div></div>
       <button class="icon-btn dl-x" data-a="deloadDismiss" aria-label="Masquer">${icon("close")}</button>
     </div>`;
   const a = deloadAdvice(); if(!a) return "";
@@ -384,14 +386,14 @@ Object.assign(ACT, {
     S.deloadLog = (S.deloadLog||[]).concat(t).slice(-50);
     if(qs("#overlay.open")) closeSheet();
     deloadRefresh(); haptic(15); sfx("open");
-    toast("Semaine allégée lancée : tes séances sont ajustées pour 7 jours", "leaf");
+    toast("Semaine allégée activée pour 7 jours", "leaf");
   },
   deloadLater(){ S.meta.deloadSnooze = addDaysISO(todayISO(), DELOAD.snooze); save(); changed(); toast("Rappel dans une semaine"); },
   deloadStop(){
     if(!S.deload) return;
     // arrêtée avant la fin : elle compte quand même (pas de nouveau conseil tout de suite)
     S.deload = null; if(qs("#overlay.open")) closeSheet();
-    deloadRefresh(); toast("Semaine allégée arrêtée : volume habituel rétabli");
+    deloadRefresh(); toast("Semaine allégée arrêtée");
   },
   deloadDismiss(){ S.deload = null; save(); changed(); },
   deloadToggleTips(d, el){ S.settings.deloadTips = S.settings.deloadTips===false; el.classList.toggle("on", S.settings.deloadTips); el.setAttribute("aria-pressed", S.settings.deloadTips); save(); changed(); },
@@ -399,21 +401,21 @@ Object.assign(ACT, {
     const a = deloadAdvice(), on = deloadActive(), streak = loadedWeeksStreak(), last = (S.deloadLog||[]).slice(-1)[0];
     openSheet(`<div class="sheet-hd"><span class="t">Semaine allégée</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div><div class="sheet-body how-body">
       <div class="how-st"><span class="dl-ic">${ii("leaf")}</span><div><b>${on ? `En cours · jour ${Math.min(DELOAD.days, deloadDay())} sur ${DELOAD.days}` : a ? "Conseillée maintenant" : "Pas nécessaire pour l'instant"}</b>
-        <p>${on ? "Tes séances ont environ 40 % de séries en moins, la même charge, et visent 2 répétitions de réserve." : a ? esc(a.txt) : `${nb(streak, "semaine chargée")} d'affilée${last ? `, dernière semaine allégée le ${fmtDate(last)}` : ""}. L'app te préviendra au bon moment.`}</p></div></div>
+        <p>${on ? "Tes séances comptent environ 40 % de séries en moins, avec la même charge et 2 répétitions en réserve." : a ? esc(a.txt) : `${streak} semaine${streak>1?"s":""} intense${streak>1?"s":""} d'affilée${last ? `. Dernière semaine allégée : ${fmtDate(last)}` : ""}. Tu seras prévenu au bon moment.`}</p></div></div>
       <h3>Pourquoi alléger ?</h3>
-      <p>Après plusieurs semaines chargées, la fatigue s'accumule. Une semaine plus légère la fait retomber, puis on repart de plus belle. Les entraîneurs experts en programment en général une toutes les 4 à 8 semaines.</p>
-      <h3>Comment ASCEN l'applique</h3>
-      <p>On continue à s'entraîner : <b>environ 40 % de séries en moins</b> (3 séries deviennent 2), <b>la même charge</b> et <b>2 répétitions de moins</b>, sans aller à l'échec. Les experts s'accordent tous pour réduire séries et répétitions ; une semaine d'arrêt complet, elle, a légèrement fait baisser la force des jambes dans une étude récente.</p>
+      <p>Après plusieurs semaines intenses, la fatigue s'accumule. Une semaine plus légère permet de récupérer et de mieux progresser ensuite. Les entraîneurs en prévoient généralement une toutes les 4 à 8 semaines.</p>
+      <h3>Comment ça fonctionne</h3>
+      <p>Tu continues à t'entraîner, avec <b>environ 40 % de séries en moins</b>, <b>la même charge</b> et <b>2 répétitions de moins</b>, sans aller à l'échec. Un arrêt complet est moins efficace : il peut faire baisser légèrement la force.</p>
       <h3>Quand l'app la propose</h3>
-      <p>Après ${DELOAD.every} semaines chargées d'affilée (au moins 2 séances par semaine), si ta charge s'emballe (statut « Surcharge »), ou si ta force estimée baisse alors que tu t'entraînes autant. Jamais deux fois en moins de 4 semaines.</p>
+      <p>Elle est proposée après ${DELOAD.every} semaines intenses d'affilée (2 séances ou plus par semaine), en cas de surcharge, ou si ta force baisse alors que tu t'entraînes autant. Jamais deux fois en moins de 4 semaines.</p>
       <div class="group" style="margin-top:16px"><div class="row">
-        <div class="grow"><div class="t">Me la proposer automatiquement</div><div class="s">Une carte sur l'accueil, au bon moment</div></div>
+        <div class="grow"><div class="t">Me la proposer automatiquement</div><div class="s">Une carte s'affiche sur l'accueil</div></div>
         <button class="switch ${S.settings.deloadTips!==false?"on":""}" role="switch" aria-checked="${!!(S.settings.deloadTips!==false)}" aria-label="Proposer automatiquement les semaines allégées" data-a="deloadToggleTips"></button>
       </div></div>
       <div class="btnrow">${on ? `<button class="btn secondary" data-a="deloadStop">Arrêter la semaine allégée</button>` : `<button class="btn" data-a="deloadStart">${icon("play")} Commencer maintenant</button>`}</div>
       <h3>Sources</h3>
       <ul class="how-src">${DELOAD_SOURCES.map(([t,u])=>`<li><a href="${u}" target="_blank" rel="noopener">${esc(t)}</a></li>`).join("")}</ul>
-      <p class="hr-note">Des repères issus de la recherche et de l'expérience d'entraîneurs, pas une règle : écoute aussi ta fatigue.</p>
+      <p class="hr-note">Ces repères viennent de la recherche et de l'expérience d'entraîneurs. Écoute aussi tes sensations.</p>
     </div>`, { tall:true, child:true, restore:()=>ACT.deloadHow() });
     sheetBackHead();
   },
