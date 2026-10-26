@@ -8,7 +8,7 @@ const MUSCLES = [
   { id:"pect", n:"Pectoraux" }, { id:"dos", n:"Dos" }, { id:"epaules", n:"Épaules" },
   { id:"biceps", n:"Biceps" }, { id:"triceps", n:"Triceps" }, { id:"avantbras", n:"Avant-bras" },
   { id:"quadriceps", n:"Quadriceps" }, { id:"ischios", n:"Ischio-jambiers" }, { id:"fessiers", n:"Fessiers" },
-  { id:"mollets", n:"Mollets" }, { id:"abdos", n:"Abdominaux" }, { id:"cardio", n:"Cardio / gainage dynamique" },
+  { id:"mollets", n:"Mollets" }, { id:"abdos", n:"Abdominaux" }, { id:"cardio", n:"Cardio" },
 ];
 const MUSCLE_MAP = {}; MUSCLES.forEach(m=>MUSCLE_MAP[m.id]=m);
 
