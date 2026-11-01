@@ -32,6 +32,8 @@ function defaultState(){
 }
 
 let LOAD_SKIPPED = 0;   // séances illisibles écartées au chargement (signalées une fois, voir init.js)
+const BIG_KEY = STORAGE_KEY+".idb";   // données dans IndexedDB (localStorage plein) : voir idbBoot
+let bootFromIDB = false, idbBootFailed = false;
 let S = load();
 
 // ---------- stockage compact (v2.5) ----------
@@ -110,12 +112,13 @@ function serializeState(savedAt){
 // ---------- copie de secours IndexedDB ----------
 // Chaque enregistrement est aussi copié dans IndexedDB (quota bien plus large). Si
 // localStorage est plein ou vidé, l'app repart de cette copie au lancement suivant.
-const IDB_NAME = "forge", IDB_STORE = "state";
+// Une copie par jour est aussi gardée (« snap », 7 jours) : on peut revenir à l'état d'un jour précis.
+const IDB_NAME = "forge", IDB_STORE = "state", IDB_SNAP = "snap";
 function idbOpen(){
   return new Promise((ok, ko)=>{
     if(!("indexedDB" in window)) return ko(new Error("indisponible"));
-    const r = indexedDB.open(IDB_NAME, 1);
-    r.onupgradeneeded = ()=>r.result.createObjectStore(IDB_STORE);
+    const r = indexedDB.open(IDB_NAME, 2);
+    r.onupgradeneeded = ()=>{ const db = r.result; [IDB_STORE, IDB_SNAP].forEach(n=>{ if(!db.objectStoreNames.contains(n)) db.createObjectStore(n); }); };
     r.onsuccess = ()=>ok(r.result); r.onerror = ()=>ko(r.error);
   });
 }
@@ -178,7 +181,41 @@ async function wipeStorage(){
   if(idbWriting) await idbClear();
   try{ Object.keys(localStorage).filter(k=>k===STORAGE_KEY || k.startsWith(STORAGE_KEY+".")).forEach(k=>localStorage.removeItem(k)); }catch(e){}
 }
-function idbClear(){ return idbOpen().then(db=>new Promise(ok=>{ const tx = db.transaction(IDB_STORE, "readwrite"); tx.objectStore(IDB_STORE).clear(); tx.oncomplete = tx.onerror = ()=>{ db.close(); ok(); }; })).catch(()=>{}); }
+function idbClear(){ return idbOpen().then(db=>new Promise(ok=>{ const tx = db.transaction([IDB_STORE, IDB_SNAP], "readwrite"); tx.objectStore(IDB_STORE).clear(); tx.objectStore(IDB_SNAP).clear(); tx.oncomplete = tx.onerror = ()=>{ db.close(); ok(); }; })).catch(()=>{}); }
+// ---------- copies du jour ----------
+// À la première ouverture de chaque jour, l'état est copié tel quel (avant les changements du jour) ;
+// les 7 dernières sont gardées. Profil › Données › Copies automatiques.
+const SNAP_KEEP = 7;
+function idbTx(store, mode, fn){
+  return idbOpen().then(db=>new Promise((ok, ko)=>{
+    if(mode==="readwrite" && persistBlocked){ db.close(); return ok(null); }
+    const tx = db.transaction(store, mode), out = fn(tx.objectStore(store));
+    tx.oncomplete = ()=>{ db.close(); ok(out && "result" in out ? out.result : null); };
+    tx.onerror = tx.onabort = ()=>{ db.close(); ko(tx.error); };
+  }));
+}
+async function snapDaily(){
+  if(persistBlocked || !S.sessions.length) return false;
+  const day = todayISO();
+  const keys = await idbTx(IDB_SNAP, "readonly", st=>st.getAllKeys());
+  if(!keys || keys.includes(day)) return false;
+  const savedAt = S.meta.savedAt || Date.now();
+  const data = await gz(serializeState(savedAt));
+  const rec = { data, savedAt, at:Date.now(), n:S.sessions.length, t:(S.templates||[]).length };
+  const old = keys.filter(k=>k!==day).sort().slice(0, Math.max(0, keys.length + 1 - SNAP_KEEP));
+  await idbTx(IDB_SNAP, "readwrite", st=>{ st.put(rec, day); old.forEach(k=>st.delete(k)); });
+  return true;
+}
+// liste (sans les données), la plus récente d'abord
+async function snapList(){
+  const out = [];
+  await idbTx(IDB_SNAP, "readonly", st=>{ const c = st.openCursor(); c.onsuccess = ()=>{ const k = c.result; if(!k) return; const v = k.value || {}; out.push({ day:k.key, at:v.at || v.savedAt, n:v.n||0, t:v.t||0 }); k.continue(); }; });
+  return out.sort((a,b)=>a.day<b.day?1:-1);
+}
+async function snapGet(day){
+  const rec = await idbTx(IDB_SNAP, "readonly", st=>st.get(day));
+  return rec && rec.data ? JSON.parse(await gunz(rec.data)) : null;
+}
 var loadedFromLS; // var : affecté pendant load(), qui s'exécute avant cette ligne
 // au lancement : si la copie IndexedDB est plus récente (localStorage plein, vidé ou
 // illisible), on la reprend
@@ -209,10 +246,23 @@ function storageUsage(){
 }
 const STORAGE_QUOTA = 5*1024*1024;
 
+// données trop grandes pour localStorage : elles sont dans IndexedDB, lues avant le premier affichage
+// (repère BIG_KEY et drapeaux déclarés avec LOAD_SKIPPED, avant load())
+function idbBoot(){
+  return idbGet().then(async rec=>{
+    if(!rec || !rec.data){ try{ localStorage.removeItem(BIG_KEY); }catch(e){} return; }   // base effacée : départ à neuf
+    S = normalizeState(JSON.parse(await gunz(rec.data))); loadedFromLS = true; persistFailed = true;
+  }).catch(e=>{
+    // base momentanément illisible : surtout ne rien écraser (relancer l'app suffit en général)
+    persistBlocked = true; idbBootFailed = true;
+  });
+}
 function load(){
   let raw = null;
   try{
     raw = localStorage.getItem(STORAGE_KEY);
+    const big = +localStorage.getItem(BIG_KEY);
+    if(big && (!raw || big >= +localStorage.getItem(STORAGE_KEY+".at"))){ bootFromIDB = true; return defaultState(); }
     if(!raw) return defaultState();
     const st = normalizeState(JSON.parse(raw));
     loadedFromLS = true;
@@ -417,12 +467,16 @@ function persistNow(urgent){
   if(derived && adoptNewerStored()) return;
   const savedAt = Date.now(), str = serializeState(savedAt);
   S.meta.savedAt = savedAt;
-  idbMirror(str, savedAt, urgent===true);
-  try{ localStorage.setItem(STORAGE_KEY, str); persistFailed = false; try{ localStorage.setItem(STORAGE_KEY+".at", String(savedAt)); }catch(e){} }
-  catch(e){
-    // localStorage plein ou refusé : la copie IndexedDB prend le relais, on prévient une fois
-    if(!persistFailed && typeof toast==="function") toast("Stockage plein : tes données sont conservées dans la copie de secours. Fais une sauvegarde.");
+  idbMirror(str, savedAt, urgent===true || persistFailed);
+  try{
+    localStorage.setItem(STORAGE_KEY, str); persistFailed = false;
+    try{ localStorage.setItem(STORAGE_KEY+".at", String(savedAt)); if(localStorage.getItem(BIG_KEY)) localStorage.removeItem(BIG_KEY); }catch(e){}
+  }catch(e){
+    // localStorage plein (≈ 5 Mo) : IndexedDB, sans cette limite, devient le stockage principal. Il est
+    // écrit tout de suite (plus d'attente de 3 s) ; localStorage ne garde qu'un repère pour le lancement.
     persistFailed = true;
+    try{ localStorage.removeItem(STORAGE_KEY); localStorage.setItem(BIG_KEY, String(savedAt)); localStorage.setItem(STORAGE_KEY+".at", String(savedAt)); }catch(err){}
+    idbMirror(str, savedAt, true);
   }
 }
 // sortie de l'app : écriture immédiate, copie de secours comprise
@@ -459,6 +513,24 @@ window.addEventListener("storage", e=>{
   if(typeof onExternalState==="function") onExternalState();
 });
 document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="hidden") flushPersist(); });
+
+// ---------- retour dans l'app ----------
+// Au retour (iOS rend la page d'un coup), la première image doit partir sans attendre : les vérifications
+// non urgentes (taille du texte, marge du bas, ciel de l'ascension, écran allumé…) passent ensuite, une par
+// temps mort, au lieu de s'empiler toutes dans la même image.
+const RESUME_Q = [];
+let resumeRun = false;
+function onResume(fn){ document.addEventListener("visibilitychange", ()=>{ if(document.hidden) return; RESUME_Q.push(fn); resumeDrain(); }); }
+function resumeDrain(){
+  if(resumeRun) return; resumeRun = true;
+  const idle = window.requestIdleCallback ? f=>requestIdleCallback(f, { timeout:400 }) : f=>setTimeout(f, 16);
+  const next = ()=>{
+    if(document.hidden || !RESUME_Q.length){ RESUME_Q.length = 0; resumeRun = false; return; }
+    const fn = RESUME_Q.shift(); try{ fn(); }catch(e){}
+    requestAnimationFrame(()=>idle(next));
+  };
+  requestAnimationFrame(()=>requestAnimationFrame(()=>idle(next)));   // après les deux premières images
+}
 
 // ---------- utilitaires ----------
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
@@ -524,6 +596,9 @@ function fmtRelative(iso){
   if(n<31) return `il y a ${Math.floor(n/7)} sem.`;
   return fmtDate(iso);
 }
+// gros chiffres : l'unité finale (« 12 kg », « +92 % », « 2 045 m ») plus petite que le nombre (CSS .u)
+const UNIT_RX = /^(.*\d)([\s\u00a0\u202f]?)(%|kg|m|km|min|s|h|j|rép\.)$/;
+function uHTML(s){ const m = UNIT_RX.exec(String(s)); return m ? `${m[1]}${m[2]}<span class="u">${m[3]}</span>` : esc(String(s)); }
 // « 1 série », « 2 séries » (en français, 0 et 1 sont au singulier)
 function nb(n, w){ return `${n} ${w}${Math.abs(n)>=2?"s":""}`; }
 // fr-FR et pas fr-CH : Safari iOS écrit « 0.5 » en fr-CH, on veut la virgule partout

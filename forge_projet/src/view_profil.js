@@ -126,6 +126,11 @@ function dataMoreHTML(){
         ${sfIcon("restore","teal")}
         <div class="grow"><div class="t">Restaurer une sauvegarde</div></div>
       </button>
+      <button class="row tap" style="width:100%" data-a="openSnaps">
+        ${sfIcon("repeat","teal")}
+        <div class="grow"><div class="t">Copies automatiques</div><div class="s">Une par jour, 7 jours</div></div>
+        <span class="chev">${icon("chev")}</span>
+      </button>
       <button class="row tap" style="width:100%" data-a="exportCSV">
         ${sfIcon("list","teal")}
         <div class="grow"><div class="t">Exporter l'historique (tableur)</div></div>
@@ -349,21 +354,46 @@ function restoreData(){
     try{ if(f.size>5e7) throw 0; const o = parseUntrusted(await f.text()); data = o && o.data ? o.data : o; }catch(e){ data = null; }
     if(!data || typeof data!=="object" || !(Array.isArray(data.sessions) || Array.isArray(data.zs))){ openModal(`<div style="font-weight:700;color:var(--red)">Fichier non reconnu</div><div class="hr-note" style="margin-top:8px">Choisis un fichier de sauvegarde créé par ASCEN (ascen-sauvegarde-….json).</div><button class="btn secondary" style="margin-top:14px" data-a="closesheet">OK</button>`); return; }
     const n = (Array.isArray(data.sessions) && data.sessions.length ? data.sessions : data.zs || []).length, t = Array.isArray(data.templates) ? data.templates.length : 0;
-    confirmSheet({ title:"Restaurer cette sauvegarde ?", html:`${nb(n, "séance")} dans l'historique${t ? ` et ${t} dans Mes séances` : ""}. Les données actuelles de cet appareil seront remplacées. Tu pourras annuler juste après.`, ok:"Restaurer", danger:true, onOk:()=>{
-      try{ localStorage.setItem(STORAGE_KEY+".avant-restauration", JSON.stringify(S)); }catch(e){}
-      let st; try{ st = normalizeState(data); }catch(e){ ERR_LOG.push({ at:new Date().toISOString(), where:"restauration", msg:String(e && e.message || e).slice(0,200) }); toast("Sauvegarde illisible. Aucune donnée n'a été modifiée.", "warn"); return; }
-      if(S.draft) stopRestTimer();
-      const prev = S;
-      S = st;
-      S.meta.lastBackup = S.meta.lastBackup || todayISO();
-      upgradeRecords(); save(); persistNow(); applyTheme(); checkMedals(true);
-      renderViewAnimated(currentTab);
-      // « Annuler » remet les données d'avant (elles restent aussi en copie dans le stockage)
-      toast(`Sauvegarde restaurée : ${nb(n, "séance")}`, null, ()=>{ S = prev; save(); persistNow(); applyTheme(); renderViewAnimated(currentTab); toast("Données précédentes restaurées"); });
-    }});
+    confirmSheet({ title:"Restaurer cette sauvegarde ?", html:`${nb(n, "séance")} dans l'historique${t ? ` et ${t} dans Mes séances` : ""}. Les données actuelles de cet appareil seront remplacées. Tu pourras annuler juste après.`, ok:"Restaurer", danger:true, onOk:()=>applyRestore(data, n, "Sauvegarde restaurée") });
   });
   inp.click();
 }
+// remplace les données par celles d'une sauvegarde ou d'une copie du jour ; « Annuler » remet les précédentes
+function applyRestore(data, n, msg){
+  try{ localStorage.setItem(STORAGE_KEY+".avant-restauration", JSON.stringify(S)); }catch(e){}
+  let st; try{ st = normalizeState(data); }catch(e){ ERR_LOG.push({ at:new Date().toISOString(), where:"restauration", msg:String(e && e.message || e).slice(0,200) }); toast("Sauvegarde illisible. Aucune donnée n'a été modifiée.", "warn"); return; }
+  if(S.draft) stopRestTimer();
+  const prev = S;
+  S = st;
+  S.meta.lastBackup = S.meta.lastBackup || todayISO();
+  upgradeRecords(); save(); persistNow(); applyTheme(); checkMedals(true);
+  renderViewAnimated(currentTab);
+  toast(`${msg} : ${nb(n, "séance")}`, null, ()=>{ S = prev; save(); persistNow(); applyTheme(); renderViewAnimated(currentTab); toast("Données précédentes restaurées"); });
+}
+// ---------- copies automatiques (core.js, snapDaily) ----------
+function snapDayLabel(day){ const g = daysBetween(day, todayISO()); return g===0 ? "Aujourd'hui" : g===1 ? "Hier" : (t=>t[0].toUpperCase()+t.slice(1))(fmtDate(day, "long")); }
+function snapTime(at){ const d = new Date(at); return `${d.getHours()} h ${String(d.getMinutes()).padStart(2, "0")}`; }
+Object.assign(ACT, {
+  async openSnaps(){
+    openSheet(`<div class="sheet-hd"><span class="t">Copies automatiques</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
+      <div class="sheet-body prefs-body"><div class="group" id="snapList"><div class="row"><div class="grow"><div class="s">Chargement…</div></div></div></div>
+      <div class="hr-note" style="margin:10px 16px 0">À la première ouverture de chaque jour, ASCEN copie tes données sur l'appareil. Les 7 dernières copies sont gardées.</div></div>`, { child:true, restore:()=>ACT.openSnaps() });
+    sheetBackHead();
+    let list = [];
+    try{ list = await snapList(); }catch(e){}
+    const el = qs("#snapList"); if(!el) return;
+    el.innerHTML = list.length ? list.map(x=>`<div class="row">${sfIcon("restore","teal")}
+        <div class="grow"><div class="t">${snapDayLabel(x.day)}</div><div class="s">${nb(x.n, "séance")} · ${snapTime(x.at)}</div></div>
+        <button class="chip" data-a="snapRestore" data-d="${esc(x.day)}">Restaurer</button></div>`).join("")
+      : `<div class="row"><div class="grow"><div class="t">Aucune copie pour l'instant</div><div class="s wrap">La première sera faite demain à l'ouverture de l'app.</div></div></div>`;
+  },
+  async snapRestore(d){
+    let data = null; try{ data = await snapGet(d.d); }catch(e){}
+    if(!data){ toast("Copie illisible. Aucune donnée n'a été modifiée.", "warn"); return; }
+    const n = Array.isArray(data.zs) ? data.zs.length : Array.isArray(data.sessions) ? data.sessions.length : 0;
+    confirmSheet({ title:`Revenir à la copie ${daysBetween(d.d, todayISO())<2 ? "d'"+snapDayLabel(d.d).toLowerCase() : "du "+fmtDate(d.d, "long")} ?`, html:`${nb(n, "séance")} dans l'historique. Les données actuelles seront remplacées. Tu pourras annuler juste après.`, ok:"Restaurer", danger:true, onOk:()=>applyRestore(data, n, "Copie restaurée") });
+  },
+});
 function openInstall(){
   openSheet(`<div class="sheet-hd"><span class="t">Installer ASCEN</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
     <div class="sheet-body">
@@ -805,26 +835,28 @@ Object.assign(ACT, {
 
 // ---------- espace de stockage ----------
 function fmtBytes(n){ return n<1024*1024 ? `${Math.max(1, Math.round(n/1024))} Ko` : `${fmtDec(n/1024/1024)} Mo`; }
-function storageRowText(){ const u = storageUsage(); return `${fmtBytes(u)} utilisés sur ~5 Mo · ${Math.max(1, Math.round(u/STORAGE_QUOTA*100))} %`; }
+// au-delà de ~5 Mo (localStorage), IndexedDB prend le relais (core.js) : plus de limite à afficher
+function storageRowText(){ return persistFailed ? "Stockage étendu" : `${fmtBytes(storageUsage())} utilisés`; }
 Object.assign(ACT, {
   openStorage(){
-    const u = storageUsage(), pct = Math.min(100, u/STORAGE_QUOTA*100);
+    const u = persistFailed ? 0 : storageUsage();
     openSheet(`<div class="sheet-hd"><span class="t">Espace de stockage</span><button class="icon-btn" data-a="closesheet" aria-label="Fermer">${icon("close")}</button></div>
       <div class="sheet-body" id="stoBody">
         <div class="chart-card" style="margin-top:0">
-          <div class="cc-h"><div class="cc-t">${fmtBytes(u)} sur ~5 Mo</div><div class="cc-s">${S.sessions.length} séance${S.sessions.length>1?"s":""} enregistrée${S.sessions.length>1?"s":""}</div></div>
-          <div class="xpbar sto-bar"><span style="width:${Math.max(1.5, pct).toFixed(1)}%"></span></div>
+          <div class="cc-h"><div class="cc-t" id="stoMain">${u ? fmtBytes(u) : "…"}</div><div class="cc-s">${nb(S.sessions.length, "séance")} enregistrée${S.sessions.length>1?"s":""}</div></div>
         </div>
         <div class="group" style="margin-top:14px">
           <div class="row">${sfIcon("storage","green")}<div class="grow"><div class="t">Format compact</div></div><div class="val">≈ 2,5× plus léger</div></div>
-          <div class="row">${sfIcon("shield","blue")}<div class="grow"><div class="t">Copie de secours</div></div><div class="val" id="stoIdb"></div></div>
+          <div class="row">${sfIcon("shield","blue")}<div class="grow"><div class="t">${persistFailed ? "Base principale" : "Copie de secours"}</div></div><div class="val" id="stoIdb"></div></div>
+          <div class="row">${sfIcon("repeat","teal")}<div class="grow"><div class="t">Copies automatiques</div></div><div class="val" id="stoSnaps"></div></div>
           <div class="row">${sfIcon("phone","gray")}<div class="grow"><div class="t">Total sur l'appareil</div></div><div class="val" id="stoTotal"></div></div>
           <div class="row">${sfIcon("lock","indigo")}<div class="grow"><div class="t">Protection</div><div class="s wrap" id="stoPersist"></div></div></div>
         </div>
         <div class="btnrow"><button class="btn secondary" data-a="backupData">${icon("bookmark")} Faire une sauvegarde</button></div>
       </div>`, { tall:true, child:true, restore:()=>ACT.openStorage() });
     sheetBackHead();
-    idbGet().then(r=>{ const e = qs("#stoIdb"); if(e && r && r.data) e.textContent = fmtBytes(typeof r.data==="string" ? r.data.length*2 : (r.data.byteLength || r.data.size || 0)); }).catch(()=>{});
+    idbGet().then(r=>{ const e = qs("#stoIdb"); if(!(e && r && r.data)) return; const b = typeof r.data==="string" ? r.data.length*2 : (r.data.byteLength || r.data.size || 0); e.textContent = fmtBytes(b); const m = qs("#stoMain"); if(m && !u) m.textContent = fmtBytes(b); }).catch(()=>{});
+    snapList().then(l=>{ const e = qs("#stoSnaps"); if(e) e.textContent = l.length ? nb(l.length, "jour") : "Aucune"; }).catch(()=>{});
     try{ if(navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(x=>{ const e = qs("#stoTotal"); if(e && x.usage) e.textContent = fmtBytes(x.usage + u); }); }catch(e){}
     const el = qs("#stoPersist");
     const setTxt = t=>{ if(el) el.textContent = t; };

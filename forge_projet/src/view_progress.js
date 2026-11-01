@@ -119,9 +119,9 @@ function forceSumHTML(){
   if(pts.length<2) return strengthCardHTML(); // en calibrage : les trois pastilles, sur place
   const last = pts[pts.length-1], d0 = parseISO(first), y0 = d0.getFullYear()!==parseISO(todayISO()).getFullYear() ? " "+d0.getFullYear() : "";
   const p = Math.round(last.v-100);
-  return `<button class="fs-card stagger" style="--i:1" data-a="progressTab" data-v="force" aria-label="Ta force : ${pctTxt(last.v)} depuis tes débuts. Voir le détail">
+  return `<button class="fs-card stagger" style="--i:1" data-vt="force" data-a="progressTab" data-v="force" aria-label="Ta force : ${pctTxt(last.v)} depuis tes débuts. Voir le détail">
     <span class="fs-h"><span>Ta force</span><span class="chev">${icon("chev")}</span></span>
-    <span class="fs-v" data-count="${Math.abs(p)}" data-pre="${p>0?"+":p<0?"−":""}" data-unit="%" data-thin="1">${pctTxt(last.v)}</span>
+    <span class="fs-v" data-vt="force-n" data-count="${Math.abs(p)}" data-pre="${p>0?"+":p<0?"−":""}" data-unit="%" data-thin="1">${uHTML(pctTxt(last.v))}</span>
     <span class="fs-s">depuis tes débuts, en ${MOIS_LONG[d0.getMonth()]}${y0}</span>
     ${forceSparkSVG(pts.map(x=>x.v))}
     <span class="fs-ax"><span>${esc(fmtDate(pts[0].wk))}</span><span>Aujourd'hui</span></span>
@@ -357,10 +357,11 @@ Object.assign(ACT, {
     if(progressTab===d.v) return;
     const el = qs("#v-progress"), from = progressTab;
     const dir = d.instant || currentTab!=="progress" ? null : PROG_SUB[d.v] ? "push" : PROG_SUB[from] ? "pop" : null;
-    let first = false;
-    navGo(el, ()=>{ first = progSet(d.v); }, dir);
-    const pane = el.querySelector(".seg-pane");
-    if(pane && first){ pane.classList.add("pane-in"); setTimeout(()=>pane.classList.remove("pane-in"), 2400); }
+    // (le rendu peut être différé d'une image par une transition partagée : l'entrée se joue dans le rendu)
+    navGo(el, ()=>{
+      const first = progSet(d.v), pane = el.querySelector(".seg-pane");
+      if(pane && first){ pane.classList.add("pane-in"); setTimeout(()=>pane.classList.remove("pane-in"), 2400); }
+    }, dir);
   },
   // depuis l'accueil (alerte de force) : l'onglet Progrès, directement sur l'écran voulu
   progressGo(d){ if(currentTab!=="progress") switchTab("progress"); ACT.progressTab({ v:d.v, instant:true }); },

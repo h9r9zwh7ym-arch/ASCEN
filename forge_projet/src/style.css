@@ -50,7 +50,7 @@
 }
 *,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{height:100%;font-size:17px;background:var(--bg);scroll-padding-top:var(--sat)}
-body{height:100%;margin:0;background:var(--bg);color:var(--label);font-family:var(--sans);font-size:var(--fs-body);line-height:1.35;-webkit-font-smoothing:antialiased;overflow:hidden;-webkit-text-size-adjust:100%}
+body{height:100%;margin:0;background:var(--bg);color:var(--label);font-family:var(--sans);font-size:var(--fs-body);line-height:1.35;-webkit-font-smoothing:antialiased;overflow:hidden;-webkit-text-size-adjust:100%;font-variant-numeric:tabular-nums}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 svg{width:20px;height:20px;display:inline-block;vertical-align:-5px;flex:none}
 input,textarea,select{font:inherit;color:inherit}
@@ -3532,3 +3532,31 @@ html.vgap .tabbar{bottom:calc(-1 * var(--vgap));padding-bottom:calc(env(safe-are
 .asc-gyro.on{background:#E07A55;color:#fff}
 .asc-scene:not(.ready) .asc-gyro,.asc-scene.playing .asc-gyro{opacity:0;pointer-events:none}
 @media (prefers-reduced-motion:reduce){ .asc-scene .asc-lay,.asc-l-fog,.asc-l-fog i,.asc-sky-fx i,.asc-bd b{animation:none!important} .asc-bd,.asc-sh{display:none} }
+
+/* ===== Mise à jour disponible (init.js) ===== */
+#updbar{position:fixed;left:50%;top:calc(10px + var(--sat));z-index:59;display:flex;align-items:center;gap:4px;width:max-content;max-width:calc(100% - 32px);padding:6px 6px 6px 16px;border-radius:22px;background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);box-shadow:0 10px 30px -8px rgba(0,0,0,.28),0 0 0 .5px var(--sep);color:var(--label);font-size:var(--fs-sub);font-weight:600;opacity:0;transform:translateX(-50%) translateY(-24px) scale(.9);transition:opacity .22s,transform .45s cubic-bezier(.32,1.35,.4,1)}
+#updbar.show{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
+#updbar .ub-t{margin-right:6px;white-space:nowrap}
+#updbar button{min-height:34px;padding:0 12px;border-radius:17px;font-weight:700;font-size:var(--fs-sub);white-space:nowrap}
+#updbar .ub-later{color:var(--label2)}
+#updbar .ub-go{background:var(--tint-bg);color:var(--tint-ink)}
+html.reloading #app,html.reloading .tabbar{opacity:0;transition:opacity .18s ease-out}
+@media (prefers-reduced-motion: reduce){#updbar{transition:opacity .2s}}
+
+/* ===== Chiffres : chasse fixe partout (rien ne bouge quand un nombre change), unité plus petite que le nombre ===== */
+.u{font-size:max(.58em, 12px);font-weight:600;letter-spacing:0;opacity:.62;margin-left:.04em}
+.rw-big .u,.ring-time .u{opacity:.7}
+
+/* ===== Transitions partagées (navVT, ui_shell.js) : l'écran glisse, l'élément partagé passe d'un écran à l'autre ===== */
+::view-transition-group(*){animation-duration:.44s;animation-timing-function:cubic-bezier(.32,.72,0,1)}
+::view-transition-old(root),::view-transition-new(root),::view-transition-old(vt-bar),::view-transition-new(vt-bar){animation:none}
+html.vt-nav .view.active{background:var(--bg)}
+html.vt-nav::view-transition-old(vt-screen),html.vt-nav::view-transition-new(vt-screen){mix-blend-mode:normal;animation-duration:.44s;animation-timing-function:cubic-bezier(.32,.72,0,1);animation-fill-mode:both}
+html.vt-push::view-transition-old(vt-screen){animation-name:vtUnder}
+html.vt-push::view-transition-new(vt-screen){animation-name:vtIn;box-shadow:-8px 0 24px -12px rgba(0,0,0,.25)}
+html.vt-pop::view-transition-old(vt-screen){animation-name:vtOut;z-index:1;box-shadow:-8px 0 24px -12px rgba(0,0,0,.25)}
+html.vt-pop::view-transition-new(vt-screen){animation-name:vtUnderBack}
+@keyframes vtIn{from{transform:translateX(100%)}to{transform:none}}
+@keyframes vtOut{from{transform:none}to{transform:translateX(100%)}}
+@keyframes vtUnder{from{transform:none}to{transform:translateX(-30%);filter:brightness(.9)}}
+@keyframes vtUnderBack{from{transform:translateX(-30%);filter:brightness(.9)}to{transform:none}}

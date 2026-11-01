@@ -231,9 +231,9 @@ function strengthCardHTML(){
   // 1. le chiffre : progression depuis les débuts, et son évolution sur les dernières semaines
   const p0 = Math.round(last.v-100);
   const delta = wk>0 ? `<span class="tr-d ${d>0?"up":d<0?"down":""}">${d ? `${d>0?"+":"−"}${Math.abs(d)}\u202f% en ${wk}\u00a0sem.` : `stable sur ${wk}\u00a0sem.`}</span>` : "";
-  const hero = `<div class="chart-card trend-card stagger" style="--i:1">
+  const hero = `<div class="chart-card trend-card stagger" style="--i:1" data-vt="force">
     <div class="tr-h"><span class="tr-k">Depuis tes débuts</span><button class="tr-how" data-a="strengthHow" aria-label="Comment la progression est calculée">i</button></div>
-    <div class="tr-hero"><span class="tr-v" data-count="${Math.abs(p0)}" data-pre="${p0>0?"+":p0<0?"−":""}" data-unit="%" data-thin="1">${pctTxt(last.v)}</span>${delta}</div>
+    <div class="tr-hero"><span class="tr-v" data-vt="force-n" data-count="${Math.abs(p0)}" data-pre="${p0>0?"+":p0<0?"−":""}" data-unit="%" data-thin="1">${uHTML(pctTxt(last.v))}</span>${delta}</div>
     ${pts.length>=3 ? lineChart(pts.map(p=>({ label:fmtDate(p.wk), v:p.v-100, tip:`Semaine du ${fmtDate(p.wk)} : ${pctTxt(p.v)}` })), { aria:"Progression de force par semaine", zero:pts.every(p=>p.v>=100), fmt:v=>pctTxt(v+100), tickFmt:v=>(v>0?"+":v<0?"−":"")+fmtDec(Math.abs(v))+"\u202f%" }) : ""}
     <button class="tr-status st-${status.c}" data-a="strengthHow" aria-label="Statut : ${status.n}. Voir comment il est calculé"><span class="tr-dot"></span><span class="tr-st"><b>${status.n}</b><small>${trainingStatus()==="starting" ? "ton habitude s'établit sur 3 semaines" : `${nb(acute, "série")} difficile${acute>=2?"s":""} cette semaine<br>${chronic} d'habitude`}</small></span><span class="chev">${icon("chev")}</span></button>
   </div>`;

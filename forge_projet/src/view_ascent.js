@@ -677,7 +677,7 @@ function ascNextHTML(a){
     t = `Prochaine expédition : ${X.n}`; sub = ok ? "Elle commence à ta prochaine séance" : `Il faut ${a.nextReq} semaines d'affilée (tu en as ${a.series})`;
     r = fmtNum(X.top)+" m"; rs = esc(X.region);
     if(!ok) return `<section class="card asc-card asc-steps asc-next" id="ascSteps" aria-label="Prochaine étape">
-      <div class="an-row"><span class="an-t">${esc(t)}<small>${esc(sub)}</small></span><span class="an-r"><b class="num">${r}</b><small>${rs}</small></span></div>
+      <div class="an-row"><span class="an-t">${esc(t)}<small>${esc(sub)}</small></span><span class="an-r"><b class="num">${uHTML(r)}</b><small>${rs}</small></span></div>
       <button class="an-re" data-a="ascSub" data-k="itin">${ascIc("loop")}<span>En attendant, regravis une montagne<small>Tes séances continuent de faire monter</small></span><span class="chev">${icon("chev")}</span></button></section>`;
   } else {
     const c = ni>=0 ? camps[ni] : [D.top, "Sommet", D.top], m = c[0]-alt, e = ascEta(m, a);
@@ -685,14 +685,14 @@ function ascNextHTML(a){
     sub = ascEtaLine(e); r = ascM(m); rs = "à gravir";
   }
   return `<section class="card asc-card asc-steps asc-next" id="ascSteps" aria-label="Prochaine étape">
-    <div class="an-row"><span class="an-t">${esc(t)}<small>${esc(sub)}</small></span><span class="an-r"><b class="num">${r}</b><small>${rs}</small></span></div>
+    <div class="an-row"><span class="an-t">${esc(t)}<small>${esc(sub)}</small></span><span class="an-r"><b class="num">${uHTML(r)}</b><small>${rs}</small></span></div>
     <div class="exp-track" aria-hidden="true"><div class="exp-push" style="width:${P(100 - ascPos(a.key, ascPushFrom(a.key)))}%"></div><div class="exp-fill" style="width:${P(ascPos(a.key, alt))}%"></div>${camps.map((c, i)=>`<i class="exp-tick${c[0]<=alt+.5 ? " past" : ""}${i===ni ? " next" : ""}" style="left:${P(ascPos(a.key, c[0]))}%"></i>`).join("")}<i class="exp-me" style="left:${P(ascPos(a.key, alt))}%"></i></div>
   </section>`;
 }
 function ascHudHTML(a){
   const D = ASC_DATA[a.key];
   return `<div class="asc-hud"><div class="hud-l"><div class="hud-k">${esc(D.region)} · ${a.re ? `${ascNth(a.re.nth)} ascension` : `${a.idx+1}/13${a.lap ? ` · ${a.lap+1}ᵉ tour` : ""}`}</div><div class="hud-n">${esc(D.n)}</div></div>
-    <div class="hud-r"><b class="asc-alt">${fmtNum(a.wait ? D.top : a.alt)} m</b><span>${a.wait ? "sommet atteint" : `sur ${fmtNum(D.top)} m`}</span></div></div>`;
+    <div class="hud-r"><b class="asc-alt">${fmtNum(a.wait ? D.top : a.alt)} <span class="u">m</span></b><span>${a.wait ? "sommet atteint" : `sur ${fmtNum(D.top)} m`}</span></div></div>`;
 }
 // vitesse d'une séance type maintenant (séries des 6 dernières séances en moyenne, palier et force actuels)
 function ascSpeedNow(a){ return (a.effAvg || ascEffort(15))*a.mul*a.force/(1 + .25*a.lap)*(a.reF || 1)*(a.slF || 1); }
@@ -767,7 +767,7 @@ function ascSecBody(k, a){
       : nextP!=null && gain>.5 ? `Tiens ton objectif <b class="num">${nb(ASC_TH[nextP]-a.series, "semaine")}</b> de plus : environ <b class="num">+${ascM(tot+gain)}</b> par séance au lieu de ${ascM(tot)}.`
       : `Pour monter plus vite : plus de séries difficiles, ou un record de plus par séance.`;
     const L = a.last, near = !a.wait && a.index!=null && a.alt > a.pushFrom - .1*(a.top - a.start), death = a.top>ASC_DEATH;
-    return `<div class="sp-hero"><b class="num">+${ascM(tot)}</b><span>par séance, en ce moment</span></div>
+    return `<div class="sp-hero"><b class="num">${uHTML("+"+ascM(tot))}</b><span>par séance, en ce moment</span></div>
       ${a.comeback ? `<p class="sp-lead">Chaque séance compte double : retour en force.</p>` : ""}
       <div class="card asc-card sp-card"><div class="sp-bar" aria-hidden="true">${pos.map(q=>`<i class="c-${q[3]}" style="flex:${(q[2]/sum).toFixed(3)}"></i>`).join("")}</div>
         ${parts.map(q=>`<div class="sp-r"><i class="c-${q[3]}"></i><span>${q[0]}<small>${esc(q[1])}</small></span><b class="num">${q===parts[0] ? ascM(q[2]) : sm(q[2])}</b></div>`).join("")}</div>
@@ -897,6 +897,8 @@ function ascStepsBar(k){
     if(m!==n){ n = m; ticks.forEach((t, i)=>t.classList.toggle("past", i<m)); } };
 }
 // scène de l'écran : chargée à la demande ; le grimpeur rejoue la montée (ou la descente) depuis la dernière visite
+// altitude affichée : le nombre change, l'unité (.u) reste
+function ascAltSet(el, v){ const t = el.firstChild; if(t && t.nodeType===3 && el.childNodes.length===2) t.data = fmtNum(v)+" "; else el.innerHTML = `${fmtNum(v)} <span class="u">m</span>`; }
 function ascMountScene(a, intro){
   const introToast = ()=>{ if(intro) setTimeout(()=>ascSceneToast("flag", `Ton historique compte déjà : <b>${nb(a.summitCount, "sommet")}</b>, jusqu'${esc(ascAu(a.summits[a.summits.length-1].key))}.`, 4200), 300); };
   ascLoadScenes().then(()=>{
@@ -909,14 +911,14 @@ function ascMountScene(a, intro){
     G.set(from, a.wait && !same);
     const remember = ()=>{ S.ascent = S.ascent || { pauses:[] }; S.ascent.seen = { key:a.key, lap:a.lap, alt:a.alt, wait:a.wait }; save(); };
     if(Math.abs(end-from)<1){ G.set(end, a.wait); remember(); introToast(); return; }
-    const bar = ascStepsBar(a.key); bar(from); if(altEl) altEl.textContent = fmtNum(from)+" m";
+    const bar = ascStepsBar(a.key); bar(from); if(altEl) ascAltSet(altEl, from);
     setTimeout(()=>{
       if(!G.el.isConnected) return;
       const up = end>from, dur = Math.min(2600, 900+Math.abs(end-from)*6);
       sfx(up ? "ascClimb" : "ascDown", dur/1000);
       ascAnimate(G, from, end, dur, c=>ascSceneToast(c.hut ? "hut" : "tent", `<b>${esc(c.name)}</b> atteint · ${fmtNum(c.real)} m`),
-        v=>{ if(altEl) altEl.textContent = fmtNum(v)+" m"; bar(v); })
-        .then(()=>{ G.set(end, a.wait); bar(end); if(altEl) altEl.textContent = fmtNum(end)+" m"; remember();
+        v=>{ if(altEl) ascAltSet(altEl, v); bar(v); })
+        .then(()=>{ G.set(end, a.wait); bar(end); if(altEl) ascAltSet(altEl, end); remember();
           if(!up){ const d = a.descents[a.descents.length-1]; ascSceneToast("tent", `Semaine sans séance : retour ${d && d.camp ? `à <b>${esc(d.camp)}</b>` : "au départ"}. Ta prochaine séance compte <b>double</b> pour remonter.`, 4200); }
           introToast(); });
     }, reducedMotion() ? 0 : 450);
@@ -931,10 +933,10 @@ function ascRewatch(){
   G.set(D.start, false); bar(D.start); sfx("ascClimb", dur/1000);
   const when = c=>{ const d = a.campDates[c.name]; return d ? ` · ${fmtDate(d)}` : ""; };
   ascAnimate(G, D.start, end, dur, c=>ascSceneToast(c.hut ? "hut" : "tent", `<b>${esc(c.name)}</b>${when(c)}`, 1600),
-    v=>{ if(altEl) altEl.textContent = fmtNum(v)+" m"; bar(v); })
+    v=>{ if(altEl) ascAltSet(altEl, v); bar(v); })
     .then(()=>{ G.playing = false; G.stop = false; host.classList.remove("playing");
       if(!G.el.isConnected) return;
-      G.set(end, a.wait); bar(end); if(altEl) altEl.textContent = fmtNum(end)+" m";
+      G.set(end, a.wait); bar(end); if(altEl) ascAltSet(altEl, end);
       const d = ascSummitDate(a);
       ascSceneToast("flag", a.wait ? `<b>Sommet</b>${d ? ` · ${fmtDate(d)}` : ""}` : `<b>Aujourd'hui</b> · ${fmtNum(end)} m`, 2400); });
 }
@@ -1174,7 +1176,7 @@ function ascCelHTML(sessionId){
   else if(e.started) badge = ["peak", "Nouvelle expédition", D.n, `${fmtNum(D.top)} m · ${D.region}`];
   return `<button class="cel-asc" data-a="ascFromCel" aria-label="Mon ascension : ${esc(D.n)}, +${fmtNum(e.gain)} mètres">
     <div class="ca-hd"><span class="ca-t">Mon ascension</span><span class="ca-mt">${esc(D.n)}${icon("chev")}</span></div>
-    <div class="ca-gain"><b class="num" data-count="${Math.round(e.gain)}" data-unit="m" data-thin="1" data-pre="+">+${ascM(e.gain)}</b></div>
+    <div class="ca-gain"><b class="num" data-count="${Math.round(e.gain)}" data-unit="m" data-thin="1" data-pre="+">${uHTML("+"+ascM(e.gain))}</b></div>
     ${e.bonus>.05 || e.back>.05 ? `<div class="ca-chips">${e.back>.05 ? `<div class="ca-bonus back">${ii("repeat")}<span>Retour en force : <b class="num">+${ascM(e.back)}</b></span></div>` : ""}${e.bonus>.05 ? `<div class="ca-bonus">${ii("bolt")}<span>Records et séries battues : <b class="num">+${ascM(e.bonus*e.mul*e.force*e.lapF)}</b></span></div>` : ""}</div>` : ""}
     <div class="ca-trk" id="celTrk" data-from="${x(e.from)}" data-to="${x(e.to)}" aria-hidden="true">
       <div class="ca-line"><i class="ca-fill" style="width:${x(e.from)}%"></i>
@@ -1316,6 +1318,6 @@ function ascSkyRefresh(){
     if(h && ascG && ascG.night!==ascDark()){ ascBubbleHide(); const a = ascent(); const G = ascBuildScene(h, a.key); if(G){ ascG = G; G.set(a.alt, a.wait); } }
   }catch(e){}
 }
-document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) ascSkyRefresh(); });
+onResume(ascSkyRefresh);
 setInterval(()=>{ if(!document.hidden) ascSkyRefresh(); }, 5*60*1000);
 document.addEventListener("keydown", e=>{ if(e.key==="Escape" && qs("#ascSummit")) ACT.ascSummitClose(); });

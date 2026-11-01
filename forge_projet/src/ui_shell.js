@@ -315,13 +315,17 @@ function animateCounts(root){
   const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   els.forEach(el=>{
     const target = parseFloat(el.dataset.count), from = parseFloat(el.dataset.from)||0, dec = +(el.dataset.dec||0), unit = el.dataset.unit, pre = el.dataset.pre||"";
-    const fmt = v => pre + (dec ? v.toLocaleString("fr-FR",{minimumFractionDigits:dec,maximumFractionDigits:dec}) : fmtNum(v)) + (unit?(el.dataset.thin?"\u202f":" ")+unit:"");
-    if(reduce || !(target>0) || target===from){ el.textContent = fmt(target||0); return; }
+    const fmt = v => pre + (dec ? v.toLocaleString("fr-FR",{minimumFractionDigits:dec,maximumFractionDigits:dec}) : fmtNum(v)) + (unit?(el.dataset.thin?"\u202f":" "):"");
+    // l'unité, plus petite (.u), est posée une fois ; seul le nombre change à chaque image
+    let num = el.firstChild;
+    if(unit){ el.textContent = ""; num = document.createTextNode(""); const u = document.createElement("span"); u.className = "u"; u.textContent = unit; el.append(num, u); }
+    else if(!num || num.nodeType!==3 || el.childNodes.length!==1){ el.textContent = ""; num = el.appendChild(document.createTextNode("")); }
+    if(reduce || !(target>0) || target===from){ num.data = fmt(target||0); return; }
     const t0 = performance.now(), dur = 800, run = el._count = {};
     (function step(t){
       if(el._count!==run) return; // relancé entre-temps
       const p = Math.min(1,(t-t0)/dur), e = 1-Math.pow(1-p,3);
-      el.textContent = fmt(from+(target-from)*e);
+      num.data = fmt(from+(target-from)*e);
       if(p<1) requestAnimationFrame(step);
     })(t0);
   });
@@ -804,9 +808,40 @@ function navSlideLive(top, under, dir, before){
 function navGo(el, render, dir){
   if(navRun) navRun();
   if(!dir || reducedMotion() || !el.animate || !el.classList.contains("active")){ render(); return; }
+  if(navVT(el, render, dir)) return;
   const snap = navSnap(el);
   render();
   navSlide(snap, el, dir, false);
+}
+// Transitions partagées (View Transitions, Safari 18 et Chrome) : un élément marqué data-vt="nom" dans
+// l'écran de départ et dans celui d'arrivée passe de l'un à l'autre (place, taille) pendant le glissement,
+// comme la carte « Ta force » qui devient l'écran Ta force. L'écran glisse lui-même par la même API
+// (CSS : ::view-transition-*(vt-screen)). Sans élément partagé visible, ou sans l'API : glissement habituel.
+function navVT(el, render, dir){
+  if(typeof document.startViewTransition!=="function") return false;
+  const vis = x=>{ const r = x.getBoundingClientRect(); return r.width>0 && r.bottom>0 && r.top<innerHeight; };
+  const pick = ()=>{ const m = new Map(); qsa("[data-vt]", el).forEach(x=>{ if(!m.has(x.dataset.vt) && vis(x)) m.set(x.dataset.vt, x); }); return m; };
+  const olds = pick(); if(!olds.size) return false;
+  const root = document.documentElement, named = [];
+  const name = (x, n)=>{ x.style.viewTransitionName = n; named.push(x); };
+  const clear = ()=>{ named.splice(0).forEach(x=>{ x.style.viewTransitionName = ""; x.style.animation = ""; }); };
+  // la barre d'onglets reste au-dessus de l'écran qui glisse (sinon dessinée dessous, avec la page)
+  const bar = qs(".tabbar");
+  name(el, "vt-screen"); olds.forEach((x, k)=>name(x, "vt-"+k)); if(bar) name(bar, "vt-bar");
+  root.classList.add("vt-nav", "vt-"+dir);
+  let t;
+  try{
+    t = document.startViewTransition(()=>{
+      clear(); render();
+      name(el, "vt-screen"); if(bar) name(bar, "vt-bar");
+      pick().forEach((x, k)=>{ if(olds.has(k)){ name(x, "vt-"+k); x.style.animation = "none"; } });
+    });
+  }catch(e){ clear(); root.classList.remove("vt-nav", "vt-"+dir); return false; }
+  const end = ()=>{ if(navRun===skip) navRun = null; clear(); root.classList.remove("vt-nav", "vt-push", "vt-pop"); };
+  const skip = ()=>{ try{ t.skipTransition(); }catch(e){} end(); };
+  navRun = skip;
+  t.finished.then(end, end);
+  return true;
 }
 // retour en glissant depuis le bord gauche. Chaque fournisseur : host() → élément qui glisse (ou null),
 // go() → affiche l'écran précédent sans animation et rend l'élément qui le porte, back() → annule

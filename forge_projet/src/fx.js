@@ -160,6 +160,6 @@ async function keepAwake(on){
   }catch(e){ wakeLock = null; }
 }
 function syncWakeLock(){ keepAwake(!!(typeof S!=="undefined" && S.draft && S.draft.startedAt)); }
-document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) syncWakeLock(); });
+onResume(syncWakeLock);
 // la demande exige souvent un geste : on la retente au toucher pendant une séance
 document.addEventListener("pointerup", ()=>{ if(typeof S!=="undefined" && S.draft && S.draft.startedAt && (!wakeLock || wakeLock.released)) keepAwake(true); }, { passive:true });

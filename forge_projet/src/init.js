@@ -1,5 +1,5 @@
 // ================= INITIALISATION =================
-const APP_VERSION = "2.13.3";
+const APP_VERSION = "2.14.0";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 // séance en sombre (réglage, actif par défaut) : pendant la séance, l'écran passe en sombre quel que
@@ -89,9 +89,41 @@ function syncVGap(){
 }
 window.addEventListener("resize", ()=>requestAnimationFrame(syncVGap));
 window.addEventListener("orientationchange", ()=>setTimeout(syncVGap, 300));
-document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) setTimeout(syncVGap, 200); });
+onResume(syncVGap);
 function hexRGB(h){ const m = /^#([0-9a-f]{6})$/i.exec(h||""); return m ? [0,2,4].map(i=>parseInt(m[1].slice(i,i+2),16)) : null; }
 if(window.matchMedia) try{ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ()=>syncStatusBar()); }catch(e){}
+
+// ---------- mises à jour ----------
+// Une nouvelle version est téléchargée en arrière-plan (sw.js). Quand son service worker prend la main,
+// un bandeau le dit : « Mettre à jour » recharge l'app au même endroit, « Plus tard » attend le prochain
+// lancement (qui l'ouvre d'office). Jamais pendant une séance. L'app installée reste parfois en mémoire
+// des jours : au retour, elle vérifie s'il y a du nouveau (au plus toutes les 30 min).
+let updPending = false, updUpdating = false;
+function swWatch(reg){
+  const had = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange", ()=>{ if(had){ updPending = true; updShow(); } });
+  let last = Date.now();
+  document.addEventListener("visibilitychange", ()=>{
+    if(document.hidden || Date.now()-last<30*60e3) return;
+    last = Date.now(); reg.update().catch(()=>{});
+  });
+}
+function updShow(){
+  if(!updPending || qs("#updbar")) return;
+  if(S.draft && S.draft.startedAt){ setTimeout(updShow, 30e3); return; }   // après la séance
+  const b = document.createElement("div"); b.id = "updbar"; b.setAttribute("role", "status");
+  b.innerHTML = `<span class="ub-t">Nouvelle version</span><button class="ub-later" data-a="updLater">Plus tard</button><button class="ub-go" data-a="appUpdate">Mettre à jour</button>`;
+  document.body.appendChild(b);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>b.classList.add("show")));
+}
+Object.assign(ACT, {
+  appUpdate(){
+    updUpdating = true; persistNow(); saveResume();   // on revient sur le même écran
+    document.documentElement.classList.add("reloading");
+    setTimeout(()=>location.reload(), reducedMotion() ? 0 : 180);
+  },
+  updLater(){ updPending = false; const b = qs("#updbar"); if(!b) return; b.classList.remove("show"); setTimeout(()=>b.remove(), 400); }
+});
 
 // ---------- lancement ----------
 // Pas d'écran de lancement : l'app s'affiche directement. Premier lancement : l'accueil s'ouvre, sauf si la
@@ -144,17 +176,21 @@ function init(){
   // préchauffage au calme (v4.0) : les pictogrammes de tous les exercices sont calculés par petits
   // lots pendant les temps morts, pour que le choix d'exercices s'ouvre sans à-coup ; le test
   // WebGL des trophées 3D (≈ 40 ms la première fois) est fait au même moment
-  const idle = window.requestIdleCallback || (f=>setTimeout(()=>f({ timeRemaining:()=>8 }), 200));
+  // Safari n'a pas requestIdleCallback : petites tranches de 8 ms espacées de 200 ms
+  const idle = window.requestIdleCallback || (f=>setTimeout(()=>{ const end = performance.now()+8; f({ timeRemaining:()=>Math.max(0, end-performance.now()) }); }, 200));
   const warm = EXOS.slice(); let warmedGL = false;
-  (function step(dl){
-    while(warm.length && (!dl || dl.timeRemaining()>3)){ const d = warm.shift(); try{ exoIcon(d); exoIcon(d, "sm"); }catch(e){} }
-    if(!warmedGL && (!dl || dl.timeRemaining()>12)){ warmedGL = true; try{ if(typeof t3dWebGL==="function") t3dWebGL(); }catch(e){} }
-    if(warm.length || !warmedGL) idle(step, { timeout:4000 });
-  })();
+  // (jamais pendant le lancement : le premier passage attend lui aussi un temps mort)
+  const step = dl=>{
+    let n = 0;   // au moins un pictogramme par passage, même quand le navigateur n'a jamais de temps libre
+    while(warm.length && (!n++ || dl.timeRemaining()>3)){ const d = warm.shift(); try{ exoIcon(d); exoIcon(d, "sm"); }catch(e){} }
+    if(!warmedGL && !warm.length){ warmedGL = true; try{ if(typeof t3dWebGL==="function") t3dWebGL(); }catch(e){} }
+    if(warm.length || !warmedGL) idle(step, { timeout:4000 });   // le test WebGL : une fois les pictogrammes faits
+  };
+  idle(step, { timeout:4000 });
   // manifeste d'installation : seulement servi par un vrai serveur (en fichier local, WebKit refuse de le lire)
   if(/^https?:$/.test(location.protocol) && !document.querySelector('link[rel="manifest"]')){ const l = document.createElement("link"); l.rel = "manifest"; l.href = "manifest.webmanifest"; document.head.appendChild(l); }
   // hors ligne : service worker (uniquement servi en https, pas en fichier local ni en aperçu)
-  try{ if("serviceWorker" in navigator && (location.protocol==="https:" || location.hostname==="localhost") && !/claude\.ai|claudeusercontent/.test(location.hostname)) navigator.serviceWorker.register("sw.js").catch(()=>{}); }catch(e){}
+  try{ if("serviceWorker" in navigator && (location.protocol==="https:" || location.hostname==="localhost") && !/claude\.ai|claudeusercontent/.test(location.hostname)) navigator.serviceWorker.register("sw.js").then(swWatch, ()=>{}); }catch(e){}
   (window.requestIdleCallback || (f=>setTimeout(f, 4000)))(()=>ascPrefetch(), { timeout:8000 });
   // la réverbération des sons, calculée au calme (le premier toucher n'a plus à le faire)
   (window.requestIdleCallback || (f=>setTimeout(f, 3000)))(()=>{ if(soundOn()) reverbData(48000); }, { timeout:6000 });
@@ -162,6 +198,9 @@ function init(){
   setTimeout(()=>{ try{ if(!LOAD_SKIPPED && !(S.draft && S.draft.startedAt)) ascDescentNotice(); }catch(e){ appError("ascent", e); } }, 2100);
   if(LOAD_SKIPPED) setTimeout(()=>toast(`${LOAD_SKIPPED} séance${LOAD_SKIPPED>1?"s":""} illisible${LOAD_SKIPPED>1?"s":""} ignorée${LOAD_SKIPPED>1?"s":""}. Le reste de l'historique est intact.`), 1800);
   cleanupStorage();
+  if(idbBootFailed) setTimeout(()=>toast("Données momentanément illisibles. Rouvre l'app pour les retrouver.", "warn"), 600);
+  // copie du jour (7 jours gardés), au calme
+  (window.requestIdleCallback || (f=>setTimeout(f, 2500)))(()=>snapDaily().catch(()=>{}), { timeout:6000 });
   // demander un stockage persistant (le navigateur ne l'effacera pas pour libérer de la place)
   try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(p=>{ if(!p) navigator.storage.persist(); }).catch(()=>{}); }catch(e){}
 
@@ -190,7 +229,8 @@ function init(){
   }
 }
 
-init();
+// données dans IndexedDB (trop grandes pour localStorage) : lues d'abord, quelques ms
+if(bootFromIDB) idbBoot().then(init); else init();
 
 // ---------- mise en arrière-plan et retour dans l'app ----------
 // iOS garde l'app en mémoire : on la retrouve telle qu'on l'a laissée, parfois le lendemain.
@@ -218,7 +258,7 @@ function applyTextSize(){
   }catch(e){}
 }
 applyTextSize();
-document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) applyTextSize(); });
+onResume(applyTextSize);
 let appDay = todayISO(), appAway = false;
 function appSuspend(){
   document.dispatchEvent(new Event("ascen:suspend"));
@@ -231,6 +271,7 @@ function appResume(){
   const day = todayISO();
   if(day===appDay) return;
   appDay = day;
+  setTimeout(()=>snapDaily().catch(()=>{}), 1500);
   const live = S.draft && S.draft.startedAt;
   if(!live) applyPlannedSession();
   // l'onglet affiché se redessine (les autres le seront en y allant : voir switchTab)
@@ -239,7 +280,7 @@ function appResume(){
 let appUnloading = false;
 document.addEventListener("visibilitychange", ()=>{ if(document.hidden){ if(!appUnloading) saveResume(); appSuspend(); } else appResume(); });
 // vrai rechargement ou fermeture (pas une mise en arrière-plan) : on repartira de l'accueil
-window.addEventListener("pagehide", e=>{ if(!e.persisted){ appUnloading = true; try{ localStorage.removeItem(RESUME_KEY); }catch(err){} } appSuspend(); });
+window.addEventListener("pagehide", e=>{ if(!e.persisted){ appUnloading = true; if(!updUpdating) try{ localStorage.removeItem(RESUME_KEY); }catch(err){} } appSuspend(); });
 window.addEventListener("blur", appSuspend);
 window.addEventListener("pageshow", e=>{ if(e.persisted){ appAway = true; appResume(); } });
 window.addEventListener("focus", appResume);
