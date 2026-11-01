@@ -113,7 +113,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await pr.evaluate(() => { localStorage.setItem('forge.v1.illisible.1', '{'); ACT.confirmReset(); }); await pr.waitForTimeout(400);
   await Promise.all([pr.waitForNavigation({ timeout: 8000 }), pr.click('[data-a="confirmYes"]')]);
   await pr.waitForSelector('#obBody', { timeout: 8000 }).catch(() => {}); await pr.waitForTimeout(300);
-  const reset = await pr.evaluate(() => ({ n: S.sessions.length, keys: Object.keys(localStorage).filter(k => k.startsWith('forge.v1.')).length, onb: !!document.querySelector('#obBody') }));
+  const reset = await pr.evaluate(() => ({ n: S.sessions.length, keys: Object.keys(localStorage).filter(k => k.startsWith('forge.v1.') && k !== 'forge.v1.at').length, /* .at : date d'écriture de l'état neuf, enregistré peu après le redémarrage */ onb: !!document.querySelector('#obBody') }));
   log('Reset:', JSON.stringify(reset)); if (reset.n !== 0 || reset.keys || !reset.onb) fail('réinitialisation complète');
   await pr.close();
   await browser.close();
