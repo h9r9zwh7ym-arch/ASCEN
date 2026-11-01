@@ -1,5 +1,5 @@
 // ================= INITIALISATION =================
-const APP_VERSION = "2.14.0";
+const APP_VERSION = "2.14.1";
 const COPYRIGHT = `© ${new Date().getFullYear()} Yannick Wahler. Tous droits réservés.`;
 
 // séance en sombre (réglage, actif par défaut) : pendant la séance, l'écran passe en sombre quel que
@@ -19,9 +19,12 @@ function applyTheme(soft){
   // garde la couleur lue au départ ; on la lui fait relire une fois le fondu fini
   if(flip) setTimeout(()=>syncStatusBar(undefined, true), 260);
 }
-// Barre d'état (heure, batterie) en « black-translucent » : l'app passe dessous, comme une app native.
-// Le bandeau #sbar n'est plus qu'un voile (CSS) qui garde l'heure blanche lisible sur les écrans clairs.
-// Le fond de page reste écrit en style direct et theme-color mis à jour (iOS plus anciens, Android).
+// Barre d'état (heure, batterie) : style « default » depuis la 2.14.1, comme Zeste. La barre est pleine, de la
+// couleur de la page (theme-color), et l'app commence dessous. Avec « black-translucent » (2.7 à 2.14),
+// l'app passait sous l'heure, mais iOS 26 arrêtait la page au-dessus du trait d'accueil : un bandeau vide
+// sous la barre d'onglets, que les rattrapages (syncVGap, filet CSS) n'effaçaient pas partout. iOS fige ce
+// style à l'ajout de l'icône : une icône ajoutée entre la 2.7 et la 2.14 reste « fondue » (marge haute non
+// nulle) et garde le voile #sbar et les rattrapages ci-dessous. Le fond de page reste écrit en style direct.
 let statusDim = false;
 // regroupé sur l'image suivante : lire le style calculé en plein script (fin de séance, ouverture d'une
 // feuille) forçait un recalcul complet ; plusieurs appels dans la même image n'en font qu'un

@@ -407,9 +407,8 @@ function openInstall(){
     </div>`);
 }
 
-// Icône ajoutée avant la barre d'état fondue : iOS fige le style de la barre d'état au moment de l'ajout
-// à l'écran d'accueil. L'ancienne icône s'ouvre donc avec une barre pleine (marge haute nulle, alors
-// qu'une barre fondue laisse l'app passer dessous). Seul remède : réinstaller l'icône, en gardant ses données.
+// Barre d'état pleine (marge haute nulle) : le cas normal depuis la 2.14.1 (style « default », voir init.js),
+// et celui des icônes ajoutées avant la 2.7. iOS fige le style au moment de l'ajout à l'écran d'accueil.
 let legacySB = null;
 function legacyStatusBar(){
   if(legacySB!==null) return legacySB;

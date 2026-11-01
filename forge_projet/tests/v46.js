@@ -32,9 +32,10 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const s1 = await sb();
   await page.evaluate(() => { document.querySelector('#v-today').scrollTop = 0; }); await wait(300);
   log('Status strip:', JSON.stringify(s0), '→ scrolled', s1.bg);
-  // 2.7.0 : barre d'état fondue (black-translucent) : le bandeau n'est plus qu'un voile, sans couleur pleine
+  // 2.14.1 : barre d'état « default » (pleine, couleur de la page), comme Zeste : avec « black-translucent »,
+  // iOS 26 laissait un bandeau vide sous la barre d'onglets. Le bandeau #sbar reste un voile sans couleur pleine
   const st = await page.evaluate(() => document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').content);
-  if (st !== 'black-translucent' || s0.bg !== '' || s0.top !== 0 || s0.w !== 390 || s0.pos !== 'fixed' || s0.body !== 'rgb(242, 242, 247)' || s0.meta !== '#f2f2f7' || s0.tipTop !== '-400px') fail('barre d\'état fondue (voile, fond en style direct)');
+  if (st !== 'default' || s0.bg !== '' || s0.top !== 0 || s0.w !== 390 || s0.pos !== 'fixed' || s0.body !== 'rgb(242, 242, 247)' || s0.meta !== '#f2f2f7' || s0.tipTop !== '-400px') fail('barre d\'état standard (voile, fond en style direct)');
 
   // 2. Ma séance ↔ séance de l'app (liens de la carte principale) : seul le bloc de la séance change, sans cascade de tout l'écran
   // au démarrage, les trophées sont vérifiés à part (~1,6 s) et peuvent redessiner l'écran : on passe ce moment
