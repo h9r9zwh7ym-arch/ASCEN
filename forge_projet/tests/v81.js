@@ -6,7 +6,12 @@ const OUT_ROOT = process.env.OUT_DIR || require('path').join(__dirname, 'out'); 
 // chiffres à chasse fixe, file des tâches au retour dans l'app.
 const __pw = require('playwright'); const path = require('path'); const fs = require('fs');
 const OUT = path.join(OUT_ROOT, 'v81'); fs.mkdirSync(OUT, { recursive: true });
-const APP = 'file://' + path.resolve(process.argv[2]);
+// servi en http (127.0.0.1 : pas de service worker) : en file://, Chromium relit parfois un localStorage ancien
+// d'un onglet à l'autre, ce qui fausse les relances testées ici
+const PORT = 8790 + Math.floor(Math.random() * 200);
+const srv = require('child_process').spawn('python3', ['-m', 'http.server', String(PORT), '--bind', '127.0.0.1', '--directory', path.dirname(path.resolve(process.argv[2]))], { stdio: 'ignore' });
+process.on('exit', () => srv.kill());
+const APP = `http://127.0.0.1:${PORT}/${path.basename(process.argv[2])}`;
 (async () => {
   const wk = process.env.ENGINE === 'webkit';
   const browser = await (wk ? __pw.webkit.launch() : __pw.chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined }));
@@ -16,8 +21,10 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await ctx.addInitScript(() => { if (localStorage.getItem('__seeded')) return; localStorage.setItem('__seeded', '1');
     localStorage.setItem('forge.v1', JSON.stringify({ meta: { onboarded: true }, profile: { name: 'T' }, settings: {},
       equipment: { owned: { dumbbells: true, bench: true }, weights: { dumbbells: [6, 8, 10, 12, 14, 16, 18, 20] } }, goals: { level: 'intermediaire', daysPerWeek: 3 } })); });
-  const page = await ctx.newPage(); page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
-  const boot = async () => { await page.waitForTimeout(900); await page.evaluate(() => { if (document.querySelector('.ob-body')) ACT.obSkip(); try { closeSheet(); } catch (e) {} }); await page.waitForTimeout(300); };
+  for (let i = 0; i < 40; i++) { try { await new Promise((ok, ko) => require('http').get(APP, r => { r.resume(); ok(); }).on('error', ko)); break; } catch (e) { await new Promise(r => setTimeout(r, 150)); } }
+  let page = await ctx.newPage(); page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
+  const reopen = async () => { await page.waitForTimeout(300); await page.reload(); await boot(); };
+  const boot = async () => { await page.waitForFunction(() => !!document.querySelector('.tabbar .tabbtn'), null, { timeout: 8000 }); await page.waitForTimeout(900); await page.evaluate(() => { if (document.querySelector('.ob-body')) ACT.obSkip(); try { closeSheet(); } catch (e) {} }); await page.waitForTimeout(300); };
   await page.goto(APP); await boot();
   const N = await page.evaluate(() => { const t = todayISO(), ids = ['dc_haltere', 'pompes', 'squat_gobelet', 'rowing_uni_haltere'];
     for (let k = 60; k >= 2; k -= 2) { const st = new Date(addDaysISO(t, -k) + 'T18:00:00').getTime();
@@ -68,13 +75,13 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const big = await page.evaluate(() => ({ ls: localStorage.getItem(STORAGE_KEY), mark: !!localStorage.getItem(BIG_KEY), toast: document.querySelector('#toast').textContent }));
   if (big.ls !== null || !big.mark) fail('bascule vers IndexedDB : ' + JSON.stringify({ ls: big.ls && big.ls.length, mark: big.mark }));
   if (/Stockage plein/.test(big.toast)) fail('message « Stockage plein » encore affiché');
-  await page.reload(); await boot();
+  await reopen();
   const b2 = await page.evaluate(() => ({ n: S.sessions.length, note: S.sessions[S.sessions.length - 1].note, boot: bootFromIDB, failed: persistFailed, row: storageRowText() }));
   if (b2.n !== N || b2.note !== 'gros' || !b2.boot || (b2.failed && b2.row !== 'Stockage étendu')) fail('relance depuis IndexedDB : ' + JSON.stringify(b2));
   // de la place à nouveau (ici : setItem normal) → retour à localStorage (parfois dès un recalcul au lancement)
   await page.evaluate(() => { S.sessions[S.sessions.length - 1].note = 'retour'; sessionTouched(); save(); persistNow(true); });
   await page.waitForTimeout(500);
-  await page.reload(); await boot();
+  await reopen();
   const b3 = await page.evaluate(() => ({ n: S.sessions.length, note: S.sessions[S.sessions.length - 1].note, boot: bootFromIDB, mark: localStorage.getItem(BIG_KEY) }));
   if (b3.n !== N || b3.note !== 'retour' || b3.boot || b3.mark) fail('retour à localStorage : ' + JSON.stringify(b3));
 
@@ -87,8 +94,8 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const live = await page.evaluate(() => { S.draft = { startedAt: new Date().toISOString(), exos: [] }; updPending = true; updShow(); const on = !!document.querySelector('#updbar'); S.draft = null; return on; });
   if (live) fail('bandeau affiché pendant une séance');
   await page.evaluate(() => { switchTab('progress'); updShow(); }); await page.waitForTimeout(400);
-  await Promise.all([page.waitForNavigation({ timeout: 8000 }), page.click('#updbar [data-a="appUpdate"]')]);
-  await boot();
+  await page.evaluate(() => { window.__old = 1; }); await page.click('#updbar [data-a="appUpdate"]');
+  await page.waitForFunction(() => !window.__old && !!document.querySelector('.tabbar .tabbtn'), null, { timeout: 8000 }); await boot();
   const back = await page.evaluate(() => currentTab);
   if (back !== 'progress') fail('après la mise à jour, écran rouvert : ' + back);
 
@@ -107,7 +114,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     await new Promise(r => setTimeout(r, 600)); return { sync, n: seen.length, first: seen[0] - t0 }; });
   if (rq.sync !== 0 || rq.n !== 2 || !(rq.first > 8)) fail('file au retour : ' + JSON.stringify(rq));
 
-  await browser.close();
+  await browser.close(); srv.kill();
   if (errors.length) { errors.forEach(e => log(e)); log(`ERRORS: ${errors.length}`); process.exit(1); }
   log('=== NO ERRORS ===');
 })();

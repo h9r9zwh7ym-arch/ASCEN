@@ -113,7 +113,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.evaluate(() => ACT.histNav({ d: 1 })); await wait(600);
 
   // 7. Rewind : des touchers rapides ne superposent jamais deux diapos
-  const rwq = await page.evaluate(async () => { openRewind('month', todayISO().slice(0, 7)); const sl = ms => new Promise(r => setTimeout(r, ms)); const counts = [];
+  const rwq = await page.evaluate(async () => { openRewind('month', S.sessions[S.sessions.length - 1].date.slice(0, 7)); const sl = ms => new Promise(r => setTimeout(r, ms)); const counts = [];
     for (const i of [1, 2, 3, 2, 3, 4, 5]) { rwGo(i); await sl(40); counts.push(document.querySelectorAll('#rwStage .rw-slide:not(.out)').length); }
     await sl(600); const left = document.querySelectorAll('#rwStage .rw-slide').length; rwGo(rw.i); await sl(50); const same = document.querySelectorAll('#rwStage .rw-slide').length;
     return { counts, left, same }; });

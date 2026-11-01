@@ -33,7 +33,7 @@ function defaultState(){
 
 let LOAD_SKIPPED = 0;   // séances illisibles écartées au chargement (signalées une fois, voir init.js)
 const BIG_KEY = STORAGE_KEY+".idb";   // données dans IndexedDB (localStorage plein) : voir idbBoot
-let bootFromIDB = false, idbBootFailed = false;
+let bootFromIDB = false, idbBootFailed = false, idbBootPending = false;   // pendant la lecture : aucune écriture
 let S = load();
 
 // ---------- stockage compact (v2.5) ----------
@@ -158,7 +158,7 @@ function idbMirror(str, savedAt, now){
   // une seule écriture à la fois ; la dernière version gagne. Pendant une séance on enregistre
   // souvent : la copie compressée n'est refaite qu'au plus toutes les 3 s (et tout de suite
   // quand l'app passe en arrière-plan), le stockage principal, lui, est écrit à chaque fois
-  if(persistBlocked) return;
+  if(persistBlocked || idbBootPending) return;
   idbPending = { str, savedAt };
   const wait = idbLast + 3000 - Date.now();
   if(!now && wait>0){ if(!idbTimer) idbTimer = setTimeout(()=>{ idbTimer = null; if(idbPending) idbMirror(idbPending.str, idbPending.savedAt, true); }, wait); return; }
@@ -255,14 +255,14 @@ function idbBoot(){
   }).catch(e=>{
     // base momentanément illisible : surtout ne rien écraser (relancer l'app suffit en général)
     persistBlocked = true; idbBootFailed = true;
-  });
+  }).finally(()=>{ idbBootPending = false; });
 }
 function load(){
   let raw = null;
   try{
     raw = localStorage.getItem(STORAGE_KEY);
     const big = +localStorage.getItem(BIG_KEY);
-    if(big && (!raw || big >= +localStorage.getItem(STORAGE_KEY+".at"))){ bootFromIDB = true; return defaultState(); }
+    if(big && (!raw || big >= +localStorage.getItem(STORAGE_KEY+".at"))){ bootFromIDB = idbBootPending = true; return defaultState(); }
     if(!raw) return defaultState();
     const st = normalizeState(JSON.parse(raw));
     loadedFromLS = true;
@@ -462,6 +462,7 @@ function persistNow(urgent){
   const derived = persistDerived;
   clearTimeout(persistTimer); persistTimer = null; persistDerived = false;
   if(persistBlocked) return;
+  if(idbBootPending){ persistTimer = setTimeout(persistNow, 200); return; }   // données encore en lecture
   // seules des valeurs recalculées partent : si un autre onglet a enregistré entre-temps (son message a pu
   // ne pas encore arriver), on prend sa version au lieu de l'écraser, puis on recalcule dessus
   if(derived && adoptNewerStored()) return;

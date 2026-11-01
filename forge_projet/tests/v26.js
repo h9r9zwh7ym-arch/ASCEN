@@ -53,7 +53,7 @@ const OUT = path.join(OUT_ROOT, 'v26'); fs.mkdirSync(OUT, { recursive: true });
   await page.click('.sheet [data-a="openStorage"]'); await wait(700); await shot('01_storage');
   const sto = await page.$eval('#stoBody', e => e.textContent.replace(/\s+/g, ' ').slice(0, 200)); log('Storage sheet:', sto);
   // 2.1.2 : plus de phrase « place pour N ans d'entraînement » ; l'espace utilisé et les lignes en valeurs suffisent
-  if (!/(Ko|Mo) utilisés/.test(sto) || /ans d'entraînement/.test(sto)) fail('espace de stockage en valeurs');
+  if (!/\d+ (Ko|Mo)/.test(sto) || /~5 Mo/.test(sto) || /ans d'entraînement/.test(sto)) fail('espace de stockage en valeurs');
   const idbSize = await page.evaluate(async () => { const r = await idbGet(); return { compressed: typeof r.data !== 'string', bytes: typeof r.data === 'string' ? r.data.length * 2 : (r.data.byteLength ?? r.data.size), ls: (localStorage.getItem('forge.v1') || '').length * 2 }; });
   log('Backup copy:', JSON.stringify(idbSize)); if (typeof CompressionStream !== 'undefined' && false) {}
   if (idbSize.bytes > idbSize.ls * 0.5) fail('copie de secours non compressée');
@@ -90,6 +90,8 @@ const OUT = path.join(OUT_ROOT, 'v26'); fs.mkdirSync(OUT, { recursive: true });
 
   // ---- 5. Rewind animé
   await page.evaluate(() => { S.medals = {}; checkMedals(true); switchTab('history'); }); await wait(600);
+  // historique figé (jusqu'à septembre 2026) : on remonte jusqu'au dernier mois qui a des séances
+  for (let k = 0; k < 6 && !(await page.$('[data-a="openRecap"]')); k++) { await page.evaluate(() => ACT.histNav({ d: -1 })); await wait(500); }
   await page.click('[data-a="openRecap"]'); await wait(900); await shot('05_rewind_sheet');
   await page.click('.rw-cover'); await wait(700); await shot('06_rw_intro_rewinding');
   const intro = await page.evaluate(() => ({ open: !!document.querySelector('#rewind.show'), slides: rw.slides.length, date: document.querySelector('#rwDate').textContent }));

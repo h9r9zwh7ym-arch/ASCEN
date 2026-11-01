@@ -37,7 +37,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     return { h: Math.round(r.height), up: __hit(b, -19), down: __hit(b, 19), span: !!b.querySelector('span'), color: __cr(getComputedStyle(all).color, getComputedStyle(all.parentElement).backgroundColor === 'rgba(0, 0, 0, 0)' ? '#fff' : getComputedStyle(document.querySelector('.chart-card')).backgroundColor) }; });
   log('Segmented:', JSON.stringify(seg)); if (!seg.up || !seg.down || !seg.span) fail('contrôle segmenté : cible de 44 pt');
   await page.evaluate(() => switchTab('history')); await wait(600);
-  const cal = await page.evaluate(() => { const b = document.querySelector('.hc-on'); return { up: __hit(b, -21), side: __hit(b, 0, 21) }; });
+  const cal = await page.evaluate(() => { if (!document.querySelector('.hc-on')) ACT.histNav({ d: -1 }); /* début de mois sans séance */ const b = document.querySelector('.hc-on'); return { up: __hit(b, -21), side: __hit(b, 0, 21) }; });
   log('Calendar day:', JSON.stringify(cal)); if (!cal.up || !cal.side) fail('jour du calendrier : cible de 44 pt');
   await page.evaluate(() => openGoals()); await wait(600);
   const step = await page.evaluate(() => { const b = document.querySelector('#overlay .mini-step button'); return { up: __hit(b, -21), down: __hit(b, 21) }; });
