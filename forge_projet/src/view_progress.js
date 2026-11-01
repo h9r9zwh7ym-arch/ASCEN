@@ -361,7 +361,7 @@ Object.assign(ACT, {
     navGo(el, ()=>{
       const first = progSet(d.v), pane = el.querySelector(".seg-pane");
       if(pane && first){ pane.classList.add("pane-in"); setTimeout(()=>pane.classList.remove("pane-in"), 2400); }
-    }, dir);
+    }, dir, d.v==="force" || from==="force");
   },
   // depuis l'accueil (alerte de force) : l'onglet Progrès, directement sur l'écran voulu
   progressGo(d){ if(currentTab!=="progress") switchTab("progress"); ACT.progressTab({ v:d.v, instant:true }); },

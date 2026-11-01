@@ -27,10 +27,11 @@ const APP = 'file://' + path.resolve(process.argv[2]);
 
   // 2. deux onglets : B enregistre pendant que A n'a en attente que des trophées recalculés
   const B = await open();
-  await A.evaluate(() => { persistNow(); S.medals.sessions = { t: 0, d: {} }; checkMedals(true); });
-  const pend = await A.evaluate(() => ({ t: !!persistTimer, derived: persistDerived }));
+  const pend = await A.evaluate(() => { persistNow(); S.medals.sessions = { t: 0, d: {} }; checkMedals(true); return { t: !!persistTimer, derived: persistDerived }; });
   await B.evaluate(() => { S.sessions.push({ id: 'b', date: '2026-09-22', exos: [{ exoId: 'pompes', sets: [{ reps: 12, done: true }] }] }); save(); persistNow(); });
-  await A.waitForFunction(() => S.sessions.length === 2, null, { timeout: 5000 }).catch(() => {});
+  // (sous forte charge, l'enregistrement de A peut partir avant celui de B : A reprend alors B, puis les
+  // trophées recalculés par B au calme ; on attend l'état final)
+  await A.waitForFunction(() => S.sessions.length === 2 && medalTier(MEDAL_MAP.sessions) >= 1, null, { timeout: 8000 }).catch(() => {});
   const a2 = await A.evaluate(() => ({ n: S.sessions.length, medal: medalTier(MEDAL_MAP.sessions) }));
   log('Attente de A :', JSON.stringify(pend), '→ A voit', JSON.stringify(a2));
   if (!pend.t || !pend.derived || a2.n !== 2 || a2.medal < 1) fail('A reprend la séance de B et recalcule ses trophées');

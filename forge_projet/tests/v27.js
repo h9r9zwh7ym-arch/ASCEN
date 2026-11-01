@@ -60,8 +60,11 @@ const OUT = path.join(OUT_ROOT, 'v27'); fs.mkdirSync(OUT, { recursive: true });
   // rendu du diamant (moteur) : couronne facettée et scintillements
   const dia = await page.evaluate(() => { const c = T3D.ctx; t3dSetMedal(c, 'prs', 4); const r = { tier: c.tier, sparks: c.sparks.length, flat: c.medal.userData.mats.frame.flatShading || c.medal.userData.mats.body.flatShading }; t3dSetMedal(c, 'prs', 3); return r; });
   log('Diamond render:', JSON.stringify(dia)); if (dia.tier !== 4 || dia.sparks < 4 || !dia.flat) fail('palier diamant');
-  await page.click('[data-a="t3dReplay"]'); await wait(500); await shot('06_replay_burst');
-  const burst = await page.evaluate(() => !!T3D.ctx.burst); log('Particles during replay:', burst); if (!burst) fail('particules');
+  // les particules partent après 0,35 s d'animation et durent 1,6 s : sur une machine chargée, les images
+  // arrivent par à-coups ; on guette leur apparition au lieu de regarder à un instant fixe
+  await page.click('[data-a="t3dReplay"]');
+  const burst = await page.waitForFunction(() => !!T3D.ctx.burst, null, { polling: 'raf', timeout: 4000 }).then(() => true, () => false);
+  await shot('06_replay_burst'); log('Particles during replay:', burst); if (!burst) fail('particules');
   await wait(2200);
   await page.click('.t3d-x'); await wait(700);
   if (await page.evaluate(() => !!document.querySelector('.t3d-full'))) fail('fermeture');

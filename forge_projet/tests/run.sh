@@ -1,7 +1,7 @@
 #!/bin/sh
 # Lance toute la batterie de tests d’ASCEN.
 # Usage : sh tests/run.sh [chromium|webkit|all]   (par défaut : all)
-# Variables utiles : CHROMIUM_PATH (Chromium déjà installé), OUT_DIR (captures d'écran).
+# Variables utiles : CHROMIUM_PATH (Chromium déjà installé), OUT_DIR (captures d'écran), JOBS (suites simultanées).
 cd "$(dirname "$0")/.." || exit 1
 ENGINES="${1:-all}"; [ "$ENGINES" = "all" ] && ENGINES="chromium webkit"
 sh build.sh >/dev/null || { echo "Échec de la construction"; exit 1; }
@@ -14,13 +14,8 @@ run(){ # $1 = libellé, reste = commande
   if [ $code -eq 0 ] && echo "$out" | grep -q "NO ERRORS"; then echo "✓ $label"
   else echo "✗ $label"; echo "$out" | grep -E "ERROR|ASSERT|Error" | head -5 | sed 's/^/    /'; FAIL=$((FAIL+1)); fi
 }
-for eng in $ENGINES; do
-  for t in $SUITES; do run "$eng $t" env ENGINE="$eng" node "tests/$t.js" "$APP"; done
-done
-for w in 320 390 430; do run "mise en page $w px" env W="$w" node tests/audit.js "$APP"; done
-run "mise en page sombre" env W=390 DARK=1 node tests/audit.js "$APP"
-run "génération des séances" node tests/gen_audit.js "$APP"
-run "touchers aléatoires (test du singe)" env SEED=3 N=250 node tests/monkey.js "$APP"
+# suites, mises en page, génération et test du singe : en parallèle (JOBS=1 pour un par un), voir run_all.js
+node tests/run_all.js "$APP" $ENGINES -- $SUITES || FAIL=$((FAIL+1))
 # hors ligne : le service worker exige http(s), on sert la racine du dépôt
 ( cd .. && python3 -m http.server 8765 >/dev/null 2>&1 ) & SRV=$!
 i=0; until curl -s --noproxy localhost -o /dev/null http://localhost:8765/ || [ $i -ge 20 ]; do sleep 0.5; i=$((i+1)); done

@@ -805,10 +805,11 @@ function navSlideLive(top, under, dir, before){
   navTween(L, dir==="push" ? 1 : 0, dir==="push" ? 0 : 1, NAV_MS, ()=>{ if(before) before(); navClean(L, null); });
 }
 // un conteneur (onglet) qui change d'écran : render() y dessine le nouvel écran
-function navGo(el, render, dir){
+// shared : l'écran d'arrivée porte un élément partagé avec celui de départ (transition partagée, navVT)
+function navGo(el, render, dir, shared){
   if(navRun) navRun();
   if(!dir || reducedMotion() || !el.animate || !el.classList.contains("active")){ render(); return; }
-  if(navVT(el, render, dir)) return;
+  if(shared && navVT(el, render, dir)) return;
   const snap = navSnap(el);
   render();
   navSlide(snap, el, dir, false);

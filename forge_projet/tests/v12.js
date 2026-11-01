@@ -89,14 +89,18 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await wait(300);
   log('Reps after edit:', await page.textContent('.bs-val'));
   for (let i = 0; i < 30; i++) {
-    const v = await page.$('[data-a="validateSet"]');
+    // entre deux exercices, le bouton disparaît le temps du passage animé : on l'attend, sauf après la
+    // dernière série
+    if (await page.evaluate(() => !S.draft || !S.draft.startedAt || !liveCounts(S.draft).left)) break;
+    const v = await page.waitForSelector('[data-a="validateSet"]', { timeout: 3000 }).catch(() => null);
     if (!v) break;
     await v.click(); await wait(120);
     if (i === 0) await shot('07_rest');
     const sk = await page.$('.focus-card [data-a="restSkip"]');
     if (sk) { await sk.click(); await wait(120); }
   }
-  await page.click('[data-a="finishSession"]:visible'); // séance complète : le bouton de la carte (le « Terminer » du haut est masqué)
+  // dernière série : la séance se termine d'elle-même (0,5 s plus tard), sans bouton à toucher
+  if (!(await page.waitForSelector('.center-modal [data-a="closesheet"]', { timeout: 5000 }).catch(() => null))) errors.push('ASSERT: fin automatique après la dernière série');
   await wait(900);
   await shot('08_celebration');
   log('Celebration medals:', await page.$$eval('.cel-medal .cm-t', e => e.map(x => x.textContent)));
