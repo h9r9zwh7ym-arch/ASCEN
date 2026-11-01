@@ -818,18 +818,21 @@ function plannedTemplate(iso){
   return S.templates.find(t=>(t.days||[]).includes(wd)) || null;
 }
 
-// séance prévue plus tôt cette semaine, ni faite ce jour-là, ni rattrapée depuis (la plus récente)
-function missedPlanned(){
-  const t0 = todayISO(), monday = weekKey(t0);
+// séances prévues plus tôt cette semaine, ni faites ce jour-là, ni rattrapées depuis, ni écartées
+// (« Laisser passer ») : de la plus récente à la plus ancienne
+function missedAll(){
+  const t0 = todayISO(), monday = weekKey(t0), out = [];
+  const skipped = new Set(Array.isArray(S.meta.missSkips) ? S.meta.missSkips : []); if(S.meta.missSkip) skipped.add(S.meta.missSkip);
   for(let i=weekdayIdx(t0)-1; i>=0; i--){
     const iso = addDaysISO(monday, i), t = S.templates.find(x=>(x.days||[]).includes(i));
     if(!t || (t.since && iso<t.since)) continue;
     if(S.sessions.some(s=>s.date===iso || (s.date>iso && s.tplId===t.id))) continue;
-    if(S.meta.missSkip===iso+":"+t.id) continue;
-    return { t, iso };
+    if(skipped.has(iso+":"+t.id)) continue;
+    out.push({ t, iso });
   }
-  return null;
+  return out;
 }
+function missedPlanned(){ return missedAll()[0] || null; }
 // régularité du mois : jours prévus (depuis la création de chaque séance planifiée) et jours faits
 function monthPlanAdherence(){
   return memo("planAdh"+todayISO(), ()=>{

@@ -1726,7 +1726,10 @@ Object.assign(ACT, {
     S.settings.todayTab = "custom"; t.exos.forEach(e=>freshIds.add(e.exoId));
     save(); renderTodaySoft(); toast(`« ${t.n} » est prête dans Ma séance`, "repeat");
   },
-  missSkip(d){ S.meta.missSkip = d.iso+":"+d.id; save(); changed(); },
+  // « Laisser passer » écarte toutes les séances manquées de la semaine (avant : une seule, la suivante réapparaissait)
+  missSkip(){ const keys = missedAll().map(m=>m.iso+":"+m.t.id), from = addDaysISO(todayISO(), -14);
+    S.meta.missSkips = (Array.isArray(S.meta.missSkips) ? S.meta.missSkips : []).filter(k=>k.slice(0,10)>=from).concat(keys);
+    delete S.meta.missSkip; save(); changed(); },
   loadTemplate(d){
     const t = S.templates.find(x=>x.id===d.id); if(!t) return;
     S.custom = { exos: clone(t.exos), name: t.n, tplId: t.id }; S.settings.todayTab = "custom"; customEdit = false; heroAll = false;

@@ -97,7 +97,7 @@ function rwSlides(kind, key){
     slides.push({ bg:"ember", html:`<div class="rw-label">Records personnels</div>
       <div class="rw-bolt" aria-hidden="true"><svg viewBox="0 0 24 24">${ICONS.bolt}</svg></div>
       <div class="rw-big sm" data-to="${sessionsPRs(d.list)}">0</div><div class="rw-unit">record${sessionsPRs(d.list)>=2?"s":""} battu${sessionsPRs(d.list)>=2?"s":""}</div>
-      ${d.prs.length ? `<div class="rw-list rw-d3">${d.prs.map((p,i)=>`<div style="--k:${i}">${exoIcon(p.def,"sm")}${esc(p.def.n.replace(/\s*\([^)]*\)/g,""))}<span>${p.reps}${loadSuffix(p.def, p.weight)}</span></div>`).join("")}</div>` : ""}
+      ${d.prs.length ? `<div class="rw-list rw-d3">${d.prs.map((p,i)=>`<div style="--k:${i}">${exoIcon(p.def,"sm")}<em class="rw-n">${esc(p.def.n.replace(/\s*\([^)]*\)/g,""))}</em><span>${p.reps}${p.weight && loadableTypeOf(p.def) ? loadSuffix(p.def, p.weight) : `\u00a0${isTimed(p.def) ? "s" : "rép."}`}</span></div>`).join("")}</div>` : ""}
       ${d.targets.length ? `<div class="rw-chip up rw-d3">${ii("target")} ${d.targets.length>1 ? `${d.targets.length} objectifs atteints` : "1 objectif atteint"}</div>` : ""}` });
   }
   // habitudes

@@ -88,10 +88,12 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     await page.click('[data-a="missSkip"]'); await wait(400);
     const skipped = await page.evaluate(() => ({ card: !!document.querySelector('.dl-card.miss'), m: missedPlanned() }));
     log('Missed:', JSON.stringify(miss), '| catch-up:', JSON.stringify(caught), '| skip:', JSON.stringify(skipped));
-    if (!/Séance manquée : Haut du corps/.test(miss.card || '') || miss.m !== 'tm' || !miss.adh || !(miss.adh.planned >= 1) || miss.adh.done > miss.adh.planned || caught.tpl !== 'tm' || caught.mode !== 'custom' || skipped.card || skipped.m) fail('rattrapage d\'une séance manquée');
+    // le 1er du mois, la séance manquée d'hier appartient au mois précédent : pas de bilan du mois à vérifier
+    const firstOfMonth = await page.evaluate(() => todayISO().slice(8) === '01');
+    if (!/Séance manquée : Haut du corps/.test(miss.card || '') || miss.m !== 'tm' || (!firstOfMonth && (!miss.adh || !(miss.adh.planned >= 1) || miss.adh.done > miss.adh.planned)) || caught.tpl !== 'tm' || caught.mode !== 'custom' || skipped.card || skipped.m) fail('rattrapage d\'une séance manquée');
     // (refonte 5 : dans l'en-tête du calendrier de l'Historique)
     const reg = await page.evaluate(() => { switchTab('history'); return document.querySelector('.hc-title span').textContent; });
-    log('Regularity:', reg); if (!/ · \d+ (des \d+ prévues|de la prévue)$/.test(reg)) fail('séances prévues du mois');
+    log('Regularity:', reg); if (!firstOfMonth && !/ · \d+ (des \d+ prévues|de la prévue)$/.test(reg)) fail('séances prévues du mois');
   } else log('Monday: missed-session check skipped (nothing earlier this week)');
 
   // 6. la fin de séance affiche ces lignes (vraie séance)

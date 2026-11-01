@@ -1299,7 +1299,9 @@ h2.sh button.more::after{content:none}
 .rw-list{width:100%;max-width:340px;margin-top:18px;display:flex;flex-direction:column;gap:8px}
 .rw-list div{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:16px;background:rgba(255,255,255,.14);font-weight:600;text-align:left;animation:rwUp .5s calc(.9s + var(--k)*.12s) both}
 .rw-list b{width:22px;opacity:.7}
-.rw-list span{margin-left:auto;opacity:.85;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rw-list div{justify-content:flex-start}
+.rw-list .rw-n{flex:1;min-width:0;font-style:normal;text-align:left;line-height:1.25}
+.rw-list span{margin-left:auto;padding-left:8px;opacity:.85;font-variant-numeric:tabular-nums;white-space:nowrap}
 .rw-bolt{width:84px;height:84px;color:#fff;margin-bottom:6px;animation:rwBolt 1.2s .3s both cubic-bezier(.32,1.6,.4,1)}
 .rw-bolt svg{width:100%;height:100%;filter:drop-shadow(0 0 22px rgba(255,255,255,.7))}
 @keyframes rwBolt{from{transform:scale(0) rotate(-30deg)}}
