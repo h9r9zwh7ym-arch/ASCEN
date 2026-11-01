@@ -88,13 +88,20 @@ function muscleScore(muscleId){
   return score;
 }
 
+// nombre de séances d'affilée (les plus récentes) qui contiennent l'exercice, jusqu'à 5
+function exoStreak(exoId){
+  return memo("streak:"+exoId+todayISO(), ()=>{ let n = 0; for(let i=S.sessions.length-1; i>=0 && n<5; i--){ if(!S.sessions[i].exos.some(e=>e.exoId===exoId)) break; n++; } return n; });
+}
 function recencyPenalty(exoId){
-  // pénalise un exercice utilisé dans les 2 dernières séances, pour varier
-  let penalty = 0;
-  for(let i=S.sessions.length-1, n=0; i>=0 && n<2; i--, n++){
-    if(S.sessions[i].exos.some(e=>e.exoId===exoId)) penalty += 2.5;
+  // pénalise un exercice utilisé dans les 2 dernières séances, pour varier ; au-delà, chaque séance de plus
+  // d'affilée pèse un peu plus (sans quoi un exercice très bien noté revenait indéfiniment)
+  let penalty = 0, streak = 0;
+  for(let i=S.sessions.length-1, n=0; i>=0 && n<5; i--, n++){
+    const has = S.sessions[i].exos.some(e=>e.exoId===exoId);
+    if(n<2 && has) penalty += 2.5;
+    if(has && streak===n) streak++;
   }
-  return penalty;
+  return penalty + Math.max(0, streak-2)*1.5;
 }
 
 function scoreExo(exo){
@@ -370,13 +377,27 @@ const SESSION_TYPES = [
 const SESSION_TYPE_MAP = {}; SESSION_TYPES.forEach(t=>SESSION_TYPE_MAP[t.id]=t);
 
 // « Auto » choisit un type selon la récupération : on évite de retravailler une
-// zone sollicitée il y a moins de 2 jours.
+// zone sollicitée il y a moins de 2 jours. Seul compte le travail ciblé (muscle principal d'un exercice) :
+// les burpees ou la planche commando d'une séance de gainage touchent un peu les bras et les jambes, et
+// les compter relançait une séance de gainage chaque jour, indéfiniment.
+// À 5 séances par semaine et plus : haut et bas du corps en alternance, plutôt que tout le corps chaque fois.
+function daysSinceTargeted(muscleId){
+  return memo("dsg:"+muscleId+todayISO(), ()=>{
+    for(let i=S.sessions.length-1;i>=0;i--){
+      const s = S.sessions[i];
+      if(s.exos.some(ex=>{ const def = EXO_MAP[ex.exoId]; return def && def.muscles[0]===muscleId && !isStretch(def) && ex.sets.some(st=>st.done); })) return daysBetween(s.date, todayISO());
+    }
+    return 999;
+  });
+}
 function resolveAutoType(){
-  const recent = ms => ms.some(m=>daysSinceTrained(m)<2);
-  const upRecent = recent(UPPER), lowRecent = recent(LOWER);
+  const since = ms => Math.min(...ms.map(daysSinceTargeted));
+  const dUp = since(UPPER), dLow = since(LOWER), upRecent = dUp<2, lowRecent = dLow<2;
   if(lowRecent && !upRecent) return { type:"haut", reason:"Jambes travaillées récemment : séance haut du corps." };
   if(upRecent && !lowRecent) return { type:"bas", reason:"Haut du corps travaillé récemment : séance jambes." };
   if(upRecent && lowRecent) return { type:"core", reason:"Tout le corps a travaillé récemment : séance de gainage plus légère." };
+  if((S.goals.daysPerWeek||3)>=5) return dLow>dUp ? { type:"bas", reason:"5 séances par semaine ou plus : haut et bas du corps en alternance." }
+    : { type:"haut", reason:"5 séances par semaine ou plus : haut et bas du corps en alternance." };
   return { type:"full", reason:"Bonne récupération : séance complète, axée sur les muscles les moins travaillés." };
 }
 

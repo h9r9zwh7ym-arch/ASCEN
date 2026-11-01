@@ -10,7 +10,7 @@ function checkRows(keys, labels, cur, a, hints){
 function stepRow(t, v, a, less, more){
   return `<div class="row"><div class="grow t">${t}</div><div class="mini-step"><button data-a="${a}" data-d="-1" aria-label="${less}">−</button><span>${v}</span><button data-a="${a}" data-d="1" aria-label="${more}">+</button></div></div>`;
 }
-const LEN_LABELS = { court:"Courte (≈ 20 min)", moyen:"Moyenne (≈ 35 min)", long:"Longue (≈ 50 min)" };
+const LEN_LABELS = { court:"Courte (≈ 20 min)", moyen:"Moyenne (≈ 40 min)", long:"Longue (≈ 60 min)" };   // = SESSION_MIN (coach.js) et TAILOR_MIN
 // niveau dit en durée de pratique : clair, et sans accord à faire
 const LEVEL_LABELS = { debutant:"Moins d'un an", intermediaire:"1 à 3 ans", avance:"Plus de 3 ans" };
 

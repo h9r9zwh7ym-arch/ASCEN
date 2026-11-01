@@ -212,7 +212,9 @@ function tailorScore(spec, exos, ctx){
   // trop de mouvements quasi identiques (cinq variantes de pompes) : au-delà de deux par geste et muscle
   const sim = {}; exos.forEach(e=>{ if(isStretch(e)) return; const k = e.pattern+"|"+e.muscles[0]; sim[k] = (sim[k]||0) + 1; });
   const same = Object.values(sim).reduce((t, c)=>t + Math.max(0, c - 2), 0);
-  const v = value*6 + need*1.2 - tired*2.2 - over*1.2 + distinct*.7 - fams*2.5 - gap/4 + multi*.4 + bal + habit - stretch*.5 + legs - gear*.2 - av*2.5 - same*1.6;
+  // déjà là trois séances d'affilée ou plus : la séance gagne à en changer (les habitudes ne doivent pas tourner en boucle)
+  const stale = exos.filter(e=>!isStretch(e) && exoStreak(e.id)>=3).length;
+  const v = value*6 + need*1.2 - tired*2.2 - over*1.2 + distinct*.7 - fams*2.5 - gap/4 + multi*.4 + bal + habit - stretch*.5 + legs - gear*.2 - av*2.5 - same*1.6 - stale*1.5;
   return { v, value, need, tired, over, distinct, min, sets, bal, fresh, gear };
 }
 // le matériel à installer pour un exercice (haltères, kettlebell, barre, élastique ; banc en plus)

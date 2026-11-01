@@ -190,7 +190,7 @@ function weeklySetTarget(m){
   const e = (g.emphasis || {})[m];
   return base*(g.level==="debutant" ? .7 : g.level==="avance" ? 1.3 : 1)*(g.senior ? .85 : 1)*(e==="prioriser" ? 1.3 : e==="eviter" ? .5 : 1);
 }
-const SESSION_MIN = { court:25, moyen:40, long:60 };
+const SESSION_MIN = { court:20, moyen:40, long:60 };   // durées annoncées dans le Profil (LEN_LABELS)
 // Combien de séries un exercice mérite au plus dans UNE séance. Au-delà de 3-4 séries d'un même exercice,
 // la fatigue l'emporte sur le gain : mieux vaut un exercice de plus (Schoenfeld 2017 ; Baz-Valle 2022 ;
 // ~6 à 10 séries utiles par muscle et par séance). Débutant, après 65 ans ou pendant les premières

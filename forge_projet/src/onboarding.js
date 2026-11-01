@@ -31,7 +31,7 @@ function obBody(){
     <div class="wz-n">${[2,3,4,5,6].map(n=>`<button class="${n===S.goals.daysPerWeek?"on":""}" data-a="obDays" data-v="${n}">${n}</button>`).join("")}</div>
     <div class="ob-note">2 à 3 séances par semaine suffisent pour progresser. La régularité compte plus que le volume.</div>
     <div class="te-sec">Durée d'une séance</div>
-    <div class="cal-alarm">${[["court","≈ 20 min"],["moyen","≈ 35 min"],["long","≈ 50 min"]].map(([k,l])=>`<button class="chip ${S.goals.sessionLength===k?"on":""}" data-a="obLen" data-v="${k}">${l}</button>`).join("")}</div>
+    <div class="cal-alarm">${[["court","≈ 20 min"],["moyen","≈ 40 min"],["long","≈ 60 min"]].map(([k,l])=>`<button class="chip ${S.goals.sessionLength===k?"on":""}" data-a="obLen" data-v="${k}">${l}</button>`).join("")}</div>
     <div class="te-sec">Pourquoi t'entraînes-tu ? <span class="ob-opt">facultatif</span></div>
     <div class="num-field txt"><input id="obWhy" type="text" maxlength="120" enterkeyhint="done" placeholder="Ex. être en forme pour la randonnée d'été" value="${esc(S.settings.why||"")}"></div>
     <div class="ob-note">ASCEN te le rappellera quand la motivation baisse.</div>`;

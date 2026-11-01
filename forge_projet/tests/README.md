@@ -11,9 +11,12 @@ npx playwright install chromium webkit   # une seule fois
 sh run.sh            # tout ; ou : sh run.sh webkit
 ```
 
-Le script reconstruit l'app avant de lancer les tests. Il affiche ✓ ou ✗ par suite et se termine en erreur si une suite échoue.
+Le script reconstruit l'app avant de lancer les tests. Les suites tournent en parallèle (`run_all.js`, une par cœur, les plus longues d'abord : environ 15 min au lieu de 45). Il affiche ✓ ou ✗ par suite et se termine en erreur si une suite échoue.
+
+Une suite qui échoue en parallèle est rejouée seule à la fin. Si elle passe alors, elle est signalée `⚠ instable sous charge`, avec l'erreur rencontrée : à corriger quand même (attente trop courte, animation en cours…), mais elle ne bloque pas la batterie.
 
 Variables utiles :
+- `JOBS` : nombre de suites simultanées (`JOBS=1` : une par une) ;
 - `CHROMIUM_PATH` : utiliser un Chromium déjà installé ;
 - `OUT_DIR` : dossier des captures d'écran (par défaut `tests/out/`, ignoré par Git).
 
@@ -89,6 +92,7 @@ Variables utiles :
 | `v79.js` | 2.12.4 : Rewind proposé sur l'accueil sous la séance du jour, avant le rappel de sauvegarde ; celui du mois pendant 10 jours, celui de l'année écoulée pendant les deux premières semaines de janvier ; « Plus tard » et « Lancer » le font disparaître |
 | `v80.js` | 2.13.0 (audit) : un débutant de plus de 65 ans sans matériel (4 mois, 3 séries au plus, aucun exercice avec matériel) puis six mois simulés dans le vrai code (propositions, séances sur mesure, séance composée, pause de 4 semaines, pesées) avec un pratiquant qui progresse ; charges et répétitions proposées valides et possédées, calculs finis (force, statut, stimulus, ascension, trophées, bilans), records en direct = records recalculés, records au poids du corps ; aucun NaN, undefined, Infinity ni null sur tous les écrans, sous-écrans et diapos du Rewind |
 | `v81.js` | 2.14.0 : copies du jour (une par jour, 7 gardées, restauration depuis Profil › Données et annulation), localStorage plein → IndexedDB principal relu au lancement puis retour à localStorage, bandeau « Nouvelle version » (« Plus tard », jamais pendant une séance, « Mettre à jour » rouvre le même écran), transition partagée Résumé → Ta force → Résumé, unités plus petites et chiffres à chasse fixe, tâches au retour dans l'app passées après les premières images |
+| `v82.js` | 2.14 : moteur de propositions face à 11 profils piégeux simulés (20 min, une seule paire d'haltères, kettlebell seul, élastiques seuls, barre de traction seule, genou fragile, avancé 6 j/7, reprise après 3 mois, irrégulier, senior débutant, trois quarts des exercices exclus) : matériel possédé, exercices non exclus, séries et durée selon le réglage, charges possédées, répétitions plausibles, reprise prudente, pas de gainage en boucle ni le même exercice 5 séances de suite quand d'autres existent |
 | `monkey.js` | Test du singe (aussi dans `run.sh`) : touchers aléatoires pondérés vers les boutons peu essayés, avec changement d'onglet régulier. Toute erreur ou écran en échec est signalé. `SEED`, `N`, `ENGINE=webkit` |
 
 Les tests partent d'un état vierge. Ils passent le premier lancement avec `ACT.obSkip()` ou injectent leurs données avec `addInitScript`.
