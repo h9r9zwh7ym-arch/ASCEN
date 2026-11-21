@@ -1,4 +1,4 @@
-APP_VERSION 2.2.7 · cache sw.js forge-v63 · mis à jour le 16 octobre 2026. Les anciennes sections « 4.0 » et les versions 2.x forment une seule lignée : 4.0 était un nom de travail, `APP_VERSION` (`src/init.js`) fait foi.
+APP_VERSION 2.15.0 · cache sw.js forge-v113 · mis à jour le 21 novembre 2026 (review complète : voir `REVIEW.md` à la racine). Les anciennes sections « 4.0 » et les versions 2.x forment une seule lignée : 4.0 était un nom de travail, `APP_VERSION` (`src/init.js`) fait foi.
 
 # Passation ASCEN (anciennement Forge)
 
@@ -20,18 +20,17 @@ App web de suivi de musculation à domicile pour iPhone, un seul fichier HTML, p
 
 ## 2. Cap design de YaYa
 
-Règles voulues, et l'écart éventuel avec le code actuel (« Écart : »).
-- **Sobre, proche des apps Apple** (Forme, Réglages, Santé). Écart : aucun majeur ; quelques écrans riches (Mon ascension, Rewind, trophées 3D) restent plus démonstratifs.
-- **Pas de textes d'instruction** (« Touche pour… », « Glisse pour… »). Écart : les feuilles « Comment ça marche » et l'onboarding gardent du texte, voulu ; à surveiller à chaque ajout.
-- **Jamais de doublon d'information** : une info à un seul endroit. Écart : aucun connu (chasse aux doublons faite sur accueil, Progrès, Profil).
-- **Accent réservé** à l'action principale et à l'état actif ; vert = validation / réussite ; orange/rouge = alerte. Écart : l'orange sert aussi aux records, favoris et à l'encadré Sécurité (`--orange` = `--tint-ink`) ; à arbitrer.
-- **3 tailles de texte**. Écart : le code a une échelle iOS de 10 tailles (`--fs-lt` à `--fs-cap2`) et ~30 tailles en px dans des blocs spécifiques (scène, séance, médailles).
-- **Multiples de 8 px**. Écart : les jetons sont en multiples de 4 (`--sp-1` 4 … `--sp-8` 32) ; beaucoup de 10/12/14 px en dur.
-- **Marge latérale 20 px**. Écart : `--gutter` vaut 16 px.
-- **Contrôles segmentés iOS** : `segHTML` + `settleSegs` (curseur glissant). Conforme.
-- **Chips et tuiles à bordure d'accent quand sélectionnées**. Écart : sélection en aplat (`.chip.on` = `--tint` plein ; puces de type et filtres du sélecteur en encre `--label`) ; listes cochées en orange.
+Règles voulues, appliquées partout depuis la 2.15 (review) ; « Écart : » signale ce qui reste.
+- **Sobre, proche des apps Apple** (Forme, Réglages, Santé). Écart : Mon ascension, Rewind et trophées 3D restent plus démonstratifs.
+- **Pas de textes d'instruction** (« Touche pour… », « Glisse pour… ») : retirés ou remplacés par l'élément visuel (installation en pictogrammes, états vides à une action). Écart : les feuilles « Comment ça marche » expliquent, volontairement.
+- **Jamais de doublon d'information** : une info à un seul endroit.
+- **Accent réservé** à l'action principale et à l'état actif : vert `#1E7A35` en clair, jaune `#FFD60A` en sombre (texte foncé dessus, `--on-accent`). Vert = fait / réussi (`--green`), orange = alerte (`--orange`), rouge = suppression. Données (courbes, barres) en encre neutre (`--data`), actions secondaires et informations en encre.
+- **3 tailles de texte** : `--fs-title` 28, `--fs-text` 17, `--fs-note` 13 (les anciens noms `--fs-lt`… en sont des alias). Exception : les chiffres d'affichage (chrono, répétitions, repos, altitude, gros totaux, Rewind) gardent `--fs-num-l` 34 / `--fs-num-m` 22 ou leur taille propre.
+- **Multiples de 8 px** (4 en demi-pas à l'intérieur d'un composant) ; **marge latérale 20 px** (`--gutter`).
+- **Contrôles segmentés iOS** : `segHTML` + `settleSegs`, pastille claire sans liseré.
+- **Chips et tuiles sélectionnées** : fond neutre et bordure d'accent de 2 px (`.chip.on`, `.type-chip.on`, jours, nombres…).
 - **Pas de swipe entre onglets**. Conforme (seuls gestes : carte d'exercice, retour par le bord, glisser pour fermer).
-- **Rebond léger uniquement sur la barre d'onglets** (`tabPop`). Écart : ~55 courbes à dépassement ailleurs (`favPop`, `ckPop`, `badgePop`, ressort des feuilles et interrupteurs, `caLand`, `ascPop`…).
+- **Rebond seulement sur la barre d'onglets** (`tabPop`) : plus de courbe à dépassement ailleurs. Écart : quelques « pops » par images clés (`badgePop`, `ckPop`) restent.
 - **Glisser-déposer des exercices intouchable** (`[data-sort]`, `SORTS`, ui_shell.js ; éditeur et liste du jour). Conforme.
 
 ## 3. Build, tests, livraison
@@ -46,6 +45,8 @@ sh tests/run.sh webkit # un seul moteur
 - Un test seul : `CHROMIUM_PATH=/opt/pw-browsers/chromium NODE_PATH=tests/node_modules node tests/v57.js $PWD/dist/forge.html` ; WebKit : `ENGINE=webkit PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers …`.
 - Suites (`SUITES` de run.sh) : smoke, test2, focus, v12 → v70 (sans v18, v68 ; `tests/README.md` les décrit). Utiles : v16 séance, v35 états abîmés, v54 budget de choix, v57 liste du Profil, v59 couleurs interdites, v60 robustesse, v69-v70 saisie au geste et gainage. Outils : `audit.js`, `gen_audit.js`, `offline.js`, `perf2.js`, `monkey.js`.
 - Écriture 400 ms après `save()` : `persistNow()` avant de lire localStorage en test.
+- CSP : les deux scripts en ligne sont autorisés par leur empreinte SHA-256, calculée par `build.sh` (`openssl`) ; plus de `'unsafe-inline'` pour les scripts. Tout script en ligne ajouté à la main doit passer par build.sh.
+- « Passer le repos » est ignoré 600 ms après « Valider la série » quand il vient d'un vrai toucher (`REST_SKIP_GUARD`, timer.js) : dans un test, attendre 650 ms ou appeler `ACT.restSkip()` directement.
 - Livrer : `APP_VERSION` (`src/init.js`) et `CACHE` (`/sw.js` à la racine, `forge-vNN`) incrémentés à chaque livraison, puis build, commit, push sur la branche de travail.
 - GitHub Pages sert la racine du dépôt ; `forge_projet/dist/` n'est pas versionné.
 
@@ -61,6 +62,8 @@ sh tests/run.sh webkit # un seul moteur
 - Réglages (`S.settings`) : `theme` (auto/light/dark), `unit`, `todayTab`, `name`, `why`, `sound`, `uiSound`, `haptic`, `stretching`, `warmup`, `rest` (court/normal/long), `flow`, `liveDark`, `beat`, `nextGoal`, `trend`, `appPicks`, `deloadTips`, `thenNow`, `ui`. Booléens actifs par défaut testés en `!== false` ; `normalizeState` garde les clés inconnues.
 - Rendu : `renderView(id)` reconstruit l'onglet (réutilisé si `el._ver === DATA_VER`) ; `changed()` = save + rendu (différé si une feuille est ouverte) ; `renderViewAnimated` pour les vrais changements d'écran ; `renderTodaySoft` pour l'accueil après une action ; `afterRenderView` (dessin de la courbe de force, grimpeur de la carte semaine) ; `prerenderStaleViews` au calme. En séance, `refreshFocusRegion` / `patchFocusSteps` ne touchent que la carte.
 - Mémoïsation : `memo(clé, fn)` invalidé par `DATA_VER` (incrémenté par `save()`), `sessionSummary` par séance marquée `markStored`, `PACK_CACHE` du format compact.
+
+**Données (2.15)** : `S.v` = version du schéma (`SCHEMA_VERSION`, core.js) ; tout changement de format ajoute une étape à `migrationStep(n)` (appelée par `migrateState` à la fin de `normalizeState`) et un cas dans `tests/v83.js`. Le nombre de records se compte dans l'historique (`prTotal()`), il n'y a plus de compteur à tenir. Le repos en cours est gardé dans `S.draft.rest` (repris par `resumeRest`). La ligne d'altitude de la séance se recalcule juste après l'image de validation (`ascLiveDefer`, `liveAscLater`).
 
 **Règles à ne pas casser**
 - Toute modification de `S` passe par `save()` (sinon caches périmés) ; `save({derived:true})` pour un recalcul (paliers de trophées).
@@ -79,7 +82,8 @@ Seul le nom affiché a changé. **Aucune migration n'existe** : tous les identif
 | Image de la scène de la carte semaine | `forge.v1.strip` (`ASC_STRIP_KEY`, JPEG ~30 Ko) | non | non |
 | Thème avant premier rendu | `forge.v1.theme` (absent si thème auto) | non | non |
 | Données illisibles mises de côté | `forge.v1.illisible.<horodatage>` (la plus récente gardée) | non (message seulement) | non |
-| Copie avant restauration | `forge.v1.avant-restauration` | non | non |
+| Copie avant restauration | IndexedDB, magasin `state`, clé `pre` (gzip) ; avant 2.15 `forge.v1.avant-restauration`, déplacée au lancement | non | oui (2.15) |
+| Version du schéma | `S.v` (2 depuis 2.15 ; 1 avant) | non | migrations `migrateState` |
 | Base IndexedDB | base `forge`, magasin `state`, clé `main` (gzip `ArrayBuffer`, `savedAt`) | non | non |
 | Cache du service worker | `forge-v63` (`CACHE`, sw.js ; les autres caches sont supprimés à l'activation) | non | non |
 | Bundle Three.js | `three-forge.js` (vendor → racine), `window.FORGE_THREE` | non | non |
@@ -99,7 +103,7 @@ Seul le nom affiché a changé. **Aucune migration n'existe** : tous les identif
 Toutes les couleurs, polices et rayons partent de `:root` (clair), redéfinis sous `@media (prefers-color-scheme:dark) :root:not([data-theme="light"])` et `:root[data-theme="dark"]`.
 
 - **Fonds et textes** : clair `--bg #F2F2F7`, `--bg2 #FFFFFF` (cartes), `--bg3 #F7F7FA`, `--label #1C1C1E`, `--label2 #636366`, `--label3 #8E8E93`, `--sep rgba(60,60,67,.16)`, `--fill rgba(118,118,128,.12)`. Sombre `--bg #000000`, `--bg2 #1C1C1E`, `--bg3 #2C2C2E`, `--label #FFFFFF`, `--label2 #A1A1A6`, `--sep rgba(84,84,88,.6)`.
-- **Accent unique** : `--tint #BC5736` (aplats, texte blanc dessus `--on-tint`), `--tint-ink #A64A29` clair / `#E07A55` sombre (texte et pictos orange, AA ≥ 4,5:1), `--tint-bg` (fond doux). `--orange` = `--tint-ink`.
+- **Accent (2.15)** : `--accent` vert `#1E7A35` (clair) / jaune `#FFD60A` (sombre), `--on-accent` blanc / `#1C1C1E` ; `--tint` et `--on-tint` en sont des alias ; `--tint-ink` = encre, `--tint-bg` = gris (actions secondaires) ; `--data` = encre (courbes) ; `--orange` `#C93400` / `#FF9F0A` (alertes). Avant 2.15 : `--tint #BC5736` (aplats, texte blanc dessus `--on-tint`), `--tint-ink #A64A29` clair / `#E07A55` sombre (texte et pictos orange, AA ≥ 4,5:1), `--tint-bg` (fond doux). `--orange` = `--tint-ink`.
 - **Système** : `--green #1E7A35` / `#30D158`, `--red #D70015` / `#FF453A`, `--blue #0066CC` / `#409CFF`, `--purple`, `--switch #34C759` / `#30D158` (interrupteurs, convention iOS).
 - **Métaux** : `--bronze`, `--silver`, `--gold`, `--plat`, `--diam` (trophées).
 - **Régions** (`--r-push/pull/legs/core`) : encore définies, mais `.r-push`… pointent sur `--tint` : les régions ne colorent plus rien.
@@ -110,7 +114,7 @@ Toutes les couleurs, polices et rayons partent de `:root` (clair), redéfinis so
 - **Boutons** : `.btn` 56 px de haut, aplat `--tint`, texte blanc, un seul primaire par écran ; `.secondary` (teinté), `.tertiary` (gris), `.ghost` (texte). Lignes de liste `.row` 52 px min.
 - **Zones de sécurité** : uniquement `var(--sat)` / `var(--sab)` et `--tabbar-h` 50 px. Feuilles limitées à `calc(100% - var(--sat) - 10px)`. Barre d'état : bandeau fixe `#sbar` (`syncStatusBar`).
 - **Cibles 44 pt** : zone agrandie par `::before` centré (attention : `overflow:hidden` la coupe). − / + de séance 40 px (zone 44).
-- **Usage de l'orange** : action principale, progression, état actif d'une liste cochée, prochain camp, records et alertes de force. Un choix exclusif (puces, nombres, jours) s'affiche en encre. Le vert reste pour « fait / réussi » et les interrupteurs ; le rouge pour la suppression et le désentraînement.
+- **Usage de l'orange (avant 2.15, remplacé par l'accent ci-dessus)** : action principale, progression, état actif d'une liste cochée, prochain camp, records et alertes de force. Un choix exclusif (puces, nombres, jours) s'affiche en encre. Le vert reste pour « fait / réussi » et les interrupteurs ; le rouge pour la suppression et le désentraînement.
 
 ## 7. Écrans
 
@@ -151,10 +155,10 @@ Toutes les couleurs, polices et rayons partent de `:root` (clair), redéfinis so
 **Haptique** (fx.js)
 - Safari iOS ignore `navigator.vibrate` ; seule la bascule d'un `<input type="checkbox" switch>` natif par un vrai toucher fait vibrer (iOS 18+). Un `.click()` en JavaScript est bloqué.
 - Motif : `hxBtn(cls, attrs, html)` rend `<label class=… role="button" tabindex="0" data-a=…>html<input type="checkbox" switch class="hx" tabindex="-1" aria-hidden="true"></label>`. Le dispatcher ignore le clic relayé dont la cible est `.hx` (pas de double déclenchement) ; Entrée / Espace sur un label `role=button|switch` lance l'action. CSS : `.hx` hors écran, `label.btn` non sélectionnable.
-- Branché sur : Valider la série (×2), Valider sans chrono, Lancer le chrono (`holdStart`, le bouton remet son input après mise à jour du texte), S'arrêter (pas « Annuler » de la préparation), Ajouter un exercice (×2). Pas sur la barre d'onglets, ni sur la navigation, la fermeture ou « Passer le repos » (règle : la vibration confirme une validation importante).
+- Branché sur les seules validations : Valider la série (×2), Valider sans chrono, S'arrêter (qui valide la série tenue). Depuis 2.15, plus sur Lancer le chrono ni Ajouter un exercice (ouverture du sélecteur). Pas sur la barre d'onglets, ni sur la navigation, la fermeture ou « Passer le repos » (règle : la vibration confirme une validation importante).
 - Réglage Profil « Retour haptique » (`S.settings.haptic`, actif par défaut, `hapticOn()`). Désactivé, `hxBtn` rend un `<button>` normal. L'interrupteur du réglage lui-même (`hapticSwitch()`) porte l'input natif quand il est coupé, donc l'activer vibre ; le couper ne vibre pas.
 - `haptic(ms)` est un no-op (`USE_LEGACY_VIBRATE = false`) gardé pour Android ; appelé à de nombreux endroits (glisser, chiffres, camps, lancement).
-- `navigator.vibrate` direct restant : `timer.js` (fin du repos `[120,60,120]`, 3 dernières secondes `10`), hors du drapeau.
+- Plus aucun `navigator.vibrate` direct (retirés de `timer.js` en 2.15 : la fin du repos est un événement automatique).
 
 **Sons** (sfx.js, Web Audio synthétisé, gamme de do majeur, compresseur en sortie, réverbération partagée `buildReverb` pour les sons musicaux, contexte créé au lâcher du doigt, recréé après > 20 s d'absence, `audioSession.type = "ambient"`)
 - Réglages : `sound` (tout) et `uiSound` (clics d'interface, liste `UI_SOUNDS`), anti-rafale.
@@ -175,10 +179,10 @@ Toutes les couleurs, polices et rayons partent de `:root` (clair), redéfinis so
 - 100 % local, aucune requête sortante, pas de compte ni de synchronisation.
 - Identifiants internes « forge » conservés (voir § 5).
 - Trois onglets ; Historique sous Progrès ; pas de swipe entre onglets.
-- Pas d'écran de lancement (`startApp` direct) ; mises à jour du service worker silencieuses (pas de « Mise à jour prête »).
+- Pas d'écran de lancement (`startApp` direct). Mises à jour : bandeau « Nouvelle version » (Mettre à jour / Plus tard) depuis la 2.14.0, jamais pendant une séance.
 - Pas de niveau XP : l'ascension le remplace. Pas de « Bilan de la semaine » ni de bouton Partager en fin de séance (refusés).
 - Pas de saisie au clavier des répétitions et de la charge en séance : glisser ou − / +. Gainage : 15 s minimum, la dernière durée est reproposée, pas de raccourcis.
-- Un seul orange (régions non colorées) ; police système ; pas de capitales décoratives.
+- Un seul accent (vert en clair, jaune en sombre, 2.15) ; régions non colorées ; police système ; pas de capitales décoratives.
 - Une seule façon de créer une séance ; « Programme de la semaine » reste.
 - Pas de mode une main, pas de Siri, pas d'export Calendrier.
 - Retour haptique seulement sur les validations ; jamais déclenché par un événement automatique.
@@ -187,10 +191,9 @@ Toutes les couleurs, polices et rayons partent de `:root` (clair), redéfinis so
 
 ## 10. Bugs connus et « pas fait »
 
-- `timer.js` appelle `navigator.vibrate` directement (fin de repos, 3 dernières secondes), sans passer par `USE_LEGACY_VIBRATE` ni le réglage « Retour haptique » : sans effet sur iPhone, mais vibre sur Android même réglage coupé. À confirmer puis faire passer par `haptic()`.
 - Le réglage « Retour haptique » ne coupe pas `haptic()` (déjà no-op) ; il ne concerne que les boutons à switch.
-- Tests en échec indépendants des dernières versions : v27 WebKit (retour à la carte 3D mise en avant), v38 (joker selon la date du jour), v39 WebKit (retour sur un onglet sans reconstruction), v47 (propositions guidées par le stimulus). v46 et v14 peuvent dépasser leur délai quand d'autres scripts tournent en parallèle.
-- Écarts avec le cap design (§ 2) : échelle de texte, multiples de 8, marge 20 px, sélections à bordure, rebonds hors barre d'onglets.
+- Tests en échec avant la 2.15 et toujours : v82 (une seule paire d'haltères de 10 kg, séance « avancé » de 10 min pour 40 visées : réglage du moteur). Instables sous charge (passent seuls) : v36 (deux onglets), v49 (graphiques dessinés une fois), v51 WebKit, v67. v46 et v14 peuvent dépasser leur délai quand d'autres scripts tournent en parallèle.
+- Écarts avec le cap design (§ 2) : pops par images clés, écrans démonstratifs (ascension, Rewind, 3D). Icônes de l'app (PNG) encore à l'ancien orange.
 - Pas fait : espaces insécables automatiques avant « : ; ! ? » ; trophées 2D et 3D tout à fait homogènes ; redessin de la carte des muscles ; vérification de chaque exercice auprès d'une source nommée (NSCA/ACSM) ; essai systématique sur un vrai iPhone (gestes, haptique, zones de sécurité).
 
 ## 11. Pièges rencontrés
