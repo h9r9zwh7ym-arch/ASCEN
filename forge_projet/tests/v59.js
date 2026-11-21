@@ -1,7 +1,8 @@
 // Généré pour le dépôt : dossiers de sortie et navigateur configurables (voir tests/README.md)
 const OUT_ROOT = process.env.OUT_DIR || require('path').join(__dirname, 'out'); require('fs').mkdirSync(OUT_ROOT, { recursive: true });
-// Harmonisation des écrans secondaires : un seul orange (plus de couleurs de région, d'ancien orange ni de
-// teintes iOS), choix exclusifs en encre, champs de texte alignés à gauche, sélections visibles au premier
+// Harmonisation des écrans secondaires (cap design 2.15) : accent vert en clair, jaune en sombre, pour l'action et
+// l'état actif ; vert pour la réussite, orange pour l'alerte ; plus de couleurs de région ni de teintes iOS ; choix
+// exclusifs sur fond neutre avec bordure d'accent, champs de texte alignés à gauche, sélections visibles au premier
 // lancement (ombre « none » qui invalidait la règle), copie de secours chiffrée (plus de « NaN Mo »),
 // étapes d'installation lisibles en entier, Rewind dans la palette de la marque. En clair et en sombre.
 const __pw = require('playwright'); const path = require('path'); const fs = require('fs');
@@ -28,7 +29,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     return page;
   };
   // couleurs qui ne doivent plus apparaître : régions (clair et sombre), ancien orange, teintes iOS des statuts
-  const FORBIDDEN = ['#eb6834', '#2a78d6', '#1baf7a', '#7a55d6', '#d95926', '#3987e5', '#199e70', '#8a63e8', '#b25000', '#ff9f0a', '#30b0c7', '#af52de', '#5856d6', '#7a3fc4', '#bf80ff'];
+  const FORBIDDEN = ['#eb6834', '#2a78d6', '#1baf7a', '#7a55d6', '#d95926', '#3987e5', '#199e70', '#8a63e8', '#b25000', '#30b0c7', '#af52de', '#5856d6', '#7a3fc4', '#bf80ff'];
   const scan = (page, sel) => page.evaluate(([sel, bad]) => {
     const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)).join(',');
     const B = new Set(bad.map(rgb)), hits = new Set();
@@ -62,7 +63,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   const tint = await tokenRGB(page, '--tint'), tintInk = await tokenRGB(page, '--tint-ink');
   log('Onboarding:', JSON.stringify(ob0), JSON.stringify(eq), JSON.stringify(goal));
   if (!ob0.txt || ob0.align !== 'left' || ob0.fs > 18 || Math.abs(ob0.label - 4) > 1) fail('prénom : champ de texte à gauche, libellé aligné');
-  if (!eq.on || eq.aria !== 'true' || eq.ck !== tint || eq.ico !== tintInk) fail('matériel coché visible');
+  if (!eq.on || eq.aria !== 'true' || eq.ck !== tint || eq.ico !== await tokenRGB(page, '--accent-ink')) fail('matériel coché visible');
   if (goal.on.join() !== 'force' || goal.ck !== tint || goal.off === tint || goal.why !== 'left') fail('objectif choisi visible');
   const obBad = await scan(page, '#overlay'); if (obBad.length) fail('couleurs hors marque au premier lancement : ' + obBad.join(' | '));
   await page.context().close();
@@ -78,22 +79,22 @@ const APP = 'file://' + path.resolve(process.argv[2]);
     const pre = (scheme === 'dark' ? 'dk_' : '') + (wk ? 'wk_' : '');
     const home = await scan(page, '#v-today'); if (home.length) fail(`accueil (${scheme}) : ` + home.join(' | '));
     const dl = await page.evaluate(() => { const i = document.querySelector('.dl-ic'); return i ? getComputedStyle(i).color : null; });
-    if (dl && dl !== await tokenRGB(page, '--tint-ink')) fail('icône de la semaine allégée dans l\'orange de la marque');
+    if (dl && dl !== await tokenRGB(page, '--orange')) fail('icône de la semaine allégée dans l\'orange d\'alerte');
     for (const [n, f] of screens) {
       await page.evaluate(f); await page.waitForTimeout(900);
       const bad = await scan(page, '#overlay');
       if (bad.length) fail(`${n} (${scheme}) : ` + bad.join(' | '));
       if (n === 'fiche tirage') {
         const mm = await page.evaluate(() => { const z = document.querySelector('.mm-exo .mm-z.on'); return { fill: z && getComputedStyle(z).fill, dot: getComputedStyle(document.querySelector('.rtag'), '::before').display }; });
-        if (mm.fill !== await tokenRGB(page, '--tint') || mm.dot !== 'none') fail('fiche : carte des muscles dans l\'orange, région sans pastille de couleur ' + JSON.stringify(mm));
+        if (mm.fill !== await tokenRGB(page, '--label2') || mm.dot !== 'none') fail('fiche : carte des muscles en encre neutre (une donnée), région sans pastille de couleur ' + JSON.stringify(mm));
         await page.screenshot({ path: `${OUT}/${pre}04_fiche.png` });
       }
       if (n === 'éditeur') {
-        const ed = await page.evaluate(() => ({ day: getComputedStyle(document.querySelector('.te-days button.on')).backgroundColor, split: (document.querySelector('.te-split') || {}).textContent || '',
+        const ed = await page.evaluate(() => ({ day: getComputedStyle(document.querySelector('.te-days button.on')).boxShadow, split: (document.querySelector('.te-split') || {}).textContent || '',
           bar: !!document.querySelector('#tplEdBody .region-bar'), name: getComputedStyle(document.querySelector('#tplEdName')).textAlign, del: getComputedStyle(document.querySelector('.te-del')).color }));
         log('Editor:', JSON.stringify(ed));
         // (la répartition par région a été retirée : seul le résumé « N · séries · ≈ min » reste au-dessus de la liste)
-        if (ed.day !== await tokenRGB(page, '--label') || ed.split || ed.bar || ed.name !== 'left' || ed.del !== await tokenRGB(page, '--red')) fail('éditeur : jours en encre, pas de répartition, nom à gauche, suppression en rouge');
+        if (!ed.day.includes(await tokenRGB(page, '--accent')) || ed.split || ed.bar || ed.name !== 'left' || ed.del !== await tokenRGB(page, '--red')) fail('éditeur : jour choisi à bordure d\'accent, pas de répartition, nom à gauche, suppression en rouge');
         await page.screenshot({ path: `${OUT}/${pre}05_editor.png` });
       }
       if (n === 'programme' && await page.evaluate(() => !!document.querySelector('#wzBody .tc-bar-s'))) fail('programme : barres de couleur');
@@ -105,7 +106,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
       if (n === 'installer') {
         const cut = await page.evaluate(() => [...document.querySelectorAll('.install-steps .s')].filter(s => s.scrollWidth > s.clientWidth + 1 || s.scrollHeight > s.clientHeight + 1).length);
         const pad = await page.evaluate(() => { const p = document.querySelector('#overlay .sheet-body > p.body'), g = document.querySelector('.install-steps'); return p.getBoundingClientRect().left - g.getBoundingClientRect().left; });
-        if (cut || Math.abs(pad - 4) > 1) fail(`installation : étapes coupées (${cut}) ou texte collé au bord (${pad})`);
+        if (cut || Math.abs(pad) > 1) fail(`installation : étapes coupées (${cut}) ou texte collé au bord (${pad})`);
         await page.screenshot({ path: `${OUT}/${pre}06_install.png` });
       }
       await page.evaluate(() => { closeSheet(); closeSheet(); }); await page.waitForTimeout(450);

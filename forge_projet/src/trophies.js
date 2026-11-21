@@ -474,7 +474,7 @@ function celSeries(session){
 function celTonnageHTML(session){
   const { vol, title, generic, pts } = celSeries(session); if(!pts.length) return "";
   const cur = pts[pts.length-1], prev = pts.length>1 ? pts[pts.length-2] : null;
-  const unit = vol ? "kg" : "reps", val = vol ? fmtNum(cur.v) : String(cur.v);
+  const unit = vol ? "kg" : "rép.", val = vol ? fmtNum(cur.v) : String(cur.v);
   const d = prev && prev.v ? Math.round((cur.v/prev.v-1)*100) : null;
   const chip = d==null ? "" : `<div class="ct-delta"><span class="ct-chip ${d>0 ? "up" : d<0 ? "down" : ""}">${d>0 ? "+" : d<0 ? "−" : ""}${Math.abs(d)} %</span><span>par rapport au ${fmtDate(prev.date)}</span></div>`;
   let chart = "";
@@ -535,7 +535,6 @@ function showCelebration(session, ups, hits, won){
     <button class="cel-note-btn" data-a="celNote" data-id="${esc(session.id)}">${icon("edit")} Ajouter une note</button>
     ${typeof lastDoneForSave!=="undefined" && lastDoneForSave ? `<div class="cel-save">
       <div class="cs-t">Garder cette séance ?</div>
-      <div class="cs-s">Enregistre-la pour la refaire ou la placer dans ta semaine.</div>
       <button class="btn secondary" data-a="saveDoneSession">${icon("bookmark")} Ajouter à Mes séances</button>
     </div>` : ""}
     <div class="cel-ft"><button class="btn big" ${summit ? `data-a="ascCelSummit" data-id="${esc(session.id)}"` : 'data-a="closesheet"'}>${summit ? "Voir le sommet" : "Terminé"}</button></div>

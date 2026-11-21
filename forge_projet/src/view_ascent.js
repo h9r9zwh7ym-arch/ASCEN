@@ -128,6 +128,9 @@ function ascRoutePaths(P){ // parties visibles / cachées (relief ou hors cadre)
   return { vis, hid };
 }
 // construit la scène dans host ; renvoie un contrôleur { set(alt, summited) }
+// couleur de progression dans les scènes (chemin parcouru, grimpeur, camps passés) : l'accent de l'app,
+// jaune sur une scène de nuit ou un fond sombre, vert sur une scène de jour
+function ascHue(night){ return night ? "#FFD60A" : "#1E7A35"; }
 function ascBuildScene(host, k){
   const sc = window.ASC_SCENES && ASC_SCENES[k]; if(!sc || !host) return null;
   const D = ASC_DATA[k], mode = ascDark() ? "night" : "day", night = mode==="night", P = ASC_PAL[D.pal][mode], W = sc.W, H = sc.H, VH = Math.min(H, D.vh || H), r = ascRng(ASC_ORDER.indexOf(k)+7);
@@ -142,7 +145,7 @@ function ascBuildScene(host, k){
   const pts = sc.route, len = [0]; for(let i=1;i<pts.length;i++) len.push(len[i-1]+Math.hypot(pts[i][0]-pts[i-1][0], pts[i][1]-pts[i-1][1]));
   const rd = "M"+pts.map(p=>p[0]+" "+p[1]).join("L"), rp = ascRoutePaths(pts);
   const route = night ? "rgba(255,255,255,.5)" : "rgba(255,255,255,.95)", ghost = night ? "rgba(255,255,255,.3)" : "rgba(255,255,255,.62)";
-  const hud = night || D.pal==="hima" ? "#F4F6FA" : "#0F1B28";
+  const hud = night || D.pal==="hima" ? "#F4F6FA" : "#0F1B28", hue = ascHue(night);
   host.style.setProperty("--hud", hud); host.style.setProperty("--hud2", night || D.pal==="hima" ? "rgba(244,246,250,.74)" : "rgba(15,27,40,.7)");
   host.style.setProperty("--pill", night ? "rgba(17,23,38,.86)" : "rgba(255,255,255,.9)"); host.style.setProperty("--pill-ink", night ? "#F2F4F8" : "#13202A");
   // vue recadrée sous le point le plus bas de la voie (D.vh) : moins de premier plan vide, la carte des étapes remonte
@@ -182,13 +185,13 @@ function ascBuildScene(host, k){
     <path d="${rp.vis}" fill="none" stroke="rgba(0,0,0,.22)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="${rp.vis}" fill="none" stroke="${route}" stroke-width="3.2" stroke-dasharray="3 9" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <svg class="asc-svg asc-lay asc-l-main asc-marks" ${vb}><defs>
-      <radialGradient id="asMe"><stop offset="0" stop-color="#E07A55" stop-opacity=".6"/><stop offset="1" stop-color="#E07A55" stop-opacity="0"/></radialGradient>
+      <radialGradient id="asMe"><stop offset="0" stop-color="${hue}" stop-opacity=".6"/><stop offset="1" stop-color="${hue}" stop-opacity="0"/></radialGradient>
       <radialGradient id="asLamp"><stop offset="0" stop-color="#FFE2B8" stop-opacity=".4"/><stop offset="1" stop-color="#FFE2B8" stop-opacity="0"/></radialGradient>
       <mask id="asHid" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><rect width="${W}" height="${H}" fill="#fff"/><path d="${rp.hid}" fill="none" stroke="#5a5a5a" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/></mask></defs>
-    <path class="asc-done" d="${rd}" fill="none" stroke="#E07A55" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" mask="url(#asHid)"/>
+    <path class="asc-done" d="${rd}" fill="none" stroke="${hue}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" mask="url(#asHid)"/>
     <g class="asc-camps"></g>
-    <g transform="translate(${sc.summit[0]} ${sc.summit[1]})"><g class="asc-flag"><line x1="0" y1="0" x2="0" y2="-46" stroke="${hud}" stroke-width="3" stroke-linecap="round"/><path class="asc-cloth" d="M0 -46h30l-7 9 7 9H0Z" fill="#E07A55"/></g></g>
-    <g class="asc-me">${night ? `<circle r="80" fill="url(#asLamp)"/>` : ""}<circle r="34" fill="url(#asMe)"/><circle class="asc-ring" r="11" fill="none" stroke="#E07A55" stroke-width="3.5"/><circle r="11" fill="#E07A55" stroke="#fff" stroke-width="4"/></g>
+    <g transform="translate(${sc.summit[0]} ${sc.summit[1]})"><g class="asc-flag"><line x1="0" y1="0" x2="0" y2="-46" stroke="${hud}" stroke-width="3" stroke-linecap="round"/><path class="asc-cloth" d="M0 -46h30l-7 9 7 9H0Z" fill="${hue}"/></g></g>
+    <g class="asc-me">${night ? `<circle r="80" fill="url(#asLamp)"/>` : ""}<circle r="34" fill="url(#asMe)"/><circle class="asc-ring" r="11" fill="none" stroke="${hue}" stroke-width="3.5"/><circle r="11" fill="${hue}" stroke="#fff" stroke-width="4"/></g>
     <g class="asc-sel"></g><g class="asc-next"></g></svg>`;
   host.querySelectorAll(".asc-lay, .asc-l-fog").forEach(x=>x.remove());
   const fog = `<div class="asc-l-fog" aria-hidden="true"><i></i><i></i></div>`;
@@ -216,12 +219,12 @@ function ascBuildScene(host, k){
     const pastN = G.camps.filter(c=>c.a<=a+.5).length;
     if(pastN!==G.pastN){ G.pastN = pastN;
       G.camps.forEach((c, i)=>{ const past = i<pastN;
-        c.inner.setAttribute("fill", past ? "#E07A55" : (night ? "rgba(17,23,38,.88)" : "rgba(255,255,255,.95)"));
+        c.inner.setAttribute("fill", past ? hue : (night ? "rgba(17,23,38,.88)" : "rgba(255,255,255,.95)"));
         c.inner.setAttribute("stroke", past ? "#fff" : (night ? "rgba(255,255,255,.75)" : "rgba(15,27,40,.6)")); }); }
     const nx = summited ? null : G.camps.find(c=>c.a>a+.5 && c.h!==2);
     if(nx && nx!==G.nx){
       const tx = `${nx.name} · ${fmtNum(nx.real)} m`, w = tx.length*11.2+30, left = nx.x+w+30>W-10, lx = left ? nx.x-w-22 : nx.x+22;
-      G.next.innerHTML = `<g transform="translate(${ascP1(nx.x)} ${ascP1(nx.y)})"><circle class="asc-halo" r="16" fill="none" stroke="#E07A55" stroke-width="4"/><circle class="asc-halo h2" r="16" fill="none" stroke="#E07A55" stroke-width="3"/></g>
+      G.next.innerHTML = `<g transform="translate(${ascP1(nx.x)} ${ascP1(nx.y)})"><circle class="asc-halo" r="16" fill="none" stroke="${hue}" stroke-width="4"/><circle class="asc-halo h2" r="16" fill="none" stroke="${hue}" stroke-width="3"/></g>
         <g class="asc-pillg" transform="translate(${ascP1(Math.max(6, lx))} ${ascP1(Math.max(6, nx.y-46))})"><rect width="${ascP1(w)}" height="38" rx="19" fill="${night ? "rgba(17,23,38,.86)" : "rgba(255,255,255,.92)"}"/><text x="${ascP1(w/2)}" y="25.5" text-anchor="middle" font-size="21" font-weight="600" font-family="-apple-system,BlinkMacSystemFont,sans-serif" fill="${night ? "#F2F4F8" : "#13202A"}">${esc(tx)}</text></g>`;
     } else if(!nx) G.next.innerHTML = "";
     G.nx = nx;
@@ -323,7 +326,7 @@ function ascBurst(G, c){
   const ns = "http://www.w3.org/2000/svg", g = document.createElementNS(ns, "g");
   g.setAttribute("transform", `translate(${ascP1(c.x)} ${ascP1(c.y)})`); g.setAttribute("pointer-events", "none");
   const ring = document.createElementNS(ns, "circle"); ring.setAttribute("fill", "none"); ring.setAttribute("stroke", "#FFB36B"); g.appendChild(ring);
-  const dots = Array.from({ length:10 }, (_, i)=>{ const d = document.createElementNS(ns, "circle"); d.setAttribute("fill", i%2 ? "#E07A55" : "#FFE2B8"); g.appendChild(d); return { d, a:i/10*Math.PI*2 + .3 }; });
+  const dots = Array.from({ length:10 }, (_, i)=>{ const d = document.createElementNS(ns, "circle"); d.setAttribute("fill", i%2 ? ascHue(true) : "#FFF4C2"); g.appendChild(d); return { d, a:i/10*Math.PI*2 + .3 }; });
   G.el.querySelector(".asc-camps").after(g);
   const t0 = performance.now(), dur = 900;
   const f = now=>{ const t = Math.min(1, (now-t0)/dur), e = 1-Math.pow(1-t, 3);
@@ -497,10 +500,10 @@ function ascPcArt(k, i, locked){
   if(kind==="are" || kind==="top") deco += `<path d="M-4 ${midY+3}q20 -3 40 0t40 0 40 0 40 0V${midY+7}H-4Z" fill="#fff" opacity=".55"/>`;
   // le camp : tente (ou refuge pour un lieu réel), le drapeau pour le sommet
   let glyph = "";
-  if(top) glyph = `<g transform="translate(${P(sx)} ${sy})"><path d="M0 0V-13" stroke="#F7F4EE" stroke-width="1.3" stroke-linecap="round"/><path d="M0 -13h9l-2.2 2.6L9 -7.8H0Z" fill="#E07A55"/></g>`;
+  if(top) glyph = `<g transform="translate(${P(sx)} ${sy})"><path d="M0 0V-13" stroke="#F7F4EE" stroke-width="1.3" stroke-linecap="round"/><path d="M0 -13h9l-2.2 2.6L9 -7.8H0Z" fill="${ascHue(true)}"/></g>`;
   else if(!locked){ const x = rs()<.5 ? rnd(20, 50) : rnd(110, 140), y = fy(x) + 3;
     glyph = ascStory(k)[i].real ? `<path d="M${P(x-7)} ${P(y)}V${P(y-6)}L${P(x)} ${P(y-11.5)}L${P(x+7)} ${P(y-6)}V${P(y)}Z" fill="#C2703F"/><path d="M${P(x-8.5)} ${P(y-5.2)}L${P(x)} ${P(y-12.6)}L${P(x+8.5)} ${P(y-5.2)}" fill="none" stroke="#6B3A22" stroke-width="1.8" stroke-linejoin="round"/><rect x="${P(x-1.6)}" y="${P(y-4.6)}" width="3.2" height="4.6" fill="#4A2A18"/>`
-      : `<path d="M${P(x-7.5)} ${P(y)}L${P(x)} ${P(y-11)}L${P(x+7.5)} ${P(y)}Z" fill="#E07A55"/><path d="M${P(x)} ${P(y-11)}L${P(x-2.2)} ${P(y)}H${P(x+2.2)}Z" fill="#9E3412"/>`; }
+      : `<path d="M${P(x-7.5)} ${P(y)}L${P(x)} ${P(y-11)}L${P(x+7.5)} ${P(y)}Z" fill="${ascHue(true)}"/><path d="M${P(x)} ${P(y-11)}L${P(x-2.2)} ${P(y)}H${P(x+2.2)}Z" fill="#B39400"/>`; }
   return `<svg class="pc-svg" viewBox="0 0 160 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs>
       <linearGradient id="${id}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${A.sky[0]}"/><stop offset="1" stop-color="${A.sky[1]}"/></linearGradient>
       <radialGradient id="${id}g"><stop offset="0" stop-color="#FFE9C2"/><stop offset=".45" stop-color="#FFC98A" stop-opacity=".85"/><stop offset="1" stop-color="#FFB070" stop-opacity="0"/></radialGradient></defs>
@@ -797,7 +800,7 @@ function ascSecBody(k, a){
       const cls = isRe || (isMain && !a.re) ? " cur" : locked ? " locked" : "";
       const inner = `<span class="it-md">${md}</span><span class="it-t"><b>${esc(D.n)} ${ascCrampHTML(x)}</b><small>${esc(state)}</small></span><span class="it-r num">${fmtNum(D.top)} m</span>`;
       return st.n ? `<button class="row tap it-row${cls}" data-a="ascMount" data-k="${x}">${inner}<span class="chev">${icon("chev")}</span></button>` : `<div class="row it-row${cls}">${inner}</div>`; }).join("")}</div>`).join("")}
-      ${a.summits.length ? `<p class="it-foot">Touche une montagne gravie pour la regravir.</p>` : ""}`;
+`;
   }
   if(k==="carnet") return ascCarnetHTML(a);
   // trophées de sommet : ceux gagnés (touche pour revoir le sommet), puis celui à gagner
@@ -858,7 +861,7 @@ function ascHowHTML(){
     <p>La dernière ligne droite (les 12 derniers %, hachurés sur la barre) se fait à pleine vitesse si ta force est à ${Math.round(ASC_FORM_OK*100)} % de son meilleur niveau des 6 derniers mois, sinon à mi-vitesse. Sur le K2 et l'Everest, cette règle commence dès ${fmtNum(ASC_DEATH)} m : la zone de la mort.</p>
     <p><b>Regravir</b> : une montagne déjà gravie se regravit depuis l'itinéraire, plus raide à chaque fois, pour un trophée Saphir, puis Rubis, puis Diamant.</p>
     <h3>La montagne</h3>
-    <p>Le tracé suit la vraie voie d'ascension. Les pointillés clairs indiquent les passages cachés par le relief. Touche un camp, le sommet ou ton grimpeur pour voir son altitude et le temps restant.</p>
+    <p>Le tracé suit la vraie voie d'ascension. Les pointillés clairs indiquent les passages cachés par le relief. Chaque camp, le sommet et ton grimpeur donnent leur altitude et le temps restant.</p>
     <h3>Tout part de ton historique</h3>
     <p>Corriger ou supprimer une séance corrige l'ascension. Sources des montagnes : voir À propos.</p>`;
 }
@@ -964,9 +967,9 @@ function ascPanoSVG(k){
     <circle class="sm-glow" cx="${D.sx}" cy="${D.sy}" r="74" fill="url(#smG)"/>
     <path d="M${line}V188H0Z" fill="url(#smM)"/><path class="sm-lit" d="M${line}V188H0Z" fill="url(#smL)"/>
     <path class="sm-rt" d="${rd}" fill="none" stroke="rgba(255,255,255,.55)" stroke-width=".7" stroke-dasharray="1.4 1.6"/>
-    <path class="sm-done" d="${rd}" pathLength="1" fill="none" stroke="#E07A55" stroke-width="1.2" stroke-linecap="round" stroke-dasharray="1 1" stroke-dashoffset="1"/>
-    <g transform="translate(${D.sx} ${D.sy})"><g class="sm-fl"><path d="M0 0V-15" stroke="#F7F4EE" stroke-width="1.1" stroke-linecap="round"/><path class="sm-cloth" d="M0 -15h9.5l-2.3 2.8 2.3 2.8H0Z" fill="#E07A55"/></g></g>
-    <circle class="sm-me" r="2.2" cx="${ridge[0][0]}" cy="${P(ridge[0][1]+.5)}" fill="#E07A55" stroke="#fff" stroke-width=".8"/></svg>`;
+    <path class="sm-done" d="${rd}" pathLength="1" fill="none" stroke="${ascHue(ascDark())}" stroke-width="1.2" stroke-linecap="round" stroke-dasharray="1 1" stroke-dashoffset="1"/>
+    <g transform="translate(${D.sx} ${D.sy})"><g class="sm-fl"><path d="M0 0V-15" stroke="#F7F4EE" stroke-width="1.1" stroke-linecap="round"/><path class="sm-cloth" d="M0 -15h9.5l-2.3 2.8 2.3 2.8H0Z" fill="${ascHue(true)}"/></g></g>
+    <circle class="sm-me" r="2.2" cx="${ridge[0][0]}" cy="${P(ridge[0][1]+.5)}" fill="${ascHue(ascDark())}" stroke="#fff" stroke-width=".8"/></svg>`;
 }
 function ascShowSummit(s){
   if(!s) return;
@@ -1061,12 +1064,12 @@ function ascDrawCard(s){
   ctx.beginPath(); p.forEach((q,i)=>{ const x = q[0]*k, y = y0 + q[1]*k*.9; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
   const mg = ctx.createLinearGradient(0, y0+D.sy*k*.9, 0, H); mg.addColorStop(0, "rgb(176,190,216)"); mg.addColorStop(.35, "rgb(60,70,96)"); mg.addColorStop(1, "rgb(20,26,44)"); ctx.fillStyle = mg; ctx.fill();
   const fx = D.sx*k, fy = y0 + D.sy*k*.9; ctx.strokeStyle = "#F4F6FA"; ctx.lineWidth = 6; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(fx, fy-120); ctx.stroke();
-  ctx.fillStyle = "#E07A55"; ctx.beginPath(); ctx.moveTo(fx, fy-120); ctx.lineTo(fx+74, fy-120); ctx.lineTo(fx+56, fy-98); ctx.lineTo(fx+74, fy-76); ctx.lineTo(fx, fy-76); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = ascHue(true); ctx.beginPath(); ctx.moveTo(fx, fy-120); ctx.lineTo(fx+74, fy-120); ctx.lineTo(fx+56, fy-98); ctx.lineTo(fx+74, fy-76); ctx.lineTo(fx, fy-76); ctx.closePath(); ctx.fill();
   // textes
   const X = 84, white = "#FFFFFF", mute = "rgba(255,255,255,.7)";
   ctx.save(); ctx.translate(X-2, 86); ctx.scale(.62, .62); ctx.translate(0, -5); ctx.lineWidth = 6.5; ctx.lineCap = ctx.lineJoin = "round";
-  ctx.strokeStyle = white; ctx.stroke(new Path2D(ASCEN_LETTERS)); ctx.strokeStyle = "#E07A55"; ctx.stroke(new Path2D(ASCEN_BAR)); ctx.restore();
-  ctx.fillStyle = "#FFB48F"; ctx.font = recapFont(700, 30, true); ctx.fillText("SOMMET ATTEINT", X, 210);
+  ctx.strokeStyle = white; ctx.stroke(new Path2D(ASCEN_LETTERS)); ctx.strokeStyle = ascHue(true); ctx.stroke(new Path2D(ASCEN_BAR)); ctx.restore();
+  ctx.fillStyle = "#FFE680"; ctx.font = recapFont(700, 30, true); ctx.fillText("SOMMET ATTEINT", X, 210);
   ctx.fillStyle = white; ctx.font = recapFont(700, 96, true); ctx.fillText(recapFit(ctx, D.n, W-2*X), X, 310);
   ctx.font = recapFont(700, 72); ctx.fillText(`${fmtNum(D.top)} m`, X, 392);
   ctx.fillStyle = mute; ctx.font = recapFont(500, 34, true);

@@ -253,7 +253,7 @@ function proposalPaneHTML(draft){
   const types = adj && !imported ? `<div class="type-scroll">${typeChips}</div>` : "";
   if(!draft.exos.length){
     return `${types}${hero}
-      ${emptyHTML("toolbox", "Aucun exercice possible", "Aucun exercice disponible pour ce type de séance avec ton matériel. Choisis un autre type ou complète ton matériel dans Profil.")}`;
+      ${emptyHTML("toolbox", "Aucun exercice possible", "Pas d'exercice de ce type avec ton matériel.", `<button class="btn sm es-cta" data-a="openEquip">Matériel</button>`)}`;
   }
   // exercices de force, puis (si le réglage est actif) le bloc d'étirements dans sa propre section
   if(heroShown && !adj) return hero; // « Autre proposition » est dans « Choisir une autre séance »
@@ -410,7 +410,7 @@ function templatesHTML(){
       <div class="tpl-empty">
         <div class="te-ico">${sfIcon("calPlan","red","lg")}</div>
         <div class="te-t">Mes séances</div>
-        <div class="te-s">Planifie une séance dans Mes séances : elle t'attendra ici.</div>
+        <div class="te-s">Aucune séance enregistrée</div>
         ${appPicksOn() ? `<button class="btn secondary sm" data-a="weekWizard"><svg class="spk" viewBox="0 0 24 24">${ICONS.sparkle}</svg> Programme de la semaine</button>` : ""}
       </div>
     </div>`;
@@ -646,7 +646,7 @@ function renderTodayLive(draft){
     <button class="sx-end nb-done" data-a="finishSession">Terminer</button></div>`;
   if(!draft.exos.length){
     return `<div class="content live sx">${top}${emptyHTML("toolbox", "Plus d'exercice", "Tous les exercices ont été retirés. Ajoute-en un pour continuer.")}
-    <div class="btnrow">${hxBtn("btn", 'data-a="addExoOpen"', `${icon("plus")} Ajouter un exercice`)}</div></div>`;
+    <div class="btnrow"><button class="btn" data-a="addExoOpen">${icon("plus")} Ajouter un exercice</button></div></div>`;
   }
   return `<div class="content live sx">${top}
     <div class="live-head" id="liveHead">${liveHeadHTML(draft)}</div>
@@ -771,7 +771,7 @@ function sessionCompleteHTML(draft){
       ${prs?`<div><b>${prs}</b><small>record${prs>1?"s":""}</small></div>`:""}
     </div>
     <button class="btn big" data-a="finishSession">${icon("check")} Enregistrer la séance</button>
-    ${hxBtn("btn ghost sm", 'style="margin-top:6px" data-a="addExoOpen"', `${icon("plus")} Ajouter un exercice`)}
+    <button class="btn ghost sm" style="margin-top:8px" data-a="addExoOpen">${icon("plus")} Ajouter un exercice</button>
   </div>`;
 }
 
@@ -954,7 +954,7 @@ function renderFocusCard(idx, ex, def){
     ${sxStepsHTML(idx, ex, def, si, st)}
     ${upNextHTML(idx)}
     ${isTimed(def)
-      ? `${hxBtn(`btn big validate hold-go ${rr?"ready":""}`, `data-a="holdStart" data-exi="${idx}" data-si="${si}"`, `${icon("timer")} Lancer le chrono · ${st.reps||30} s`)}
+      ? `<button class="btn big validate hold-go ${rr?"ready":""}" data-a="holdStart" data-exi="${idx}" data-si="${si}">${icon("timer")} Lancer le chrono · ${st.reps||30} s</button>
          ${hxBtn("btn ghost sm hold-skip", `data-a="validateSet" data-exi="${idx}"`, "Valider sans chrono")}`
       : hxBtn(`btn big validate ${rr?"ready":""}`, `data-a="validateSet" data-exi="${idx}"`, "Valider la série")}
   </div>`;
@@ -1176,7 +1176,7 @@ function refreshFocusRegion(){
     }
   }
   // l'altitude de la séance : +X m, compteur, camp atteint en pleine séance (view_ascent.js)
-  if(head && typeof liveAscAfter==="function") liveAscAfter(head);
+  if(head && typeof liveAscAfter==="function")liveAscAfter(head);
   if(typeof renderRestBar==="function") renderRestBar();
 }
 
@@ -1293,7 +1293,7 @@ function openPlanDaySheet(day){
         <button class="btn secondary sm" data-a="tplOpenEditor" data-id="${cur.id}">${icon("edit")} Modifier</button></div>` : ""}
       ${S.templates.length ? `<p class="body" style="margin-bottom:12px">${cur?"Changer pour une autre séance :":`Laquelle de Mes séances veux-tu faire chaque ${label} ?`}</p><div class="group">${rows}</div>
         ${cur?`<div class="btnrow"><button class="btn ghost" data-a="planSet" data-d="${day}">Ne rien prévoir le ${label}</button></div>`:""}`
-      : emptyHTML("bookmarkG", "Mes séances est vide", "Compose une séance : tu pourras la garder pour ce jour.", "", "padding:24px 20px")}
+      : emptyHTML("bookmarkG", "Mes séances est vide", "", "", "padding:24px 20px")}
       <div class="btnrow"><button class="btn ${S.templates.length?"secondary":""}" data-a="planNew" data-d="${day}">${icon("plus")} Composer une séance pour le ${label}</button></div>
     </div>`);
 }
@@ -1438,7 +1438,7 @@ Object.assign(ACT, {
     const app = [];
     if(prop && draft.source!=="imported") app.push(row("csRegen", sfIcon("sparkles", "orange"), draft.tailored ? "Autre séance sur mesure" : "Autre proposition", draft.tailored ? "Mêmes critères, d'autres exercices" : ""));
     else if(appPicksOn() && !prop) app.push(row("csApp", sfIcon("sparkles", "orange"), "Laisse l'app choisir"));
-    app.push(row("csTailor", sfIcon("ruler", "purple"), "Séance sur mesure", "Choisis le type, la zone et la durée"));
+    app.push(row("csTailor", sfIcon("ruler", "purple"), "Séance sur mesure", "Type, zone et durée au choix"));
     const now = [row("csExpress", sfIcon("stopwatch", "green"), "Séance express", "10 min · tout le corps"),
       row("csCompose", sfIcon("pencil", "blue"), "Composer moi-même")];
     const sec = (h, rows)=>rows.length ? `<h2 class="sh">${h}</h2><div class="group">${rows.join("")}</div>` : "";
@@ -1542,7 +1542,7 @@ Object.assign(ACT, {
     else S.custom.pendingDays = [day];
     S.settings.todayTab = "custom";
     closeSheet(); save(); scrollTodayTop(); renderTodaySoft();
-    toast(`Compose ta séance, puis enregistre-la pour ${JOURS[(day+1)%7]}`);
+    toast(`Nouvelle séance pour le ${JOURS[(day+1)%7]}`);
   },
   pickerInfo(d){ const l = qs("#pickerList"); if(picker && l) picker.scroll = l.scrollTop; ACT.showExoInfo({ id:d.id }); },
   swapFromInfo(d){
@@ -2027,10 +2027,10 @@ function setPRFlag(ex, si){
 }
 function doneSetsBodyHTML(exi){
   const ex = S.draft && S.draft.exos[exi]; if(!ex) return "";
-  const def = EXO_MAP[ex.exoId], lt = loadableTypeOf(def), unit = isTimed(def) ? "s" : "reps";
+  const def = EXO_MAP[ex.exoId], lt = loadableTypeOf(def), unit = isTimed(def) ? "s" : "rép.", what = isTimed(def) ? "secondes" : "répétitions";
   const rows = ex.sets.map((s,si)=>!s.done ? "" : `<div class="row ds-row">
       <span class="ds-n">${si+1}</span>
-      <div class="ds-f"><div class="mini-step"><button data-a="dsStep" data-exi="${exi}" data-si="${si}" data-f="reps" data-d="-1" aria-label="Moins de ${unit}">−</button><span>${s.reps||0}</span><button data-a="dsStep" data-exi="${exi}" data-si="${si}" data-f="reps" data-d="1" aria-label="Plus de ${unit}">+</button></div><small>${unit}</small></div>
+      <div class="ds-f"><div class="mini-step"><button data-a="dsStep" data-exi="${exi}" data-si="${si}" data-f="reps" data-d="-1" aria-label="Moins de ${what}">−</button><span>${s.reps||0}</span><button data-a="dsStep" data-exi="${exi}" data-si="${si}" data-f="reps" data-d="1" aria-label="Plus de ${what}">+</button></div><small>${unit}</small></div>
       ${lt ? `<div class="ds-f"><div class="mini-step"><button data-a="dsStep" data-exi="${exi}" data-si="${si}" data-f="weight" data-d="-1" aria-label="Charge plus légère">−</button><span>${lt==="bands" ? esc(bandLabel(s.weight||1)).slice(0,6) : fmtDec(s.weight||0)}</span><button data-a="dsStep" data-exi="${exi}" data-si="${si}" data-f="weight" data-d="1" aria-label="Plus lourd">+</button></div><small>${lt==="bands"?"élastique":"kg"}</small></div>` : ""}
       ${s.pr ? `<span class="ds-pr" title="Record">${ii("bolt")}</span>` : ""}
       <button class="icon-btn ds-undo" data-a="dsUndo" data-exi="${exi}" data-si="${si}" aria-label="Annuler la validation de la série ${si+1}">${icon("undo")}</button>

@@ -50,7 +50,7 @@ fs.mkdirSync(OUT, { recursive: true });
   await page.click('.ef-opts button >> nth=0'); await wait(150);
   log('Effort saved:', await page.evaluate(() => S.draft.exos[0].sets[0].effort));
   await shot('02_effort');
-  await page.click('.focus-card [data-a="restSkip"]'); await wait(300);
+  await page.waitForTimeout(650); await page.click('.focus-card [data-a="restSkip"]'); await wait(300);
   log('Warm-up hint on dumbbell first set:', await page.$('.warmup') ? 'shown (should not, a set is done)' : 'hidden');
   await page.evaluate(() => { S.draft = null; save(); renderViewAnimated('today'); }); await wait(300);
   log('Wake lock released:', await page.evaluate(() => window.__wl));

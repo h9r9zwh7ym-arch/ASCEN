@@ -44,7 +44,7 @@ const path = require('path');
   await page.screenshot({ path: `${shotDir}/focus3_rest.png` });
 
   // skip rest
-  await page.click('[data-a="restSkip"]');
+  await page.waitForTimeout(650); await page.click('[data-a="restSkip"]');
   await page.waitForTimeout(200);
   const ringGoneAfterSkip = await page.$('.ring-wrap');
   console.log('Ring gone after skip:', !ringGoneAfterSkip);
@@ -56,7 +56,7 @@ const path = require('path');
     await btn.click();
     await page.waitForTimeout(150);
     const skip = await page.$('[data-a="restSkip"]');
-    if (skip) { await skip.click(); await page.waitForTimeout(150); }
+    if (skip) { await page.waitForTimeout(650); await skip.click(); await page.waitForTimeout(150); }
   }
   const nameAfterAdvance = await page.$eval('.fc-name', el => el.textContent);
   console.log('Exercise name after auto-advance (should differ from first):', nameAfterAdvance);

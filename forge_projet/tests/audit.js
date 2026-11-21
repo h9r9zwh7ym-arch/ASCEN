@@ -78,10 +78,10 @@ const W = +(process.env.W || 375), DARK = process.env.DARK === '1', wk = process
   await act('saveTemplateOpen'); await audit('savetpl'); await close();
   await act('startCustom'); await page.waitForSelector('#launch', { state: 'detached', timeout: 6000 }); await audit('live');
   await page.click('[data-a="validateSet"]'); await audit('live_rest');
-  await page.click('.focus-card [data-a="restSkip"]'); await wait(200);
+  await page.waitForTimeout(650); await page.click('.focus-card [data-a="restSkip"]'); await wait(200);
   await act('focusMenu', { idx: '0' }); await audit('live_menu'); await close();
   await act('openOverview'); await audit('live_overview'); await close();
-  for (let i = 0; i < 40; i++) { const v = await page.$('[data-a="validateSet"]'); if (!v) break; await v.click(); await wait(60); const sk = await page.$('.focus-card [data-a="restSkip"]'); if (sk) { await sk.click(); await wait(60); } }
+  for (let i = 0; i < 40; i++) { const v = await page.$('[data-a="validateSet"]'); if (!v) break; await v.click(); await wait(60); const sk = await page.$('.focus-card [data-a="restSkip"]'); if (sk) { await page.waitForTimeout(650); await sk.click(); await wait(60); } }
   await audit('live_complete');
   // depuis 2.3.0 la dernière série termine la séance toute seule ; sinon on clique « Enregistrer »
   if (await page.$('.complete-card [data-a="finishSession"]')) await page.click('.complete-card [data-a="finishSession"]');

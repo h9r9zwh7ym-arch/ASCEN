@@ -223,7 +223,7 @@ function strengthCardHTML(){
     const n = Math.min(2, Math.max(0, ...Object.values(cnt)));
     return `<div class="chart-card trend-card stagger" style="--i:1">${head}<div class="tr-empty">
       <div class="tr-dots" aria-hidden="true">${[0,1,2].map(i=>`<i class="${i<n?"on":""}" style="--k:${i}"></i>`).join("")}</div>
-      <div><b>${n ? `Encore ${nb(3-n,"séance")} avec un même exercice` : "Fais 3 séances avec un même exercice"}</b><span>et ta courbe de force apparaît.</span></div>
+      <div><b>${n ? `Encore ${nb(3-n,"séance")} avec un même exercice` : "3 séances avec un même exercice"}</b><span>et ta courbe de force apparaît.</span></div>
     </div></div>`;
   }
   const last = pts[pts.length-1], ref = pts[Math.max(0, pts.length-5)], d = last.v-ref.v, wk = Math.round(daysBetween(ref.wk, last.wk)/7);

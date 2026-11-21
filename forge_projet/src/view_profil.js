@@ -39,7 +39,7 @@ function profileHeroHTML(){
   return `<button class="profile-hero stagger" style="--i:0" data-a="editName" aria-label="${name ? esc(name)+" : modifier ton prénom" : "Ajoute ton prénom"}">
     <span class="ph-avatar${AVATARS[S.settings.avatar] ? " pic" : ""}" aria-hidden="true"><span>${AVATARS[S.settings.avatar] ? avatarSVG(S.settings.avatar) : initial}</span></span>
     <span class="ph-main">
-      <span class="ph-name">${name ? esc(name) : "Ajoute ton prénom"}</span>
+      <span class="ph-name${name ? "" : " ph-empty"}">${name ? esc(name) : "Ton prénom"}</span>
       <span class="ph-sub">${n ? `${nb(n, "séance")} depuis ${MOIS_LONG[d.getMonth()]}${y}` : "Ta première séance t'attend"}</span>
     </span>
   </button>`;
@@ -111,7 +111,7 @@ function dataMoreHTML(){
         ${sfIcon("download","green")}
         <div class="grow"><div class="t">Sauvegarder mes données</div><div class="s">${backupStatusText()}</div></div>
       </button>
-      ${canAutoBackup() ? `<div class="row">${sfIcon("repeat","green")}<div class="grow"><div class="t">Sauvegarde automatique</div><div class="s wrap">${S.settings.autoBackup ? "Mise à jour après chaque séance" : "Choisis un fichier : il sera mis à jour après chaque séance"}</div></div>
+      ${canAutoBackup() ? `<div class="row">${sfIcon("repeat","green")}<div class="grow"><div class="t">Sauvegarde automatique</div><div class="s wrap">${S.settings.autoBackup ? "Mise à jour après chaque séance" : "Un fichier mis à jour après chaque séance"}</div></div>
         <button class="switch ${S.settings.autoBackup ? "on" : ""}" role="switch" aria-checked="${!!S.settings.autoBackup}" aria-label="Sauvegarde automatique" data-a="toggleAutoBackup"></button></div>` : ""}
     </div>
     ${isStandalone() ? "" : `<div class="group" style="margin-top:14px">
@@ -403,9 +403,9 @@ function openInstall(){
     <div class="sheet-body">
       <p class="body" style="margin:0 20px 14px">Installée sur l'écran d'accueil, ASCEN s'ouvre en plein écran et fonctionne hors ligne. Safari ne peut plus effacer tes données.</p>
       <div class="group install-steps">
-        <div class="row"><span class="step-n">1</span><div class="grow"><div class="t">Touche le bouton Partager</div><div class="s wrap">Le carré avec une flèche, dans la barre de Safari</div></div></div>
-        <div class="row"><span class="step-n">2</span><div class="grow"><div class="t">Choisis « Sur l'écran d'accueil »</div><div class="s wrap">Fais défiler la liste si nécessaire</div></div></div>
-        <div class="row"><span class="step-n">3</span><div class="grow"><div class="t">Ouvre ASCEN depuis son icône</div><div class="s wrap">Tes séances ne sont pas transférées automatiquement. Fais une sauvegarde, puis restaure-la dans l'app installée.</div></div></div>
+        <div class="row"><span class="step-n">1</span><span class="step-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5v10.5M8 7.2l4-3.7 4 3.7M7.5 10H6.2a1 1 0 0 0-1 1v8.3a1 1 0 0 0 1 1h11.6a1 1 0 0 0 1-1V11a1 1 0 0 0-1-1h-1.3"/></svg></span><div class="grow"><div class="t">Partager</div><div class="s wrap">Barre de Safari</div></div></div>
+        <div class="row"><span class="step-n">2</span><span class="step-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4.5" y="4.5" width="15" height="15" rx="3.5"/><path d="M12 8.5v7M8.5 12h7"/></svg></span><div class="grow"><div class="t">Sur l'écran d'accueil</div></div></div>
+        <div class="row"><span class="step-n">3</span><span class="step-ic logo" aria-hidden="true">${ascenMark("", true)}</span><div class="grow"><div class="t">ASCEN</div><div class="s wrap">Les séances faites dans Safari n'y sont pas transférées.</div></div></div>
       </div>
       <div class="btnrow"><button class="btn secondary" data-a="backupData">${icon("bookmark")} Faire une sauvegarde d'abord</button></div>
     </div>`);

@@ -61,7 +61,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.click('[data-a="validateSet"]'); await wait(300);
   log('Rest card next text:', await page.textContent('.fc-next'));
   await shot('06_rest_next');
-  await page.click('.focus-card [data-a="restSkip"]'); await wait(400);
+  await page.waitForTimeout(650); await page.click('.focus-card [data-a="restSkip"]'); await wait(400);
   log('After skip ->', await page.textContent('.fc-name'));
   // 10. chrono de la planche
   log('Hold button:', await page.textContent('[data-a="holdStart"]'));
@@ -79,7 +79,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await wait(1800); // + 1,1 s d'anneau orange avant la série suivante
   log('After rest end ->', await page.textContent('.fc-name').catch(() => 'complete'));
   // terminer tout
-  for (let i = 0; i < 10; i++) { const v = await page.$('[data-a="validateSet"]'); if (!v) break; await v.click(); await wait(150); const sk = await page.$('.focus-card [data-a="restSkip"]'); if (sk) { await sk.click(); await wait(150); } }
+  for (let i = 0; i < 10; i++) { const v = await page.$('[data-a="validateSet"]'); if (!v) break; await v.click(); await wait(150); const sk = await page.$('.focus-card [data-a="restSkip"]'); if (sk) { await page.waitForTimeout(650); await sk.click(); await wait(150); } }
   await wait(500);
   await wait(1300); // 2.3 : la dernière série termine la séance toute seule
   log('Save offer:', !!(await page.$('[data-a="saveDoneSession"]')), '| custom cleared:', await page.evaluate(() => S.custom.exos.length === 0));

@@ -1,7 +1,7 @@
 // Généré pour le dépôt : dossiers de sortie et navigateur configurables (voir tests/README.md)
 const OUT_ROOT = process.env.OUT_DIR || require('path').join(__dirname, 'out'); require('fs').mkdirSync(OUT_ROOT, { recursive: true });
 // 4.0 (retours) : roue abdominale debout de retour, rangées de filtres sans rebond vertical, « Retour »
-// séparé du titre, carte des muscles contrastée (gainage en violet) avec légende lisible, stimulus épuré
+// séparé du titre, carte des muscles contrastée (2.15 : vert de réussite, une seule teinte) avec légende lisible, stimulus épuré
 // (légende des chiffres, « À propos »), période du graphique de l'historique, suggestions de l'app
 // désactivables, Mes séances et Ma semaine repliées en résumé compact
 const __pw = require('playwright'); const path = require('path'); const fs = require('fs');
@@ -45,7 +45,7 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await page.click('.tabbtn[data-id="progress"]'); await wait(600);
   await page.evaluate(() => ACT.progressTab({ v: 'muscles' })); await wait(1300); // zones allumées en fondu
   const mm = await page.evaluate(() => { const z = document.querySelector('.mm-week .mm-z.r-core.on'), cs = z && getComputedStyle(z);
-    const off = getComputedStyle(document.querySelector('.mm-week .mm-z:not(.on)')), tint = getComputedStyle(document.documentElement).getPropertyValue('--tint').trim();
+    const off = getComputedStyle(document.querySelector('.mm-week .mm-z:not(.on)')), tint = (()=>{ const pr = document.createElement('i'); pr.style.color = 'var(--green)'; document.body.appendChild(pr); const c = getComputedStyle(pr).color; pr.remove(); return '#' + c.match(/\d+/g).slice(0,3).map(x => (+x).toString(16).padStart(2, '0')).join(''); })();
     return { abs: !!z, op: z ? +cs.fillOpacity : 0, fill: cs && cs.fill, stroke: off.stroke !== 'none', tint, legend: document.querySelectorAll('.mm-legend').length, scale: document.querySelectorAll('.mm-scale .sc i').length, top: (document.querySelector('.mm-top') || {}).textContent }; });
   log('Muscle map:', JSON.stringify(mm));
   const hex = '#' + ((mm.fill || '').match(/\d+/g) || []).map(x => (+x).toString(16).padStart(2, '0')).join('');

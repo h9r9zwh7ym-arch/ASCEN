@@ -97,7 +97,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
     await v.click(); await wait(120);
     if (i === 0) await shot('07_rest');
     const sk = await page.$('.focus-card [data-a="restSkip"]');
-    if (sk) { await sk.click(); await wait(120); }
+    if (sk) { await page.waitForTimeout(650); await sk.click(); await wait(120); }
   }
   // dernière série : la séance se termine d'elle-même (0,5 s plus tard), sans bouton à toucher
   if (!(await page.waitForSelector('.center-modal [data-a="closesheet"]', { timeout: 5000 }).catch(() => null))) errors.push('ASSERT: fin automatique après la dernière série');

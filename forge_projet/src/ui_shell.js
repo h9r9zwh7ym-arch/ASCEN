@@ -577,6 +577,21 @@ function resetDocScroll(){
   if(window.scrollY || window.scrollX) window.scrollTo(0, 0);
 }
 window.addEventListener("scroll", ()=>{ if(window.scrollY || window.scrollX) requestAnimationFrame(resetDocScroll); }, { passive:true });
+// Clavier ouvert dans une feuille (modifier une séance, onboarding, nom d'une séance…) : iOS le pose par-dessus la
+// page sans la raccourcir. La hauteur qu'il cache (visualViewport) remonte le voile et sa feuille juste au-dessus :
+// le champ et le bouton du bas restent visibles. Rien ne change hors saisie.
+if(window.visualViewport){
+  let kbRaf = 0;
+  const kbSync = ()=>{ kbRaf = 0;
+    const a = document.activeElement, typing = a && /^(INPUT|TEXTAREA)$/.test(a.tagName) && a.closest && a.closest("#overlay");
+    const h = typing ? Math.max(0, Math.round(innerHeight - visualViewport.height - visualViewport.offsetTop)) : 0, on = h>80;
+    const r = document.documentElement;
+    if(r.classList.contains("kb-open")!==on || (on && r.style.getPropertyValue("--kb")!==h+"px")){ r.style.setProperty("--kb", on ? h+"px" : "0px"); r.classList.toggle("kb-open", on); }
+  };
+  const kb = ()=>{ if(!kbRaf) kbRaf = requestAnimationFrame(kbSync); };
+  visualViewport.addEventListener("resize", kb); visualViewport.addEventListener("scroll", kb);
+  document.addEventListener("focusin", kb); document.addEventListener("focusout", ()=>setTimeout(kb, 60));
+}
 document.addEventListener("focusout", ()=>setTimeout(resetDocScroll, 120));
 function closeSheet(){
   const ov = qs("#overlay");

@@ -42,9 +42,9 @@ require('fs').mkdirSync(OUT, { recursive: true });
   log('After exo 1 done, current:', await page.evaluate(() => (document.querySelector('.fc-name') || document.querySelector('.sx-upcard b') || {}).textContent), '| float:', await page.$$eval('.float-txt', e=>e.map(x=>x.textContent)));
   await shot('03_after_exo');
   // sauter au 3e, le terminer, le 2e reste à faire
-  await page.click('[data-a="restSkip"]').catch(()=>{}); await wait(200);
+  await page.waitForTimeout(650); await page.click('[data-a="restSkip"]').catch(()=>{}); await wait(200);
   await page.evaluate(() => ACT.focusJump({ idx: '2' })); await wait(300);
-  for (let i=0;i<2;i++){ await page.click('[data-a="validateSet"]'); await wait(200); const sk = await page.$('.focus-card [data-a="restSkip"]'); if (sk){ await sk.click(); await wait(150);} }
+  for (let i=0;i<2;i++){ await page.click('[data-a="validateSet"]'); await wait(200); const sk = await page.$('.focus-card [data-a="restSkip"]'); if (sk){ await page.waitForTimeout(650); await sk.click(); await wait(150);} }
   log('After exo 3 -> goes to undone exo 2:', await page.textContent('.fc-name'));
   await page.click('[data-a="openOverview"]'); await wait(400);
   log('Overview groups:', await page.$$eval('.ov-h', e => e.map(x => x.textContent.trim())));
@@ -54,7 +54,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   log('Menu items:', await page.$$eval('.menu-list button', e => e.map(x => x.textContent.trim())));
   await shot('05_menu');
   await page.click('.center-modal [data-a="closesheet"]'); await wait(350);
-  for (let i=0;i<2;i++){ await page.click('[data-a="validateSet"]'); await wait(200); const sk = await page.$('.focus-card [data-a="restSkip"]'); if (sk){ await sk.click(); await wait(150);} }
+  for (let i=0;i<2;i++){ await page.click('[data-a="validateSet"]'); await wait(200); const sk = await page.$('.focus-card [data-a="restSkip"]'); if (sk){ await page.waitForTimeout(650); await sk.click(); await wait(150);} }
   await wait(600);
   // 2.3 : plus de carte « Séance complète » ni de bouton à toucher : la séance se termine toute seule
   await wait(1200);

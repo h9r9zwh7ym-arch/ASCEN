@@ -96,7 +96,11 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   await p.evaluate(() => { S.custom = { exos: [{ exoId: 'pompes', sets: 2 }] }; S.settings.todayTab = 'custom'; save(); renderView('today'); ACT.startCustom(); });
   await p.waitForTimeout(3300);
   await p.evaluate(() => { S.draft.exos[0].sets[0].reps = 80; runAction('validateSet', document.querySelector('[data-a="validateSet"]')); });
-  await p.waitForTimeout(1000);
+  // double touche : le 2e toucher, 200 ms après, tombe sur « Passer le repos » et ne doit pas le passer
+  await p.waitForTimeout(200);
+  await p.evaluate(() => runAction('restSkip', document.body)); await p.waitForTimeout(100);
+  if (!(await p.evaluate(() => !!restState))) fail('double touche : le repos n\'est plus sauté');
+  await p.waitForTimeout(700);
   await p.evaluate(() => ACT.abandonNow()); await p.waitForTimeout(400);
   r = await p.evaluate(() => prTotal());
   if (r !== base) fail(`abandon : records inchangés (${base} attendu, ${r})`);

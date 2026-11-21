@@ -100,7 +100,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.click('[data-a="openOverview"]'); await wait(400); await page.click('[data-a="jumpFromOverview"][data-idx="3"]');
   await wait(400);
   log('Jump from list, card:', await page.$eval('.fc-name', e => e.textContent));
-  for (let i = 0; i < 3; i++) { await page.click('[data-a="validateSet"]'); await wait(150); const sk = await page.$('.focus-card [data-a="restSkip"]'); if (sk) { await sk.click(); await wait(120); } }
+  for (let i = 0; i < 3; i++) { await page.click('[data-a="validateSet"]'); await wait(150); const sk = await page.$('.focus-card [data-a="restSkip"]'); if (sk) { await page.waitForTimeout(650); await sk.click(); await wait(120); } }
   await wait(300);
   log('Progress bar:', await page.$eval('.lp-bar', e => e.getAttribute('aria-label')));
   await page.evaluate(() => document.querySelector('#v-today').scrollTo(0, 300));

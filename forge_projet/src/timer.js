@@ -1,6 +1,7 @@
 // ================= TIMER DE REPOS =================
 let restState = null; // {endAt, totalSec, label, exoIdx}
 let restInterval = null;
+const REST_SKIP_GUARD = 600;   // ms : « Passer le repos » ignoré juste après « Valider la série » (double touche)
 
 // arrived : le repos s'affiche déjà sur l'exercice qui vient ensuite (pas de nouveau saut à la fin)
 // src : la série qui vient d'être validée (pour noter son ressenti pendant le repos)
@@ -58,8 +59,7 @@ function tickRest(){
     // à zéro, l'anneau passe à l'orange (« C'est reparti ») un court instant, puis la série suivante s'affiche
     if(!late && !restState.over){
       restState.over = Date.now();
-      if(navigator.vibrate) try{ navigator.vibrate([120,60,120]); }catch(e){}
-      sfx("restEnd"); renderRestBar(0);
+      sfx("restEnd"); renderRestBar(0);   // pas de vibration : événement automatique (règle du retour haptique)
       if(typeof ringOver==="function" && ringOver(true)) return;
     }
     if(!late && restState.over && Date.now()-restState.over < 1100) return;
@@ -72,7 +72,7 @@ function tickRest(){
   // 3 dernières secondes : l'anneau bat et le téléphone vibre à chaque seconde
   const wrap = document.querySelector(".ring-wrap");
   if(wrap) wrap.classList.toggle("ending", remain<=3);
-  if(remain<=3 && remain!==restState.lastTick && !document.hidden){ restState.lastTick = remain; if(navigator.vibrate) try{ navigator.vibrate(10); }catch(e){} sfx("restTick"); }
+  if(remain<=3 && remain!==restState.lastTick && !document.hidden){ restState.lastTick = remain; sfx("restTick"); }
   renderRestBar(remain);
   if(typeof updateFocusRing==="function") updateFocusRing(remain, restState.totalSec);
 }
@@ -99,7 +99,7 @@ function renderRestBar(remainOverride){
   if(tEl && bar._label===key){ const t = fmtMMSS(remain); if(tEl.textContent!==t) tEl.textContent = t; arc(); return; }
   bar._label = key;
   bar.innerHTML = isl
-    ? `<button class="ri-hit" data-a="restOpen" aria-label="Repos en cours, revenir au repos"><span class="ri-ring"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="14" fill="none" stroke="#3A3A3C" stroke-width="4"/><circle class="ri-arc" cx="18" cy="18" r="14" fill="none" stroke="#E07A55" stroke-width="4" stroke-linecap="round" pathLength="100" stroke-dasharray="100"/></svg></span><span class="rt-time">${fmtMMSS(remain)}</span></button>`
+    ? `<button class="ri-hit" data-a="restOpen" aria-label="Repos en cours, revenir au repos"><span class="ri-ring"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="14" fill="none" stroke="#3A3A3C" stroke-width="4"/><circle class="ri-arc" cx="18" cy="18" r="14" fill="none" stroke="#FFD60A" stroke-width="4" stroke-linecap="round" pathLength="100" stroke-dasharray="100"/></svg></span><span class="rt-time">${fmtMMSS(remain)}</span></button>`
     : `<div class="rt-time">${fmtMMSS(remain)}</div><div class="rt-label">${esc(restState.label)}</div>
     <button data-a="restAdjust" data-d="-15">−15</button><button data-a="restAdjust" data-d="15">+15</button><button data-a="restSkip">Passer</button>`;
   arc();
@@ -107,5 +107,7 @@ function renderRestBar(remainOverride){
 }
 Object.assign(ACT, {
   restAdjust(d){ adjustRestTimer(parseInt(d.d,10)); },
-  restSkip(){ endRest(); },
+  // une double touche sur « Valider la série » tombait sur « Passer le repos », affiché au même endroit
+  // (seulement pour un vrai toucher, passé par le répartiteur ; un appel direct passe le repos tout de suite)
+  restSkip(d, el){ if(el && restState && restState.at && Date.now()-restState.at<REST_SKIP_GUARD) return; endRest(); },
 });

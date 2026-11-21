@@ -18,7 +18,7 @@ function obBody(){
     </div>
     <div class="te-sec">Ton prénom <span class="ob-opt">facultatif</span></div>
     <div class="num-field txt"><input id="obName" type="text" maxlength="30" placeholder="Prénom" autocomplete="given-name" autocapitalize="words" autocorrect="off" spellcheck="false" enterkeyhint="done" value="${esc(S.settings.name||"")}"></div>`;
-  if(obStep===1) return `<div class="ob-t2">Ton matériel</div><div class="ob-s2">Coche ce que tu as à la maison. Le poids du corps est toujours inclus.</div>
+  if(obStep===1) return `<div class="ob-t2">Ton matériel</div><div class="ob-s2">Le poids du corps est toujours inclus.</div>
     <div class="group ob-list">${OB_EQUIP.map(id=>{ const e = EQUIP_MAP[id]; const on = !!S.equipment.owned[id];
       return `<button class="row tap ob-eq ${on?"on":""}" data-a="obEquip" data-id="${id}" role="checkbox" aria-checked="${on}">${sfIcon(EQUIP_GLYPH[id]||"wrench", "gray")}<div class="grow"><div class="t">${esc(e.n)}</div></div><em class="ob-ck">${icon("check")}</em></button>`; }).join("")}</div>
     ${S.equipment.owned.dumbbells ? obDbHTML() : ""}`;
