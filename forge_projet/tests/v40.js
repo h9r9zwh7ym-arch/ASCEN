@@ -54,15 +54,16 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   if (mm.vals.some(v => /\./.test(v))) fail('séries avec une virgule');
   await page.evaluate(() => { const c = document.querySelector('.mm-card'); document.querySelector('#v-progress').scrollTop = c.offsetTop - 60; }); await wait(300); await shot('01_muscles');
 
-  // 3. accueil : « Ma séance » d'abord, une seule action forte, plus de « Ensuite … »
+  // 3. accueil : une seule action forte, plus de « Ensuite … »
   await page.click('.tabbtn[data-id="today"]'); await wait(600);
   const home = await page.evaluate(() => ({
     hero: (document.querySelector('#v-today .hero') || {}).className, title: (document.querySelector('.hero-title') || {}).textContent,
     acts: [...document.querySelectorAll('.hero.compose button')].map(b => b.dataset.a), propose: !!document.querySelector('#v-today [data-a="startSession"]'),
     next: !!document.querySelector('.hero-next'), sep: !!document.querySelector('.home-sep'), nudges: document.querySelectorAll('#v-today .backup-nudge').length, tab: S.settings.todayTab }));
   log('Home (empty):', JSON.stringify(home));
-  // (loi de Hick : la séance de l'app s'ouvre depuis la carte, « Ou laisse l'app choisir »)
-  if (!/compose/.test(home.hero || '') || home.acts.join() !== 'customAddOpen,todayMode' || home.propose) fail('accueil : composer sa séance en premier');
+  // 2.15 (review, M1) : Ma séance vide et rien de prévu, la séance de l'app est prête sur la carte (« Commencer » en
+  // 1 toucher) ; composer reste à un toucher (« Choisir une autre séance »). Une seule action forte.
+  if (!/proposal/.test(home.hero || '') || !home.propose || home.acts.length || !(await page.$('#v-today .hero [data-a="chooseSession"]'))) fail('accueil : séance de l\'app prête, composer à un toucher');
   if (home.next || home.sep || home.nudges > 1) fail('accueil allégé (pas de « Ensuite », un seul rappel)');
   await shot('02_home_compose');
   await page.evaluate(() => { S.custom = { exos: [{ exoId: 'pompes', sets: 3 }, { exoId: 'squat_pdc', sets: 3 }], name: 'Ma routine' }; save(); renderView('today'); }); await wait(400);

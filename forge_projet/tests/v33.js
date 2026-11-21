@@ -17,6 +17,9 @@ const OUT = path.join(OUT_ROOT, 'v33'); fs.mkdirSync(OUT, { recursive: true });
   await page.goto('file://' + path.resolve(process.argv[2]));
   await page.waitForSelector('#splash', { state: 'detached', timeout: 8000 }); await wait(500);
   // 1. carte principale « Compose ta séance » : Choisir + L'app choisit (+ le lien discret « Sur mesure », 2.8.0)
+  // 2.15 : Ma séance vide, l'accueil montre d'abord la séance de l'app ; la carte « Compose ta séance » vient
+  // d'un choix explicite (« Choisir une autre séance » › Composer moi-même), gardé pour la journée
+  await page.evaluate(() => { ACT.csCompose(); closeSheet(); }); await wait(700);
   const card = await page.$$eval('.hero.compose button', b => b.map(x => x.dataset.a));
   // (loi de Hick : « L'app choisit » ouvre la séance de l'app, une seule voie au lieu de deux)
   log('Compose card buttons:', card.join(',')); if (card.join() !== 'customAddOpen,todayMode') fail('un seul « L\'app choisit »');

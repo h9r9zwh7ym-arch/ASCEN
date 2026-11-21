@@ -193,7 +193,7 @@ function nudgeHTML(){
 // Ma séance vide, rien de prévu aujourd'hui : la séance proposée par l'app s'affiche directement, prête à
 // « Commencer » (1 toucher). Composer reste à un toucher (« Choisir une autre séance » › Composer moi-même).
 function autoProposal(draft){
-  return appPicksOn() && !S.custom.exos.length && !customEdit && !plannedTemplate() && !(S.custom.pendingDays && S.custom.pendingDays.length)
+  return appPicksOn() && !S.custom.exos.length && !customEdit && !plannedTemplate() && !(S.custom.pendingDays && S.custom.pendingDays.length) && S.custom.compose!==todayISO()
     && !!draft && !draft.startedAt && draft.exos.length>0;
 }
 function renderTodayPreview(draft){
@@ -1461,7 +1461,8 @@ Object.assign(ACT, {
   csApp(){ closeSheet(); ACT.todayMode({ v:"proposal" }); },
   csExpress(){ closeSheet(); ACT.startExpress(); },
   csTailor(){ ACT.tailorOpen({ child:true }); },
-  csCompose(){ closeSheet(); customEdit = false; heroSnap = null; S.custom = { exos:[] }; S.settings.todayTab = "custom"; save(); renderTodaySoft(); ACT.customAddOpen(); },
+  // choix explicite de composer : gardé pour la journée (autoProposal ne remet pas la séance de l'app)
+  csCompose(){ closeSheet(); customEdit = false; heroSnap = null; S.custom = { exos:[], compose:todayISO() }; S.settings.todayTab = "custom"; save(); renderTodaySoft(); ACT.customAddOpen(); },
   // la séance proposée : réglages fins dépliés ou repliés, sur place
   propAdjust(){
     const sn = heroSnap, changed = propAdjust && sn && sn.draft && JSON.stringify(sn.draft)!==JSON.stringify(S.draft);
