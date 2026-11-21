@@ -59,9 +59,55 @@ Ce qui change pour toi à l'usage, au-delà de l'apparence et de la fiabilité :
 12. **Modifier une séance passée** : la charge garde deux décimales (11,25 kg) au lieu d'être arrondie au dixième.
 13. **Clavier** : une feuille avec un champ de saisie remonte au-dessus du clavier.
 
-⟨MESURES⟩
+## Mesures avant / après
 
-⟨CAPTURES⟩
+Chromium headless, CPU ralenti ×4 pour approcher un iPhone. Données générées : 1 an (157 séances), 3 ans (470) ou 5 ans (783).
+
+| Mesure | Avant (2.14.1) | Après (2.15.0) | Commentaire |
+|---|---|---|---|
+| « Valider la série » (médiane de 8, vraie touche, 3 ans) | ≈ 63 ms | ≈ 44 ms | −30 % : l'ascension est recalculée après l'image de validation |
+| « Valider la série » (`tests/perf2.js`, 3 essais) | 44,7 · 45,4 · 44,8 ms | 24,7 · 22,6 · 25,9 ms | −45 % |
+| Lancement d'une séance : « Valider la série » touchable | ≈ 2,3 s | ≈ 0,5 s | |
+| Lancement d'une séance : fin de l'animation | ≈ 2,4 s | ≈ 1,3 s | |
+| Démarrage à froid (DOMContentLoaded, 3 essais) | 0 séance : 351 · 233 · 229 ms ; 1 an : 421 · 403 · 288 ; 5 ans : 474 · 567 · 397 | 0 séance : 363 · 242 · 308 ms ; 1 an : 439 · 383 · 379 ; 5 ans : 527 · 441 · 419 | Inchangé (±80 ms d'un essai à l'autre) |
+| Rendu de l'accueil à froid, à mode égal (Ma séance / proposition) | 20–29 / 18–19 ms | 24–25 / 19–20 ms | Inchangé. `perf2` montre +10 ms parce que l'accueil affiche maintenant une séance complète (M1) |
+| Écriture complète (`persistNow`) | 1 an : 1,4 ms ; 5 ans : 4,8 ms | 1 an : 1,2 ms ; 5 ans : 4,9 ms | Inchangé |
+| `index.html` | 1 085 531 o (316 900 en gzip) | 1 091 976 o (317 502 en gzip) | +0,6 % (+0,2 % en gzip) |
+| Tailles de texte par écran (8 écrans mesurés) | 6 à 10 | 3 (28 / 17 / 13), plus les chiffres d'affichage | Seules exceptions : chrono, répétitions, altitude, unités dans un chiffre, libellé de la scène SVG |
+| Cibles tactiles de moins de 44 px (8 écrans) | 10 | 0 | |
+| Marge latérale | 16 et 20 px mélangées | 20 px partout | |
+| Contraste du texte tertiaire (clair) | 2,9:1 | 4,5:1 | |
+| Injection HTML dans les champs saisis | aucune exécution | aucune exécution, et gestionnaire injecté bloqué par la CSP | |
+| Hors ligne (`tests/offline.js` + Mon ascension) | OK | OK | Service worker, manifeste, icônes, scènes en cache |
+
+## Captures avant / après
+
+Galerie complète : **[review/captures/README.md](review/captures/README.md)**. Elle contient 33 écrans en trois variantes (390×844 clair, 375×667 clair, 390×844 sombre), avant à gauche et après à droite, avec les mêmes données.
+
+Quelques paires représentatives :
+
+| Écran | Avant | Après |
+|---|---|---|
+| Accueil, première ouverture | <img src="review/captures/avant/390x844_light_04_accueil_vide.jpg" width="180"> | <img src="review/captures/apres/390x844_light_04_accueil_vide.jpg" width="180"> |
+| Séance en cours (sombre) | <img src="review/captures/avant/390x844_light_11_seance.jpg" width="180"> | <img src="review/captures/apres/390x844_light_11_seance.jpg" width="180"> |
+| Progrès | <img src="review/captures/avant/390x844_light_17_progres.jpg" width="180"> | <img src="review/captures/apres/390x844_light_17_progres.jpg" width="180"> |
+| Onboarding, objectif | <img src="review/captures/avant/390x844_light_03_onboarding_objectif.jpg" width="180"> | <img src="review/captures/apres/390x844_light_03_onboarding_objectif.jpg" width="180"> |
+| Accueil (sombre) | <img src="review/captures/avant/390x844_dark_05_accueil.jpg" width="180"> | <img src="review/captures/apres/390x844_dark_05_accueil.jpg" width="180"> |
+
+Parcours couverts par ces captures et par les tests :
+- première ouverture et onboarding ;
+- accueil vide, puis avec 1 an de séances ;
+- créer une séance : proposition, choix, sélecteur ;
+- enregistrer des séries : séance, repos, menu de l'exercice, terminer ;
+- fin de séance avec trophées débloqués ;
+- progression : Progrès, Ta force, Muscles, Historique ;
+- éditer une séance : modification d'une séance passée ;
+- profil et réglages ;
+- Mon ascension ;
+- export et import : `tests/v21.js` (sauvegarde et restauration), `tests/v83.js` (anciens formats) ;
+- données corrompues ou absentes : `tests/v35.js` et `tests/v83.js`.
+
+Le clavier ouvert ne se simule pas en headless (voir la liste iPhone).
 
 ## Tableau des problèmes (audit de la phase 2, statut après la phase 3)
 
@@ -71,9 +117,9 @@ Gravité : **critique** = perte de données ou fonction principale cassée ; **i
 
 | # | Gravité | Où | Problème (et pourquoi) | Correction prévue | Statut |
 |---|---|---|---|---|---|
-| U1 | important | `style.css:6`, `:33`, `:44` (`--tint`), 272 usages de `var(--tint…)` | Accent orange `#BC5736` dans les deux thèmes. Ton cap : jaune en sombre, vert en clair. Attention : un texte blanc sur le vert iOS `#34C759` n'a que 2,2:1 de contraste (illisible). | Redéfinir les jetons `--tint`, `--tint-ink`, `--tint-bg`, `--on-tint` par thème. Sombre : jaune `#FFD60A`, texte noir dessus (14,9:1). Clair : vert foncé `#1E7A35`, texte blanc (5,4:1), ou vert iOS avec texte noir. **À valider (D1).** | corrigé |
+| U1 | important | `style.css:6`, `:33`, `:44` (`--tint`), 272 usages de `var(--tint…)` | Accent orange `#BC5736` dans les deux thèmes. Ton cap : jaune en sombre, vert en clair. Attention : un texte blanc sur le vert iOS `#34C759` n'a que 2,2:1 de contraste (illisible). | Redéfinir les jetons `--tint`, `--tint-ink`, `--tint-bg`, `--on-tint` par thème. Sombre : jaune `#FFD60A`, texte noir dessus (14,9:1). Clair : vert foncé `#1E7A35`, texte blanc (5,4:1), ou vert iOS avec texte noir. Retenu : vert foncé `#1E7A35` avec texte blanc en clair, jaune avec texte foncé en sombre. | corrigé |
 | U2 | important | jours faits `style.css:2608` et calendrier de l'Historique ; courbes `:343-352` ; barres des muscles `:391` ; « +18 % » d'Avant et maintenant ; « Camp 15 à ta portée aujourd'hui » (`view_today.js:313`) ; « Proposée par l'app », « Exercice principal, en premier », « Voir les 6 exercices » | L'accent sert aussi aux données, aux états « fait » et à des textes d'information. Ton cap le réserve à l'action principale et à l'état actif ; « fait / réussi » doit être vert. | « Fait » et coches en vert de validation. Courbes et barres en encre neutre (`--label` / `--label2`). Textes d'information en `--label2`. L'accent reste sur le bouton principal, l'onglet actif et la sélection. | corrigé |
-| U3 | important | `style.css:20-21` (10 tailles), 544 déclarations `font-size` dont ≈ 50 valeurs en dur | Mesuré : 6 à 10 tailles de texte différentes par écran (Mon ascension : 10). Ton cap : 3 tailles. | 3 jetons (titre, corps, légende) et remplacement de toutes les déclarations. Exception documentée pour les grands chiffres de séance (chrono, répétitions, repos), qui sont des affichages et non du texte. **À valider (D2).** | corrigé (chiffres d'affichage en exception) |
+| U3 | important | `style.css:20-21` (10 tailles), 544 déclarations `font-size` dont ≈ 50 valeurs en dur | Mesuré : 6 à 10 tailles de texte différentes par écran (Mon ascension : 10). Ton cap : 3 tailles. | 3 jetons (titre, corps, légende) et remplacement de toutes les déclarations. Exception documentée pour les grands chiffres de séance (chrono, répétitions, repos), qui sont des affichages et non du texte. Retenu : 28 / 17 / 13. | corrigé (chiffres d'affichage en exception) |
 | U4 | important | `style.css:23` (`--gutter:16px`) | Marge latérale de 16 px. Mesuré : titres à 20 px, cartes et contrôles segmentés à 16 px, donc deux alignements sur le même écran. | `--gutter:20px`, tout aligné sur 20 px. | corrigé |
 | U5 | important | `style.css:766`, `:774`, `:874`, `:1503` (`.chip.on`, `.type-chip.on`, `.wz-n button.on`) ; `:288-289` (lignes cochées) | Puces et tuiles sélectionnées en aplat noir (onboarding, sélecteur, types de séance) ; lignes cochées sur fond orange. Ton cap : bordure d'accent quand c'est sélectionné. | Sélection = fond neutre et bordure d'accent de 2 px, partout, via une seule règle. | corrigé |
 | U6 | important | `view_today.js:930` (« Passer le repos ») et `:959` (« Valider la série »), même emplacement ; garde anti-double appui `ui_shell.js:995` liée à l'élément | **Double touche** : le 2e toucher tombe sur « Passer le repos », qui remplace le bouton au même endroit. Reproduit sur Chromium et WebKit avec 120, 250 et 400 ms d'écart : la série est validée et le repos sauté. | Ignorer « Passer le repos » pendant 600 ms après le début du repos (garde dans `restSkip`, `timer.js:89`). | corrigé |
@@ -93,7 +139,7 @@ Gravité : **critique** = perte de données ou fonction principale cassée ; **i
 
 | # | Gravité | Où | Problème (et pourquoi) | Correction prévue | Statut |
 |---|---|---|---|---|---|
-| D1 | important | `view_today.js:2004-2008` (abandon), `view_history.js:252-261` (suppression), `core.js:822` ; lu par le trophée « Records » `trophies.js:105` | `S.meta.prCount` est un compteur tenu à la main. Abandonner une séance qui contenait un record, ou supprimer une séance de l'historique, ne le décrémente pas (`recomputePRFlags` ne compte que les séances restantes). Le nombre de records ne fait que monter et peut débloquer un trophée non mérité. Reproduit : 9 records réels, compteur à 10 après un abandon, puis 10 pour 8 records réels après une suppression. | Compter les records directement dans l'historique (somme des séries marquées `pr`, mémoïsée) ; `prCount` recalé une fois au chargement, sans changer le format. | corrigé |
+| D1 | important | `view_today.js:2004-2008` (abandon), `view_history.js:252-261` (suppression), `core.js:822` ; lu par le trophée « Records » `trophies.js:105` | `S.meta.prCount` est un compteur tenu à la main. Abandonner une séance qui contenait un record, ou supprimer une séance de l'historique, ne le décrémente pas (`recomputePRFlags` ne compte que les séances restantes). Le nombre de records ne fait que monter et peut débloquer un trophée non mérité. Reproduit : 9 records réels, compteur à 10 après un abandon, puis 10 pour 8 records réels après une suppression. | Compter les records directement dans l'historique (somme des séries marquées `pr`, mémoïsée) ; `prCount` recalé une fois au chargement, sans changer le format. | corrigé (`prTotal()` ; l'ancien champ `prCount` est retiré par la migration 2) |
 | D2 | important | `core.js:272-276`, `init.js:200-204` | Données principales illisibles et pas de copie IndexedDB : la copie est mise de côté (`forge.v1.illisible.*`), mais l'app repart sur l'onboarding **sans aucun message**, et rien ne permet de récupérer cette copie ni de proposer une copie du jour. | Message au lancement (« Tes données n'ont pas pu être lues… ») avec deux choix : revenir à la dernière copie du jour, ou garder la copie illisible de côté pour l'envoyer. | corrigé |
 | D3 | important | `core.js:228-230` (`idbRecover`) | Un état lisible mais vide (par exemple `sessions` qui n'est pas une liste) est accepté sans date d'enregistrement ; la copie IndexedDB, qui contient l'historique, est ignorée puis écrasée par l'état vide dès le lancement (reproduit : 15 séances dans la copie, 0 après 2,5 s). Scénario rare (il faut un état mal formé, par exemple après un bug), conséquence lourde : seules les copies du jour restent. | Si l'état chargé n'a ni séance ni `savedAt` alors que la copie IndexedDB a des séances, reprendre la copie. | corrigé |
 | D4 | important | `core.js:13` (`v:1` jamais incrémenté), `core.js:279-408` | Pas de version de schéma ni de migrations ordonnées : les conversions d'anciennes versions (élastiques en kg, `todayMode`, anciens trophées, règle des records) sont mêlées à la validation dans `normalizeState` (131 lignes). Ta règle 3 exige des migrations versionnées et testées. | `S.v` = numéro de schéma, liste ordonnée `MIGRATIONS` (les conversions existantes y passent, sans changer le format actuel), test sur des données d'exemple de chaque ancien format (JSON brut v1, compact `fmt:2`, élastiques en kg, sauvegarde « FORGE »). | corrigé |
@@ -152,7 +198,7 @@ Gravité : **critique** = perte de données ou fonction principale cassée ; **i
 
 | # | Gravité | Où | Problème (et pourquoi) | Correction prévue | Statut |
 |---|---|---|---|---|---|
-| M1 | important | `view_today.js:135-138`, réglage par défaut `todayTab:"custom"` (`core.js:29`) | Première ouverture et tout jour sans séance prévue : l'accueil affiche une carte « Compose ta séance » vide. L'onboarding promet « Une séance prête chaque jour ». Lancer une séance demande 2 touches (« Ou laisse l'app choisir », puis « Commencer ») et un choix à faire. | Quand Ma séance est vide et que rien n'est prévu, afficher directement la séance proposée par l'app (« Commencer » en 1 touche, « Choisir mes exercices » en lien secondaire). Changement de comportement : noté au journal. **À valider (D4).** | corrigé |
+| M1 | important | `view_today.js:135-138`, réglage par défaut `todayTab:"custom"` (`core.js:29`) | Première ouverture et tout jour sans séance prévue : l'accueil affiche une carte « Compose ta séance » vide. L'onboarding promet « Une séance prête chaque jour ». Lancer une séance demande 2 touches (« Ou laisse l'app choisir », puis « Commencer ») et un choix à faire. | Quand Ma séance est vide et que rien n'est prévu, afficher directement la séance proposée par l'app (« Commencer » en 1 touche, « Choisir mes exercices » en lien secondaire). Changement de comportement : noté au journal. Retenu, avec le choix « Composer moi-même » gardé pour la journée. | corrigé |
 | M2 | mineur | `view_ascent.js:718` | « Fais au moins une séance d'ici dimanche pour ne pas redescendre. » : formulation qui met la pression. | Formulation neutre tournée vers le prochain camp. Le mécanisme de descente lui-même est traité dans les Recommandations. | corrigé |
 | M3 | mineur | `trophies.js:96-131` | 1re séance, même une seule série de 13 s : 2 à 4 trophées bronze d'un coup (Assiduité, Guerrier du week-end, Lève-tôt…, seuils à 1). Les trophées perdent de la valeur, et une séance d'une série compte pleinement pour la série de semaines et l'ascension. | Rien en phase 3 (règle de jeu) ; voir Recommandations. | non fait (recommandation) |
 | M4 | mineur | `view_progress.js:117-127` (carte « Ta force ») | « +127 % depuis tes débuts, en novembre 2025 », mais la courbe est limitée à 26 semaines et commence le 25 mai : les deux repères ne correspondent pas. | Courbe sur toute la période (points regroupés au-delà de 26 semaines), ou date de départ de la courbe dans le texte. | corrigé |
@@ -164,7 +210,24 @@ Gravité : **critique** = perte de données ou fonction principale cassée ; **i
 - **Absence sans culpabilité** : joker mensuel, 2 pauses par trimestre, « Retour en force ».
 - **Fin de séance** : complète et gratifiante (tonnage, ascension, trophées, « Garder cette séance ? »).
 
-⟨TESTS⟩
+## État des tests
+
+Batterie complète du dépôt (`tests/run_all.js`) : 80 suites × Chromium et WebKit, 4 audits de mise en page (320, 390 et 430 px, sombre), génération de 11 520 séances, 250 touchers aléatoires. Plus le test hors ligne.
+
+| | Avant (2.14.1) | Après (2.15.0) |
+|---|---|---|
+| Suites vertes | 145 / 150 | 149 / 152 (dont la nouvelle `v83`, × 2 moteurs) |
+| Échecs | chromium v67, v82 ; webkit v12, v51, v82 | chromium v27 (passe seul 2 fois sur 2 : instable sous charge) ; v82 × 2 |
+| Hors ligne | — | OK |
+
+- **v82** échouait avant la review et échoue toujours : le moteur propose une séance de 10 min au lieu de 40 pour un niveau avancé avec une seule paire d'haltères de 10 kg. C'est le moteur de propositions, hors de ce périmètre.
+- **v67, v12, v51, v36, v49, v27** échouent par moments sous charge (4 suites en parallèle) et passent seules, avant comme après la review.
+- **Tests ajoutés** : `tests/v83.js`. Il couvre les migrations sur chaque ancien format, les records, les données illisibles, l'état vide, localStorage plein, le repos repris, la double touche et les 2 décimales.
+- **Tests adaptés au nouveau comportement** (jamais désactivés) :
+  - v35 : réinitialisation ;
+  - v33, v40 : accueil ;
+  - v44, v59 : couleurs du cap ;
+  - les suites qui passent le repos attendent maintenant 650 ms.
 
 ## Relecture du diff et régressions corrigées
 
@@ -240,7 +303,7 @@ Les 10 points que je ne peux pas vérifier sans l'appareil :
 - Lecture du code : `core.js` et `init.js` en entier ; `ui_shell.js`, `timer.js`, `fx.js`, sauvegarde/restauration (`view_profil.js`), historique (`view_history.js`), validation et fin de séance (`view_today.js`), formules (`strength.js`), trophées ; recherche ciblée dans le reste (textes affichés, couleurs, tailles, échappement).
 - L'app réelle lancée dans Chromium et WebKit headless (390×844 et 375×667, clair et sombre), avec 0 séance, 1 an et 5 ans de séances générées.
 - Scripts d'essai : injection de HTML dans tous les champs saisis, données corrompues (5 cas), double touche, cibles tactiles, tailles de texte par écran, contrastes, code mort, actions sans gestionnaire.
-- Captures « avant » : [`review/captures/avant/`](review/captures/avant/) (45 écrans).
+- Captures : voir « Captures avant / après » (la première série de 45 captures a été remplacée par 33 écrans × 3 variantes, comparables avant/après).
 
 ## Annexe C — Mesures de référence (avant correction)
 
@@ -253,5 +316,5 @@ Les 10 points que je ne peux pas vérifier sans l'appareil :
 | Taille stockée (`forge.v1`) | 1 an : 58 Ko · 5 ans : 274 Ko (limite localStorage ≈ 5 Mo) |
 | `tests/perf2.js` (3 ans, 470 séances, CPU ×4) | accueil 21,1 ms · Progrès 19,1 ms · Profil 12,5 ms · changement d'onglet médian 6,3 ms (max 35,7) · valider une série 46,9 ms · 1 image longue sur 69 à l'entrée de l'accueil |
 | Lancement d'une séance (toucher → bouton utilisable) | ≈ 2,3 s de transition, dont ≈ 1,3 s où « Valider la série » n'est pas touchable |
-| Tests existants (80 suites × 2 moteurs + audits) | voir « État des tests » plus bas |
+| Tests existants (80 suites × 2 moteurs + audits) | voir « État des tests » |
 
