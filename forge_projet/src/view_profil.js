@@ -351,16 +351,20 @@ function restoreData(){
     const f = inp.files && inp.files[0]; inp.remove(); if(!f) return;
     let data;
     // une sauvegarde de plusieurs années pèse moins de 2 Mo : au-delà de 50 Mo, ce n'en est pas une
-    try{ if(f.size>5e7) throw 0; const o = parseUntrusted(await f.text()); data = o && o.data ? o.data : o; }catch(e){ data = null; }
+    let newer = false;
+    try{ if(f.size>5e7) throw 0; const o = parseUntrusted(await f.text()); data = o && o.data ? o.data : o;
+      // sauvegarde faite par une version plus récente de l'app : lue quand même, mais on le dit
+      newer = !!o && (+o.format>1 || (data && +data.v>SCHEMA_VERSION)); }catch(e){ data = null; }
     if(!data || typeof data!=="object" || !(Array.isArray(data.sessions) || Array.isArray(data.zs))){ openModal(`<div style="font-weight:700;color:var(--red)">Fichier non reconnu</div><div class="hr-note" style="margin-top:8px">Choisis un fichier de sauvegarde créé par ASCEN (ascen-sauvegarde-….json).</div><button class="btn secondary" style="margin-top:14px" data-a="closesheet">OK</button>`); return; }
     const n = (Array.isArray(data.sessions) && data.sessions.length ? data.sessions : data.zs || []).length, t = Array.isArray(data.templates) ? data.templates.length : 0;
-    confirmSheet({ title:"Restaurer cette sauvegarde ?", html:`${nb(n, "séance")} dans l'historique${t ? ` et ${t} dans Mes séances` : ""}. Les données actuelles de cet appareil seront remplacées. Tu pourras annuler juste après.`, ok:"Restaurer", danger:true, onOk:()=>applyRestore(data, n, "Sauvegarde restaurée") });
+    confirmSheet({ title:"Restaurer cette sauvegarde ?", html:`${nb(n, "séance")} dans l'historique${t ? ` et ${t} dans Mes séances` : ""}. Les données actuelles de cet appareil seront remplacées. Tu pourras annuler juste après.${newer ? "<br><br>Cette sauvegarde vient d'une version plus récente d'ASCEN : ses ajouts les plus récents peuvent être ignorés." : ""}`, ok:"Restaurer", danger:true, onOk:()=>applyRestore(data, n, "Sauvegarde restaurée") });
   });
   inp.click();
 }
 // remplace les données par celles d'une sauvegarde ou d'une copie du jour ; « Annuler » remet les précédentes
 function applyRestore(data, n, msg){
-  try{ localStorage.setItem(STORAGE_KEY+".avant-restauration", JSON.stringify(S)); }catch(e){}
+  // copie des données remplacées, compressée dans IndexedDB (clé « pre ») : localStorage garde sa place pour l'historique
+  { const pre = serializeState(S.meta.savedAt || Date.now()); gz(pre).then(d=>idbPut(d, Date.now(), "pre")).catch(()=>{}); }
   let st; try{ st = normalizeState(data); }catch(e){ ERR_LOG.push({ at:new Date().toISOString(), where:"restauration", msg:String(e && e.message || e).slice(0,200) }); toast("Sauvegarde illisible. Aucune donnée n'a été modifiée.", "warn"); return; }
   if(S.draft) stopRestTimer();
   const prev = S;
@@ -782,13 +786,15 @@ Object.assign(ACT, {
   },
   setTheme(d){ S.settings.theme = d.v; save(); applyTheme(); const b=qs(".sheet-body"); if(b) b.innerHTML = appearanceBodyHTML(); changed(); },
 
+  // irréversible : séances, réglages, trophées et copies du jour (le dernier filet de sécurité) disparaissent ;
+  // une sauvegarde est proposée d'abord, au même endroit
   confirmReset(){
-    confirmSheet({ title:"Réinitialiser toutes les données ?", html:"Cette action est irréversible : séances, matériel, objectifs et trophées seront définitivement supprimés.", ok:"Tout supprimer", danger:true,
-      onOk:()=>{
+    actionSheet({ label:"Réinitialiser toutes les données ?", msg:"Séances, matériel, objectifs, trophées et copies automatiques seront définitivement supprimés.",
+      actions:[...(S.sessions.length ? [{ t:"Faire une sauvegarde d'abord", run:()=>backupData() }] : []), { t:"Tout supprimer", danger:true, run:()=>{
         // on recharge même si IndexedDB ne répond pas
         const go = ()=>location.reload(); setTimeout(go, 4000);
         wipeStorage().catch(()=>{}).then(go);
-      } });
+      } }] });
   },
 });
 VIEWS.profil = renderProfil;

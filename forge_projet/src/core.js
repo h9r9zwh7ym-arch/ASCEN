@@ -1,5 +1,7 @@
 // ================= ÉTAT & STOCKAGE =================
 const STORAGE_KEY = "forge.v1";
+// version du format des données (S.v) : voir migrateState. À incrémenter avec une nouvelle étape de migration.
+const SCHEMA_VERSION = 2;
 // sources de séance abrégées dans le format compact (déclarées avant le chargement)
 const SRC_CODE = { engine:"e", custom:"c", imported:"i", template:"t" };
 const SRC_NAME = { e:"engine", c:"custom", i:"imported", t:"template" };
@@ -10,7 +12,7 @@ function markStored(s){ Object.defineProperty(s, STORED, { value:true, configura
 
 function defaultState(){
   return {
-    v:1,
+    v:SCHEMA_VERSION,
     equipment: defaultEquipment(),
     prefs: { excluded:[], included:[], swapped:{} },
     goals: { overall:"hypertrophie", emphasis:{}, daysPerWeek:3, sessionLength:"moyen", level:"intermediaire", exoCount:0, senior:false },
@@ -27,11 +29,12 @@ function defaultState(){
     medals: {},            // {familleId: {t: palier atteint 0-4, d: {1: iso, 2: iso…}}}
     ascent: { pauses:[], seen:null, descSeen:"", intro:0 }, // ascension (ascent.js) : pauses déclarées (lundis), dernière position vue, dernière descente annoncée
     settings: { theme:"auto", unit:"kg", todayTab:"custom", name:"", why:"", sound:true, stretching:false, rest:"normal", beat:true, nextGoal:true, trend:true, appPicks:true, deloadTips:true, thenNow:true }, // why : « ton pourquoi »
-    meta: { createdAt: new Date().toISOString(), prCount:0 },
+    meta: { createdAt: new Date().toISOString() },
   };
 }
 
 let LOAD_SKIPPED = 0;   // séances illisibles écartées au chargement (signalées une fois, voir init.js)
+let LOAD_FAILED = false; // données principales illisibles, mises de côté (proposition de reprise au lancement, init.js)
 const BIG_KEY = STORAGE_KEY+".idb";   // données dans IndexedDB (localStorage plein) : voir idbBoot
 let bootFromIDB = false, idbBootFailed = false, idbBootPending = false;   // pendant la lecture : aucune écriture
 let S = load();
@@ -122,13 +125,13 @@ function idbOpen(){
     r.onsuccess = ()=>ok(r.result); r.onerror = ()=>ko(r.error);
   });
 }
-function idbPut(data, savedAt){
+function idbPut(data, savedAt, key){
   return idbOpen().then(db=>new Promise((ok, ko)=>{
     // réinitialisation en cours : une écriture partie avant l'effacement ne doit pas le défaire
     // (vérifié au dernier moment, juste avant d'ouvrir la transaction)
-    if(persistBlocked){ db.close(); return ok(); }
+    if(persistBlocked){ db.close(); return ko(new Error("bloqué")); }
     const tx = db.transaction(IDB_STORE, "readwrite");
-    tx.objectStore(IDB_STORE).put({ data, savedAt }, "main");
+    tx.objectStore(IDB_STORE).put({ data, savedAt }, key || "main");
     tx.oncomplete = ()=>{ db.close(); ok(); }; tx.onerror = ()=>{ db.close(); ko(tx.error); };
   }));
 }
@@ -154,19 +157,23 @@ async function gunz(data){
   return await new Response(s).text();
 }
 let idbPending = null, idbWriting = false, idbLast = 0, idbTimer = null;
-function idbMirror(str, savedAt, now){
+function idbMirror(str, savedAt, now, after){
   // une seule écriture à la fois ; la dernière version gagne. Pendant une séance on enregistre
   // souvent : la copie compressée n'est refaite qu'au plus toutes les 3 s (et tout de suite
   // quand l'app passe en arrière-plan), le stockage principal, lui, est écrit à chaque fois
   if(persistBlocked || idbBootPending) return;
-  idbPending = { str, savedAt };
+  // after : à faire une fois cette version (ou une plus récente) écrite, jamais avant (voir persistNow)
+  idbPending = { str, savedAt, after: after || (idbPending && idbPending.after) || null };
   const wait = idbLast + 3000 - Date.now();
   if(!now && wait>0){ if(!idbTimer) idbTimer = setTimeout(()=>{ idbTimer = null; if(idbPending) idbMirror(idbPending.str, idbPending.savedAt, true); }, wait); return; }
   clearTimeout(idbTimer); idbTimer = null; idbLast = Date.now();
   if(idbWriting) return;
   idbWriting = true;
   (async ()=>{
-    while(idbPending && !persistBlocked){ const j = idbPending; idbPending = null; try{ await idbPut(await gz(j.str), j.savedAt); }catch(e){ try{ await idbPut(j.str, j.savedAt); }catch(e2){} } }
+    while(idbPending && !persistBlocked){ const j = idbPending; idbPending = null; let ok = false;
+      try{ await idbPut(await gz(j.str), j.savedAt); ok = true; }catch(e){ try{ await idbPut(j.str, j.savedAt); ok = true; }catch(e2){} }
+      if(ok && j.after) try{ j.after(); }catch(e){}   // échec : la copie principale reste en place
+    }
     idbWriting = false;
   })();
 }
@@ -224,8 +231,10 @@ function idbRecover(){
     if(!rec || !rec.data) return;
     // copies non compressées (avant v2.7) et compressées
     rec = Object.assign({}, rec, { data: await gunz(rec.data) });
-    // localStorage absent, ou plus ancien que la copie (écriture refusée faute de place)
-    if(loadedFromLS && !(S.meta.savedAt && rec.savedAt > S.meta.savedAt)) return;
+    // localStorage absent, ou plus ancien que la copie (écriture refusée faute de place), ou lisible mais vide
+    // et jamais enregistré par l'app (état mal formé) : la copie de secours, qui a un historique, l'emporte
+    const blank = !S.sessions.length && !S.meta.savedAt;
+    if(loadedFromLS && !blank && !(S.meta.savedAt && rec.savedAt > S.meta.savedAt)) return;
     const st = normalizeState(JSON.parse(rec.data));
     if(!st.sessions.length && S.sessions.length) return;
     S = st; save(); persistNow();
@@ -237,6 +246,9 @@ function cleanupStorage(){
   try{
     const bad = []; for(let i=0;i<localStorage.length;i++){ const k = localStorage.key(i); if(k && k.startsWith(STORAGE_KEY+".illisible.")) bad.push(k); }
     bad.sort().slice(0, -1).forEach(k=>localStorage.removeItem(k));
+    // copie « avant restauration » (avant 2.15 dans localStorage, non compressée, jamais retirée) : rangée dans IndexedDB
+    const pk = STORAGE_KEY+".avant-restauration", old = localStorage.getItem(pk);
+    if(old) gz(old).then(d=>idbPut(d, Date.now(), "pre")).then(()=>localStorage.removeItem(pk)).catch(()=>{});
   }catch(e){}
 }
 function storageUsage(){
@@ -272,6 +284,7 @@ function load(){
   }catch(e){
     // données illisibles : on les met de côté au lieu de les écraser à la prochaine sauvegarde
     try{ if(raw) localStorage.setItem(STORAGE_KEY+".illisible."+Date.now(), raw); }catch(err){}
+    if(raw) LOAD_FAILED = true;
     return defaultState();
   }
 }
@@ -384,27 +397,44 @@ function normalizeState(parsed){
       .map(c=>Object.assign({}, c, { id:safeId(c.id) ? c.id : uid(), n:String(c.n||"Équipement").slice(0,60) }));
     if(merged.custom.tplId!=null && !safeId(merged.custom.tplId)) delete merged.custom.tplId;
     if(merged.draft){ if(!safeId(merged.draft.id)) merged.draft.id = uid(); if(merged.draft.tplId!=null && !safeId(merged.draft.tplId)) delete merged.draft.tplId; }
-    delete merged.settings.todayMode; // v1.2 : remplacé par todayTab (« Ma séance » en premier)
-    // v2.2 : nouveaux équipements. On garde le comportement précédent : un banc servait aussi
-    // aux exercices inclinés, et quiconque faisait du squat à la barre avait des supports.
-    const po = (parsed.equipment||{}).owned||{};
-    if(po.bench && po.bench_incline===undefined) merged.equipment.owned.bench_incline = true;
-    if(po.barbell && po.rack===undefined) merged.equipment.owned.rack = true;
-    // élastiques : des niveaux de résistance 1 à 5 (et plus des « kilos »)
-    // anciennes valeurs en kg (> 5) : converties par rang, du plus léger au plus fort
-    let bw = (merged.equipment.weights.bands||[]).map(Number).filter(v=>v>0);
-    if(bw.some(v=>v>5)){
-      const kg = Array.from(new Set(bw)).sort((a,b)=>a-b);
-      bw = kg.map((v,i)=>kg.length>1 ? 1+i*4/(kg.length-1) : 3);
-      // séries d'élastique déjà enregistrées en kg : même correspondance (au plus proche)
-      const lvl = w=>Math.round(bw[kg.reduce((bi,v,i)=>Math.abs(v-w)<Math.abs(kg[bi]-w)?i:bi, 0)]);
-      merged.sessions.forEach(ss=>ss.exos.forEach(ex=>{ const d = EXO_MAP[ex.exoId];
-        if(d && loadableTypeOf(d)==="bands") ex.sets.forEach(st=>{ if(st.weight>5) st.weight = lvl(st.weight); }); }));
-    }
-    bw = bw.filter(v=>v>=1 && v<=5);
+    migrateState(merged, parsed);
+    // élastiques : des niveaux de résistance 1 à 5
+    const bw = (merged.equipment.weights.bands||[]).map(Number).filter(v=>v>=1 && v<=5);
     merged.equipment.weights.bands = bw.length ? Array.from(new Set(bw.map(Math.round))).sort((a,b)=>a-b) : [2,3,4];
-    delete merged.trophies; // ancien système de trophées (v1.0-1.1), remplacé par les médailles à paliers
     return merged;
+  }
+}
+// ---------- migrations versionnées ----------
+// Chaque changement du format des données ajoute une étape n (de la version n-1 à n), appliquée une seule fois,
+// au chargement comme à la restauration d'une sauvegarde, puis S.v = SCHEMA_VERSION. Chaque étape est testée sur
+// des données de l'ancien format (tests/v83.js). Une version plus récente que l'app (sauvegarde venue d'une mise
+// à jour) n'est jamais abaissée.
+function migrateState(st, raw){
+  const from = Math.max(1, Math.floor(+(raw && raw.v)) || 1);
+  for(let n = from+1; n<=SCHEMA_VERSION; n++) migrationStep(n, st, raw || {});
+  st.v = Math.max(from, SCHEMA_VERSION);
+}
+function migrationStep(n, st, raw){
+  if(n===2){
+    // versions 1.0 à 2.14 (sans numéro de schéma) : conversions autrefois refaites à chaque chargement
+    delete st.settings.todayMode;   // 1.2 : remplacé par todayTab (« Ma séance » en premier)
+    delete st.trophies;             // 1.0-1.1 : remplacé par les trophées à paliers (medals)
+    // 2.2 : nouveaux équipements ; un banc servait aussi aux exercices inclinés, une barre allait avec des supports
+    const po = (raw.equipment && raw.equipment.owned) || {};
+    if(po.bench && po.bench_incline===undefined) st.equipment.owned.bench_incline = true;
+    if(po.barbell && po.rack===undefined) st.equipment.owned.rack = true;
+    // 2.2 : élastiques notés en kg → niveaux de résistance 1 à 5, par rang du plus léger au plus fort ;
+    // les séries déjà enregistrées suivent la même correspondance (au plus proche)
+    const bw = (st.equipment.weights.bands||[]).map(Number).filter(v=>v>0);
+    if(bw.some(v=>v>5)){
+      const kg = Array.from(new Set(bw)).sort((a,b)=>a-b), lv = kg.map((v,i)=>kg.length>1 ? 1+i*4/(kg.length-1) : 3);
+      const near = w=>Math.round(lv[kg.reduce((bi,v,i)=>Math.abs(v-w)<Math.abs(kg[bi]-w)?i:bi, 0)]);
+      st.sessions.forEach(ss=>ss.exos.forEach(ex=>{ const d = EXO_MAP[ex.exoId];
+        if(d && loadableTypeOf(d)==="bands") ex.sets.forEach(x=>{ if(x.weight>5) x.weight = near(x.weight); }); }));
+      st.equipment.weights.bands = lv;
+    }
+    // 2.15 : le nombre de records se compte dans l'historique (prTotal) ; l'ancien compteur tenu à part dérivait
+    if(st.meta) delete st.meta.prCount;
   }
 }
 
@@ -475,9 +505,10 @@ function persistNow(urgent){
   }catch(e){
     // localStorage plein (≈ 5 Mo) : IndexedDB, sans cette limite, devient le stockage principal. Il est
     // écrit tout de suite (plus d'attente de 3 s) ; localStorage ne garde qu'un repère pour le lancement.
+    // La copie principale n'est retirée qu'une fois l'écriture IndexedDB réussie : si elle échoue, la
+    // version précédente reste lisible au lancement suivant.
     persistFailed = true;
-    try{ localStorage.removeItem(STORAGE_KEY); localStorage.setItem(BIG_KEY, String(savedAt)); localStorage.setItem(STORAGE_KEY+".at", String(savedAt)); }catch(err){}
-    idbMirror(str, savedAt, true);
+    idbMirror(str, savedAt, true, ()=>{ try{ localStorage.removeItem(STORAGE_KEY); localStorage.setItem(BIG_KEY, String(savedAt)); localStorage.setItem(STORAGE_KEY+".at", String(savedAt)); }catch(err){} });
   }
 }
 // sortie de l'app : écriture immédiate, copie de secours comprise
@@ -800,7 +831,7 @@ function upgradeRecords(){
 // Records recalculés après la modification d'une séance passée : même règle qu'en direct
 // (battre l'historique ET les séries précédentes de la séance, jamais à la 1re fois).
 function recomputePRFlags(){
-  const best = {}; let before = 0, after = 0;
+  const best = {};
   S.sessions.forEach(s=>{
     const cur = {};
     s.exos.forEach(ex=>{
@@ -810,17 +841,17 @@ function recomputePRFlags(){
       const c = cur[ex.exoId] || (cur[ex.exoId] = b ? { w:b.w, e:b.e, reps:{ ...b.reps } } : prState());
       ex.sets.forEach(st=>{
         if(!st.done) return;
-        if(st.pr) before++;
         const w = st.weight||0, r = st.reps||0, was = !!st.pr;
-        if(b && prBeats(def, c, w, r)){ st.pr = true; after++; } else delete st.pr;
+        if(b && prBeats(def, c, w, r)) st.pr = true; else delete st.pr;
         if(was!==!!st.pr) sessionTouched(s);
         prAdd(def, c, w, r);
       });
     });
     Object.keys(cur).forEach(id=>{ best[id] = cur[id]; });
   });
-  S.meta.prCount = Math.max(0, (S.meta.prCount||0) + after - before);
 }
+// records personnels battus : comptés dans l'historique (séries marquées « pr »), jamais tenus à la main
+function prTotal(){ return memo("prTotal", ()=>S.sessions.reduce((t,s)=>t+sessionSummary(s).prs, 0)); }
 
 // ---------- régularité ----------
 // Semaines consécutives avec au moins une séance. La semaine en cours pas encore entamée ne

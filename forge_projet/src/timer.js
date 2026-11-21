@@ -5,7 +5,8 @@ let restInterval = null;
 // arrived : le repos s'affiche déjà sur l'exercice qui vient ensuite (pas de nouveau saut à la fin)
 // src : la série qui vient d'être validée (pour noter son ressenti pendant le repos)
 function startRestTimer(sec, label, exoIdx, arrived, src){
-  restState = { endAt: Date.now()+sec*1000, totalSec:sec, label:label||"Repos", exoIdx, arrived:!!arrived, src:src||null };
+  restState = { endAt: Date.now()+sec*1000, totalSec:sec, label:label||"Repos", exoIdx, arrived:!!arrived, src:src||null, at:Date.now() };
+  restKeep();
   renderRestBar();
   clearInterval(restInterval);
   restInterval = setInterval(tickRest, 250);
@@ -13,7 +14,25 @@ function startRestTimer(sec, label, exoIdx, arrived, src){
 function adjustRestTimer(delta){
   if(!restState) return;
   restState.endAt += delta*1000;
+  restKeep(); save();
   tickRest();
+}
+// le repos en cours est gardé dans la séance en cours (S.draft.rest) : si iOS ferme l'app pendant le repos,
+// le décompte reprend au retour (resumeRest). Retiré de la séance quand elle est enregistrée (compactSession).
+function restKeep(){
+  if(!(S.draft && S.draft.startedAt)) return;
+  if(restState) S.draft.rest = { end:restState.endAt, total:restState.totalSec, label:restState.label, exo:restState.exoIdx, arr:restState.arrived ? 1 : 0, src:restState.src };
+  else delete S.draft.rest;
+}
+function resumeRest(){
+  const r = S.draft && S.draft.startedAt && S.draft.rest;
+  if(!r || restState || !(r.end>0)) return;
+  const n = S.draft.exos.length, exo = Math.min(Math.max(0, r.exo|0), Math.max(0, n-1));
+  restState = { endAt:+r.end, totalSec:Math.max(1, +r.total||60), label:String(r.label||"Repos"), exoIdx:exo, arrived:!!r.arr, src:r.src && typeof r.src==="object" ? r.src : null, at:0 };
+  if(typeof liveFocusIdx!=="undefined") liveFocusIdx = exo;
+  clearInterval(restInterval); restInterval = setInterval(tickRest, 250);
+  if(typeof refreshFocusRegion==="function") refreshFocusRegion();
+  tickRest();   // déjà fini pendant l'absence : « Repos terminé : série suivante »
 }
 // fin du repos (décompte écoulé ou « Passer ») : on amène l'écran sur ce qui vient ensuite
 function endRest(){
@@ -22,7 +41,9 @@ function endRest(){
   stopRestTimer();
 }
 function stopRestTimer(){
+  const kept = S.draft && S.draft.rest;
   restState = null;
+  if(kept){ delete S.draft.rest; save(); }
   clearInterval(restInterval);
   const bar = qs("#restbar");
   if(bar) bar.classList.remove("show");

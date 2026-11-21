@@ -1873,7 +1873,6 @@ Object.assign(ACT, {
     const w = st.weight||0, r = st.reps||0;
     if(isLivePR(def, ex.sets.filter(s=>s.done), w, r)){
       st.pr = true;
-      S.meta.prCount = (S.meta.prCount||0)+1;
       confettiBurst(bx, by, 60);
       floatText(fx0, fy0, "Record !", "pr", "bolt");
     }
@@ -2024,7 +2023,7 @@ function draftSetIsPR(ex, si){
 }
 function setPRFlag(ex, si){
   const st = ex.sets[si], was = !!st.pr, now = st.done && draftSetIsPR(ex, si);
-  if(was!==now){ st.pr = now || undefined; if(!now) delete st.pr; S.meta.prCount = Math.max(0, (S.meta.prCount||0) + (now?1:-1)); }
+  if(was!==now){ if(now) st.pr = true; else delete st.pr; }
 }
 function doneSetsBodyHTML(exi){
   const ex = S.draft && S.draft.exos[exi]; if(!ex) return "";
@@ -2056,7 +2055,7 @@ Object.assign(ACT, {
   dsUndo(d){
     const exi = +d.exi, si = +d.si, ex = S.draft && S.draft.exos[exi]; if(!ex || !ex.sets[si]) return;
     const st = ex.sets[si];
-    if(st.pr){ S.meta.prCount = Math.max(0, (S.meta.prCount||0)-1); delete st.pr; }
+    delete st.pr;
     st.done = false; delete st.effort;
     ex.sets.forEach((s,i)=>{ if(s.done && i>si) setPRFlag(ex, i); });
     if(restState && restState.src && restState.src.exi===exi && restState.src.si===si) stopRestTimer();

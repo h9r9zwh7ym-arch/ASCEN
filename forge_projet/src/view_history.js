@@ -270,7 +270,7 @@ function heSetRow(def, i, j, st){
   const lt = loadableTypeOf(def), timed = isTimed(def);
   const load = lt==="bands"
     ? `<select class="he-sel" data-c="heVal" data-i="${i}" data-j="${j}" data-k="weight" aria-label="Résistance de l'élastique">${[1,2,3,4,5].map(v=>`<option value="${v}" ${Math.round(st.weight||0)===v?"selected":""}>${bandLabel(v)}</option>`).join("")}</select>`
-    : lt ? `<span class="he-x">×</span><input class="he-in" type="text" inputmode="decimal" maxlength="5" value="${st.weight!=null?fmtDec(st.weight):""}" placeholder="0" data-c="heVal" data-i="${i}" data-j="${j}" data-k="weight" aria-label="Charge en kg"><span class="he-u">kg</span>` : "";
+    : lt ? `<span class="he-x">×</span><input class="he-in" type="text" inputmode="decimal" maxlength="6" value="${st.weight!=null?fmtW(st.weight):""}" placeholder="0" data-c="heVal" data-i="${i}" data-j="${j}" data-k="weight" aria-label="Charge en kg"><span class="he-u">kg</span>` : "";
   return `<div class="he-set"><span class="he-n">${j+1}</span>
     <input class="he-in" type="text" inputmode="numeric" maxlength="4" value="${st.reps||""}" placeholder="0" data-c="heVal" data-i="${i}" data-j="${j}" data-k="reps" aria-label="${timed?"Secondes":"Répétitions"}"><span class="he-u">${timed?"s":"rép."}</span>
     ${load}<span class="grow"></span>
@@ -329,7 +329,7 @@ Object.assign(ACT, {
     const st = histEdit && histEdit.exos[+d.i] && histEdit.exos[+d.i].sets[+d.j]; if(!st) return;
     const v = heNum(el.value); histEdit.dirty = true;
     if(d.k==="reps") st.reps = v>0 ? Math.min(9999, Math.round(v)) : 0;
-    else if(isNaN(v) || v<=0) delete st.weight; else st.weight = Math.min(500, round1(v));
+    else if(isNaN(v) || v<=0) delete st.weight; else st.weight = Math.min(500, Math.round(v*100)/100);   // 11,25 kg reste 11,25
   },
   heMeta(d, el){
     if(!histEdit) return;

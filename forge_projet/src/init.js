@@ -132,7 +132,11 @@ Object.assign(ACT, {
 // Pas d'écran de lancement : l'app s'affiche directement. Premier lancement : l'accueil s'ouvre, sauf si la
 // copie de secours (stockage vidé) rend les données ; on l'attend donc quand rien n'a été lu (au plus 0,6 s).
 function startApp(recovered){
-  if(typeof needsOnboarding==="function" && needsOnboarding()){
+  // données principales illisibles : on attend la copie de secours ; si elle ne rend rien, on le dit (dataLostNotice)
+  // au lieu d'ouvrir l'accueil des nouveaux venus comme si de rien n'était
+  if(LOAD_FAILED){
+    Promise.resolve(recovered).catch(()=>{}).then(()=>{ if(!S.sessions.length) dataLostNotice(); });
+  } else if(typeof needsOnboarding==="function" && needsOnboarding()){
     const wait = loadedFromLS ? null : Promise.race([recovered, new Promise(ok=>setTimeout(ok, 600))]);
     Promise.resolve(wait).catch(()=>{}).then(()=>{ if(needsOnboarding()) openOnboarding(); });
   }
@@ -141,6 +145,24 @@ function startApp(recovered){
   syncVGap(); setTimeout(syncVGap, 600);
   // ancienne icône (barre d'état pleine) : on le dit une fois, la marche à suivre est dans Profil
 }
+
+// Données illisibles et aucune copie de secours reprise : la copie abîmée est gardée de côté (forge.v1.illisible.*).
+// On propose la dernière copie du jour (Profil › Données › Copies automatiques) ou d'enregistrer le fichier abîmé.
+async function dataLostNotice(){
+  let snaps = []; try{ snaps = await snapList(); }catch(e){}
+  const last = snaps.find(x=>x.n>0), acts = [];
+  if(last) acts.push({ t:`Reprendre la copie ${daysBetween(last.day, todayISO())<2 ? "d'"+snapDayLabel(last.day).toLowerCase() : "du "+fmtDate(last.day, "long")} (${nb(last.n, "séance")})`, run:()=>ACT.snapRestore({ d:last.day }) });
+  acts.push({ t:"Enregistrer le fichier illisible", run:saveUnreadable });
+  actionSheet({ label:"Données illisibles", msg:"Tes données enregistrées n'ont pas pu être lues. Elles restent gardées de côté sur cet appareil.",
+    actions:acts, cancel:"Repartir de zéro", cancelA:"dataLostFresh" });
+}
+function saveUnreadable(){
+  try{
+    const keys = Object.keys(localStorage).filter(k=>k.startsWith(STORAGE_KEY+".illisible.")).sort(), raw = keys.length ? localStorage.getItem(keys[keys.length-1]) : null;
+    if(raw) shareOrDownload(raw, `ascen-donnees-illisibles-${todayISO()}.json`, "application/json", "Données ASCEN illisibles");
+  }catch(e){}
+}
+ACT.dataLostFresh = ()=>{ closeSheet(); if(needsOnboarding()) setTimeout(openOnboarding, 320); };
 
 // iOS ferme parfois l'app en arrière-plan pour libérer de la mémoire (après la musique, l'appareil photo…) :
 // au retour elle redémarre. On rouvre alors le même onglet, à la même position, si on l'a quittée il y a
@@ -172,6 +194,7 @@ function init(){
   applyPlannedSession(); // la séance prévue aujourd'hui s'affiche directement
   switchTab(resumeTab() || "today");
   resumeScroll();
+  resumeRest();   // repos en cours quand iOS a fermé l'app
   startApp(idbRecover()); // copie de secours IndexedDB (voir core.js)
   // médailles déjà méritées (ex. après une mise à jour) : attribuées sans célébration, au calme
   // (une quarantaine de statistiques sur tout l'historique : pas pendant le démarrage)

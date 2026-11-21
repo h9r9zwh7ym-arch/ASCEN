@@ -111,7 +111,8 @@ const APP = 'file://' + path.resolve(process.argv[2]);
   // 9. réinitialisation : tout est effacé (copies illisibles comprises) et l'app redémarre à neuf
   const pr = await open({ meta: { onboarded: true }, sessions: [{ id: 'a', date: iso(1), exos: [done('pompes', 3, 10)] }] });
   await pr.evaluate(() => { localStorage.setItem('forge.v1.illisible.1', '{'); ACT.confirmReset(); }); await pr.waitForTimeout(400);
-  await Promise.all([pr.waitForNavigation({ timeout: 8000 }), pr.click('[data-a="confirmYes"]')]);
+  // 2.15 : feuille d'actions (« Faire une sauvegarde d'abord » / « Tout supprimer »)
+  await Promise.all([pr.waitForNavigation({ timeout: 8000 }), pr.click('#overlay .as-btn.danger')]);
   await pr.waitForSelector('#obBody', { timeout: 8000 }).catch(() => {}); await pr.waitForTimeout(300);
   const reset = await pr.evaluate(() => ({ n: S.sessions.length, keys: Object.keys(localStorage).filter(k => k.startsWith('forge.v1.') && k !== 'forge.v1.at').length, /* .at : date d'écriture de l'état neuf, enregistré peu après le redémarrage */ onb: !!document.querySelector('#obBody') }));
   log('Reset:', JSON.stringify(reset)); if (reset.n !== 0 || reset.keys || !reset.onb) fail('réinitialisation complète');
