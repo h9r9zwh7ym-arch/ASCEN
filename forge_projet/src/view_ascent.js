@@ -718,8 +718,7 @@ function ascWeekHTML(a){
   let msg;
   if(pzThis && !held) msg = "Semaine en pause : rien ne se perd.";
   else if(held) msg = `Objectif tenu : ta série passe à <b>${nb(a.series, "semaine")}</b>.`;
-  else if(left>daysLeft) msg = n ? "Objectif hors de portée cette semaine : chaque séance fait quand même monter." : "Fais au moins une séance d'ici dimanche pour ne pas redescendre.";
-  else if(n===0 && !a.wait) msg = `Encore ${nb(left, "séance")} d'ici dimanche. Sans séance cette semaine, tu redescends d'un camp.`;
+  else if(left>daysLeft) msg = n ? "Objectif hors de portée cette semaine : chaque séance fait quand même monter." : "Une séance d'ici dimanche garde ton camp.";
   else msg = `Encore ${nb(left, "séance")} d'ici dimanche pour allonger ta série.`;
   return `<section class="asc-week" id="ascWeek">
     <div class="aw-hd"><h2>Cette semaine</h2><span class="aw-n"><b class="num">${n}</b>/${g}</span></div>

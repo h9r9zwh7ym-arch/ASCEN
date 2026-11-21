@@ -190,8 +190,15 @@ function nudgeHTML(){
 }
 
 // ---------- aperçu ----------
+// Ma séance vide, rien de prévu aujourd'hui : la séance proposée par l'app s'affiche directement, prête à
+// « Commencer » (1 toucher). Composer reste à un toucher (« Choisir une autre séance » › Composer moi-même).
+function autoProposal(draft){
+  return appPicksOn() && !S.custom.exos.length && !customEdit && !plannedTemplate() && !(S.custom.pendingDays && S.custom.pendingDays.length)
+    && !!draft && !draft.startedAt && draft.exos.length>0;
+}
 function renderTodayPreview(draft){
-  const mode = S.settings.todayTab==="proposal" ? "proposal" : "custom";
+  let mode = S.settings.todayTab==="proposal" ? "proposal" : "custom";
+  if(mode==="custom" && autoProposal(draft)) mode = "proposal";
   return `<div class="navbar"><div class="nb-title">Aujourd'hui</div></div><div class="content home">
     <div class="home-head stagger" style="--i:0">
       <div class="eyebrow">${fmtDate(todayISO(),"long")}</div>

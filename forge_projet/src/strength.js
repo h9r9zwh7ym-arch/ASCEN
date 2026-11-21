@@ -154,6 +154,20 @@ function strengthSeries(weeks){
     return out;
   });
 }
+// toute la période depuis la première séance, en au plus `max` points régulièrement espacés (carte « Ta force » :
+// la courbe part bien « de tes débuts », comme le dit son texte, sans calculer une valeur par semaine sur des années)
+function strengthSeriesSpan(weeks, max){
+  if(weeks<=max) return strengthSeries(weeks);
+  const step = Math.ceil(weeks/max);
+  return memoHist("strengthSpan"+weeks+":"+max+todayISO(), ()=>{
+    const out = [], today = todayISO(), end0 = addDaysISO(weekKey(today), 6);
+    for(let k = Math.floor((weeks-1)/step)*step; k>=0; k-=step){
+      const end = addDaysISO(end0, -7*k), at = end>today ? today : end, st = strengthAt(at);
+      if(st) out.push({ wk:addDaysISO(end, -6), v:st.index, n:st.muscles.length });
+    }
+    return out;
+  });
+}
 // ---------- charge d'entraînement et statut ----------
 // séries « difficiles » du jour : une série faite compte 1, une série avec 3 reps ou plus en réserve 0,5
 function dailyHardSets(){

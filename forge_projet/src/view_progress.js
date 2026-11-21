@@ -114,8 +114,8 @@ function overviewPaneHTML(){
 // « Ta force » : le chiffre et sa courbe depuis tes débuts ; le détail (statut, régions, projections) est un toucher plus loin
 function forceSumHTML(){
   if(S.settings.trend===false) return "";
-  const first = firstSessionDate(), weeks = Math.max(2, Math.min(26, Math.floor(daysBetween(weekKey(first), todayISO())/7)+1));
-  const pts = strengthSeries(weeks);
+  const first = firstSessionDate(), weeks = Math.max(2, Math.floor(daysBetween(weekKey(first), todayISO())/7)+1);
+  const pts = strengthSeriesSpan(weeks, 26);   // depuis la première séance (avant 2.15 : 26 semaines au plus)
   if(pts.length<2) return strengthCardHTML(); // en calibrage : les trois pastilles, sur place
   const last = pts[pts.length-1], d0 = parseISO(first), y0 = d0.getFullYear()!==parseISO(todayISO()).getFullYear() ? " "+d0.getFullYear() : "";
   const p = Math.round(last.v-100);
@@ -124,7 +124,7 @@ function forceSumHTML(){
     <span class="fs-v" data-vt="force-n" data-count="${Math.abs(p)}" data-pre="${p>0?"+":p<0?"−":""}" data-unit="%" data-thin="1">${uHTML(pctTxt(last.v))}</span>
     <span class="fs-s">depuis tes débuts, en ${MOIS_LONG[d0.getMonth()]}${y0}</span>
     ${forceSparkSVG(pts.map(x=>x.v))}
-    <span class="fs-ax"><span>${esc(fmtDate(pts[0].wk))}</span><span>Aujourd'hui</span></span>
+    <span class="fs-ax"><span>${esc(fmtDate(pts[0].wk))}${pts[0].wk.slice(0,4)!==todayISO().slice(0,4) ? " "+pts[0].wk.slice(0,4) : ""}</span><span>Aujourd'hui</span></span>
   </button>`;
 }
 // animation signature n° 2 : la courbe se trace et le chiffre défile, une fois par version des données,
