@@ -1162,10 +1162,13 @@ function refreshFocusRegion(){
   // chaque état (série, repos, exercice terminé) est un écran : il commence en haut
   const v = qs("#v-today"); if(v && v.scrollTop && currentTab==="today") v.scrollTop = 0;
   const head = qs("#liveHead");
+  let later = false;
   if(head){
     // la barre part de l'ancienne valeur pour que le progrès se voie
     const oldW = qsa(".lp-seg i", head).map(i=>i.style.width);
-    head.innerHTML = liveHeadHTML(S.draft);
+    // l'altitude est recalculée juste après cette image (liveAscLater, view_ascent.js)
+    later = typeof liveAscLater==="function" && !!ascLiveMemo && ascLiveMemo.id===S.draft.id;
+    ascLiveDefer = later; try{ head.innerHTML = liveHeadHTML(S.draft); } finally{ ascLiveDefer = false; }
     const segs = qsa(".lp-seg i", head);
     if(oldW.length===segs.length && !reducedMotion()){
       // la barre part de l'ancienne largeur (Web Animations : pas de mise en page forcée)
@@ -1176,7 +1179,7 @@ function refreshFocusRegion(){
     }
   }
   // l'altitude de la séance : +X m, compteur, camp atteint en pleine séance (view_ascent.js)
-  if(head && typeof liveAscAfter==="function")liveAscAfter(head);
+  if(head && typeof liveAscAfter==="function"){ if(later) liveAscLater(head); else liveAscAfter(head); }
   if(typeof renderRestBar==="function") renderRestBar();
 }
 

@@ -336,6 +336,9 @@ function moStartCapture(){
 }
 // render : construit l'écran de la séance ; appelé quand l'orange couvre tout (le départ reste fluide),
 // ou tout de suite si l'animation est interrompue
+// 2.15 : chronologie resserrée (×0,55, ≈ 1,2 s au lieu de 2,3 s) et vrai bouton « Valider la série » touchable
+// dès que la séance est construite (le calque de l'animation laisse passer les touchers)
+const MO_K = .55;
 function moStart(cap, render){
   if(!cap) return false;
   if(!S.draft || !render){ cap.snap.remove(); return false; }
@@ -359,14 +362,14 @@ function moStart(cap, render){
   lab.animate([{ opacity:1, filter:"blur(0)", transform:"scale(1)" }, { opacity:0, filter:"blur(4px)", transform:"scale(.85)" }], { duration:220, delay:60, fill:"forwards" });
   const core = moBlob({ x:G.x, y:G.y, w:G.w, h:G.h, r:cap.radius }, tint, { o:1 }); core.stretch = 0;
   const ends = [-1, 1].map(s=>moDisc({ x:G.x + s*(G.w/2-G.h/2), y:G.y, w:G.h, h:G.h }, tint));
-  core.to({ w:G.w*1.06, h:G.h*.78, r:cap.radius+3 }, { response:.14, damping:1 });
+  core.to({ w:G.w*1.06, h:G.h*.78, r:cap.radius+3 }, { response:.14*MO_K, damping:1 });
   if(typeof haptic==="function" && typeof hapticOn==="function" && hapticOn()) haptic(10);
   const live = ()=>MO.busy===end;   // une étape programmée ne démarre plus si l'animation a été interrompue
   setTimeout(()=>{
     if(!live()) return;
-    core.to({ w:50, h:50, r:25 }, { response:.5, damping:.55 });
-    ends.forEach(e=>e.to({ x:G.x, w:G.h*.6 }, { response:.6, damping:.7 }));
-  }, 110);
+    core.to({ w:50, h:50, r:25 }, { response:.5*MO_K, damping:.55 });
+    ends.forEach(e=>e.to({ x:G.x, w:G.h*.6 }, { response:.6*MO_K, damping:.7 }));
+  }, 110*MO_K);
   // 2 · il éclate : l'orange inonde l'écran depuis le bouton, des gouttes giclent ; le nom de la séance arrive
   const R = Math.hypot(Math.max(G.x, W-G.x), Math.max(G.y, H-G.y)) + 30;
   const flood = el("mo-flood", { background:tint });
@@ -380,25 +383,24 @@ function moStart(cap, render){
     if(!live()) return;
     const tw = title.offsetWidth; th = title.offsetHeight; size = parseFloat(getComputedStyle(title).fontSize) || 60;
     T0 = { x:Math.max(16, W/2 - tw/2), y:H*.40 - th/2 - 8 };
-    flood.animate([{ clipPath:`circle(24px at ${G.x}px ${G.y}px)` }, { clipPath:`circle(${R}px at ${G.x}px ${G.y}px)` }], { ...moEase(.62,.92), fill:"forwards" });
+    flood.animate([{ clipPath:`circle(24px at ${G.x}px ${G.y}px)` }, { clipPath:`circle(${R}px at ${G.x}px ${G.y}px)` }], { ...moEase(.62*MO_K,.92), fill:"forwards" });
     for(let i=0;i<9;i++){ const a = -Math.PI/2 + (i-4)*.38 + (Math.random()-.5)*.2, dist = 80 + Math.random()*110, sz = 10 + Math.random()*14;
       const d = moDisc({ x:G.x, y:G.y, w:sz, h:sz }, tint, { o:1 });
-      d.to({ x:G.x + Math.cos(a)*dist, y:G.y + Math.sin(a)*dist }, { response:.5, damping:.9 });
-      setTimeout(()=>{ if(live()) d.to({ o:0 }, { response:.2 }); }, 300); }
-    core.to({ w:120, h:120 }, { response:.3, damping:1 }); setTimeout(()=>{ if(live()) core.to({ o:0 }, { response:.15 }); }, 180);
+      d.to({ x:G.x + Math.cos(a)*dist, y:G.y + Math.sin(a)*dist }, { response:.5*MO_K, damping:.9 });
+      setTimeout(()=>{ if(live()) d.to({ o:0 }, { response:.2*MO_K }); }, 300*MO_K); }
+    core.to({ w:120, h:120 }, { response:.3*MO_K, damping:1 }); setTimeout(()=>{ if(live()) core.to({ o:0 }, { response:.15*MO_K }); }, 180*MO_K);
     ends.forEach(e=>{ e.stop(); e.el.remove(); });
-    title.animate([{ opacity:0, transform:`translate(${T0.x}px,${T0.y+18}px)` }, { opacity:1, transform:`translate(${T0.x}px,${T0.y}px)` }], { ...moEase(.5,.8), delay:120, fill:"forwards" });
-    sub.animate([{ opacity:0 }, { opacity:1 }], { duration:300, delay:260, fill:"forwards" });
+    title.animate([{ opacity:0, transform:`translate(${T0.x}px,${T0.y+18}px)` }, { opacity:1, transform:`translate(${T0.x}px,${T0.y}px)` }], { ...moEase(.5*MO_K,.8), delay:120*MO_K, fill:"forwards" });
+    sub.animate([{ opacity:0 }, { opacity:1 }], { duration:300*MO_K, delay:260*MO_K, fill:"forwards" });
     if(typeof sfx==="function") sfx("open");
-  }, 200);
-  // l'orange couvre l'écran : la séance se construit dessous, sans que ça se voie
-  setTimeout(()=>{ if(MO.busy===end) doRender(); }, 560);
+  }, 200*MO_K);
+  // l'accent couvre l'écran : la séance se construit dessous, sans que ça se voie
+  setTimeout(()=>{ if(MO.busy===end) doRender(); }, 560*MO_K);
   // 3 · le niveau baisse en ondulant et dévoile la séance ; la dernière flaque devient « Valider la série »
   setTimeout(()=>{
     if(MO.busy!==end) return;
     doRender(); snap.remove(); flood.remove();
     const b = vbtn(), V = b && b.offsetParent ? moRect(b) : { x:W/2, y:H-70, w:W-32, h:56, l:16, t:H-98 };
-    if(b) b.style.visibility = "hidden";
     const nm = name(), N = nm ? moRect(nm) : null; if(nm) nm.style.opacity = 0;
     const bottom = V.t - 6, ns = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(ns, "svg"), path = document.createElementNS(ns, "path");
@@ -406,11 +408,11 @@ function moStart(cap, render){
     Object.assign(svg.style, { width:W+"px", height:H+"px", maxWidth:"none" }); path.setAttribute("fill", tint);
     svg.appendChild(path); fx.insertBefore(svg, title);
     sub.animate([{ opacity:1 }, { opacity:0 }], { duration:160, fill:"forwards" });
-    let flew = false; const t0 = performance.now(), dur = 760;
+    let flew = false; const t0 = performance.now(), dur = 760*MO_K;
     // le nom se range à sa place, en haut de la séance, quand l'eau passe sous lui
     const fly = ()=>{ flew = true;
       const k = N ? parseFloat(getComputedStyle(nm).fontSize)/size : .3, to = N ? `translate(${N.l}px,${N.t - (th*k - N.h)/2}px) scale(${k})` : `translate(${T0.x}px,${T0.y-40}px) scale(.5)`;
-      const a = title.animate([{ transform:`translate(${T0.x}px,${T0.y}px) scale(1)`, color:"#fff" }, { transform:to, color:moVar("--label2") || "#9A9AA2" }], { ...moEase(.55,.88), fill:"forwards" });
+      const a = title.animate([{ transform:`translate(${T0.x}px,${T0.y}px) scale(1)`, color:"#fff" }, { transform:to, color:moVar("--label2") || "#9A9AA2" }], { ...moEase(.55*MO_K,.88), fill:"forwards" });
       a.finished.then(()=>{ if(nm) nm.style.opacity = ""; title.remove(); }).catch(()=>{});
     };
     const step = now=>{
@@ -425,7 +427,7 @@ function moStart(cap, render){
       svg.remove();
       const pool = el("mo-pool", { background:tint, left:"0px", top:bottom+"px", width:W+"px", height:(H-bottom)+"px", borderRadius:"0px" });
       const br = b ? getComputedStyle(b).borderRadius : "16px";
-      const pe = moEase(.5,.7);
+      const pe = moEase(.5*MO_K,.7);
       pool.animate([{ left:"0px", top:bottom+"px", width:W+"px", height:(H-bottom)+"px", borderRadius:"0px" },
                     { left:V.l+"px", top:V.t+"px", width:V.w+"px", height:V.h+"px", borderRadius:br }], { ...pe, fill:"forwards" });
       // la flaque est en place (le ressort ne fait plus que trembler) : le vrai bouton prend le relais, son mot apparaît
@@ -435,11 +437,11 @@ function moStart(cap, render){
         if(b){ b.style.visibility = "";
           b.animate([{ scale:"1 1" }, { scale:"1.03 .9" }, { scale:"1 1" }], { duration:420, easing:"cubic-bezier(.3,1.4,.5,1)" });
           b.animate([{ opacity:.4, filter:"blur(2px)" }, { opacity:1, filter:"blur(0)" }], { duration:260 }); }
-        setTimeout(end, 120);
+        setTimeout(end, 120*MO_K);
       }, Math.min(520, pe.duration*.55));
     };
     raf = requestAnimationFrame(step);
-  }, 1020);
+  }, 1020*MO_K);
   }catch(e){ console.error(e); end(); }
   return true;
 }

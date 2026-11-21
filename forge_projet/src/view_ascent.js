@@ -1084,9 +1084,13 @@ function ascDrawCard(s){
 // La séance en cours est comptée comme une séance de plus, aujourd'hui, par le même moteur (ascent_raw) :
 // l'altitude affichée pendant la séance est exactement celle de la fin de séance. Mémorisé par l'état des séries
 // validées (les +/− sur une série à faire ne recalculent rien).
-let ascLiveMemo = null, liveAscPrev = null;
+// ascLiveDefer (2.15) : après une série validée, la ligne d'altitude garde un instant sa valeur précédente et
+// l'ascension, recalculée sur tout l'historique (≈ 25 ms à CPU ×4 sur 3 ans), l'est juste après l'image de
+// validation (liveAscLater) : le retour de la série est immédiat, le « +X m » suit aussitôt.
+let ascLiveMemo = null, liveAscPrev = null, ascLiveDefer = false, liveAscT = 0;
 function ascLive(draft){
   if(!draft || !draft.startedAt || typeof ascent_raw!=="function") return null;
+  if(ascLiveDefer && ascLiveMemo && ascLiveMemo.id===draft.id) return ascLiveMemo.v;
   const sig = DATA_VER+"|"+draft.exos.map(ex=>ex.exoId+":"+ex.sets.map(s=>s.done ? `${s.reps||0}x${s.weight||0}${s.pr ? "p" : ""}${s.effort===1 ? "e" : ""}` : "-").join(",")).join(";");
   if(ascLiveMemo && ascLiveMemo.sig===sig) return ascLiveMemo.v;
   const a = ascent_raw({ id:"__live", date:todayISO(), exos:draft.exos, beats:typeof draftBeats==="function" ? draftBeats(draft) : 0 });
@@ -1102,7 +1106,16 @@ function ascLive(draft){
     v.perSet = (e && e.hard>=20) ? 0 : ascEffort(1)*m*(a.comeback ? ASC_BACK : 1);
     v.back = !!(a.comeback || (e && e.back>0));
   }
-  ascLiveMemo = { sig, v }; return v;
+  ascLiveMemo = { sig, v, id:draft.id }; return v;
+}
+function liveAscLater(head){
+  clearTimeout(liveAscT);
+  liveAscT = setTimeout(()=>requestAnimationFrame(()=>{
+    if(!head.isConnected || !(S.draft && S.draft.startedAt)) return;
+    const box = qs("#liveAsc", head), html = liveAscHTML(S.draft);
+    if(box && html) box.outerHTML = html;
+    liveAscAfter(head);
+  }), 16);
 }
 function liveSetsLeft(draft){ return draft.exos.reduce((t, ex)=>{ const def = EXO_MAP[ex.exoId]; return def && isStretch(def) ? t : t + ex.sets.filter(s=>!s.done).length; }, 0); }
 function liveAscHTML(draft){
