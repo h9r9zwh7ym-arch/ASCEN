@@ -1,53 +1,71 @@
-# Review ASCEN — phases 1 et 2 (cartographie et audit)
+# Review ASCEN — bilan complet (phases 1 à 5)
 
-Branche `review-complete`, point de retour : tag `avant-review` (commit `21ad8bd`, version 2.14.1, cache `forge-v112`).
-Consigne complète : [PROMPT-REVIEW.md](PROMPT-REVIEW.md). Aucun fichier de l'app n'a été modifié dans cette session.
+Branche `review-complete`, point de retour : tag `avant-review` (commit `21ad8bd`, version 2.14.1). Version livrée : **2.15.0** (cache `forge-v113`).
+Consigne : [PROMPT-REVIEW.md](PROMPT-REVIEW.md). La branche principale n'a pas été touchée.
 
 ## Résumé
 
-L'app est solide : stockage double (localStorage + IndexedDB compressé + 7 copies du jour), chargement qui répare les données abîmées, formules sourcées, aucune injection trouvée, aucune fonction morte, performances correctes même avec 5 ans d'historique. Je n'ai trouvé **aucun problème critique**.
+Avant la review, l'app était déjà solide sur le fond : stockage double, formules sourcées, aucune injection, aucun code mort. Je n'avais trouvé aucun problème critique. Les 41 problèmes relevés (14 importants, 27 mineurs) portaient surtout sur le cap design, quelques failles de fiabilité des données et des frictions en séance.
 
-Les écarts principaux sont ailleurs :
-1. **Le cap design n'est pas appliqué** : accent orange partout (au lieu de jaune en sombre / vert en clair), accent utilisé pour des données et des textes d'information, 6 à 10 tailles de texte par écran (au lieu de 3), marge latérale de 16 px (au lieu de 20), puces sélectionnées en aplat noir (au lieu d'une bordure d'accent), textes qui disent quoi faire.
-2. **Une double touche sur « Valider la série » passe le repos** (reproduit sur Chromium et WebKit, jusqu'à 400 ms d'écart).
-3. **Le compteur de records dérive vers le haut** : abandonner une séance ou en supprimer une ne retire pas ses records du compteur (trophée « Records » faussé).
-4. **Données illisibles sans copie de secours : l'app repart à zéro sans rien dire** (la copie mise de côté n'est proposée nulle part).
-5. **Première ouverture et jours sans séance prévue** : l'accueil affiche « Compose ta séance » vide alors que l'onboarding promet « Une séance prête chaque jour ».
+**Corrigé** : 35 des 41 problèmes, en 7 commits (un par thème, plus une relecture et une correction de suivi).
+- **Cap design appliqué partout** : accent vert en clair et jaune en sombre, réservé à l'action principale et à l'état actif ; vert pour « fait », encre pour les données, orange pour les alertes ; 3 tailles de texte ; marge de 20 px et multiples de 8 ; sélections à bordure d'accent ; plus de textes qui disent quoi faire.
+- **Données** :
+  - les records sont comptés dans l'historique, le compteur ne dérive plus ;
+  - le schéma est versionné, avec des migrations testées sur chaque ancien format ;
+  - des données illisibles ne font plus repartir l'app à zéro en silence ;
+  - un état vide n'écrase plus la copie de secours ;
+  - le repos en cours survit à une fermeture de l'app ;
+  - localStorage plein ne fait plus perdre la copie principale.
+- **Séance** :
+  - une double touche ne saute plus le repos ;
+  - le lancement passe de 2,3 s à 1,2 s ;
+  - « Valider la série » est 30 % plus rapide ;
+  - l'haptique ne vibre plus que sur les validations.
+- **Motivation** : quand rien n'est prévu, l'accueil montre une séance prête à « Commencer » en 1 toucher ; formulations sans pression ; courbe de force « depuis tes débuts » cohérente.
 
-Plusieurs corrections changent l'apparence de toute l'app : elles demandent ta validation (voir « Décisions à valider » en fin de document).
+**Partiellement corrigé ou non fait** : 6 problèmes, détaillés dans « Ce qui reste ».
 
-## Phase 1 — Cartographie
+## Commits
 
-1. **Architecture** : PWA mono-fichier. `forge_projet/build.sh` concatène 33 fichiers JS (≈ 15 000 lignes) et `style.css` (3 481 lignes) en `index.html` (1,06 Mo, minifié par esbuild). Scripts globaux partagés, sans modules ni framework. Boutons déclaratifs `data-a="nom"` → `ACT.nom()` via un répartiteur unique (`ui_shell.js`). Service worker « cache d'abord » (`sw.js`). Three.js (trophées 3D) et scènes de montagne chargés à la demande.
-2. **Modèle de données** : un objet `S` (`core.js`) : `sessions` (séances terminées → exercices → séries `{reps, weight, done, pr, effort, goal}`), `draft` (séance proposée ou en cours), `custom` / `templates` (Ma séance, Mes séances et leurs jours), `equipment`, `prefs`, `goals`, `settings`, `medals`, `targets`, `challenges`, `body`, `deload`, `ascent`, `meta` (compteurs, sauvegardes).
-3. **Stockage** : localStorage `forge.v1` (JSON, historique compacté dans `zs`, écriture 400 ms après chaque `save()` et à la sortie), miroir IndexedDB gzip (`forge/state`, au plus toutes les 3 s), 7 copies du jour (`forge/snap`). `normalizeState` valide et répare chaque chargement et chaque import. Records, séries de semaines, force, ascension et trophées sont **recalculés depuis l'historique** et mémoïsés (`DATA_VER`, `memoHist`, `sessionSummary`).
-4. **Écrans** : 3 onglets. Aujourd'hui (carte du jour, Cette semaine / ascension, Mes séances). Progrès (Résumé : force, muscles, records, avant/maintenant, statistiques | Historique : calendrier, séances, Rewind). Profil (trophées, réglages, données). Feuilles : Mon ascension, fiche exercice, sélecteur, éditeurs, onboarding en 4 étapes.
-5. **Flux principal** : accueil → séance prévue, composée ou proposée → « Commencer » → carte de l'exercice (− / +, glisser, « Valider la série ») → repos (anneau, ressenti) → … → fin automatique → page de fin (records, ascension, trophées, « Garder cette séance ? ») → Progrès et Historique recalculés.
-6. **Moteurs** : `engine.js` / `tailor.js` (propositions, double progression), `strength.js` (indice de force), `ascent.js` (13 montagnes, camps), `trophies.js` (42 familles × 4 paliers), `coach.js` (fatigue en séance).
+Dans l'ordre, sur `review-complete` (chaque commit reconstruit `index.html`) :
 
-## Méthode de l'audit
+| Commit | Thème | Contenu |
+|---|---|---|
+| `c79b9d2` | Données | D1 à D10 : records comptés, migrations versionnées et testées (`tests/v83.js`), données illisibles, état vide, localStorage plein, copie avant restauration, sauvegarde plus récente, 2 décimales, repos gardé, réinitialisation |
+| `344c120` | UI | U1 à U17 : cap design, double touche, haptique, textes d'instruction, cibles, contraste, clavier |
+| `a98e37a` | Performance | P1 et P2 : lancement resserré, altitude recalculée après la validation |
+| `92949d6` | Motivation | M1, M2, M4 : séance de l'app prête sur l'accueil, formulation sans pression, courbe de force |
+| `78deaf7` | Code | C3 et C4 : CSP par empreintes, version 2.15.0, HANDOFF.md |
+| `06a1f25` | Motivation (suivi) | « Composer moi-même » gardé pour la journée (défaut de M1 trouvé par les tests) |
+| `37ef720` | Relecture | Régressions trouvées en relisant le diff, corrigées (voir « Relecture du diff ») |
 
-- Lecture du code : `core.js` et `init.js` en entier ; `ui_shell.js`, `timer.js`, `fx.js`, sauvegarde/restauration (`view_profil.js`), historique (`view_history.js`), validation et fin de séance (`view_today.js`), formules (`strength.js`), trophées ; recherche ciblée dans le reste (textes affichés, couleurs, tailles, échappement).
-- L'app réelle lancée dans Chromium et WebKit headless (390×844 et 375×667, clair et sombre), avec 0 séance, 1 an et 5 ans de séances générées.
-- Scripts d'essai : injection de HTML dans tous les champs saisis, données corrompues (5 cas), double touche, cibles tactiles, tailles de texte par écran, contrastes, code mort, actions sans gestionnaire.
-- Captures « avant » : [`review/captures/avant/`](review/captures/avant/) (45 écrans).
+Plus trois commits de rapport : la consigne, l'audit et les statuts.
 
-## Mesures de référence (avant correction)
+## Journal des changements de comportement
 
-| Mesure | Valeur |
-|---|---|
-| `index.html` | 1 085 531 octets (316 901 en gzip) |
-| `ascent-scenes.js` / `three-forge.js` (à la demande) | 695 361 / 617 941 octets (143 098 / 159 159 en gzip) |
-| Démarrage, Chromium, CPU ×4 (DOMContentLoaded, 3 essais) | 0 séance : 219–396 ms · 1 an (157 séances) : 305–402 ms · 5 ans (783) : 386–515 ms |
-| Écriture complète (`persistNow`), CPU ×4 | 1 an : 1,8 ms · 5 ans : 3,7 ms |
-| Taille stockée (`forge.v1`) | 1 an : 58 Ko · 5 ans : 274 Ko (limite localStorage ≈ 5 Mo) |
-| `tests/perf2.js` (3 ans, 470 séances, CPU ×4) | accueil 21,1 ms · Progrès 19,1 ms · Profil 12,5 ms · changement d'onglet médian 6,3 ms (max 35,7) · valider une série 46,9 ms · 1 image longue sur 69 à l'entrée de l'accueil |
-| Lancement d'une séance (toucher → bouton utilisable) | ≈ 2,3 s de transition, dont ≈ 1,3 s où « Valider la série » n'est pas touchable |
-| Tests existants (80 suites × 2 moteurs + audits) | voir « État des tests » plus bas |
+Ce qui change pour toi à l'usage, au-delà de l'apparence et de la fiabilité :
 
-## Phase 2 — Audit
+1. **Accueil** : quand Ma séance est vide et que rien n'est prévu aujourd'hui, la séance proposée par l'app s'affiche directement, avec « Commencer ». Avant : une carte « Compose ta séance » vide. « Choisir une autre séance › Composer moi-même » reste disponible, et ce choix est gardé jusqu'au lendemain.
+2. **Passer le repos** : un toucher sur « Passer le repos » dans les 600 ms qui suivent « Valider la série » est ignoré (c'était presque toujours une double touche).
+3. **Retour haptique** : plus de « tac » sur « Lancer le chrono » ni sur « Ajouter un exercice » (qui ouvre une liste). Plus de vibration en fin de repos, un événement automatique ; elle n'existait de toute façon que sur Android.
+4. **Trophée « Records »** : il compte les records présents dans l'historique. Si l'ancien compteur était gonflé (séances abandonnées ou supprimées), le nombre affiché baisse ; les paliers déjà gagnés restent acquis.
+5. **Repos** : si iOS ferme l'app pendant un repos, le décompte reprend au retour. S'il s'est terminé entre-temps, l'app passe à la série suivante.
+6. **Lancement d'une séance** : l'animation dure environ 1,2 s au lieu de 2,3 s, et « Valider la série » est touchable dès son apparition : un toucher dessus pendant l'animation valide la série.
+7. **Données illisibles au lancement** : une feuille « Données illisibles » propose de reprendre la dernière copie du jour ou d'enregistrer le fichier abîmé. Avant : l'accueil des nouveaux venus, sans explication.
+8. **Réinitialiser** : la confirmation propose d'abord « Faire une sauvegarde » ; le texte précise que les copies automatiques sont aussi effacées.
+9. **Restaurer** une sauvegarde faite par une version plus récente d'ASCEN : un avertissement s'ajoute à la confirmation.
+10. **Ta force** : la courbe couvre toute la période depuis la première séance (au plus 26 points), au lieu des 26 dernières semaines.
+11. **Mon ascension › Cette semaine** : les phrases « pour ne pas redescendre » et « tu redescends d'un camp » sont remplacées. La règle de l'ascension, elle, ne change pas.
+12. **Modifier une séance passée** : la charge garde deux décimales (11,25 kg) au lieu d'être arrondie au dixième.
+13. **Clavier** : une feuille avec un champ de saisie remonte au-dessus du clavier.
 
-Gravité : **critique** = perte de données ou fonction principale cassée ; **important** = défaut visible au quotidien, calcul faux ou écart net au cap ; **mineur** = ponctuel, rare ou cosmétique. Tous les statuts sont « à faire » (phase 3).
+⟨MESURES⟩
+
+⟨CAPTURES⟩
+
+## Tableau des problèmes (audit de la phase 2, statut après la phase 3)
+
+Gravité : **critique** = perte de données ou fonction principale cassée ; **important** = défaut visible au quotidien, calcul faux ou écart net au cap ; **mineur** = ponctuel, rare ou cosmétique. La colonne **Statut** donne le résultat de la phase 3.
 
 ### 1. UI et ergonomie
 
@@ -146,42 +164,94 @@ Gravité : **critique** = perte de données ou fonction principale cassée ; **i
 - **Absence sans culpabilité** : joker mensuel, 2 pauses par trimestre, « Retour en force ».
 - **Fin de séance** : complète et gratifiante (tonnage, ascension, trophées, « Garder cette séance ? »).
 
-## État des tests (avant correction)
+⟨TESTS⟩
 
-Batterie complète (80 suites × Chromium et WebKit, audits de mise en page, génération, test du singe) lancée sur le build de référence ; résultats ajoutés ici à la fin de l'exécution.
+## Relecture du diff et régressions corrigées
 
-## Décisions à valider avant la phase 3
+J'ai relu `git diff avant-review..review-complete` (JS ligne à ligne, CSS par comparaison automatique règle à règle) et repassé chaque écran en capture. Voici ce que j'ai trouvé et corrigé :
 
-- **D1. Accent.** Sombre : jaune `#FFD60A`, texte noir dessus. Clair : vert foncé `#1E7A35` avec texte blanc (lisible), ou vert iOS `#34C759` avec texte noir. Le vert de validation et l'accent seraient alors de la même famille en mode clair : je propose de garder la coche comme marque de « fait ».
-- **D2. Trois tailles de texte.** Proposition : titre 28 px, corps 17 px, légende 13 px, plus une exception pour les grands chiffres de séance (chrono, répétitions, repos). Ou alors 34 / 17 / 13 si tu veux garder les grands titres iOS.
-- **D3. Marge de 20 px et espacements en multiples de 8.** Tous les écrans bougent légèrement. Je le fais écran par écran, avec captures avant/après.
-- **D4. Accueil sans séance prévue** : afficher directement la proposition de l'app (M1) ?
+| Trouvé | Où | Correction |
+|---|---|---|
+| Texte blanc sur l'accent jaune (illisible en mode sombre), dans 8 règles écrites en dur | `style.css` (`.sx .validate`, `.hero-go`, `.next-exo`…) | `--on-accent` (texte foncé sur le jaune) |
+| Taille de base de la page passée à 16 px (la passe typographique avait remplacé le `font-size:17px` racine par un alias qui dépendait de lui-même) | `style.css`, `html{}` | 17 px rétablis |
+| 28 marges négatives de centrage ou de compensation arrondies par la passe d'espacement (ex. rond de 20 px décalé de 2 px) | `style.css` | Valeurs d'origine rétablies |
+| Conteneurs pleine largeur restés à 16 px de marge (Mon ascension, feuilles, puces) | `style.css` | `var(--gutter)` (20 px) |
+| En-tête « Mes séances » et lien « Voir les N exercices » décalés de 4 et 2 px | `style.css` | Réalignés (test v63) |
+| « Composer moi-même » puis annulation : l'accueil revenait à la séance de l'app | `view_today.js` (M1) | Choix gardé pour la journée |
+| Garde de « Passer le repos » appliquée aussi aux appels directs du code | `timer.js` | Seulement pour un vrai toucher |
+| Variable de portée de bloc : le recalcul différé de l'altitude ne se déclenchait jamais | `view_today.js` | Déclarée au bon niveau ; gain mesuré ensuite |
+| Jours du programme : la bordure d'accent annulée par une ancienne règle | `style.css` (`.te-days button.on`) | Bordure rétablie |
+| Vignettes de thème, icône « Séries » du menu et pastille de fin de séance encore en orange ; « jamais » (sauvegarde due) non signalé comme alerte | `style.css` | Accent, encre ou orange d'alerte selon le cas |
+| « Ton prénom » (profil sans prénom) affiché comme un vrai prénom | `view_profil.js`, `style.css` | Gris tertiaire |
 
-## Plan de la phase 3 (un commit par thème, par gravité)
+## Ce qui reste
 
-1. **Données** : D1/C1 (records calculés), D2, D3, D4/C2 (schéma versionné et migrations testées), puis D5 à D10.
-2. **UI** : U6 (double touche), U8-U9 (haptique), U7 (textes), U11-U12, U14, U16-U17, puis U1-U5 et U13 (cap design, après tes réponses D1 à D3), U15.
-3. **Performance** : U10/P1 (lancement), P2 (valider une série), P3 (dédoublonnage CSS des zones touchées).
-4. **Code** : C4 (CSP), C5 (fonctions touchées), C3 (documentation).
-5. **Motivation** : M1 (après D4), M2, M4.
+| # | Statut | Pourquoi |
+|---|---|---|
+| U10 / P1 | partiel | Le lancement dure ≈ 1,2 s (objectif : 600 ms). L'animation « liquide » est une signature de l'app : je l'ai resserrée sans la supprimer. Le bouton est utilisable dès ≈ 0,5 s. |
+| U15 | partiel | Toutes les courbes de transition sont sans dépassement, mais quelques « pops » par images clés (`badgePop`, `ckPop`) restent : ce sont des animations dessinées, pas des courbes. |
+| P3 | non fait | La feuille de style garde des règles redéfinies plusieurs fois. Un dédoublonnage global touche 3 500 lignes pour un gain non mesurable : trop risqué pour cette review. |
+| P4 | non fait | Charger les écrans rares à la demande demande de découper le build en modules (voir Recommandations). |
+| C5 | non fait | Aucune longue fonction n'a dû être modifiée en profondeur : les découper n'apportait pas de gain concret. |
+| M3 | non fait | Le dosage des trophées est une règle de jeu, je ne la change pas sans ton accord (voir Recommandations). |
 
-Chaque changement de comportement sera noté dans un journal des changements, en fin de ce fichier.
+Autres points connus :
+- Les icônes de l'app (`icon-*.png`, `favicon.svg`) sont encore à l'ancien orange : une icône installée ne change qu'après réinstallation, c'est à toi de décider de la nouvelle.
+- Les feuilles « Comment ça marche » gardent leurs explications (elles expliquent un calcul, elles ne disent pas quoi toucher).
+- Le test v82 (moteur de séances : une seule paire d'haltères de 10 kg en niveau avancé donne une séance trop courte) échouait déjà avant la review ; il concerne le moteur de propositions, hors de ce périmètre.
 
-## Recommandations (non prévues en phase 3)
+## Recommandations (grosses évolutions non faites)
 
-- **Ascension** : une semaine sans séance pourrait geler l'altitude au lieu de faire redescendre d'un camp, avec le même bonus au retour.
-- **Trophées** : relever les seuils bronze à 1 des familles « style » (week-end, lève-tôt, midi…), et compter une séance seulement à partir de 3 séries validées.
-- **Démarrage** : charger à la demande les modules d'écrans rares (Rewind, bilan image, Mon ascension), comme Three.js aujourd'hui. Gain estimé : 20 à 30 % de code analysé en moins au lancement.
+1. **Ascension sans recul** : une semaine sans séance pourrait geler l'altitude au lieu de faire redescendre d'un camp, avec le même bonus au retour. La perte d'altitude reste la seule mécanique qui punit une absence.
+2. **Trophées mieux dosés** : relever les seuils bronze à 1 des familles « style » (week-end, lève-tôt, midi, nuit), qui tombent par 2 à 4 dès la première séance ; ne compter une séance qu'à partir de 3 séries validées (aujourd'hui, une série de 13 s compte pour les trophées, la série de semaines et l'ascension).
+3. **Lancement encore plus court** : une version courte de l'animation (≈ 500 ms) par défaut, la version longue réservée à la première séance de la semaine.
+4. **Chargement à la demande** des écrans rares (Mon ascension 120 Ko, Rewind, bilan image) comme pour Three.js : environ 20 à 30 % de code analysé en moins au lancement.
+5. **Dédoublonnage de `style.css`** par composant, avec captures avant/après de chaque écran.
+6. **Ascension incrémentale** : mémoriser l'état de l'ascension à la fin de la semaine précédente pour ne recalculer que la semaine en cours (aujourd'hui tout l'historique est relu après chaque série, en différé).
+7. **Nouvelle icône d'app** aux couleurs de l'accent.
+8. **Bilan de la semaine** (déjà dans PLAN.md) : une carte le dimanche soir avec séances, records, montée et objectif de la semaine suivante.
 
-## À tester sur ton iPhone (liste provisoire)
+## À tester sur ton iPhone
 
-1. Le « tac » sur « Valider la série », et aucun sur la navigation, la fermeture ou la fin du repos.
-2. Le réglage « Retour haptique » coupé : plus aucun « tac ».
-3. Le clavier ouvert dans « Modifier la séance » et l'onboarding : le bouton du bas reste visible.
-4. Les zones de sécurité (encoche, Dynamic Island, barre d'accueil) dans l'app installée, en séance et sur les feuilles.
-5. La double touche rapide sur « Valider la série » (après correction).
-6. Le contraste du nouvel accent au soleil, en clair et en sombre.
-7. Le retour dans l'app après un verrouillage pendant un repos.
-8. La sauvegarde vers Fichiers / iCloud et la restauration depuis Fichiers.
-9. « Réduire les animations » activé dans Réglages › Accessibilité.
-10. Le mode hors ligne (mode Avion) après une mise à jour.
+Les 10 points que je ne peux pas vérifier sans l'appareil :
+
+1. **Haptique** : un seul « tac » sur « Valider la série », « Valider sans chrono » et « S'arrêter » ; aucun sur la navigation, les fermetures, « Lancer le chrono », « Ajouter un exercice » ni la fin du repos.
+2. **Réglage « Retour haptique »** coupé : plus aucun « tac » ; réactivé : il vibre au moment de l'activer.
+3. **Clavier** : dans « Modifier la séance » (historique), l'onboarding (prénom, pourquoi) et le nom d'une séance, le champ et le bouton du bas restent visibles au-dessus du clavier.
+4. **Zones de sécurité** dans l'app installée : en haut (encoche ou Dynamic Island) et en bas (trait d'accueil), sur l'accueil, en séance, sur les feuilles et sur la page de fin.
+5. **Double touche** rapide sur « Valider la série » : la série est validée une fois et le repos démarre bien.
+6. **Couleurs au soleil** : lisibilité du vert (mode clair) et du jaune avec texte foncé (mode sombre et séance), y compris l'anneau de repos et l'île du repos (Dynamic Island).
+7. **Repos et verrouillage** : verrouiller pendant un repos, attendre, revenir : le décompte reprend, ou la série suivante s'affiche s'il est fini.
+8. **Sauvegarde et restauration** : « Sauvegarder mes données » vers Fichiers ou iCloud, puis « Restaurer une sauvegarde » depuis ce fichier.
+9. **Réduire les animations** (Réglages › Accessibilité › Mouvement) : pas de transition de lancement, pas de confettis, chiffres posés directement.
+10. **Mise à jour hors ligne** : ouvrir l'app installée en ligne (bandeau « Nouvelle version », Mettre à jour), puis en mode Avion : tout s'ouvre, y compris Mon ascension et les trophées 3D.
+
+## Annexe A — Cartographie (phase 1)
+
+1. **Architecture** : PWA mono-fichier. `forge_projet/build.sh` concatène 33 fichiers JS (≈ 15 000 lignes) et `style.css` (3 481 lignes) en `index.html` (1,06 Mo, minifié par esbuild). Scripts globaux partagés, sans modules ni framework. Boutons déclaratifs `data-a="nom"` → `ACT.nom()` via un répartiteur unique (`ui_shell.js`). Service worker « cache d'abord » (`sw.js`). Three.js (trophées 3D) et scènes de montagne chargés à la demande.
+2. **Modèle de données** : un objet `S` (`core.js`) : `sessions` (séances terminées → exercices → séries `{reps, weight, done, pr, effort, goal}`), `draft` (séance proposée ou en cours), `custom` / `templates` (Ma séance, Mes séances et leurs jours), `equipment`, `prefs`, `goals`, `settings`, `medals`, `targets`, `challenges`, `body`, `deload`, `ascent`, `meta` (compteurs, sauvegardes).
+3. **Stockage** : localStorage `forge.v1` (JSON, historique compacté dans `zs`, écriture 400 ms après chaque `save()` et à la sortie), miroir IndexedDB gzip (`forge/state`, au plus toutes les 3 s), 7 copies du jour (`forge/snap`). `normalizeState` valide et répare chaque chargement et chaque import. Records, séries de semaines, force, ascension et trophées sont **recalculés depuis l'historique** et mémoïsés (`DATA_VER`, `memoHist`, `sessionSummary`).
+4. **Écrans** : 3 onglets. Aujourd'hui (carte du jour, Cette semaine / ascension, Mes séances). Progrès (Résumé : force, muscles, records, avant/maintenant, statistiques | Historique : calendrier, séances, Rewind). Profil (trophées, réglages, données). Feuilles : Mon ascension, fiche exercice, sélecteur, éditeurs, onboarding en 4 étapes.
+5. **Flux principal** : accueil → séance prévue, composée ou proposée → « Commencer » → carte de l'exercice (− / +, glisser, « Valider la série ») → repos (anneau, ressenti) → … → fin automatique → page de fin (records, ascension, trophées, « Garder cette séance ? ») → Progrès et Historique recalculés.
+6. **Moteurs** : `engine.js` / `tailor.js` (propositions, double progression), `strength.js` (indice de force), `ascent.js` (13 montagnes, camps), `trophies.js` (42 familles × 4 paliers), `coach.js` (fatigue en séance).
+
+## Annexe B — Méthode de l'audit
+
+- Lecture du code : `core.js` et `init.js` en entier ; `ui_shell.js`, `timer.js`, `fx.js`, sauvegarde/restauration (`view_profil.js`), historique (`view_history.js`), validation et fin de séance (`view_today.js`), formules (`strength.js`), trophées ; recherche ciblée dans le reste (textes affichés, couleurs, tailles, échappement).
+- L'app réelle lancée dans Chromium et WebKit headless (390×844 et 375×667, clair et sombre), avec 0 séance, 1 an et 5 ans de séances générées.
+- Scripts d'essai : injection de HTML dans tous les champs saisis, données corrompues (5 cas), double touche, cibles tactiles, tailles de texte par écran, contrastes, code mort, actions sans gestionnaire.
+- Captures « avant » : [`review/captures/avant/`](review/captures/avant/) (45 écrans).
+
+## Annexe C — Mesures de référence (avant correction)
+
+| Mesure | Valeur |
+|---|---|
+| `index.html` | 1 085 531 octets (316 901 en gzip) |
+| `ascent-scenes.js` / `three-forge.js` (à la demande) | 695 361 / 617 941 octets (143 098 / 159 159 en gzip) |
+| Démarrage, Chromium, CPU ×4 (DOMContentLoaded, 3 essais) | 0 séance : 219–396 ms · 1 an (157 séances) : 305–402 ms · 5 ans (783) : 386–515 ms |
+| Écriture complète (`persistNow`), CPU ×4 | 1 an : 1,8 ms · 5 ans : 3,7 ms |
+| Taille stockée (`forge.v1`) | 1 an : 58 Ko · 5 ans : 274 Ko (limite localStorage ≈ 5 Mo) |
+| `tests/perf2.js` (3 ans, 470 séances, CPU ×4) | accueil 21,1 ms · Progrès 19,1 ms · Profil 12,5 ms · changement d'onglet médian 6,3 ms (max 35,7) · valider une série 46,9 ms · 1 image longue sur 69 à l'entrée de l'accueil |
+| Lancement d'une séance (toucher → bouton utilisable) | ≈ 2,3 s de transition, dont ≈ 1,3 s où « Valider la série » n'est pas touchable |
+| Tests existants (80 suites × 2 moteurs + audits) | voir « État des tests » plus bas |
+
